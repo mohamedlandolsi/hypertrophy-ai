@@ -12,12 +12,14 @@ import {
   File, 
   X, 
   Plus, 
-  Search,
-  Filter,
+  Search,  Filter,
   MoreVertical,
   Download,
   Trash2,
-  Eye
+  Eye,
+  FileImage,
+  FileSpreadsheet,
+  RefreshCw
 } from 'lucide-react';
 import {
   DropdownMenu,
@@ -25,17 +27,25 @@ import {
   DropdownMenuItem,
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
+import {
+  Dialog,
+  DialogContent,
+  DialogDescription,
+  DialogHeader,
+  DialogTitle,
+} from "@/components/ui/dialog";
 import { Label } from '@/components/ui/label';
 
 interface KnowledgeItem {
   id: string;
   title: string;
-  type: 'file' | 'text';
+  type: 'FILE' | 'TEXT';
   content?: string;
   fileName?: string;
   fileSize?: number;
-  uploadedAt: string;
-  status: 'processing' | 'ready' | 'error';
+  mimeType?: string;
+  createdAt: string;
+  status: 'PROCESSING' | 'READY' | 'ERROR';
 }
 
 export default function KnowledgePage() {
@@ -43,50 +53,40 @@ export default function KnowledgePage() {
   const [knowledgeItems, setKnowledgeItems] = useState<KnowledgeItem[]>([]);
   const [isUploading, setIsUploading] = useState(false);
   const [dragActive, setDragActive] = useState(false);
-  const [selectedFiles, setSelectedFiles] = useState<File[]>([]);
-  const [textInput, setTextInput] = useState('');
-  const [textTitle, setTextTitle] = useState('');
-  const [searchQuery, setSearchQuery] = useState('');
+  const [selectedFiles, setSelectedFiles] = useState<File[]>([]);  const [textInput, setTextInput] = useState('');
+  const [textTitle, setTextTitle] = useState('');  const [searchQuery, setSearchQuery] = useState('');
   const [filterType, setFilterType] = useState<'all' | 'file' | 'text'>('all');
-
+  const [viewModalOpen, setViewModalOpen] = useState(false);
+  const [selectedItem, setSelectedItem] = useState<KnowledgeItem | null>(null);
+  const [isLoading, setIsLoading] = useState(true);
   useEffect(() => {
     const fetchUser = async () => {
       const supabase = createClient();
       const { data: { user: currentUser } } = await supabase.auth.getUser();
       setUser(currentUser);
+      
+      if (currentUser) {
+        await fetchKnowledgeItems();
+      }
     };
     fetchUser();
-    
-    // Mock data for demonstration
-    setKnowledgeItems([
-      {
-        id: '1',
-        title: 'Nutrition Guidelines',
-        type: 'file',
-        fileName: 'nutrition-guide.pdf',
-        fileSize: 2048576,
-        uploadedAt: '2025-06-10T10:30:00Z',
-        status: 'ready'
-      },
-      {
-        id: '2',
-        title: 'Workout Principles',
-        type: 'text',
-        content: 'Progressive overload is the key to muscle growth...',
-        uploadedAt: '2025-06-09T15:20:00Z',
-        status: 'ready'
-      },
-      {
-        id: '3',
-        title: 'Recovery Protocols',
-        type: 'file',
-        fileName: 'recovery-methods.docx',
-        fileSize: 1024000,
-        uploadedAt: '2025-06-08T09:15:00Z',
-        status: 'processing'
-      }
-    ]);
   }, []);
+  const fetchKnowledgeItems = async () => {
+    setIsLoading(true);
+    try {
+      const response = await fetch('/api/knowledge');
+      if (response.ok) {
+        const data = await response.json();
+        setKnowledgeItems(data.knowledgeItems);
+      } else {
+        console.error('Failed to fetch knowledge items');
+      }
+    } catch (error) {
+      console.error('Error fetching knowledge items:', error);
+    } finally {
+      setIsLoading(false);
+    }
+  };
 
   const handleDrag = (e: React.DragEvent) => {
     e.preventDefault();
@@ -119,28 +119,181 @@ export default function KnowledgePage() {
   const removeSelectedFile = (index: number) => {
     setSelectedFiles(files => files.filter((_, i) => i !== index));
   };
-
   const handleFileUpload = async () => {
     if (selectedFiles.length === 0) return;
     
     setIsUploading(true);
-    // TODO: Implement actual file upload logic
-    setTimeout(() => {
+    
+    try {
+      const formData = new FormData();
+      selectedFiles.forEach(file => {
+        formData.append('files', file);
+      });      const response = await fetch('/api/knowledge/upload', {
+        method: 'POST',
+        body: formData,
+      });      if (response.ok) {
+        const data = await response.json();        console.log('Files uploaded successfully:', data);
+        
+        // Show success message with details
+        if (data.skippedFiles && data.skippedFiles.length > 0) {
+          const skippedInfo = data.skippedFiles.map((f: { name: string; reason: string }) => `${f.name}: ${f.reason}`).join('\n');
+          alert(`${data.message}\n\nSkipped files:\n${skippedInfo}`);
+        } else {
+          alert(data.message);
+        }
+        
+        // Refresh knowledge items
+        await fetchKnowledgeItems();
+        
+        // Clear selected files
+        setSelectedFiles([]);
+      } else {
+        const errorData = await response.json();
+        console.error('Upload failed:', errorData.error);
+        
+        // Show detailed error message
+        if (errorData.skippedFiles && errorData.skippedFiles.length > 0) {
+          const skippedInfo = errorData.skippedFiles.map((f: { name: string; reason: string }) => `${f.name}: ${f.reason}`).join('\n');
+          alert(`Upload failed: ${errorData.error}\n\nDetails:\n${skippedInfo}`);
+        } else {
+          alert('Upload failed: ' + errorData.error);
+        }
+      }
+    } catch (error) {
+      console.error('Upload error:', error);
+      alert('Upload failed. Please try again.');
+    } finally {
       setIsUploading(false);
-      setSelectedFiles([]);
-    }, 2000);
+    }
   };
-
   const handleTextSubmit = async () => {
     if (!textInput.trim() || !textTitle.trim()) return;
     
     setIsUploading(true);
-    // TODO: Implement actual text submission logic
-    setTimeout(() => {
+    
+    try {
+      const response = await fetch('/api/knowledge', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({
+          title: textTitle,
+          content: textInput,
+          type: 'TEXT'
+        }),
+      });
+
+      if (response.ok) {
+        const data = await response.json();
+        console.log('Text content added successfully:', data);
+        
+        // Refresh knowledge items
+        await fetchKnowledgeItems();
+        
+        // Clear form
+        setTextInput('');
+        setTextTitle('');
+      } else {
+        const errorData = await response.json();
+        console.error('Text submission failed:', errorData.error);
+        alert('Failed to add text content: ' + errorData.error);
+      }
+    } catch (error) {
+      console.error('Text submission error:', error);
+      alert('Failed to add text content. Please try again.');
+    } finally {
       setIsUploading(false);
-      setTextInput('');
-      setTextTitle('');
-    }, 1000);
+    }
+  };
+  const handleDeleteKnowledgeItem = async (id: string) => {
+    if (!confirm('Are you sure you want to delete this knowledge item?')) {
+      return;
+    }
+
+    try {
+      const response = await fetch(`/api/knowledge/${id}`, {
+        method: 'DELETE',
+      });
+
+      if (response.ok) {
+        // Refresh knowledge items
+        await fetchKnowledgeItems();
+      } else {
+        const errorData = await response.json();
+        console.error('Delete failed:', errorData.error);
+        alert('Failed to delete knowledge item: ' + errorData.error);
+      }
+    } catch (error) {
+      console.error('Delete error:', error);
+      alert('Failed to delete knowledge item. Please try again.');
+    }
+  };
+
+  const handleViewKnowledgeItem = (item: KnowledgeItem) => {
+    setSelectedItem(item);
+    setViewModalOpen(true);
+  };
+
+  const handleDownloadKnowledgeItem = async (item: KnowledgeItem) => {
+    if (item.type !== 'FILE' || !item.fileName) {
+      alert('This item is not available for download');
+      return;
+    }
+
+    try {
+      const response = await fetch(`/api/knowledge/${item.id}/download`);
+      
+      if (response.ok) {
+        // Create a blob from the response
+        const blob = await response.blob();
+        
+        // Create a temporary URL for the blob
+        const url = window.URL.createObjectURL(blob);
+        
+        // Create a temporary anchor element and trigger download
+        const a = document.createElement('a');
+        a.href = url;
+        a.download = item.fileName;
+        document.body.appendChild(a);
+        a.click();
+        
+        // Clean up
+        window.URL.revokeObjectURL(url);
+        document.body.removeChild(a);
+      } else {
+        const errorData = await response.json();
+        console.error('Download failed:', errorData.error);
+        alert('Failed to download file: ' + errorData.error);
+      }
+    } catch (error) {
+      console.error('Download error:', error);
+      alert('Failed to download file. Please try again.');
+    }
+  };
+  const getFileTypeInfo = (mimeType?: string) => {
+    if (!mimeType) return { type: 'Unknown', icon: File, color: 'text-muted-foreground' };
+      switch (mimeType) {
+      case 'application/pdf':
+        return { type: 'PDF Document', icon: FileText, color: 'text-red-600' };
+      case 'application/msword':
+      case 'application/vnd.openxmlformats-officedocument.wordprocessingml.document':
+        return { type: 'Word Document', icon: FileText, color: 'text-blue-600' };
+      case 'text/plain':
+        return { type: 'Text File', icon: FileText, color: 'text-gray-600' };
+      case 'text/markdown':
+        return { type: 'Markdown File', icon: FileText, color: 'text-purple-600' };
+      case 'application/vnd.ms-excel':
+      case 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet':
+        return { type: 'Spreadsheet', icon: FileSpreadsheet, color: 'text-green-600' };
+      case 'image/jpeg':
+      case 'image/png':
+      case 'image/gif':
+      case 'image/webp':
+        return { type: 'Image', icon: FileImage, color: 'text-orange-600' };
+      default:
+        return { type: 'Document', icon: File, color: 'text-muted-foreground' };
+    }
   };
 
   const formatFileSize = (bytes: number) => {
@@ -149,12 +302,16 @@ export default function KnowledgePage() {
     const sizes = ['Bytes', 'KB', 'MB', 'GB'];
     const i = Math.floor(Math.log(bytes) / Math.log(k));
     return parseFloat((bytes / Math.pow(k, i)).toFixed(2)) + ' ' + sizes[i];
-  };
-
-  const filteredItems = knowledgeItems.filter(item => {
-    const matchesSearch = item.title.toLowerCase().includes(searchQuery.toLowerCase()) ||
-                         (item.content && item.content.toLowerCase().includes(searchQuery.toLowerCase()));
-    const matchesFilter = filterType === 'all' || item.type === filterType;
+  };  const filteredItems = knowledgeItems.filter(item => {
+    const searchLower = searchQuery.toLowerCase();
+    const matchesSearch = searchQuery === '' || 
+                         item.title.toLowerCase().includes(searchLower) ||
+                         (item.fileName && item.fileName.toLowerCase().includes(searchLower)) ||
+                         (item.content && item.content.toLowerCase().includes(searchLower)) ||
+                         (item.mimeType && getFileTypeInfo(item.mimeType).type.toLowerCase().includes(searchLower));
+    const matchesFilter = filterType === 'all' || 
+                         (filterType === 'file' && item.type === 'FILE') ||
+                         (filterType === 'text' && item.type === 'TEXT');
     return matchesSearch && matchesFilter;
   });
 
@@ -202,8 +359,7 @@ export default function KnowledgePage() {
                 onDragLeave={handleDrag}
                 onDragOver={handleDrag}
                 onDrop={handleDrop}
-              >
-                <Upload className="mx-auto h-12 w-12 text-muted-foreground mb-4" />
+              >                <Upload className="mx-auto h-12 w-12 text-muted-foreground mb-4" />
                 <p className="text-sm text-muted-foreground mb-2">
                   Drag and drop files here, or
                 </p>
@@ -213,12 +369,15 @@ export default function KnowledgePage() {
                     <input
                       type="file"
                       multiple
-                      accept=".pdf,.doc,.docx,.txt,.md"
+                      accept=".pdf,.doc,.docx,.txt,.md,.xls,.xlsx"
                       onChange={handleFileSelect}
                       className="hidden"
                     />
                   </label>
                 </Button>
+                <p className="text-xs text-muted-foreground mt-2">
+                  Supports: PDF, Word, Text, Markdown, Excel files
+                </p>
                 <p className="text-xs text-muted-foreground mt-2">
                   Supported: PDF, DOC, DOCX, TXT, MD (Max 10MB each)
                 </p>
@@ -303,17 +462,45 @@ export default function KnowledgePage() {
         {/* Knowledge Items Section */}
         <Card>
           <CardHeader>
-            <div className="flex items-center justify-between">
-              <div>
+            <div className="flex items-center justify-between">              <div>
                 <CardTitle>Knowledge Items</CardTitle>
                 <CardDescription>
                   Manage your uploaded content and text entries
                 </CardDescription>
+                {/* Status Summary */}
+                <div className="flex items-center gap-4 mt-2 text-sm">
+                  <span className="text-muted-foreground">
+                    Total: <span className="font-medium text-foreground">{knowledgeItems.length}</span>
+                  </span>
+                  <span className="text-green-600">
+                    Ready: <span className="font-medium">{knowledgeItems.filter(item => item.status === 'READY').length}</span>
+                  </span>
+                  {knowledgeItems.filter(item => item.status === 'PROCESSING').length > 0 && (
+                    <span className="text-yellow-600">
+                      Processing: <span className="font-medium">{knowledgeItems.filter(item => item.status === 'PROCESSING').length}</span>
+                    </span>
+                  )}
+                  {knowledgeItems.filter(item => item.status === 'ERROR').length > 0 && (
+                    <span className="text-red-600">
+                      Errors: <span className="font-medium">{knowledgeItems.filter(item => item.status === 'ERROR').length}</span>
+                    </span>
+                  )}
+                </div>              </div>
+              <div className="flex gap-2">
+                <Button 
+                  variant="outline" 
+                  size="sm"
+                  onClick={fetchKnowledgeItems}
+                  disabled={isLoading}
+                >
+                  <RefreshCw className={`mr-2 h-4 w-4 ${isLoading ? 'animate-spin' : ''}`} />
+                  Refresh
+                </Button>
+                <Button variant="outline" size="sm">
+                  <Plus className="mr-2 h-4 w-4" />
+                  Add New
+                </Button>
               </div>
-              <Button variant="outline" size="sm">
-                <Plus className="mr-2 h-4 w-4" />
-                Add New
-              </Button>
             </div>
           </CardHeader>
           <CardContent>
@@ -347,11 +534,14 @@ export default function KnowledgePage() {
                   </DropdownMenuItem>
                 </DropdownMenuContent>
               </DropdownMenu>
-            </div>
-
-            {/* Knowledge Items List */}
+            </div>            {/* Knowledge Items List */}
             <div className="space-y-3">
-              {filteredItems.length === 0 ? (
+              {isLoading ? (
+                <div className="text-center py-12">
+                  <RefreshCw className="mx-auto h-8 w-8 text-muted-foreground animate-spin mb-4" />
+                  <p className="text-muted-foreground">Loading knowledge items...</p>
+                </div>
+              ) : filteredItems.length === 0 ? (
                 <div className="text-center py-12">
                   <FileText className="mx-auto h-12 w-12 text-muted-foreground mb-4" />
                   <p className="text-muted-foreground">
@@ -366,18 +556,16 @@ export default function KnowledgePage() {
                     key={item.id}
                     className="flex items-center justify-between p-4 border rounded-lg hover:bg-muted/50 transition-colors"
                   >
-                    <div className="flex items-center space-x-4">
-                      <div className="p-2 rounded-lg bg-primary/10">
-                        {item.type === 'file' ? (
+                    <div className="flex items-center space-x-4">                      <div className="p-2 rounded-lg bg-primary/10">
+                        {item.type === 'FILE' ? (
                           <File className="h-5 w-5 text-primary" />
                         ) : (
                           <FileText className="h-5 w-5 text-primary" />
                         )}
                       </div>
                       <div className="flex-1">
-                        <h3 className="font-medium text-foreground">{item.title}</h3>
-                        <div className="flex items-center space-x-4 mt-1">
-                          {item.type === 'file' && item.fileName && (
+                        <h3 className="font-medium text-foreground">{item.title}</h3>                        <div className="flex items-center space-x-4 mt-1">
+                          {item.type === 'FILE' && item.fileName && (
                             <span className="text-sm text-muted-foreground">
                               {item.fileName}
                             </span>
@@ -388,16 +576,16 @@ export default function KnowledgePage() {
                             </span>
                           )}
                           <span className="text-sm text-muted-foreground">
-                            {new Date(item.uploadedAt).toLocaleDateString()}
+                            {new Date(item.createdAt).toLocaleDateString()}
                           </span>
                           <span className={`text-xs px-2 py-1 rounded-full ${
-                            item.status === 'ready' 
+                            item.status === 'READY' 
                               ? 'bg-green-100 text-green-800 dark:bg-green-900 dark:text-green-300'
-                              : item.status === 'processing'
+                              : item.status === 'PROCESSING'
                               ? 'bg-yellow-100 text-yellow-800 dark:bg-yellow-900 dark:text-yellow-300'
                               : 'bg-red-100 text-red-800 dark:bg-red-900 dark:text-red-300'
                           }`}>
-                            {item.status}
+                            {item.status.toLowerCase()}
                           </span>
                         </div>
                       </div>
@@ -408,18 +596,19 @@ export default function KnowledgePage() {
                           <MoreVertical className="h-4 w-4" />
                         </Button>
                       </DropdownMenuTrigger>
-                      <DropdownMenuContent align="end">
-                        <DropdownMenuItem>
+                      <DropdownMenuContent align="end">                        <DropdownMenuItem onClick={() => handleViewKnowledgeItem(item)}>
                           <Eye className="mr-2 h-4 w-4" />
                           View
                         </DropdownMenuItem>
-                        {item.type === 'file' && (
-                          <DropdownMenuItem>
+                        {item.type === 'FILE' && (
+                          <DropdownMenuItem onClick={() => handleDownloadKnowledgeItem(item)}>
                             <Download className="mr-2 h-4 w-4" />
                             Download
                           </DropdownMenuItem>
-                        )}
-                        <DropdownMenuItem className="text-destructive">
+                        )}                        <DropdownMenuItem 
+                          className="text-destructive"
+                          onClick={() => handleDeleteKnowledgeItem(item.id)}
+                        >
                           <Trash2 className="mr-2 h-4 w-4" />
                           Delete
                         </DropdownMenuItem>
@@ -428,9 +617,261 @@ export default function KnowledgePage() {
                   </div>
                 ))
               )}
-            </div>
-          </CardContent>
+            </div>          </CardContent>
         </Card>
-      </div>    </div>
+      </div>
+
+      {/* View Modal */}
+      <Dialog open={viewModalOpen} onOpenChange={setViewModalOpen}>
+        <DialogContent className="max-w-4xl max-h-[80vh] overflow-auto">          <DialogHeader>            <DialogTitle className="flex items-center gap-2">
+              {selectedItem?.type === 'FILE' ? (
+                (() => {
+                  const fileInfo = getFileTypeInfo(selectedItem.mimeType);
+                  const IconComponent = fileInfo.icon;
+                  return <IconComponent className={`h-5 w-5 ${fileInfo.color}`} />;
+                })()
+              ) : (
+                <FileText className="h-5 w-5 text-blue-600" />
+              )}
+              {selectedItem?.title}
+            </DialogTitle>
+            <DialogDescription className="text-sm text-muted-foreground">
+              {selectedItem?.type === 'FILE' ? (
+                selectedItem.fileName && selectedItem.fileSize
+                  ? `${getFileTypeInfo(selectedItem.mimeType).type} • ${selectedItem.fileName} • Size: ${formatFileSize(selectedItem.fileSize)} • Created: ${new Date(selectedItem.createdAt).toLocaleDateString()}`
+                  : `${getFileTypeInfo(selectedItem.mimeType).type} • ${selectedItem.fileName || 'Unknown'} • Created: ${new Date(selectedItem.createdAt).toLocaleDateString()}`
+              ) : (
+                `Text content • Created: ${selectedItem && new Date(selectedItem.createdAt).toLocaleDateString()}`
+              )}
+            </DialogDescription>
+          </DialogHeader>
+            {selectedItem && (
+            <div className="mt-4">
+              {selectedItem.status === 'PROCESSING' ? (
+                <div className="flex items-center justify-center py-8">
+                  <div className="text-muted-foreground">Processing content...</div>
+                </div>
+              ) : selectedItem.status === 'ERROR' ? (
+                <div className="flex items-center justify-center py-8">
+                  <div className="text-destructive">Error processing content</div>
+                </div>
+              ) : selectedItem.type === 'FILE' && selectedItem.mimeType === 'application/pdf' ? (
+                // PDF Viewer
+                <div className="space-y-4">                  <div className="flex items-center gap-2 text-sm text-muted-foreground bg-muted/30 px-3 py-2 rounded-lg">
+                    <FileText className="h-4 w-4 text-red-600" />
+                    <span>PDF Document Viewer</span>
+                    <div className="ml-auto flex gap-2">
+                      <Button 
+                        variant="outline" 
+                        size="sm"
+                        onClick={() => window.open(`/api/knowledge/${selectedItem.id}/download?inline=true`, '_blank')}
+                      >
+                        <Eye className="h-4 w-4 mr-1" />
+                        Open in New Tab
+                      </Button>
+                      <Button 
+                        variant="outline" 
+                        size="sm"
+                        onClick={() => handleDownloadKnowledgeItem(selectedItem)}
+                      >
+                        <Download className="h-4 w-4 mr-1" />
+                        Download
+                      </Button>
+                    </div>
+                  </div>
+                    {/* PDF Embed */}
+                  <div className="border rounded-lg overflow-hidden bg-white">
+                    <iframe
+                      src={`/api/knowledge/${selectedItem.id}/download?inline=true`}
+                      className="w-full h-[600px]"
+                      title={`PDF: ${selectedItem.fileName}`}
+                      style={{ border: 'none' }}
+                    />
+                  </div>
+                    <div className="text-xs text-muted-foreground text-center">                    <p>💡 <strong>Tip:</strong> If the PDF doesn&apos;t display properly above, try opening it in a new tab or downloading it.</p>
+                    <p>You can also zoom, scroll, and navigate through the PDF using your browser&apos;s built-in controls.</p>
+                  </div>
+                </div>
+              ) : selectedItem.content ? (
+                <div className="space-y-4">
+                  {/* File type indicator */}
+                  {selectedItem.type === 'FILE' && selectedItem.mimeType && (
+                    <div className="flex items-center gap-2 text-sm text-muted-foreground bg-muted/30 px-3 py-2 rounded-lg">
+                      <File className="h-4 w-4" />
+                      <span>Extracted content from {getFileTypeInfo(selectedItem.mimeType).type}</span>
+                    </div>
+                  )}
+                    {/* Content display */}
+                  <div className={`
+                    whitespace-pre-wrap bg-muted/50 p-4 rounded-lg max-h-96 overflow-auto text-sm
+                    ${selectedItem.mimeType === 'text/markdown' ? 'font-mono' : ''}
+                  `}>                    {/* Special handling for different message types */}
+                    {selectedItem.content.includes('[PDF file uploaded successfully. This PDF is displayed directly in the viewer') ? (
+                      <div className="space-y-3">
+                        <div className="text-green-600 flex items-center gap-2">
+                          <span className="text-lg">✅</span>
+                          <span className="font-medium">PDF Ready for Viewing</span>
+                        </div>
+                        <p className="text-muted-foreground">
+                          This PDF has been uploaded successfully and is available for direct viewing.
+                        </p>
+                        <div className="bg-green-50 dark:bg-green-900/20 p-3 rounded border-l-4 border-green-400">
+                          <p className="text-sm text-green-800 dark:text-green-200 font-medium mb-2">
+                            📖 How to view this PDF:
+                          </p>
+                          <ul className="list-disc pl-4 text-sm text-green-700 dark:text-green-300 space-y-1">
+                            <li>The PDF is displayed above using a built-in viewer</li>
+                            <li>Use &quot;Open in New Tab&quot; for a larger view</li>
+                            <li>Download the file to save it locally</li>
+                            <li>Use browser zoom controls for better readability</li>
+                          </ul>
+                        </div>
+                      </div>
+                    ) : selectedItem.content.includes('[PDF uploaded successfully but no text content was found') ? (
+                      <div className="space-y-3">
+                        <div className="text-amber-600 flex items-center gap-2">
+                          <span className="text-lg">📄</span>
+                          <span className="font-medium">PDF Uploaded Successfully</span>
+                        </div>
+                        <p className="text-muted-foreground">
+                          This PDF was uploaded successfully but appears to contain no extractable text content.
+                        </p>
+                        <div className="bg-amber-50 dark:bg-amber-900/20 p-3 rounded border-l-4 border-amber-400">
+                          <p className="text-sm text-amber-800 dark:text-amber-200 font-medium mb-2">
+                            This could be because:
+                          </p>
+                          <ul className="list-disc pl-4 text-sm text-amber-700 dark:text-amber-300 space-y-1">
+                            <li>The PDF contains only images or scanned content</li>
+                            <li>The PDF uses non-standard fonts or encoding</li>
+                            <li>The content is primarily visual (charts, diagrams, etc.)</li>
+                          </ul>
+                        </div>
+                        <p className="text-muted-foreground text-sm">
+                          💡 <strong>Tip:</strong> If this PDF contains important text, consider copying the text manually 
+                          and adding it as a text entry to make it searchable by the AI.
+                        </p>
+                      </div>
+                    ) : selectedItem.content.includes('[PDF file uploaded successfully but text extraction failed') ? (
+                      <div className="space-y-3">
+                        <div className="text-destructive flex items-center gap-2">
+                          <span className="text-lg">⚠️</span>
+                          <span className="font-medium">PDF Text Extraction Failed</span>
+                        </div>
+                        <p className="text-muted-foreground">
+                          The PDF file was uploaded successfully but text extraction encountered an error.
+                        </p>
+                        <div className="bg-destructive/10 p-3 rounded border-l-4 border-destructive">
+                          <p className="text-sm text-destructive font-medium mb-2">
+                            Common reasons for extraction failure:
+                          </p>
+                          <ul className="list-disc pl-4 text-sm text-destructive/80 space-y-1">
+                            <li>Image-based or scanned PDF</li>
+                            <li>Password-protected or encrypted PDF</li>
+                            <li>Corrupted PDF file</li>
+                            <li>PDF parsing library issues</li>
+                          </ul>
+                        </div>
+                        <div className="bg-blue-50 dark:bg-blue-900/20 p-3 rounded">
+                          <p className="text-sm text-blue-800 dark:text-blue-200 font-medium mb-1">
+                            💡 Solutions:
+                          </p>
+                          <ul className="list-disc pl-4 text-sm text-blue-700 dark:text-blue-300 space-y-1">
+                            <li>Convert the PDF to a text file (.txt)</li>
+                            <li>Copy and paste the text content manually</li>
+                            <li>Use a different PDF with selectable text</li>
+                            <li>Try re-uploading the file</li>
+                          </ul>
+                        </div>
+                      </div>
+                    ) : selectedItem.content.includes('[Unable to extract text from PDF') ? (
+                      <div className="space-y-2">
+                        <div className="text-destructive flex items-center gap-2">
+                          <span className="text-lg">❌</span>
+                          <span className="font-medium">PDF Processing Error</span>
+                        </div>
+                        <p className="text-muted-foreground">
+                          There was an error processing this PDF file.
+                        </p>
+                        <div className="bg-destructive/10 p-3 rounded text-sm">
+                          {selectedItem.content}
+                        </div>
+                      </div>
+                    ) : selectedItem.content.includes('[Error extracting text from') ? (
+                      <div className="space-y-2">
+                        <div className="text-destructive flex items-center gap-2">
+                          <span className="text-lg">⚠️</span>
+                          <span className="font-medium">Content Extraction Error</span>
+                        </div>
+                        <p className="text-muted-foreground">
+                          There was an error extracting text from this file. 
+                          The file format might not be fully supported or the file might be corrupted.
+                        </p>
+                        <div className="bg-destructive/10 p-3 rounded text-sm">
+                          {selectedItem.content}
+                        </div>
+                      </div>
+                    ) : (
+                      <div>
+                        {/* Regular content display */}
+                        {selectedItem.mimeType === 'text/markdown' ? (
+                          <div className="space-y-2">
+                            <div className="text-xs text-muted-foreground bg-purple-50 dark:bg-purple-900/20 px-2 py-1 rounded">
+                              📝 Markdown content
+                            </div>
+                            <div className="font-mono text-sm">
+                              {selectedItem.content}
+                            </div>
+                          </div>
+                        ) : (
+                          selectedItem.content
+                        )}
+                      </div>
+                    )}
+                  </div>
+                  
+                  {/* Content statistics */}
+                  <div className="flex items-center gap-4 text-xs text-muted-foreground border-t pt-3">
+                    <span>Characters: {selectedItem.content.length.toLocaleString()}</span>
+                    <span>Words: {selectedItem.content.split(/\s+/).filter(word => word.length > 0).length.toLocaleString()}</span>
+                    <span>Lines: {selectedItem.content.split('\n').length.toLocaleString()}</span>
+                  </div>
+                </div>
+              ) : (
+                <div className="flex items-center justify-center py-8">
+                  <div className="text-muted-foreground">No content available</div>
+                </div>
+              )}
+            </div>
+          )}        </DialogContent>
+      </Dialog>
+
+      {/* Help Section */}
+      <div className="mt-8 p-4 bg-muted/30 rounded-lg border">
+        <h3 className="font-semibold mb-2 flex items-center">
+          <FileText className="mr-2 h-4 w-4" />
+          💡 Tips for Better Knowledge Management
+        </h3>
+        <div className="grid grid-cols-1 md:grid-cols-2 gap-4 text-sm text-muted-foreground">
+          <div>
+            <p className="mb-2"><strong>Supported Files:</strong></p>
+            <ul className="list-disc pl-4 space-y-1">
+              <li>PDF documents (text will be extracted)</li>
+              <li>Word documents (.doc, .docx)</li>
+              <li>Text files (.txt, .md)</li>
+              <li>Excel spreadsheets</li>
+            </ul>
+          </div>
+          <div>
+            <p className="mb-2"><strong>Best Practices:</strong></p>
+            <ul className="list-disc pl-4 space-y-1">
+              <li>Use descriptive titles for better searchability</li>
+              <li>Organize content by topic or category</li>
+              <li>Check the status indicator after uploading</li>
+              <li>Use the search function to find specific content</li>
+            </ul>
+          </div>
+        </div>
+      </div>
+    </div>
   );
 }

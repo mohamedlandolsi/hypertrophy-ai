@@ -1,0 +1,151 @@
+import { NextRequest, NextResponse } from 'next/server';
+import { createClient } from '@/lib/supabase/server';
+import { prisma } from '@/lib/prisma';
+import { writeFile, mkdir } from 'fs/promises';
+import { join } from 'path';
+import { existsSync } from 'fs';
+import { extractTextFromFile, isFileTypeSupported, getMaxFileSize } from '@/lib/file-processor';
+
+// POST - Upload and process files
+export async function POST(request: NextRequest) {
+  console.log('📁 Upload API called');
+  
+  try {
+    console.log('🔐 Checking authentication...');
+    const supabase = await createClient();
+    const { data: { user }, error: authError } = await supabase.auth.getUser();
+
+    if (authError || !user) {
+      console.log('❌ Authentication failed:', authError);
+      return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
+    }
+
+    console.log('✅ User authenticated:', user.id);
+
+    console.log('📤 Parsing form data...');
+    const formData = await request.formData();
+    const files = formData.getAll('files') as File[];
+
+    console.log('📊 Files received:', files.length);
+
+    if (!files || files.length === 0) {
+      console.log('❌ No files provided');
+      return NextResponse.json(
+        { error: 'No files provided' },
+        { status: 400 }
+      );
+    }    console.log('💾 Ensuring user exists in database...');
+    // Ensure user exists in our database
+    await prisma.user.upsert({
+      where: { id: user.id },
+      update: {},
+      create: { id: user.id }
+    });    const uploadedItems = [];
+    const skippedFiles = [];
+
+    console.log('📁 Creating upload directories...');
+    // Create uploads directory if it doesn't exist
+    const uploadsDir = join(process.cwd(), 'uploads');
+    if (!existsSync(uploadsDir)) {
+      await mkdir(uploadsDir, { recursive: true });
+    }
+
+    // Create user-specific directory
+    const userDir = join(uploadsDir, user.id);
+    if (!existsSync(userDir)) {
+      await mkdir(userDir, { recursive: true });
+    }
+
+    console.log('🔄 Processing files...');
+    for (const file of files) {
+      console.log(`📄 Processing file: ${file.name} (${file.type}, ${file.size} bytes)`);
+      
+      // Validate file size
+      const maxSize = getMaxFileSize();
+      if (file.size > maxSize) {
+        const reason = `File size ${Math.round(file.size / 1024 / 1024)}MB exceeds the ${Math.round(maxSize / 1024 / 1024)}MB limit`;
+        console.log(`⚠️ Skipping file ${file.name}: ${reason}`);
+        skippedFiles.push({ name: file.name, reason });
+        continue;
+      }
+
+      // Validate file type
+      if (!isFileTypeSupported(file.type)) {
+        const reason = `File type ${file.type} is not supported`;
+        console.log(`⚠️ Skipping file ${file.name}: ${reason}`);
+        skippedFiles.push({ name: file.name, reason });
+        continue;
+      }
+
+      try {
+        console.log(`💾 Saving file: ${file.name}`);
+        // Generate unique filename
+        const timestamp = Date.now();
+        const fileName = `${timestamp}-${file.name}`;
+        const filePath = join(userDir, fileName);
+
+        // Save file to disk
+        const bytes = await file.arrayBuffer();
+        const buffer = Buffer.from(bytes);
+        await writeFile(filePath, buffer);
+
+        console.log(`🔍 Extracting text from: ${file.name}`);
+        // Extract text content using the file processor
+        const content = await extractTextFromFile(buffer, file.type, file.name);
+
+        console.log(`💾 Creating database record for: ${file.name}`);
+        // Create knowledge item in database
+        const knowledgeItem = await prisma.knowledgeItem.create({
+          data: {
+            title: file.name,
+            type: 'FILE',
+            content: content,
+            fileName: file.name,
+            fileSize: file.size,
+            filePath: filePath,
+            mimeType: file.type,
+            status: 'READY',
+            userId: user.id,
+          }
+        });        console.log(`✅ Successfully processed: ${file.name}`);
+        uploadedItems.push(knowledgeItem);
+      } catch (fileError) {
+        console.error(`❌ Error processing file ${file.name}:`, fileError);
+        skippedFiles.push({ 
+          name: file.name, 
+          reason: `Processing error: ${(fileError as Error).message}` 
+        });
+      }
+    }
+
+    console.log(`🎉 Upload completed. Successfully processed ${uploadedItems.length} file(s), skipped ${skippedFiles.length} file(s)`);
+    
+    // If no files were processed successfully, return an error
+    if (uploadedItems.length === 0) {
+      const errorMessage = skippedFiles.length > 0 
+        ? `No files could be processed. Issues: ${skippedFiles.map(f => `${f.name}: ${f.reason}`).join('; ')}`
+        : 'No files could be processed.';
+      
+      return NextResponse.json({ 
+        error: errorMessage,
+        skippedFiles 
+      }, { status: 400 });
+    }
+    
+    const responseMessage = uploadedItems.length === files.length
+      ? `Successfully uploaded ${uploadedItems.length} file(s)`
+      : `Successfully uploaded ${uploadedItems.length} out of ${files.length} file(s)`;
+    
+    return NextResponse.json({ 
+      message: responseMessage,
+      knowledgeItems: uploadedItems,
+      skippedFiles: skippedFiles.length > 0 ? skippedFiles : undefined
+    });
+  } catch (error) {
+    console.error('❌ Upload API error:', error);
+    return NextResponse.json(
+      { error: 'Failed to upload files: ' + (error as Error).message },
+      { status: 500 }
+    );
+  }
+}

@@ -62,14 +62,12 @@ export async function POST(request: NextRequest) {
         role: 'USER',
         chatId: chatId,
       }
-    });
-
-    // Prepare conversation history for Gemini
+    });    // Prepare conversation history for Gemini
     const allMessages = [...existingMessages, userMessage];
     const conversationForGemini = formatConversationForGemini(allMessages);
 
-    // Get AI response from Gemini
-    const assistantReply = await sendToGemini(conversationForGemini);
+    // Get AI response from Gemini with user context for knowledge base
+    const assistantReply = await sendToGemini(conversationForGemini, user.id);
 
     // Save assistant message to database
     const assistantMessage = await prisma.message.create({

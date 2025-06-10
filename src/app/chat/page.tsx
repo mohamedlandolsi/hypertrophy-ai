@@ -5,7 +5,7 @@ import { useEffect, useState as reactUseState } from 'react'; // Renamed to avoi
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 // Updated lucide-react imports
-import { Settings, MessageSquare, Send, ChevronLeft, Menu, User, LogOut, Database } from 'lucide-react';
+import { Settings, MessageSquare, Send, ChevronLeft, Menu, User, LogOut, Database, Trash2 } from 'lucide-react';
 import Link from 'next/link';
 import { ThemeToggle } from '@/components/theme-toggle';
 import type { User as SupabaseUser } from '@supabase/supabase-js';
@@ -127,6 +127,42 @@ const ChatPage = () => {
     setActiveChatId(null);
     setMessages([]);
     router.push('/chat', { scroll: false });
+  };
+  const handleDeleteChat = async (chatId: string, e: React.MouseEvent) => {
+    // Prevent the chat from being selected when delete button is clicked
+    e.stopPropagation();
+    
+    // Find the chat to get its title for the confirmation
+    const chatToDelete = chatHistory.find(chat => chat.id === chatId);
+    const chatTitle = chatToDelete?.title || `Chat from ${chatToDelete ? new Date(chatToDelete.createdAt).toLocaleDateString() : 'Unknown date'}`;
+    
+    if (!confirm(`Are you sure you want to delete "${chatTitle}"? This action cannot be undone.`)) {
+      return;
+    }
+
+    try {
+      const response = await fetch(`/api/conversations/${chatId}`, {
+        method: 'DELETE',
+      });
+
+      if (response.ok) {
+        // Remove the chat from local state
+        setChatHistory(prev => prev.filter(chat => chat.id !== chatId));
+        
+        // If the deleted chat was active, redirect to new chat
+        if (activeChatId === chatId) {
+          setActiveChatId(null);
+          setMessages([]);
+          router.push('/chat', { scroll: false });
+        }
+      } else {
+        console.error('Failed to delete chat');
+        alert('Failed to delete chat. Please try again.');
+      }
+    } catch (error) {
+      console.error('Error deleting chat:', error);
+      alert('Failed to delete chat. Please try again.');
+    }
   };
 
   const handleInputChange = (e: React.ChangeEvent<HTMLInputElement>) => {
@@ -254,21 +290,32 @@ const ChatPage = () => {
             {/* Chat History List */}
             <div className="flex-1 space-y-1.5 overflow-y-auto -mr-2 pr-2">
               {isLoadingHistory ? (
-                <p className="text-sm text-muted-foreground text-center pt-10">Loading history...</p>
-              ) : chatHistory.length > 0 ? (
+                <p className="text-sm text-muted-foreground text-center pt-10">Loading history...</p>              ) : chatHistory.length > 0 ? (
                 chatHistory.map(chat => (
-                  <Button
+                  <div
                     key={chat.id}
-                    variant={activeChatId === chat.id ? "secondary" : "ghost"}
-                    className="w-full justify-start text-left h-9 px-2.5 hover:bg-muted/50"
-                    onClick={() => loadChatSession(chat.id)}
-                    disabled={isLoadingMessages && activeChatId === chat.id}
+                    className={`group flex items-center w-full h-9 px-2.5 rounded-md hover:bg-muted/50 ${
+                      activeChatId === chat.id ? "bg-secondary" : ""
+                    }`}
                   >
-                    <MessageSquare className="mr-2 h-3.5 w-3.5 flex-shrink-0 text-muted-foreground" />
-                    <span className="truncate text-sm font-normal text-foreground/90">
-                      {chat.title || `Chat from ${new Date(chat.createdAt).toLocaleDateString()}`}
-                    </span>
-                  </Button>
+                    <button
+                      className="flex items-center flex-1 min-w-0 text-left"
+                      onClick={() => loadChatSession(chat.id)}
+                      disabled={isLoadingMessages && activeChatId === chat.id}
+                    >
+                      <MessageSquare className="mr-2 h-3.5 w-3.5 flex-shrink-0 text-muted-foreground" />
+                      <span className="truncate text-sm font-normal text-foreground/90">
+                        {chat.title || `Chat from ${new Date(chat.createdAt).toLocaleDateString()}`}
+                      </span>
+                    </button>
+                    <button
+                      onClick={(e) => handleDeleteChat(chat.id, e)}
+                      className="opacity-0 group-hover:opacity-100 transition-opacity duration-200 p-1 rounded hover:bg-destructive/10"
+                      aria-label="Delete chat"
+                    >
+                      <Trash2 className="h-3.5 w-3.5 text-destructive hover:text-destructive/80" />
+                    </button>
+                  </div>
                 ))
               ) : (
                 <p className="text-sm text-muted-foreground text-center pt-10">No chat history.</p>

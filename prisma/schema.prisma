@@ -18,9 +18,10 @@ model Document {
 }
 
 model User {
-  id      String   @id @default(cuid()) // This will correspond to the Supabase auth.users.id
-  profile Profile?
-  chats   Chat[]
+  id             String          @id @default(cuid()) // This will correspond to the Supabase auth.users.id
+  profile        Profile?
+  chats          Chat[]
+  knowledgeItems KnowledgeItem[]
 }
 
 model Profile {
@@ -54,7 +55,34 @@ model Message {
   chat      Chat     @relation(fields: [chatId], references: [id], onDelete: Cascade)
 }
 
+model KnowledgeItem {
+  id          String            @id @default(cuid())
+  title       String
+  type        KnowledgeType
+  content     String?           @db.Text
+  fileName    String?
+  fileSize    Int?
+  filePath    String?
+  mimeType    String?
+  status      ProcessingStatus  @default(PROCESSING)
+  createdAt   DateTime          @default(now())
+  updatedAt   DateTime          @updatedAt
+  userId      String
+  user        User              @relation(fields: [userId], references: [id], onDelete: Cascade)
+}
+
 enum Role {
   USER
   ASSISTANT
+}
+
+enum KnowledgeType {
+  FILE
+  TEXT
+}
+
+enum ProcessingStatus {
+  PROCESSING
+  READY
+  ERROR
 }
