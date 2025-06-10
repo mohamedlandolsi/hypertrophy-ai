@@ -53,9 +53,25 @@ export async function middleware(request: NextRequest) {
       },
     }
   )
-
   // Refresh session if expired - required for Server Components
-  await supabase.auth.getUser()
+  // await supabase.auth.getUser()
+  const { data: { user } } = await supabase.auth.getUser();
+
+  // Temporarily allow access to /chat for testing
+  // if (!user && request.nextUrl.pathname.startsWith('/chat')) {
+  //   return NextResponse.redirect(new URL('/login', request.url))
+  // }
+  if (!user && request.nextUrl.pathname.startsWith('/chat')) {
+    return NextResponse.redirect(new URL('/login', request.url))
+  }
+
+  if (!user && request.nextUrl.pathname.startsWith('/knowledge')) {
+    return NextResponse.redirect(new URL('/login', request.url))
+  }
+
+  if (user && (request.nextUrl.pathname.startsWith('/login') || request.nextUrl.pathname.startsWith('/signup'))) {
+    return NextResponse.redirect(new URL('/chat', request.url));
+  }
 
   return response
 }

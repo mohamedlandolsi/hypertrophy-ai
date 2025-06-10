@@ -1,0 +1,60 @@
+// This is your Prisma schema file,
+// learn more about it in the docs: https://pris.ly/d/prisma-schema
+
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider  = "postgresql"
+  url       = env("DATABASE_URL")
+  directUrl = env("DIRECT_URL")
+}
+
+model Document {
+  id        String @id @default(cuid())
+  content   String
+  // embedding Unsupported("vector(768)") // Commented out for now - requires pgvector extension
+}
+
+model User {
+  id      String   @id @default(cuid()) // This will correspond to the Supabase auth.users.id
+  profile Profile?
+  chats   Chat[]
+}
+
+model Profile {
+  id                  String    @id @default(cuid())
+  user                User      @relation(fields: [id], references: [id])
+  training_experience String?
+  weekly_training_days String?
+  main_goal           String?
+
+  // Subscription & Gating Fields
+  subscriptionStatus  String    @default("free") // e.g., "free", "pro"
+  dailyMessageCount   Int       @default(0)
+  lastMessageDate     DateTime?
+}
+
+model Chat {
+  id        String    @id @default(cuid())
+  title     String
+  createdAt DateTime  @default(now())
+  userId    String
+  user      User      @relation(fields: [userId], references: [id])
+  messages  Message[]
+}
+
+model Message {
+  id        String   @id @default(cuid())
+  createdAt DateTime @default(now())
+  content   String   @db.Text
+  role      Role
+  chatId    String
+  chat      Chat     @relation(fields: [chatId], references: [id], onDelete: Cascade)
+}
+
+enum Role {
+  USER
+  ASSISTANT
+}

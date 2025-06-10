@@ -2,9 +2,16 @@
 
 import { createClient } from '@/lib/supabase/client';
 import { useEffect, useState } from 'react';
+import type { User as SupabaseUser, Session } from '@supabase/supabase-js';
 
 export default function AuthDebugPage() {
-  const [authState, setAuthState] = useState<any>(null);
+  const [authState, setAuthState] = useState<{
+    user: SupabaseUser | null;
+    session?: Session | null;
+    error?: string | null;
+    timestamp: string;
+    event?: string;
+  } | null>(null);
   const [loading, setLoading] = useState(true);
 
   useEffect(() => {
@@ -13,10 +20,9 @@ export default function AuthDebugPage() {
     // Get initial auth state
     const getInitialAuth = async () => {
       try {
-        const { data: { user }, error } = await supabase.auth.getUser();
-        setAuthState({
+        const { data: { user }, error } = await supabase.auth.getUser();        setAuthState({
           user,
-          error: error?.message,
+          error: error?.message || null,
           timestamp: new Date().toISOString()
         });
       } catch (err) {
@@ -35,11 +41,11 @@ export default function AuthDebugPage() {
     // Listen for auth changes
     const { data: { subscription } } = supabase.auth.onAuthStateChange(
       (event, session) => {
-        console.log('Auth state changed:', event, session);
-        setAuthState({
+        console.log('Auth state changed:', event, session);        setAuthState({
           user: session?.user || null,
           event,
           session,
+          error: null,
           timestamp: new Date().toISOString()
         });
       }

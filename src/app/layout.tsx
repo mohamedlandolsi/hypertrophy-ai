@@ -1,11 +1,8 @@
 import type { Metadata } from "next";
 import { Geist, Geist_Mono } from "next/font/google";
 import "./globals.css";
-import { Button } from "@/components/ui/button";
-import { createClient } from "@/lib/supabase/server";
-import { redirect } from "next/navigation";
-import { revalidatePath } from 'next/cache';
-import Navbar from '@/components/navbar'; // Import the Navbar component
+import ConditionalNavbar from '@/components/conditional-navbar'; // Import ConditionalNavbar
+import { ThemeProvider } from "@/components/theme-provider"; // Import ThemeProvider
 
 const geistSans = Geist({
   variable: "--font-geist-sans",
@@ -22,37 +19,25 @@ export const metadata: Metadata = {
   description: "Your personal AI fitness coach",
 };
 
-async function signOutAction() {
-  'use server';
-  const supabase = await createClient();
-  
-  // Sign out from Supabase
-  await supabase.auth.signOut();
-  
-  // Revalidate multiple paths to ensure cache is cleared
-  revalidatePath('/', 'layout');
-  revalidatePath('/dashboard');
-  revalidatePath('/login');
-  
-  // Redirect to home page
-  redirect('/');
-}
-
 export default async function RootLayout({
   children,
 }: Readonly<{
   children: React.ReactNode;
 }>) {
-  const supabase = await createClient();
-  const { data: { user } } = await supabase.auth.getUser();
-
   return (
-    <html lang="en">
+    <html lang="en" suppressHydrationWarning className="h-full">
       <body
-        className={`${geistSans.variable} ${geistMono.variable} font-sans antialiased`}
+        className={`${geistSans.variable} ${geistMono.variable} font-sans antialiased flex flex-col h-full`}
       >
-        <Navbar />
-        <main className="flex-1">{children}</main>
+        <ThemeProvider
+          attribute="class"
+          defaultTheme="system"
+          enableSystem
+          disableTransitionOnChange
+        >
+          <ConditionalNavbar /> {/* Use ConditionalNavbar */}
+          <main className="flex-1 flex flex-col">{children}</main>
+        </ThemeProvider>
       </body>
     </html>
   );

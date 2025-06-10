@@ -1,5 +1,3 @@
-'use server';
-
 import { Button } from "@/components/ui/button";
 import {
   Card,
@@ -14,10 +12,12 @@ import { Label } from "@/components/ui/label";
 import { createClient } from "@/lib/supabase/server";
 import { redirect } from "next/navigation";
 
-export async function login(formData: FormData) {
+async function login(formData: FormData) {
+  'use server';
+  
   const email = formData.get("email") as string;
   const password = formData.get("password") as string;
-  const supabase = await createClient(); // Await the client creation
+  const supabase = await createClient();
 
   const { error } = await supabase.auth.signInWithPassword({
     email,
@@ -28,14 +28,13 @@ export async function login(formData: FormData) {
     return redirect("/login?message=Could not authenticate user");
   }
 
-  return redirect("/dashboard");
+  return redirect("/chat");
 }
 
-
-
-export async function signInWithGoogle() {
-  const supabase = await createClient(); // Await the client creation
-  // Get redirect URL from environment or construct dynamically
+async function signInWithGoogle() {
+  'use server';
+  
+  const supabase = await createClient();
   const redirectTo = process.env.NEXT_PUBLIC_SITE_URL
     ? `${process.env.NEXT_PUBLIC_SITE_URL}/auth/callback`
     : "/auth/callback";
@@ -53,7 +52,7 @@ export async function signInWithGoogle() {
   }
 
   if (data.url) {
-    return redirect(data.url); // Redirect to Google's OAuth page
+    return redirect(data.url);
   }
 
   return redirect("/login?message=Could not get Google OAuth URL");
@@ -62,8 +61,10 @@ export async function signInWithGoogle() {
 export default async function LoginPage({
   searchParams,
 }: {
-  searchParams?: { message?: string };
+  searchParams: Promise<{ message?: string }>;
 }) {
+  const params = await searchParams;
+  
   return (
     <div className="flex min-h-screen flex-col items-center justify-center bg-background">
       <Card className="w-full max-w-sm">
@@ -89,12 +90,13 @@ export default async function LoginPage({
               <Label htmlFor="password">Password</Label>
               <Input id="password" name="password" type="password" required />
             </div>
-            {searchParams?.message && (
+            {params?.message && (
               <p className="text-sm font-medium text-destructive">
-                {searchParams.message}
+                {params.message}
               </p>
             )}
-          </CardContent>          <CardFooter className="flex flex-col gap-4">
+          </CardContent>
+          <CardFooter className="flex flex-col gap-4 pt-4">
             <Button formAction={login} className="w-full">
               Sign In
             </Button>
@@ -104,9 +106,8 @@ export default async function LoginPage({
               className="w-full"
             >
               Sign In with Google
-            </Button>
-            <div className="text-center text-sm">
-              Don't have an account?{" "}
+            </Button>            <div className="text-center text-sm">
+              Don&apos;t have an account?{" "}
               <a href="/signup" className="underline">
                 Sign Up
               </a>

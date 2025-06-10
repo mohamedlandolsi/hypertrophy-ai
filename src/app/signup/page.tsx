@@ -1,5 +1,3 @@
-'use server';
-
 import { Button } from "@/components/ui/button";
 import {
   Card,
@@ -14,7 +12,9 @@ import { Label } from "@/components/ui/label";
 import { createClient } from "@/lib/supabase/server";
 import { redirect } from "next/navigation";
 
-export async function signup(formData: FormData) {
+async function signup(formData: FormData) {
+  'use server';
+  
   const email = formData.get("email") as string;
   const password = formData.get("password") as string;
   const confirmPassword = formData.get("confirmPassword") as string;
@@ -44,7 +44,9 @@ export async function signup(formData: FormData) {
   return redirect("/signup?message=Check your email to continue sign up process");
 }
 
-export async function signInWithGoogle() {
+async function signInWithGoogle() {
+  'use server';
+  
   const supabase = await createClient();
   const redirectTo = process.env.NEXT_PUBLIC_SITE_URL
     ? `${process.env.NEXT_PUBLIC_SITE_URL}/auth/callback`
@@ -72,8 +74,10 @@ export async function signInWithGoogle() {
 export default async function SignupPage({
   searchParams,
 }: {
-  searchParams?: { message?: string };
+  searchParams: Promise<{ message?: string }>;
 }) {
+  const params = await searchParams;
+  
   return (
     <div className="flex min-h-screen flex-col items-center justify-center bg-background">
       <Card className="w-full max-w-sm">
@@ -115,17 +119,17 @@ export default async function SignupPage({
                 required
               />
             </div>
-            {searchParams?.message && (
+            {params?.message && (
               <p className={`text-sm font-medium ${
-                searchParams.message.includes("Check your email") 
+                params.message.includes("Check your email") 
                   ? "text-green-600" 
                   : "text-destructive"
               }`}>
-                {searchParams.message}
+                {params.message}
               </p>
             )}
           </CardContent>
-          <CardFooter className="flex flex-col gap-4">
+          <CardFooter className="flex flex-col gap-4 pt-4">
             <Button formAction={signup} className="w-full">
               Sign Up
             </Button>
