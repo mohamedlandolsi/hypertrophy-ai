@@ -119,4 +119,54 @@
   body {
     @apply bg-background text-foreground;
   }
+  
+  /* Arabic Text Improvements */
+  .arabic-text {
+    font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', 'Roboto', 'Amiri', 'Noto Sans Arabic', 'Arabic Typesetting', 'Times New Roman', serif;
+    line-height: 1.8;
+    letter-spacing: 0.01em;
+    font-variant-ligatures: common-ligatures;
+    font-feature-settings: "liga" 1, "calt" 1;
+    text-rendering: optimizeLegibility;
+  }
+  
+  /* RTL Support */
+  [dir="rtl"] {
+    text-align: right;
+  }
+  
+  [dir="rtl"] .arabic-text {
+    text-align: right;
+  }
+  
+  /* Mixed Content (Auto Direction) */
+  [dir="auto"] {
+    unicode-bidi: plaintext;
+    text-align: start;
+  }
+  
+  /* Message Content Specific Styling */
+  .message-content {
+    font-variant-ligatures: common-ligatures;
+    font-feature-settings: "liga" 1, "calt" 1;
+  }
+  
+  .message-content p {
+    unicode-bidi: plaintext;
+    word-break: break-word;
+    overflow-wrap: break-word;
+  }
+  
+  /* Better spacing for mixed Arabic/English content */
+  .text-mixed {
+    unicode-bidi: plaintext;
+    text-align: start;
+    word-spacing: 0.1em;
+  }
+  
+  /* Improved punctuation spacing for Arabic */
+  .arabic-text .punctuation {
+    margin-inline-start: 0.1em;
+    margin-inline-end: 0.1em;
+  }
 }

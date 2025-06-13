@@ -13,6 +13,7 @@ An AI-powered fitness coaching application that specializes in muscle hypertroph
   - Recovery Science
 - Chat history with delete functionality
 - Knowledge base-restricted responses (only uses your uploaded content)
+- **🌐 Multi-language Support**: Automatic Arabic language detection and response
 
 ### 📚 Knowledge Management System
 - **File Upload**: Support for PDFs, Word documents, text files, and Markdown
@@ -25,6 +26,16 @@ An AI-powered fitness coaching application that specializes in muscle hypertroph
 - Supabase authentication integration
 - User-specific data isolation
 - Secure file storage and access
+
+### 🌍 Language Support
+- **Automatic Language Detection**: Detects Arabic text in user messages
+- **Bilingual Responses**: Responds in Arabic when user prompts in Arabic
+- **Fitness Terminology**: Uses proper Arabic scientific and fitness terminology
+- **Context Awareness**: Maintains language consistency throughout conversations
+- **Enhanced Text Formatting**: Proper RTL/LTR support for mixed Arabic/English content
+- **Arabic-Aware Interface**: Dynamic input placeholders and text direction handling
+
+See [ARABIC_SUPPORT.md](./ARABIC_SUPPORT.md) for language features and [ARABIC_TEXT_FORMATTING.md](./ARABIC_TEXT_FORMATTING.md) for text formatting details.
 
 ## 🚀 Getting Started
 

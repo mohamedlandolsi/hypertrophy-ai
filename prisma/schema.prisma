@@ -22,6 +22,7 @@ model User {
   profile        Profile?
   chats          Chat[]
   knowledgeItems KnowledgeItem[]
+  clientMemory   ClientMemory?
 }
 
 model Profile {
@@ -69,6 +70,71 @@ model KnowledgeItem {
   updatedAt   DateTime          @updatedAt
   userId      String
   user        User              @relation(fields: [userId], references: [id], onDelete: Cascade)
+}
+
+model ClientMemory {
+  id                  String    @id @default(cuid())
+  userId              String    @unique
+  user                User      @relation(fields: [userId], references: [id], onDelete: Cascade)
+  
+  // Personal Information
+  name                String?
+  age                 Int?
+  height              Float?    // in cm
+  weight              Float?    // in kg
+  bodyFatPercentage   Float?
+  
+  // Training Information
+  trainingExperience  String?   // "beginner", "intermediate", "advanced"
+  weeklyTrainingDays  Int?      // 1-7
+  preferredTrainingStyle String? // "strength", "hypertrophy", "powerlifting", "bodybuilding"
+  trainingSchedule    String?   // "morning", "evening", "flexible"
+  availableTime       Int?      // minutes per session
+  
+  // Goals and Motivation
+  primaryGoal         String?   // "muscle_gain", "fat_loss", "strength", "general_fitness"
+  secondaryGoals      String[]  // array of additional goals
+  targetWeight        Float?    // goal weight in kg
+  targetBodyFat       Float?    // goal body fat percentage
+  goalDeadline        DateTime? // when they want to achieve their goal
+  motivation          String?   // what drives them
+  
+  // Health and Limitations
+  injuries            String[]  // current or past injuries
+  limitations         String[]  // physical limitations or restrictions
+  medications         String[]  // medications that might affect training
+  allergies           String[]  // food allergies or dietary restrictions
+  
+  // Preferences and Lifestyle
+  dietaryPreferences  String[]  // "vegetarian", "vegan", "keto", "paleo", etc.
+  foodDislikes        String[]  // foods they don't like
+  supplementsUsed     String[]  // current supplements
+  sleepHours          Float?    // average hours of sleep
+  stressLevel         String?   // "low", "moderate", "high"
+  workSchedule        String?   // "standard", "shift", "irregular"
+  
+  // Training Environment
+  gymAccess           Boolean   @default(false)
+  homeGym             Boolean   @default(false)
+  equipmentAvailable  String[]  // available equipment
+  gymBudget           Float?    // monthly gym/equipment budget
+  
+  // Progress Tracking
+  currentBench        Float?    // 1RM in kg
+  currentSquat        Float?    // 1RM in kg
+  currentDeadlift     Float?    // 1RM in kg
+  currentOHP          Float?    // 1RM in kg (overhead press)
+  
+  // Communication Preferences
+  preferredLanguage   String    @default("en") // "en", "ar", etc.
+  communicationStyle  String?   // "direct", "encouraging", "detailed", "simple"
+  
+  // AI Coaching Notes (structured memory)
+  coachingNotes       Json?     // JSON object for AI to store insights and observations
+  
+  createdAt           DateTime  @default(now())
+  updatedAt           DateTime  @updatedAt
+  lastInteraction     DateTime  @default(now())
 }
 
 enum Role {
