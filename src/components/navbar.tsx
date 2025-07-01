@@ -1,7 +1,7 @@
 'use client';
 
 import Link from 'next/link';
-import { Menu, Zap, User, MessageSquare, LayoutDashboard, Settings, LogOut } from 'lucide-react';
+import { Menu, Zap, User, MessageSquare, Settings, LogOut, LayoutDashboard, UserCircle } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Sheet, SheetContent, SheetTrigger, SheetClose, SheetTitle } from '@/components/ui/sheet';
 import { useState, useEffect } from 'react';
@@ -27,12 +27,28 @@ const Navbar = () => {
   const [isMobileMenuOpen, setIsMobileMenuOpen] = useState(false);
   const [user, setUser] = useState<SupabaseUser | null>(null);
   const [isLoadingUser, setIsLoadingUser] = useState(true);
+  const [userRole, setUserRole] = useState<string>('user');
 
   useEffect(() => {
     const supabase = createClient(); // Define supabase client here
     const fetchUser = async () => {
       const { data: { user: currentUser } } = await supabase.auth.getUser();
       setUser(currentUser);
+      
+      // Fetch user role from database if user exists
+      if (currentUser) {
+        try {
+          const response = await fetch('/api/user/role');
+          if (response.ok) {
+            const data = await response.json();
+            setUserRole(data.role || 'user');
+          }
+        } catch (error) {
+          console.error('Error fetching user role:', error);
+          setUserRole('user'); // Default to user role on error
+        }
+      }
+      
       setIsLoadingUser(false);
     };
     fetchUser();
@@ -42,6 +58,15 @@ const Navbar = () => {
       setUser(session?.user ?? null);
       if (event === 'SIGNED_IN' || event === 'SIGNED_OUT' || event === 'USER_UPDATED') {
         setIsLoadingUser(false);
+        // Fetch role when user signs in
+        if (session?.user && event === 'SIGNED_IN') {
+          fetch('/api/user/role')
+            .then(res => res.json())
+            .then(data => setUserRole(data.role || 'user'))
+            .catch(() => setUserRole('user'));
+        } else if (event === 'SIGNED_OUT') {
+          setUserRole('user');
+        }
       }
     });
 
@@ -51,8 +76,9 @@ const Navbar = () => {
   }, []);
 
   const navLinks = [
-    { href: "/dashboard", label: "Dashboard", icon: LayoutDashboard },
+    { href: "/profile", label: "Profile", icon: UserCircle },
     { href: "/chat", label: "Chat", icon: MessageSquare },
+    ...(userRole === 'admin' ? [{ href: "/admin", label: "Dashboard", icon: LayoutDashboard }] : []),
   ];
 
   const UserAvatarFallback = user ? (user.user_metadata?.full_name?.[0] || user.email?.[0])?.toUpperCase() : 'U';

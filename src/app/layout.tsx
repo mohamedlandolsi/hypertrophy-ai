@@ -3,7 +3,8 @@ import { Geist, Geist_Mono } from "next/font/google";
 import "./globals.css";
 import ConditionalNavbar from '@/components/conditional-navbar'; // Import ConditionalNavbar
 import { ThemeProvider } from "@/components/theme-provider"; // Import ThemeProvider
-import { Toaster } from "@/components/ui/sonner";
+import { Toaster as SonnerToaster } from "@/components/ui/sonner";
+import { Toaster } from "@/components/ui/toaster";
 
 const geistSans = Geist({
   variable: "--font-geist-sans",
@@ -38,7 +39,8 @@ export default async function RootLayout({
         >
           <ConditionalNavbar /> {/* Use ConditionalNavbar */}
           <main className="flex-1 flex flex-col">{children}</main>
-          <Toaster richColors position="top-right" />
+          <SonnerToaster richColors position="top-right" />
+          <Toaster />
         </ThemeProvider>
       </body>
     </html>

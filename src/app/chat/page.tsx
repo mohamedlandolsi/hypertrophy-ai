@@ -285,8 +285,10 @@ const ChatPage = () => {
           <div className="p-4 h-full flex flex-col">
             {/* Header */}
             <div className="mb-6">
-              <h2 className="text-lg font-bold text-foreground mb-1">Hypertrophy AI</h2>
-              <p className="text-xs text-muted-foreground">Your AI fitness coach</p>
+              <Link href="/" className="block hover:opacity-80 transition-opacity">
+                <h2 className="text-lg font-bold text-foreground mb-1">Hypertrophy AI</h2>
+                <p className="text-xs text-muted-foreground">Your AI fitness coach</p>
+              </Link>
             </div>
 
             {/* Action Buttons */}

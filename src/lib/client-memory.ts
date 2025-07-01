@@ -5,6 +5,7 @@ export interface MemoryUpdate {
   // Personal Information
   name?: string;
   age?: number;
+  gender?: 'MALE' | 'FEMALE' | 'OTHER' | 'PREFER_NOT_TO_SAY';
   height?: number; // in cm
   weight?: number; // in kg
   bodyFatPercentage?: number;
@@ -15,6 +16,7 @@ export interface MemoryUpdate {
   preferredTrainingStyle?: string;
   trainingSchedule?: string;
   availableTime?: number;
+  activityLevel?: 'SEDENTARY' | 'LIGHT' | 'MODERATE' | 'ACTIVE' | 'VERY_ACTIVE';
   
   // Goals and Motivation
   primaryGoal?: string;
@@ -52,7 +54,9 @@ export interface MemoryUpdate {
   
   // Communication Preferences
   preferredLanguage?: string;
-  communicationStyle?: string;  // AI Coaching Notes
+  communicationStyle?: string;
+  
+  // AI Coaching Notes
   coachingNotes?: Prisma.InputJsonValue;
 }
 
@@ -257,57 +261,75 @@ export async function generateMemorySummary(userId: string): Promise<string> {
   
   const sections = [];
   
-  // Personal info
-  if (memory.name || memory.age || memory.height || memory.weight) {
+  // Personal info with new fields
+  if (memory.name || memory.age || memory.gender || memory.height || memory.weight) {
     const personal = [];
     if (memory.name) personal.push(`Name: ${memory.name}`);
     if (memory.age) personal.push(`Age: ${memory.age}`);
+    if (memory.gender) personal.push(`Gender: ${memory.gender.toLowerCase()}`);
     if (memory.height) personal.push(`Height: ${memory.height}cm`);
     if (memory.weight) personal.push(`Weight: ${memory.weight}kg`);
     if (memory.bodyFatPercentage) personal.push(`Body Fat: ${memory.bodyFatPercentage}%`);
     sections.push(`PERSONAL INFO: ${personal.join(', ')}`);
   }
   
-  // Training info
-  if (memory.trainingExperience || memory.weeklyTrainingDays || memory.preferredTrainingStyle) {
+  // Training info with activity level
+  if (memory.trainingExperience || memory.weeklyTrainingDays || memory.preferredTrainingStyle || memory.activityLevel) {
     const training = [];
     if (memory.trainingExperience) training.push(`Experience: ${memory.trainingExperience}`);
     if (memory.weeklyTrainingDays) training.push(`Training Days: ${memory.weeklyTrainingDays}/week`);
+    if (memory.activityLevel) training.push(`Activity Level: ${memory.activityLevel.toLowerCase()}`);
     if (memory.preferredTrainingStyle) training.push(`Style: ${memory.preferredTrainingStyle}`);
     if (memory.availableTime) training.push(`Session Time: ${memory.availableTime}min`);
+    if (memory.trainingSchedule) training.push(`Prefers: ${memory.trainingSchedule} training`);
     sections.push(`TRAINING: ${training.join(', ')}`);
   }
   
-  // Goals
-  if (memory.primaryGoal || memory.targetWeight || memory.motivation) {
+  // Goals with enhanced information
+  if (memory.primaryGoal || memory.secondaryGoals?.length || memory.targetWeight || memory.motivation) {
     const goals = [];
     if (memory.primaryGoal) goals.push(`Primary: ${memory.primaryGoal}`);
+    if (memory.secondaryGoals?.length) goals.push(`Secondary: ${memory.secondaryGoals.join(', ')}`);
     if (memory.targetWeight) goals.push(`Target Weight: ${memory.targetWeight}kg`);
+    if (memory.targetBodyFat) goals.push(`Target Body Fat: ${memory.targetBodyFat}%`);
     if (memory.goalDeadline) goals.push(`Deadline: ${memory.goalDeadline.toDateString()}`);
     if (memory.motivation) goals.push(`Motivation: ${memory.motivation}`);
     sections.push(`GOALS: ${goals.join(', ')}`);
   }
   
   // Health & limitations
-  if (memory.injuries?.length || memory.limitations?.length || memory.medications?.length) {
+  if (memory.injuries?.length || memory.limitations?.length || memory.medications?.length || memory.allergies?.length) {
     const health = [];
     if (memory.injuries?.length) health.push(`Injuries: ${memory.injuries.join(', ')}`);
     if (memory.limitations?.length) health.push(`Limitations: ${memory.limitations.join(', ')}`);
     if (memory.medications?.length) health.push(`Medications: ${memory.medications.join(', ')}`);
+    if (memory.allergies?.length) health.push(`Allergies: ${memory.allergies.join(', ')}`);
     sections.push(`HEALTH: ${health.join(', ')}`);
   }
   
+  // Lifestyle factors
+  if (memory.sleepHours || memory.stressLevel || memory.workSchedule || memory.dietaryPreferences?.length) {
+    const lifestyle = [];
+    if (memory.sleepHours) lifestyle.push(`Sleep: ${memory.sleepHours}h/night`);
+    if (memory.stressLevel) lifestyle.push(`Stress Level: ${memory.stressLevel}`);
+    if (memory.workSchedule) lifestyle.push(`Work Schedule: ${memory.workSchedule}`);
+    if (memory.dietaryPreferences?.length) lifestyle.push(`Diet: ${memory.dietaryPreferences.join(', ')}`);
+    if (memory.supplementsUsed?.length) lifestyle.push(`Supplements: ${memory.supplementsUsed.join(', ')}`);
+    sections.push(`LIFESTYLE: ${lifestyle.join(', ')}`);
+  }
+  
   // Equipment & environment
-  if (memory.gymAccess !== null || memory.homeGym !== null || memory.equipmentAvailable?.length) {
+  if (memory.gymAccess !== null || memory.homeGym !== null || memory.equipmentAvailable?.length || memory.gymBudget) {
     const environment = [];
     if (memory.gymAccess) environment.push('Has gym access');
     if (memory.homeGym) environment.push('Has home gym');
     if (memory.equipmentAvailable?.length) environment.push(`Equipment: ${memory.equipmentAvailable.join(', ')}`);
+    if (memory.gymBudget) environment.push(`Budget: ${memory.gymBudget}/month`);
     sections.push(`ENVIRONMENT: ${environment.join(', ')}`);
   }
   
   // Progress tracking
-  if (memory.currentBench || memory.currentSquat || memory.currentDeadlift) {
+  if (memory.currentBench || memory.currentSquat || memory.currentDeadlift || memory.currentOHP) {
     const progress = [];
     if (memory.currentBench) progress.push(`Bench: ${memory.currentBench}kg`);
     if (memory.currentSquat) progress.push(`Squat: ${memory.currentSquat}kg`);
