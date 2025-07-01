@@ -46,7 +46,8 @@ interface Conversation {
 }
 
 const ChatPage = () => {
-  const [isSidebarOpen, setIsSidebarOpen] = reactUseState(true);
+  const [isSidebarOpen, setIsSidebarOpen] = reactUseState(false); // Default closed on mobile
+  const [isMobile, setIsMobile] = reactUseState(false);
   const [user, setUser] = reactUseState<SupabaseUser | null>(null); // Using reactUseState
   const [chatHistory, setChatHistory] = reactUseState<Conversation[]>([]);
   const [activeChatId, setActiveChatId] = reactUseState<string | null>(null);
@@ -90,6 +91,30 @@ const ChatPage = () => {
   }, []);
 
   // Auto-scroll to bottom when new messages arrive
+  // Check for mobile viewport and handle responsive behavior
+  useEffect(() => {
+    const checkMobile = () => {
+      const mobile = window.innerWidth < 768; // md breakpoint
+      setIsMobile(mobile);
+      
+      // On desktop, default to open; on mobile, default to closed
+      if (!mobile && !isSidebarOpen) {
+        setIsSidebarOpen(true);
+      }
+    };
+
+    checkMobile();
+    window.addEventListener('resize', checkMobile);
+    return () => window.removeEventListener('resize', checkMobile);
+  }, [isSidebarOpen]);
+
+  // Auto-close sidebar on mobile when navigating to a chat
+  useEffect(() => {
+    if (isMobile && activeChatId) {
+      setIsSidebarOpen(false);
+    }
+  }, [activeChatId, isMobile]);
+
   useEffect(() => {
     if (autoScroll && messagesEndRef.current) {
       messagesEndRef.current.scrollIntoView({ behavior: 'smooth' });
@@ -274,14 +299,25 @@ const ChatPage = () => {
     return <div className="flex flex-1 items-center justify-center bg-background text-foreground">Loading user data or redirecting...</div>; // Or a loading spinner
   }
 
-  return (    <div className="flex h-screen bg-background text-foreground overflow-hidden">
+  return (
+    <div className="flex h-screen bg-background text-foreground overflow-hidden relative">
+      {/* Mobile Backdrop Overlay */}
+      {isMobile && isSidebarOpen && (
+        <div 
+          className="fixed inset-0 bg-black/50 z-40 transition-opacity"
+          onClick={() => setIsSidebarOpen(false)}
+        />
+      )}
+
       {/* Sidebar */}
       <div
-        className={`flex flex-col bg-muted/20 border-r border-border transition-all duration-300 ease-in-out ${
-          isSidebarOpen ? 'w-64 md:w-72' : 'w-0'
-        } overflow-hidden shadow-sm`}
+        className={`flex flex-col bg-muted/20 border-r border-border transition-all duration-300 ease-in-out z-50 ${
+          isMobile 
+            ? `fixed left-0 top-0 h-full w-80 transform ${isSidebarOpen ? 'translate-x-0' : '-translate-x-full'} shadow-xl`
+            : `relative ${isSidebarOpen ? 'w-64 md:w-72' : 'w-0'} overflow-hidden shadow-sm`
+        }`}
       >
-        {isSidebarOpen && (
+        {(isMobile ? isSidebarOpen : true) && (
           <div className="p-4 h-full flex flex-col">
             {/* Header */}
             <div className="mb-6">
@@ -397,24 +433,24 @@ const ChatPage = () => {
             </div>
           </div>
         )}
-      </div>{/* Main Chat Area */}
-      <div className="flex-1 flex flex-col bg-background relative">
+      </div>      {/* Main Chat Area */}
+      <div className={`flex-1 flex flex-col bg-background relative ${isMobile && isSidebarOpen ? 'pointer-events-none' : ''}`}>
         {/* Header */}
-        <div className="p-4 border-b border-border flex items-center justify-between h-16 flex-shrink-0 bg-background/95 backdrop-blur-sm sticky top-0 z-10">
-          <div className="flex items-center">
+        <div className="p-3 md:p-4 border-b border-border flex items-center justify-between h-14 md:h-16 flex-shrink-0 bg-background/95 backdrop-blur-sm sticky top-0 z-10">
+          <div className="flex items-center min-w-0 flex-1">
             <Button
               variant="ghost"
               size="icon"
               onClick={toggleSidebar}
-              className="mr-3 hover:bg-muted/50"
+              className="mr-2 md:mr-3 hover:bg-muted/50 flex-shrink-0"
               aria-label={isSidebarOpen ? "Close sidebar" : "Open sidebar"}
             >
               {isSidebarOpen ? <ChevronLeft className="h-5 w-5" /> : <Menu className="h-5 w-5" />}
             </Button>
-            <div className="flex flex-col">
-              <h1 className="text-xl font-bold text-foreground">Hypertrophy AI</h1>
+            <div className="flex flex-col min-w-0">
+              <h1 className="text-lg md:text-xl font-bold text-foreground truncate">Hypertrophy AI</h1>
               {activeChatId && (
-                <p className="text-xs text-muted-foreground">
+                <p className="text-xs text-muted-foreground truncate">
                   {chatHistory.find(chat => chat.id === activeChatId)?.title || 'Active Chat'}
                 </p>
               )}
@@ -424,8 +460,8 @@ const ChatPage = () => {
           {/* User Avatar Dropdown Menu */}
           <DropdownMenu>
             <DropdownMenuTrigger asChild>
-              <Button variant="ghost" className="relative h-10 w-10 rounded-full hover:bg-muted/50">
-                <Avatar className="h-10 w-10">
+              <Button variant="ghost" className="relative h-8 w-8 md:h-10 md:w-10 rounded-full hover:bg-muted/50 flex-shrink-0">
+                <Avatar className="h-8 w-8 md:h-10 md:w-10">
                   {/* You can set a dynamic src for AvatarImage e.g., user.imageUrl */}
                   <AvatarImage src="/placeholder-avatar.png" alt="User Avatar" />
                   <AvatarFallback className="bg-primary text-primary-foreground">
@@ -480,7 +516,7 @@ const ChatPage = () => {
           className="flex-1 overflow-y-auto pb-32"
           onScroll={handleScroll}
         >
-          <div className="max-w-4xl mx-auto px-4 py-6 space-y-6">
+          <div className="max-w-4xl mx-auto px-3 md:px-4 py-4 md:py-6 space-y-4 md:space-y-6">
             {isLoadingMessages && (
               <div className="flex justify-center items-center h-32">
                 <div className="flex items-center space-x-2 text-muted-foreground">
@@ -521,9 +557,9 @@ const ChatPage = () => {
                     </div>
                   )}
                 </div>                {/* Message Content */}
-                <div className={`flex-1 max-w-[80%] ${msg.role === 'user' ? 'flex justify-end' : ''}`}>
+                <div className={`flex-1 max-w-[85%] md:max-w-[80%] ${msg.role === 'user' ? 'flex justify-end' : ''}`}>
                   <div
-                    className={`px-4 py-3 rounded-2xl shadow-sm ${
+                    className={`px-3 md:px-4 py-2 md:py-3 rounded-2xl shadow-sm ${
                       msg.role === 'user'
                         ? 'bg-primary text-primary-foreground rounded-br-md'
                         : 'bg-muted text-foreground rounded-bl-md border'
@@ -569,12 +605,13 @@ const ChatPage = () => {
 
         {/* Message Input Area - Fixed at Bottom */}
         <div className="absolute bottom-0 left-0 right-0 bg-background/95 backdrop-blur-sm border-t border-border">
-          <form onSubmit={handleSubmit} className="p-4">
+          <form onSubmit={handleSubmit} className="p-3 md:p-4">
             <div className="max-w-4xl mx-auto">
-              <div className="flex items-end space-x-3">                <div className="flex-1 relative">
+              <div className="flex items-end space-x-2 md:space-x-3">
+                <div className="flex-1 relative">
                   <ArabicAwareTextarea
                     placeholder="Message AI Coach..."
-                    className="w-full rounded-2xl px-4 pr-12 text-sm border-2 focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-0 focus-visible:border-primary/50"
+                    className="w-full rounded-2xl px-3 md:px-4 pr-10 md:pr-12 text-sm border-2 focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-0 focus-visible:border-primary/50"
                     value={input}
                     onChange={handleInputChange}
                     disabled={isSendingMessage || isAiThinking}
@@ -591,7 +628,7 @@ const ChatPage = () => {
                       type="button"
                       variant="ghost"
                       size="sm"
-                      className="absolute right-14 top-1/2 -translate-y-1/2 h-8 w-8 p-0 hover:bg-muted/50"
+                      className="absolute right-12 md:right-14 top-1/2 -translate-y-1/2 h-8 w-8 p-0 hover:bg-muted/50"
                       onClick={() => {
                         setAutoScroll(true);
                         messagesEndRef.current?.scrollIntoView({ behavior: 'smooth' });
@@ -605,22 +642,25 @@ const ChatPage = () => {
                 <Button
                   type="submit"
                   size="icon"
-                  className="rounded-full h-12 w-12 bg-primary hover:bg-primary/90 flex-shrink-0 shadow-lg transition-all duration-200 hover:scale-105"
+                  className="rounded-full h-10 w-10 md:h-12 md:w-12 bg-primary hover:bg-primary/90 flex-shrink-0 shadow-lg transition-all duration-200 hover:scale-105"
                   aria-label="Send message"
                   disabled={isSendingMessage || isAiThinking || !input.trim()}
                 >
                   {isSendingMessage ? (
-                    <div className="w-4 h-4 border-2 border-primary-foreground border-t-transparent rounded-full animate-spin" />
+                    <div className="w-3 h-3 md:w-4 md:h-4 border-2 border-primary-foreground border-t-transparent rounded-full animate-spin" />
                   ) : (
-                    <Send className="h-5 w-5 text-primary-foreground" />
+                    <Send className="h-4 w-4 md:h-5 md:w-5 text-primary-foreground" />
                   )}
                 </Button>
               </div>
               
               {/* Input helper text */}
               <div className="flex items-center justify-between mt-2 px-1">
-                <p className="text-xs text-muted-foreground">
+                <p className="text-xs text-muted-foreground hidden md:block">
                   Press Enter to send, Shift+Enter for new line
+                </p>
+                <p className="text-xs text-muted-foreground md:hidden">
+                  Tap send or press Enter
                 </p>
                 <p className="text-xs text-muted-foreground">
                   {input.length}/2000

@@ -20,6 +20,7 @@
     "@radix-ui/react-slot": "^1.2.3",
     "@supabase/ssr": "^0.6.1",
     "@supabase/supabase-js": "^2.50.0",
+    "@tailwindcss/typography": "^0.5.16",
     "@types/pdf-parse": "^1.1.5",
     "ai": "^4.3.16",
     "class-variance-authority": "^0.7.1",
@@ -34,6 +35,8 @@
     "react": "^19.0.0",
     "react-dom": "^19.0.0",
     "react-hot-toast": "^2.5.2",
+    "react-markdown": "^10.1.0",
+    "remark-gfm": "^4.0.1",
     "sonner": "^2.0.5",
     "tailwind-merge": "^3.3.0"
   },

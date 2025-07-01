@@ -12,85 +12,7 @@ import { getRelevantContext } from './vector-search';
 // Initialize the Gemini client
 const genAI = new GoogleGenerativeAI(process.env.GEMINI_API_KEY!);
 
-// Default configuration fallback
-const defaultConfig = {
-  systemPrompt: `You are an expert AI fitness and hypertrophy coach designed to provide personalized, evidence-based training and nutrition guidance. You specialize in muscle building, strength training, and optimizing body composition through scientific principles.
-
-You are a personal trainer with deep expertise in:
-- Biomechanics and movement quality
-- Muscle hypertrophy science
-- Progressive overload principles
-- Exercise programming and periodization
-- Nutrition for muscle growth and fat loss
-- Training optimization for different experience levels
-
-You maintain a professional yet encouraging tone, like a knowledgeable personal trainer who genuinely cares about their client's success. You build personal relationships with users by remembering their information, tracking their progress, and adapting advice to their specific needs and limitations.
-
-Personal Coaching Mandate:
-You are building a long-term coaching relationship with this client. Remember their information, reference their goals, acknowledge their progress, and provide personalized guidance based on their specific circumstances, limitations, and preferences.
-Always address the client in a personal, encouraging manner while maintaining scientific accuracy.
-Use their stored information to make your advice more relevant and actionable for their specific situation.
-When they provide new information about themselves, acknowledge it and explain how it affects your recommendations.
-
-CRITICAL: Information Extraction & Storage
-Whenever the user provides ANY personal information about themselves, you MUST call the update_client_profile function to store this information. This includes but is not limited to:
-- Personal details (name, age, height, weight, body fat percentage)
-- Training information (experience level, training days, preferred style, available time)
-- Goals and motivation (primary goals, target weight, deadlines, what motivates them)
-- Health information (injuries, limitations, medications, allergies)
-- Lifestyle factors (diet preferences, sleep, stress levels, work schedule)
-- Training environment (gym access, home setup, available equipment)
-- Progress metrics (current lifts, measurements, achievements)
-- Communication preferences (language, preferred interaction style)
-
-Examples of information to extract:
-- "I'm 25 years old" → call update_client_profile with age: 25
-- "I weigh 70kg" → call update_client_profile with weight: 70
-- "I'm a beginner" → call update_client_profile with trainingExperience: "beginner"
-- "I train 4 days a week" → call update_client_profile with weeklyTrainingDays: 4
-- "I want to build muscle" → call update_client_profile with primaryGoal: "muscle_gain"
-- "I have a bad knee" → call update_client_profile with injuries: ["knee"]
-- "I have dumbbells at home" → call update_client_profile with homeGym: true, equipmentAvailable: ["dumbbells"]
-
-Always call the function BEFORE providing your coaching response, so you can reference the newly stored information in your reply.
-
-Core Scientific Foundation: RAG-Based Synthesis
-Your scientific knowledge comes exclusively from the SCIENTIFIC REFERENCE MATERIAL provided. You are fundamentally a Retrieval-Augmented Generation (RAG) system enhanced with personal coaching capabilities.
-
-You do not possess external knowledge or access to real-time studies.
-Your entire knowledge base is the text provided to you within the knowledgeContext.
-Your primary function is to synthesize scientific principles and apply them personally to this specific client.
-
-Domains of Expertise (Applied to Client's Specific Needs):
-Exercise Physiology: Analyze and explain concepts like motor unit recruitment, metabolic stress, the mTOR pathway, and muscle protein synthesis as they relate to the client's goals and current fitness level.
-Biomechanics: Deconstruct movement patterns for the client's specific body type, limitations, and available equipment.
-Hypertrophy Science: Apply the core drivers of muscle growth—mechanical tension, muscle damage, and metabolic stress—to the client's training program.
-Training Methodology: Create personalized periodization, progressive overload, volume, frequency, and intensity recommendations based on the client's experience level and goals.
-Nutritional Science: Provide nutrition guidance that considers the client's dietary preferences, restrictions, and lifestyle.
-
-Personal Coaching Rules:
-Client-Centric Responses: Always consider the client's stored information when providing advice. Reference their goals, limitations, experience level, and preferences.
-Progressive Relationship: Build upon previous conversations. Reference past interactions and show awareness of their journey.
-Motivational Support: Provide encouragement and celebrate progress while maintaining scientific accuracy.
-Adaptive Guidance: Adjust recommendations based on their equipment, time constraints, and environment.
-Safety First: Always prioritize the client's safety, especially considering any injuries or limitations they've mentioned.
-
-Professional Communication Style:
-Personal Trainer Tone: Encouraging, supportive, and motivational while maintaining expertise and authority.
-Client Recognition: Use their name when known, reference their specific goals and circumstances.
-Practical Application: Always connect scientific principles to actionable steps for this specific client.
-Progress Tracking: Encourage the client to share updates and celebrate milestones.`,
-  modelName: 'gemini-2.0-flash-exp',
-  temperature: 0.7,
-  maxTokens: 3000,
-  topK: 45,
-  topP: 0.85,
-  useKnowledgeBase: true,
-  useClientMemory: true,
-  enableWebSearch: false
-};
-
-// Function to get AI configuration with fallback
+// Function to get AI configuration - REQUIRES admin configuration
 async function getAIConfiguration() {
   try {
     const config = await prisma.aIConfiguration.findUnique({
@@ -98,24 +20,32 @@ async function getAIConfiguration() {
     });
 
     if (!config) {
-      console.log('No AI configuration found, using defaults');
-      return defaultConfig;
+      throw new Error('AI Configuration not found. Please configure the AI system through the Admin Settings page before using the chat feature.');
+    }
+
+    // Validate required fields
+    if (!config.systemPrompt || config.systemPrompt.trim() === '') {
+      throw new Error('System prompt is not configured. Please set up the AI system prompt through the Admin Settings page.');
+    }
+
+    if (!config.modelName || config.modelName.trim() === '') {
+      throw new Error('AI model is not configured. Please select an AI model through the Admin Settings page.');
     }
 
     return {
-      systemPrompt: config.systemPrompt || defaultConfig.systemPrompt,
-      modelName: config.modelName || defaultConfig.modelName,
-      temperature: config.temperature ?? defaultConfig.temperature,
-      maxTokens: config.maxTokens || defaultConfig.maxTokens,
-      topK: config.topK || defaultConfig.topK,
-      topP: config.topP ?? defaultConfig.topP,
-      useKnowledgeBase: config.useKnowledgeBase ?? defaultConfig.useKnowledgeBase,
-      useClientMemory: config.useClientMemory ?? defaultConfig.useClientMemory,
-      enableWebSearch: config.enableWebSearch ?? defaultConfig.enableWebSearch
+      systemPrompt: config.systemPrompt,
+      modelName: config.modelName,
+      temperature: config.temperature ?? 0.7,
+      maxTokens: config.maxTokens || 3000,
+      topK: config.topK || 45,
+      topP: config.topP ?? 0.85,
+      useKnowledgeBase: config.useKnowledgeBase ?? true,
+      useClientMemory: config.useClientMemory ?? true,
+      enableWebSearch: config.enableWebSearch ?? false
     };
   } catch (error) {
-    console.error('Error fetching AI configuration, using defaults:', error);
-    return defaultConfig;
+    console.error('Error fetching AI configuration:', error);
+    throw error; // Re-throw to prevent AI usage without proper configuration
   }
 }
 
@@ -355,7 +285,7 @@ export async function sendToGemini(
   userId?: string
 ): Promise<string> {
   try {
-    // Fetch AI configuration
+    // Fetch AI configuration - will throw if not properly configured
     const aiConfig = await getAIConfiguration();
 
     if (!process.env.GEMINI_API_KEY) {
@@ -363,11 +293,10 @@ export async function sendToGemini(
       const latestUserMessage = conversation[conversation.length - 1];
       
       if (isArabicText(latestUserMessage.content)) {
-        return "شكراً لك على رسالتك! أنا مدربك الذكي للياقة البدنية، وأود مساعدتك في تحقيق أهدافك في تدريب تضخم العضلات. يرجى ملاحظة: مفتاح واجهة برمجة التطبيقات Gemini غير مُكوّن، لذا هذه استجابة تجريبية. بمجرد التكوين، سأقدم لك نصائح تدريبية مخصصة، وإرشادات تغذوية، وتحسين التدريب بناءً على احتياجاتك المحددة.";
+        return "عذراً، لم يتم تكوين مفتاح واجهة برمجة التطبيقات Gemini. يرجى التواصل مع المسؤول لتكوين النظام.";
       }
       
-      // Temporary fallback for testing without API key
-      return "Thank you for your message! I'm your AI fitness coach, and I'd love to help you with your hypertrophy training goals. Please note: The Gemini API key is not configured, so this is a test response. Once configured, I'll provide personalized workout advice, nutrition guidance, and training optimization based on your specific needs.";
+      return "Sorry, the Gemini API key is not configured. Please contact the administrator to configure the system.";
     }    // Get the latest user message to detect language
     const latestUserMessage = conversation[conversation.length - 1];
     const languageInstruction = getLanguageInstruction(conversation);
@@ -437,10 +366,10 @@ ${languageInstruction}
 
 ${clientMemoryContext}
 
-${knowledgeContext ? `SCIENTIFIC REFERENCE MATERIAL (Your Single Source of Truth):
+${knowledgeContext ? `SCIENTIFIC REFERENCE MATERIAL (Your Primary Source of Truth):
 ${knowledgeContext}
 
-Your Task: Based exclusively on the materials above and the client's personal information, provide personalized coaching advice that integrates biomechanical and physiological principles to directly address their specific question and circumstances.` : `IMPORTANT: No knowledge base content available. For any training or science-related questions, you MUST respond with: "I'd love to help you with personalized training advice! However, my knowledge base doesn't currently contain specific scientific data on that topic. To provide you with evidence-based recommendations tailored to your goals, I would need relevant research or protocols to be added to my knowledge base. In the meantime, I'm here to support you and remember everything you tell me about your fitness journey!"`}`;
+Your Task: Based on the materials above and the client's personal information, provide personalized coaching advice that integrates biomechanical and physiological principles to directly address their specific question and circumstances.` : `IMPORTANT: No knowledge base content is currently available. You are authorized to draw upon your general, pre-trained knowledge base to provide evidence-based fitness guidance.`}`;
 
     // Get the generative model with function calling capabilities
     const model = genAI.getGenerativeModel({ 
@@ -607,6 +536,20 @@ Your Task: Based exclusively on the materials above and the client's personal in
     return aiResponse;
   } catch (error) {
     console.error('Error calling Gemini API:', error);
+    
+    // Handle configuration errors specifically
+    if (error instanceof Error && error.message.includes('AI Configuration not found')) {
+      return "🔧 **Configuration Required**: The AI system is not yet configured. Please ask an administrator to set up the AI configuration through the Admin Settings page before using the chat feature.";
+    }
+    
+    if (error instanceof Error && error.message.includes('System prompt is not configured')) {
+      return "🔧 **Configuration Required**: The AI system prompt is not configured. Please ask an administrator to set up the system prompt through the Admin Settings page.";
+    }
+    
+    if (error instanceof Error && error.message.includes('AI model is not configured')) {
+      return "🔧 **Configuration Required**: The AI model is not selected. Please ask an administrator to select an AI model through the Admin Settings page.";
+    }
+    
     throw new Error('Failed to get response from AI');
   }
 }
