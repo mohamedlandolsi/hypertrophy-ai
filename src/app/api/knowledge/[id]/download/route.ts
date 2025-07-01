@@ -1,8 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { createClient } from '@/lib/supabase/server';
 import { prisma } from '@/lib/prisma';
-import { promises as fs } from 'fs';
-import path from 'path';
 
 export async function GET(
   request: NextRequest,
@@ -35,42 +33,11 @@ export async function GET(
       return NextResponse.json({ error: 'File not available for download' }, { status: 400 });
     }
 
-    // Construct file path
-    const uploadsDir = path.join(process.cwd(), 'uploads');
-    const userDir = path.join(uploadsDir, user.id);
-    const filePath = path.join(userDir, knowledgeItem.fileName);
-
-    try {
-      // Check if file exists
-      await fs.access(filePath);
-        // Read the file
-      const fileBuffer = await fs.readFile(filePath);
-      
-      // Check if this is for viewing (inline) or downloading
-      const url = new URL(request.url);
-      const inline = url.searchParams.get('inline') === 'true';
-      
-      // Set appropriate headers
-      const headers = new Headers();
-      
-      if (inline && knowledgeItem.mimeType === 'application/pdf') {
-        // For PDF viewing in iframe
-        headers.set('Content-Disposition', `inline; filename="${knowledgeItem.fileName}"`);
-        headers.set('Content-Type', 'application/pdf');
-      } else {
-        // For file download
-        headers.set('Content-Disposition', `attachment; filename="${knowledgeItem.fileName}"`);
-        headers.set('Content-Type', knowledgeItem.mimeType || 'application/octet-stream');
-      }
-      
-      headers.set('Content-Length', fileBuffer.length.toString());
-      headers.set('Cache-Control', 'private, max-age=3600'); // Cache for 1 hour
-
-      return new NextResponse(fileBuffer, { headers });
-    } catch (fileError) {
-      console.error('File access error:', fileError);
-      return NextResponse.json({ error: 'File not found on disk' }, { status: 404 });
-    }
+    // In serverless mode, files are processed in memory and not stored on disk
+    // File downloads are not available in this configuration
+    return NextResponse.json({ 
+      error: 'File downloads are not available in serverless mode. Files are processed in memory for text extraction only.' 
+    }, { status: 400 });
   } catch (error) {
     console.error('Download error:', error);
     return NextResponse.json({ error: 'Internal server error' }, { status: 500 });

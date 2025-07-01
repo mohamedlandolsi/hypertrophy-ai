@@ -1,9 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { createClient } from '@/lib/supabase/server';
 import { prisma } from '@/lib/prisma';
-import { writeFile, mkdir } from 'fs/promises';
-import { join } from 'path';
-import { existsSync } from 'fs';
 import { extractTextFromFile, isFileTypeSupported, getMaxFileSize } from '@/lib/file-processor';
 import { processFileWithEmbeddings, type ProcessingResult } from '@/lib/enhanced-file-processor';
 
@@ -44,18 +41,7 @@ export async function POST(request: NextRequest) {
     });    const uploadedItems = [];
     const skippedFiles = [];
 
-    console.log('📁 Creating upload directories...');
-    // Create uploads directory if it doesn't exist
-    const uploadsDir = join(process.cwd(), 'uploads');
-    if (!existsSync(uploadsDir)) {
-      await mkdir(uploadsDir, { recursive: true });
-    }
-
-    // Create user-specific directory
-    const userDir = join(uploadsDir, user.id);
-    if (!existsSync(userDir)) {
-      await mkdir(userDir, { recursive: true });
-    }
+    console.log('📁 Processing files in memory (serverless-compatible)...');
 
     console.log('🔄 Processing files...');
     for (const file of files) {
@@ -79,19 +65,12 @@ export async function POST(request: NextRequest) {
       }
 
       try {
-        console.log(`💾 Saving file: ${file.name}`);
-        // Generate unique filename
-        const timestamp = Date.now();
-        const fileName = `${timestamp}-${file.name}`;
-        const filePath = join(userDir, fileName);
-
-        // Save file to disk
+        console.log(`� Processing file in memory: ${file.name}`);
+        
+        // Get file buffer
         const bytes = await file.arrayBuffer();
         const buffer = Buffer.from(bytes);
-        await writeFile(filePath, buffer);
 
-        console.log(`🔍 Processing file with enhanced chunking and embeddings: ${file.name}`);
-        
         // Create knowledge item in database first (with PROCESSING status)
         const knowledgeItem = await prisma.knowledgeItem.create({
           data: {
@@ -100,7 +79,7 @@ export async function POST(request: NextRequest) {
             content: null, // Will be populated during processing
             fileName: file.name,
             fileSize: file.size,
-            filePath: filePath,
+            filePath: null, // No file path in serverless mode
             mimeType: file.type,
             status: 'PROCESSING',
             userId: user.id,
