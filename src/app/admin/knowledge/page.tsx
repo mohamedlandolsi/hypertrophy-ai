@@ -1,10 +1,14 @@
 'use client';
 
 import { createClient } from '@/lib/supabase/client';
-import { useEffect, useState } from 'react';
+import { useEffect, useState, useCallback } from 'react';
+import { useRouter } from 'next/navigation';
+import AdminLayout from '@/components/admin-layout';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
+import KnowledgeProcessingMonitor from '@/components/knowledge-processing-monitor';
+import { showToast } from '@/lib/toast';
 import type { User as SupabaseUser } from '@supabase/supabase-js';
 import { 
   Upload, 
@@ -48,29 +52,73 @@ interface KnowledgeItem {
   status: 'PROCESSING' | 'READY' | 'ERROR';
 }
 
+interface UploadResult extends KnowledgeItem {
+  processingResult?: {
+    chunksCreated: number;
+    embeddingsGenerated: number;
+    processingTime: number;
+    warnings: string[];
+    errors?: string[];
+  };
+}
+
 export default function KnowledgePage() {
   const [user, setUser] = useState<SupabaseUser | null>(null);
   const [knowledgeItems, setKnowledgeItems] = useState<KnowledgeItem[]>([]);
   const [isUploading, setIsUploading] = useState(false);
   const [dragActive, setDragActive] = useState(false);
-  const [selectedFiles, setSelectedFiles] = useState<File[]>([]);  const [textInput, setTextInput] = useState('');
-  const [textTitle, setTextTitle] = useState('');  const [searchQuery, setSearchQuery] = useState('');
+  const [selectedFiles, setSelectedFiles] = useState<File[]>([]);
+  const [textInput, setTextInput] = useState('');
+  const [textTitle, setTextTitle] = useState('');
+  const [searchQuery, setSearchQuery] = useState('');
   const [filterType, setFilterType] = useState<'all' | 'file' | 'text'>('all');
   const [viewModalOpen, setViewModalOpen] = useState(false);
   const [selectedItem, setSelectedItem] = useState<KnowledgeItem | null>(null);
   const [isLoading, setIsLoading] = useState(true);
-  useEffect(() => {
-    const fetchUser = async () => {
+  const [adminAccessError, setAdminAccessError] = useState<string | null>(null);
+  const router = useRouter();
+
+  const checkAdminAccess = useCallback(async () => {
+    try {
       const supabase = createClient();
       const { data: { user: currentUser } } = await supabase.auth.getUser();
-      setUser(currentUser);
       
-      if (currentUser) {
-        await fetchKnowledgeItems();
+      if (!currentUser) {
+        router.push('/login');
+        return;
       }
-    };
-    fetchUser();
-  }, []);
+
+      setUser(currentUser);
+
+      // Verify admin access by trying to fetch admin config
+      const response = await fetch('/api/admin/config');
+      if (response.status === 401) {
+        router.push('/login');
+        return;
+      }
+      if (response.status === 403) {
+        setAdminAccessError('Access denied. Admin privileges required to access knowledge management.');
+        setIsLoading(false);
+        return;
+      }
+      if (!response.ok) {
+        setAdminAccessError('Unable to verify admin access.');
+        setIsLoading(false);
+        return;
+      }
+
+      // Admin access verified, fetch knowledge items
+      await fetchKnowledgeItems();
+    } catch (error) {
+      console.error('Admin access check failed:', error);
+      setAdminAccessError('Access denied. Admin privileges required to access knowledge management.');
+      setIsLoading(false);
+    }
+  }, [router]);
+
+  useEffect(() => {
+    checkAdminAccess();
+  }, [checkAdminAccess]);
   const fetchKnowledgeItems = async () => {
     setIsLoading(true);
     try {
@@ -124,22 +172,49 @@ export default function KnowledgePage() {
     
     setIsUploading(true);
     
+    // Show loading toast for each file
+    const uploadToasts = selectedFiles.map(file => 
+      showToast.uploadProgress(file.name)
+    );
+    
     try {
       const formData = new FormData();
       selectedFiles.forEach(file => {
         formData.append('files', file);
-      });      const response = await fetch('/api/knowledge/upload', {
+      });
+
+      const response = await fetch('/api/knowledge/upload', {
         method: 'POST',
         body: formData,
-      });      if (response.ok) {
-        const data = await response.json();        console.log('Files uploaded successfully:', data);
+      });
+
+      // Dismiss loading toasts
+      uploadToasts.forEach(toastId => showToast.dismiss(toastId));
+
+      if (response.ok) {
+        const data = await response.json();
+        console.log('Files uploaded successfully:', data);
         
-        // Show success message with details
+        // Show success messages
+        if (data.knowledgeItems && data.knowledgeItems.length > 0) {
+          data.knowledgeItems.forEach((item: UploadResult) => {
+            if (item.processingResult) {
+              showToast.uploadSuccess(
+                item.fileName || item.title,
+                item.processingResult.chunksCreated,
+                item.processingResult.embeddingsGenerated
+              );
+            } else {
+              showToast.success(`Successfully uploaded ${item.fileName || item.title}`);
+            }
+          });
+        }
+        
+        // Show warnings for skipped files
         if (data.skippedFiles && data.skippedFiles.length > 0) {
-          const skippedInfo = data.skippedFiles.map((f: { name: string; reason: string }) => `${f.name}: ${f.reason}`).join('\n');
-          alert(`${data.message}\n\nSkipped files:\n${skippedInfo}`);
-        } else {
-          alert(data.message);
+          data.skippedFiles.forEach((file: { name: string; reason: string }) => {
+            showToast.fileValidationError(file.name, file.reason);
+          });
         }
         
         // Refresh knowledge items
@@ -151,17 +226,19 @@ export default function KnowledgePage() {
         const errorData = await response.json();
         console.error('Upload failed:', errorData.error);
         
-        // Show detailed error message
+        // Show error for each file or general error
         if (errorData.skippedFiles && errorData.skippedFiles.length > 0) {
-          const skippedInfo = errorData.skippedFiles.map((f: { name: string; reason: string }) => `${f.name}: ${f.reason}`).join('\n');
-          alert(`Upload failed: ${errorData.error}\n\nDetails:\n${skippedInfo}`);
+          errorData.skippedFiles.forEach((file: { name: string; reason: string }) => {
+            showToast.uploadError(file.name, file.reason);
+          });
         } else {
-          alert('Upload failed: ' + errorData.error);
+          showToast.error('Upload failed', errorData.error);
         }
       }
     } catch (error) {
       console.error('Upload error:', error);
-      alert('Upload failed. Please try again.');
+      uploadToasts.forEach(toastId => showToast.dismiss(toastId));
+      showToast.networkError('upload files');
     } finally {
       setIsUploading(false);
     }
@@ -170,6 +247,7 @@ export default function KnowledgePage() {
     if (!textInput.trim() || !textTitle.trim()) return;
     
     setIsUploading(true);
+    const loadingToast = showToast.processing('Adding text content', 'Processing and generating embeddings...');
     
     try {
       const response = await fetch('/api/knowledge', {
@@ -184,9 +262,13 @@ export default function KnowledgePage() {
         }),
       });
 
+      showToast.dismiss(loadingToast);
+
       if (response.ok) {
         const data = await response.json();
         console.log('Text content added successfully:', data);
+        
+        showToast.success('Text content added successfully', `"${textTitle}" has been added to your knowledge base`);
         
         // Refresh knowledge items
         await fetchKnowledgeItems();
@@ -197,11 +279,12 @@ export default function KnowledgePage() {
       } else {
         const errorData = await response.json();
         console.error('Text submission failed:', errorData.error);
-        alert('Failed to add text content: ' + errorData.error);
+        showToast.error('Failed to add text content', errorData.error);
       }
     } catch (error) {
       console.error('Text submission error:', error);
-      alert('Failed to add text content. Please try again.');
+      showToast.dismiss(loadingToast);
+      showToast.networkError('add text content');
     } finally {
       setIsUploading(false);
     }
@@ -211,22 +294,28 @@ export default function KnowledgePage() {
       return;
     }
 
+    const loadingToast = showToast.processing('Deleting knowledge item', 'Removing item and associated data...');
+
     try {
       const response = await fetch(`/api/knowledge/${id}`, {
         method: 'DELETE',
       });
 
+      showToast.dismiss(loadingToast);
+
       if (response.ok) {
+        showToast.success('Knowledge item deleted', 'The item has been removed from your knowledge base');
         // Refresh knowledge items
         await fetchKnowledgeItems();
       } else {
         const errorData = await response.json();
         console.error('Delete failed:', errorData.error);
-        alert('Failed to delete knowledge item: ' + errorData.error);
+        showToast.error('Failed to delete knowledge item', errorData.error);
       }
     } catch (error) {
       console.error('Delete error:', error);
-      alert('Failed to delete knowledge item. Please try again.');
+      showToast.dismiss(loadingToast);
+      showToast.networkError('delete knowledge item');
     }
   };
 
@@ -237,12 +326,16 @@ export default function KnowledgePage() {
 
   const handleDownloadKnowledgeItem = async (item: KnowledgeItem) => {
     if (item.type !== 'FILE' || !item.fileName) {
-      alert('This item is not available for download');
+      showToast.warning('Download not available', 'This item is not available for download');
       return;
     }
 
+    const loadingToast = showToast.processing('Downloading file', `Preparing ${item.fileName}...`);
+
     try {
       const response = await fetch(`/api/knowledge/${item.id}/download`);
+      
+      showToast.dismiss(loadingToast);
       
       if (response.ok) {
         // Create a blob from the response
@@ -261,14 +354,17 @@ export default function KnowledgePage() {
         // Clean up
         window.URL.revokeObjectURL(url);
         document.body.removeChild(a);
+        
+        showToast.success('Download completed', `${item.fileName} has been downloaded`);
       } else {
         const errorData = await response.json();
         console.error('Download failed:', errorData.error);
-        alert('Failed to download file: ' + errorData.error);
+        showToast.error('Failed to download file', errorData.error);
       }
     } catch (error) {
       console.error('Download error:', error);
-      alert('Failed to download file. Please try again.');
+      showToast.dismiss(loadingToast);
+      showToast.networkError('download file');
     }
   };
   const getFileTypeInfo = (mimeType?: string) => {
@@ -315,24 +411,56 @@ export default function KnowledgePage() {
     return matchesSearch && matchesFilter;
   });
 
-  if (!user) {
+  if (!user || isLoading) {
     return (
-      <div className="flex flex-1 items-center justify-center bg-background text-foreground">
-        Loading...
-      </div>
+      <AdminLayout>
+        <div className="flex items-center justify-center min-h-[60vh]">
+          <div className="text-center">
+            <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-primary mx-auto mb-4"></div>
+            <p className="text-muted-foreground">
+              {isLoading ? 'Loading knowledge base...' : 'Authenticating...'}
+            </p>
+          </div>
+        </div>
+      </AdminLayout>
+    );
+  }
+
+  if (adminAccessError) {
+    return (
+      <AdminLayout>
+        <div className="flex items-center justify-center min-h-[60vh]">
+          <div className="text-center max-w-md mx-auto p-6">
+            <div className="mb-4">
+              <X className="h-12 w-12 text-destructive mx-auto mb-2" />
+              <h2 className="text-xl font-semibold">Access Denied</h2>
+            </div>
+            <p className="text-muted-foreground mb-6">
+              {adminAccessError}
+            </p>
+            <Button 
+              onClick={() => router.push('/admin')}
+              variant="outline"
+            >
+              Return to Dashboard
+            </Button>
+          </div>
+        </div>
+      </AdminLayout>
     );
   }
 
   return (
-    <div className="flex-1 bg-background text-foreground">
-      <div className="container max-w-6xl mx-auto p-6">
-        {/* Header */}
-        <div className="mb-8">
-          <h1 className="text-3xl font-bold text-foreground mb-2">Knowledge Base</h1>
-          <p className="text-muted-foreground">
-            Upload files or add text content to enhance your AI fitness coach&apos;s knowledge
-          </p>
-        </div>
+    <AdminLayout>
+      <div className="p-6 min-h-0">
+        <div className="max-w-6xl mx-auto">
+          {/* Header */}
+          <div className="mb-8">
+            <h1 className="text-3xl font-bold mb-2">Knowledge Base</h1>
+            <p className="text-muted-foreground">
+              Upload files or add text content to enhance your AI fitness coach&apos;s knowledge
+            </p>
+          </div>
 
         {/* Upload Section */}
         <div className="grid grid-cols-1 lg:grid-cols-2 gap-6 mb-8">
@@ -457,6 +585,11 @@ export default function KnowledgePage() {
               </Button>
             </CardContent>
           </Card>
+        </div>
+
+        {/* Processing Monitor */}
+        <div className="mb-8">
+          <KnowledgeProcessingMonitor />
         </div>
 
         {/* Knowledge Items Section */}
@@ -619,6 +752,34 @@ export default function KnowledgePage() {
               )}
             </div>          </CardContent>
         </Card>
+
+        {/* Help Section */}
+        <div className="mt-8 p-4 bg-muted/30 rounded-lg border">
+          <h3 className="font-semibold mb-2 flex items-center">
+            <FileText className="mr-2 h-4 w-4" />
+            💡 Tips for Better Knowledge Management
+          </h3>
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-4 text-sm text-muted-foreground">
+            <div>
+              <p className="mb-2"><strong>Supported Files:</strong></p>
+              <ul className="list-disc pl-4 space-y-1">
+                <li>PDF documents (text will be extracted)</li>
+                <li>Word documents (.doc, .docx)</li>
+                <li>Text files (.txt, .md)</li>
+                <li>Excel spreadsheets</li>
+              </ul>
+            </div>
+            <div>
+              <p className="mb-2"><strong>Best Practices:</strong></p>
+              <ul className="list-disc pl-4 space-y-1">
+                <li>Use descriptive titles for better searchability</li>
+                <li>Organize content by topic or category</li>
+                <li>Check the status indicator after uploading</li>
+                <li>Use the search function to find specific content</li>
+              </ul>
+            </div>
+          </div>
+        </div>
       </div>
 
       {/* View Modal */}
@@ -872,6 +1033,7 @@ export default function KnowledgePage() {
           </div>
         </div>
       </div>
-    </div>
+      </div>
+    </AdminLayout>
   );
 }

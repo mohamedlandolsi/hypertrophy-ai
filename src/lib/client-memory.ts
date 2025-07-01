@@ -122,9 +122,10 @@ export async function addCoachingNote(userId: string, note: string, category: st
 }
 
 /**
- * Extract and save information from user messages
+ * Legacy regex-based extraction (kept as fallback)
+ * Extract and save information from user messages using regex patterns
  */
-export async function extractAndSaveInformation(userId: string, userMessage: string) {
+export async function extractAndSaveInformationLegacy(userId: string, userMessage: string) {
   const message = userMessage.toLowerCase();
   const updates: MemoryUpdate = {};
   

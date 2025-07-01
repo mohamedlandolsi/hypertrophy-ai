@@ -112,15 +112,9 @@ const Navbar = () => {
                       </Link>
                     </DropdownMenuItem>
                     <DropdownMenuItem asChild>
-                      <Link href="/parameters" className="flex items-center w-full">
+                      <Link href="/admin/settings" className="flex items-center w-full">
                         <Settings className="mr-2 h-4 w-4" />
-                        <span>Parameter</span>
-                      </Link>
-                    </DropdownMenuItem>
-                    <DropdownMenuItem asChild>
-                      <Link href="/settings" className="flex items-center w-full">
-                        <Settings className="mr-2 h-4 w-4" />
-                        <span>Settings</span>
+                        <span>AI Configuration</span>
                       </Link>
                     </DropdownMenuItem>
                     <DropdownMenuSeparator />
@@ -221,17 +215,9 @@ const Navbar = () => {
                         </SheetClose>
                         <SheetClose asChild>
                           <Button variant="outline" className="w-full justify-start h-12 px-4" asChild>
-                            <Link href="/parameters">
+                            <Link href="/admin/settings">
                               <Settings className="mr-2 h-4 w-4" />
-                              Parameter
-                            </Link>
-                          </Button>
-                        </SheetClose>
-                        <SheetClose asChild>
-                          <Button variant="outline" className="w-full justify-start h-12 px-4" asChild>
-                            <Link href="/settings">
-                              <Settings className="mr-2 h-4 w-4" />
-                              Settings
+                              AI Configuration
                             </Link>
                           </Button>
                         </SheetClose>

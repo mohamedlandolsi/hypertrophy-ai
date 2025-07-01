@@ -6,8 +6,9 @@ import Navbar from '@/components/navbar';
 const ConditionalNavbar = () => {
   const pathname = usePathname();
 
-  if (pathname === '/chat') {
-    return null; // Don't render Navbar on /chat page
+  // Don't render Navbar on chat page or admin pages
+  if (pathname === '/chat' || pathname.startsWith('/admin')) {
+    return null;
   }
 
   return <Navbar />;

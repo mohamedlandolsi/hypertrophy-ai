@@ -7,6 +7,7 @@ import { Button } from '@/components/ui/button';
 import { Settings, MessageSquare, Send, ChevronLeft, Menu, User, LogOut, Database, Trash2 } from 'lucide-react';
 import Link from 'next/link';
 import { ThemeToggle } from '@/components/theme-toggle';
+import { showToast } from '@/lib/toast';
 import type { User as SupabaseUser } from '@supabase/supabase-js';
 import { Suspense } from 'react';
 import { MessageContent } from '@/components/message-content';
@@ -172,13 +173,15 @@ const ChatPage = () => {
           setMessages([]);
           router.push('/chat', { scroll: false });
         }
+        
+        showToast.success('Chat deleted', 'The conversation has been removed');
       } else {
         console.error('Failed to delete chat');
-        alert('Failed to delete chat. Please try again.');
+        showToast.error('Failed to delete chat', 'Please try again');
       }
     } catch (error) {
       console.error('Error deleting chat:', error);
-      alert('Failed to delete chat. Please try again.');
+      showToast.networkError('delete chat');
     }
   };  const handleInputChange = (e: React.ChangeEvent<HTMLTextAreaElement>) => {
     const value = e.target.value;
@@ -251,7 +254,12 @@ const ChatPage = () => {
       }
 
     } catch (error) {
-      console.error('Error sending message:', error);      // Remove the optimistic message on error
+      console.error('Error sending message:', error);
+      
+      // Show error toast
+      showToast.error('Failed to send message', 'Please check your connection and try again');
+      
+      // Remove the optimistic message on error
       setMessages(prev => prev.filter(msg => msg.id !== tempUserMessage.id));
       setInput(userMessage); // Restore the input
     } finally {
@@ -292,17 +300,17 @@ const ChatPage = () => {
                 New Chat
               </Button>
               
-              <Link href="/knowledge" passHref>
+              <Link href="/admin/knowledge" passHref>
                 <Button variant="outline" className="w-full justify-start h-10 hover:bg-muted/50">
                   <Database className="mr-2 h-4 w-4" />
                   Knowledge Base
                 </Button>
               </Link>
 
-              <Link href="/parameters" passHref>
+              <Link href="/admin/settings" passHref>
                 <Button variant="outline" className="w-full justify-start h-10 hover:bg-muted/50">
                   <Settings className="mr-2 h-4 w-4" />
-                  Parameters
+                  AI Configuration
                 </Button>
               </Link>
             </div>
@@ -442,21 +450,15 @@ const ChatPage = () => {
                 </Link>
               </DropdownMenuItem>
               <DropdownMenuItem asChild>
-                <Link href="/knowledge">
+                <Link href="/admin/knowledge">
                   <Database className="mr-2 h-4 w-4" />
                   <span>Knowledge Base</span>
                 </Link>
               </DropdownMenuItem>
               <DropdownMenuItem asChild>
-                <Link href="/parameters">
+                <Link href="/admin/settings">
                   <Settings className="mr-2 h-4 w-4" />
-                  <span>Parameter</span>
-                </Link>
-              </DropdownMenuItem>
-              <DropdownMenuItem asChild>
-                <Link href="/settings">
-                  <Settings className="mr-2 h-4 w-4" />
-                  <span>Settings</span>
+                  <span>AI Configuration</span>
                 </Link>
               </DropdownMenuItem>
               <DropdownMenuSeparator />

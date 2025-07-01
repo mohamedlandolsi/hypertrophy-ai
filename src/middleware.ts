@@ -1,6 +1,9 @@
 import { createServerClient, type CookieOptions } from '@supabase/ssr'
 import { NextResponse, type NextRequest } from 'next/server'
 
+// Remove Prisma from middleware - it can cause issues in Edge Runtime
+// We'll do the admin check in the actual API routes and pages instead
+
 export async function middleware(request: NextRequest) {
   let response = NextResponse.next({
     request: {
@@ -65,8 +68,17 @@ export async function middleware(request: NextRequest) {
     return NextResponse.redirect(new URL('/login', request.url))
   }
 
-  if (!user && request.nextUrl.pathname.startsWith('/knowledge')) {
-    return NextResponse.redirect(new URL('/login', request.url))
+  // Admin route protection - only check authentication, role check happens in API routes
+  if (request.nextUrl.pathname.startsWith('/admin')) {
+    console.log('🔍 Middleware: Admin route accessed');
+    
+    if (!user) {
+      console.log('❌ Middleware: No user found, redirecting to login');
+      return NextResponse.redirect(new URL('/login', request.url))
+    }
+    
+    console.log(`👤 Middleware: User authenticated, allowing access to admin route`);
+    // The actual admin role check will happen in the page/API route
   }
 
   if (user && (request.nextUrl.pathname.startsWith('/login') || request.nextUrl.pathname.startsWith('/signup'))) {

@@ -11,31 +11,27 @@ datasource db {
   directUrl = env("DIRECT_URL")
 }
 
-model Document {
-  id        String @id @default(cuid())
-  content   String
-  // embedding Unsupported("vector(768)") // Commented out for now - requires pgvector extension
+model KnowledgeChunk {
+  id              String                      @id @default(cuid())
+  knowledgeItemId String
+  knowledgeItem   KnowledgeItem               @relation(fields: [knowledgeItemId], references: [id], onDelete: Cascade)
+  content         String                      @db.Text
+  chunkIndex      Int // Position of this chunk in the original document
+  // embedding       Unsupported("vector(768)")? // Gemini embeddings - Enable after pgvector extension
+  embeddingData   String?                     // JSON string to store embedding temporarily until pgvector is enabled
+  createdAt       DateTime                    @default(now())
+  updatedAt       DateTime                    @updatedAt
+
+  @@index([knowledgeItemId])
+  @@index([knowledgeItemId, chunkIndex])
 }
 
 model User {
   id             String          @id @default(cuid()) // This will correspond to the Supabase auth.users.id
-  profile        Profile?
+  role           String          @default("user") // "user" or "admin"
   chats          Chat[]
   knowledgeItems KnowledgeItem[]
   clientMemory   ClientMemory?
-}
-
-model Profile {
-  id                  String    @id @default(cuid())
-  user                User      @relation(fields: [id], references: [id])
-  training_experience String?
-  weekly_training_days String?
-  main_goal           String?
-
-  // Subscription & Gating Fields
-  subscriptionStatus  String    @default("free") // e.g., "free", "pro"
-  dailyMessageCount   Int       @default(0)
-  lastMessageDate     DateTime?
 }
 
 model Chat {
@@ -57,84 +53,105 @@ model Message {
 }
 
 model KnowledgeItem {
-  id          String            @id @default(cuid())
-  title       String
-  type        KnowledgeType
-  content     String?           @db.Text
-  fileName    String?
-  fileSize    Int?
-  filePath    String?
-  mimeType    String?
-  status      ProcessingStatus  @default(PROCESSING)
-  createdAt   DateTime          @default(now())
-  updatedAt   DateTime          @updatedAt
-  userId      String
-  user        User              @relation(fields: [userId], references: [id], onDelete: Cascade)
+  id        String           @id @default(cuid())
+  title     String
+  type      KnowledgeType
+  content   String?          @db.Text
+  fileName  String?
+  fileSize  Int?
+  filePath  String?
+  mimeType  String?
+  status    ProcessingStatus @default(PROCESSING)
+  createdAt DateTime         @default(now())
+  updatedAt DateTime         @updatedAt
+  userId    String
+  user      User             @relation(fields: [userId], references: [id], onDelete: Cascade)
+  chunks    KnowledgeChunk[] // Relation to knowledge chunks
 }
 
 model ClientMemory {
-  id                  String    @id @default(cuid())
-  userId              String    @unique
-  user                User      @relation(fields: [userId], references: [id], onDelete: Cascade)
-  
+  id     String @id @default(cuid())
+  userId String @unique
+  user   User   @relation(fields: [userId], references: [id], onDelete: Cascade)
+
   // Personal Information
-  name                String?
-  age                 Int?
-  height              Float?    // in cm
-  weight              Float?    // in kg
-  bodyFatPercentage   Float?
-  
+  name              String?
+  age               Int?
+  height            Float? // in cm
+  weight            Float? // in kg
+  bodyFatPercentage Float?
+
   // Training Information
-  trainingExperience  String?   // "beginner", "intermediate", "advanced"
-  weeklyTrainingDays  Int?      // 1-7
+  trainingExperience     String? // "beginner", "intermediate", "advanced"
+  weeklyTrainingDays     Int? // 1-7
   preferredTrainingStyle String? // "strength", "hypertrophy", "powerlifting", "bodybuilding"
-  trainingSchedule    String?   // "morning", "evening", "flexible"
-  availableTime       Int?      // minutes per session
-  
+  trainingSchedule       String? // "morning", "evening", "flexible"
+  availableTime          Int? // minutes per session
+
   // Goals and Motivation
-  primaryGoal         String?   // "muscle_gain", "fat_loss", "strength", "general_fitness"
-  secondaryGoals      String[]  // array of additional goals
-  targetWeight        Float?    // goal weight in kg
-  targetBodyFat       Float?    // goal body fat percentage
-  goalDeadline        DateTime? // when they want to achieve their goal
-  motivation          String?   // what drives them
-  
+  primaryGoal    String? // "muscle_gain", "fat_loss", "strength", "general_fitness"
+  secondaryGoals String[] // array of additional goals
+  targetWeight   Float? // goal weight in kg
+  targetBodyFat  Float? // goal body fat percentage
+  goalDeadline   DateTime? // when they want to achieve their goal
+  motivation     String? // what drives them
+
   // Health and Limitations
-  injuries            String[]  // current or past injuries
-  limitations         String[]  // physical limitations or restrictions
-  medications         String[]  // medications that might affect training
-  allergies           String[]  // food allergies or dietary restrictions
-  
+  injuries    String[] // current or past injuries
+  limitations String[] // physical limitations or restrictions
+  medications String[] // medications that might affect training
+  allergies   String[] // food allergies or dietary restrictions
+
   // Preferences and Lifestyle
-  dietaryPreferences  String[]  // "vegetarian", "vegan", "keto", "paleo", etc.
-  foodDislikes        String[]  // foods they don't like
-  supplementsUsed     String[]  // current supplements
-  sleepHours          Float?    // average hours of sleep
-  stressLevel         String?   // "low", "moderate", "high"
-  workSchedule        String?   // "standard", "shift", "irregular"
-  
+  dietaryPreferences String[] // "vegetarian", "vegan", "keto", "paleo", etc.
+  foodDislikes       String[] // foods they don't like
+  supplementsUsed    String[] // current supplements
+  sleepHours         Float? // average hours of sleep
+  stressLevel        String? // "low", "moderate", "high"
+  workSchedule       String? // "standard", "shift", "irregular"
+
   // Training Environment
-  gymAccess           Boolean   @default(false)
-  homeGym             Boolean   @default(false)
-  equipmentAvailable  String[]  // available equipment
-  gymBudget           Float?    // monthly gym/equipment budget
-  
+  gymAccess          Boolean  @default(false)
+  homeGym            Boolean  @default(false)
+  equipmentAvailable String[] // available equipment
+  gymBudget          Float? // monthly gym/equipment budget
+
   // Progress Tracking
-  currentBench        Float?    // 1RM in kg
-  currentSquat        Float?    // 1RM in kg
-  currentDeadlift     Float?    // 1RM in kg
-  currentOHP          Float?    // 1RM in kg (overhead press)
-  
+  currentBench    Float? // 1RM in kg
+  currentSquat    Float? // 1RM in kg
+  currentDeadlift Float? // 1RM in kg
+  currentOHP      Float? // 1RM in kg (overhead press)
+
   // Communication Preferences
-  preferredLanguage   String    @default("en") // "en", "ar", etc.
-  communicationStyle  String?   // "direct", "encouraging", "detailed", "simple"
-  
+  preferredLanguage  String  @default("en") // "en", "ar", etc.
+  communicationStyle String? // "direct", "encouraging", "detailed", "simple"
+
   // AI Coaching Notes (structured memory)
-  coachingNotes       Json?     // JSON object for AI to store insights and observations
+  coachingNotes Json? // JSON object for AI to store insights and observations
+
+  createdAt       DateTime @default(now())
+  updatedAt       DateTime @updatedAt
+  lastInteraction DateTime @default(now())
+}
+
+model AIConfiguration {
+  id          String   @id @default("singleton") // Single row constraint
+  systemPrompt String  @db.Text @default("You are an expert AI fitness and hypertrophy coach designed to provide personalized, evidence-based training and nutrition guidance. You specialize in muscle building, strength training, and optimizing body composition through scientific principles.\n\nYou are a personal trainer with deep expertise in:\n- Biomechanics and movement quality\n- Muscle hypertrophy science\n- Progressive overload principles\n- Exercise programming and periodization\n- Nutrition for muscle growth and fat loss\n- Training optimization for different experience levels\n\nYou maintain a professional yet encouraging tone, like a knowledgeable personal trainer who genuinely cares about their client's success. You build personal relationships with users by remembering their information, tracking their progress, and adapting advice to their specific needs and limitations.\n\nPersonal Coaching Mandate:\nYou are building a long-term coaching relationship with this client. Remember their information, reference their goals, acknowledge their progress, and provide personalized guidance based on their specific circumstances, limitations, and preferences.\nAlways address the client in a personal, encouraging manner while maintaining scientific accuracy.\nUse their stored information to make your advice more relevant and actionable for their specific situation.\nWhen they provide new information about themselves, acknowledge it and explain how it affects your recommendations.\n\nCRITICAL: Information Extraction & Storage\nWhenever the user provides ANY personal information about themselves, you MUST call the update_client_profile function to store this information. This includes but is not limited to:\n- Personal details (name, age, height, weight, body fat percentage)\n- Training information (experience level, training days, preferred style, available time)\n- Goals and motivation (primary goals, target weight, deadlines, what motivates them)\n- Health information (injuries, limitations, medications, allergies)\n- Lifestyle factors (diet preferences, sleep, stress levels, work schedule)\n- Training environment (gym access, home setup, available equipment)\n- Progress metrics (current lifts, measurements, achievements)\n- Communication preferences (language, preferred interaction style)\n\nExamples of information to extract:\n- \"I'm 25 years old\" → call update_client_profile with age: 25\n- \"I weigh 70kg\" → call update_client_profile with weight: 70\n- \"I'm a beginner\" → call update_client_profile with trainingExperience: \"beginner\"\n- \"I train 4 days a week\" → call update_client_profile with weeklyTrainingDays: 4\n- \"I want to build muscle\" → call update_client_profile with primaryGoal: \"muscle_gain\"\n- \"I have a bad knee\" → call update_client_profile with injuries: [\"knee\"]\n- \"I have dumbbells at home\" → call update_client_profile with homeGym: true, equipmentAvailable: [\"dumbbells\"]\n\nAlways call the function BEFORE providing your coaching response, so you can reference the newly stored information in your reply.\n\nCore Scientific Foundation: RAG-Based Synthesis\nYour scientific knowledge comes exclusively from the SCIENTIFIC REFERENCE MATERIAL provided. You are fundamentally a Retrieval-Augmented Generation (RAG) system enhanced with personal coaching capabilities.\n\nYou do not possess external knowledge or access to real-time studies.\nYour entire knowledge base is the text provided to you within the knowledgeContext.\nYour primary function is to synthesize scientific principles and apply them personally to this specific client.\n\nDomains of Expertise (Applied to Client's Specific Needs):\nExercise Physiology: Analyze and explain concepts like motor unit recruitment, metabolic stress, the mTOR pathway, and muscle protein synthesis as they relate to the client's goals and current fitness level.\nBiomechanics: Deconstruct movement patterns for the client's specific body type, limitations, and available equipment.\nHypertrophy Science: Apply the core drivers of muscle growth—mechanical tension, muscle damage, and metabolic stress—to the client's training program.\nTraining Methodology: Create personalized periodization, progressive overload, volume, frequency, and intensity recommendations based on the client's experience level and goals.\nNutritional Science: Provide nutrition guidance that considers the client's dietary preferences, restrictions, and lifestyle.\n\nPersonal Coaching Rules:\nClient-Centric Responses: Always consider the client's stored information when providing advice. Reference their goals, limitations, experience level, and preferences.\nProgressive Relationship: Build upon previous conversations. Reference past interactions and show awareness of their journey.\nMotivational Support: Provide encouragement and celebrate progress while maintaining scientific accuracy.\nAdaptive Guidance: Adjust recommendations based on their equipment, time constraints, and environment.\nSafety First: Always prioritize the client's safety, especially considering any injuries or limitations they've mentioned.\n\nProfessional Communication Style:\nPersonal Trainer Tone: Encouraging, supportive, and motivational while maintaining expertise and authority.\nClient Recognition: Use their name when known, reference their specific goals and circumstances.\nPractical Application: Always connect scientific principles to actionable steps for this specific client.\nProgress Tracking: Encourage the client to share updates and celebrate milestones.")
+  modelName   String   @default("gemini-2.0-flash-exp")
+  temperature Float    @default(0.7)
+  maxTokens   Int      @default(3000)
   
-  createdAt           DateTime  @default(now())
-  updatedAt           DateTime  @updatedAt
-  lastInteraction     DateTime  @default(now())
+  // Advanced settings
+  topK        Int      @default(45)
+  topP        Float    @default(0.85)
+  
+  // Feature flags
+  useKnowledgeBase  Boolean @default(true)
+  useClientMemory   Boolean @default(true)
+  enableWebSearch   Boolean @default(false)
+  
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
 }
 
 enum Role {

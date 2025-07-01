@@ -5,6 +5,7 @@ import { writeFile, mkdir } from 'fs/promises';
 import { join } from 'path';
 import { existsSync } from 'fs';
 import { extractTextFromFile, isFileTypeSupported, getMaxFileSize } from '@/lib/file-processor';
+import { processFileWithEmbeddings, type ProcessingResult } from '@/lib/enhanced-file-processor';
 
 // POST - Upload and process files
 export async function POST(request: NextRequest) {
@@ -89,26 +90,90 @@ export async function POST(request: NextRequest) {
         const buffer = Buffer.from(bytes);
         await writeFile(filePath, buffer);
 
-        console.log(`🔍 Extracting text from: ${file.name}`);
-        // Extract text content using the file processor
-        const content = await extractTextFromFile(buffer, file.type, file.name);
-
-        console.log(`💾 Creating database record for: ${file.name}`);
-        // Create knowledge item in database
+        console.log(`🔍 Processing file with enhanced chunking and embeddings: ${file.name}`);
+        
+        // Create knowledge item in database first (with PROCESSING status)
         const knowledgeItem = await prisma.knowledgeItem.create({
           data: {
             title: file.name,
             type: 'FILE',
-            content: content,
+            content: null, // Will be populated during processing
             fileName: file.name,
             fileSize: file.size,
             filePath: filePath,
             mimeType: file.type,
-            status: 'READY',
+            status: 'PROCESSING',
             userId: user.id,
           }
-        });        console.log(`✅ Successfully processed: ${file.name}`);
-        uploadedItems.push(knowledgeItem);
+        });
+
+        // Process file with enhanced processor (includes chunking and embeddings)
+        const processingResult: ProcessingResult = await processFileWithEmbeddings(
+          buffer,
+          file.type,
+          file.name,
+          knowledgeItem.id,
+          {
+            generateEmbeddings: true,
+            chunkSize: 800,
+            chunkOverlap: 150,
+            batchSize: 5 // Smaller batch size for API
+          }
+        );
+
+        // Update the knowledge item with the extracted content
+        if (processingResult.success) {
+          // Extract text for content field (for backward compatibility)
+          const content = await extractTextFromFile(buffer, file.type, file.name);
+          
+          await prisma.knowledgeItem.update({
+            where: { id: knowledgeItem.id },
+            data: { 
+              content: content,
+              status: 'READY'
+            }
+          });
+
+          console.log(`✅ Successfully processed: ${file.name} (${processingResult.chunksCreated} chunks, ${processingResult.embeddingsGenerated} embeddings)`);
+          
+          uploadedItems.push({
+            ...knowledgeItem,
+            content: content,
+            status: 'READY' as const,
+            processingResult: {
+              chunksCreated: processingResult.chunksCreated,
+              embeddingsGenerated: processingResult.embeddingsGenerated,
+              processingTime: processingResult.processingTime,
+              warnings: processingResult.warnings
+            }
+          });
+        } else {
+          console.error(`❌ Processing failed for ${file.name}:`, processingResult.errors);
+          
+          // Still add the item but mark processing issues
+          const content = await extractTextFromFile(buffer, file.type, file.name);
+          
+          await prisma.knowledgeItem.update({
+            where: { id: knowledgeItem.id },
+            data: { 
+              content: content,
+              status: 'ERROR'
+            }
+          });
+
+          uploadedItems.push({
+            ...knowledgeItem,
+            content: content,
+            status: 'ERROR' as const,
+            processingResult: {
+              chunksCreated: processingResult.chunksCreated,
+              embeddingsGenerated: processingResult.embeddingsGenerated,
+              processingTime: processingResult.processingTime,
+              warnings: processingResult.warnings,
+              errors: processingResult.errors
+            }
+          });
+        }
       } catch (fileError) {
         console.error(`❌ Error processing file ${file.name}:`, fileError);
         skippedFiles.push({ 
