@@ -11,6 +11,7 @@
   },
   "dependencies": {
     "@google/generative-ai": "^0.24.1",
+    "@hookform/resolvers": "^5.1.1",
     "@prisma/client": "^6.9.0",
     "@radix-ui/react-avatar": "^1.1.10",
     "@radix-ui/react-dialog": "^1.1.14",
@@ -34,11 +35,13 @@
     "prisma": "^6.9.0",
     "react": "^19.0.0",
     "react-dom": "^19.0.0",
+    "react-hook-form": "^7.59.0",
     "react-hot-toast": "^2.5.2",
     "react-markdown": "^10.1.0",
     "remark-gfm": "^4.0.1",
     "sonner": "^2.0.5",
-    "tailwind-merge": "^3.3.0"
+    "tailwind-merge": "^3.3.0",
+    "zod": "^3.25.67"
   },
   "devDependencies": {
     "@eslint/eslintrc": "^3",

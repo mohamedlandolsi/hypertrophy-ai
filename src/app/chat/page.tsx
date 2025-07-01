@@ -106,14 +106,14 @@ const ChatPage = () => {
     checkMobile();
     window.addEventListener('resize', checkMobile);
     return () => window.removeEventListener('resize', checkMobile);
-  }, [isSidebarOpen]);
+  }, [isSidebarOpen, setIsMobile, setIsSidebarOpen]);
 
   // Auto-close sidebar on mobile when navigating to a chat
   useEffect(() => {
     if (isMobile && activeChatId) {
       setIsSidebarOpen(false);
     }
-  }, [activeChatId, isMobile]);
+  }, [activeChatId, isMobile, setIsSidebarOpen]);
 
   useEffect(() => {
     if (autoScroll && messagesEndRef.current) {
