@@ -23,6 +23,7 @@ import { useRouter } from "next/navigation";
 import Image from "next/image";
 import { toast } from "sonner";
 import { Loader2 } from "lucide-react";
+import { GoogleIcon } from "@/components/ui/google-icon";
 
 export default function SignupForm() {
   const [isLoading, setIsLoading] = useState(false);
@@ -193,7 +194,11 @@ export default function SignupForm() {
               onClick={handleGoogleSignup}
               disabled={isLoading || isGoogleLoading}
             >
-              {isGoogleLoading && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
+              {isGoogleLoading ? (
+                <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+              ) : (
+                <GoogleIcon className="mr-2" size={16} />
+              )}
               Sign Up with Google
             </Button>
             

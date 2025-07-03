@@ -84,7 +84,7 @@ const ChatPage = () => {
       window.removeEventListener('online', handleOnline);
       window.removeEventListener('offline', handleOffline);
     };
-  }, []);
+  }, [setIsOnline]);
 
   useEffect(() => {
     const fetchInitialData = async () => {

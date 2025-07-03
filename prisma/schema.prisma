@@ -27,11 +27,12 @@ model KnowledgeChunk {
 }
 
 model User {
-  id             String          @id @default(cuid()) // This will correspond to the Supabase auth.users.id
-  role           String          @default("user") // "user" or "admin"
-  chats          Chat[]
-  knowledgeItems KnowledgeItem[]
-  clientMemory   ClientMemory?
+  id                      String          @id @default(cuid()) // This will correspond to the Supabase auth.users.id
+  role                    String          @default("user") // "user" or "admin"
+  hasCompletedOnboarding  Boolean         @default(false) // Track onboarding completion
+  chats                   Chat[]
+  knowledgeItems          KnowledgeItem[]
+  clientMemory            ClientMemory?
 }
 
 model Chat {

@@ -19,11 +19,12 @@ export async function GET() {
     });
 
     if (!dbUser) {
-      // Create user if doesn't exist (with default role)
+      // Create user if doesn't exist (with default role and onboarding status)
       const newUser = await prisma.user.create({
         data: {
           id: user.id,
-          role: 'user'
+          role: 'user',
+          hasCompletedOnboarding: false
         }
       });
       

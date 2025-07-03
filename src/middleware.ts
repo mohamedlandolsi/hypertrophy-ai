@@ -60,6 +60,10 @@ export async function middleware(request: NextRequest) {
   // await supabase.auth.getUser()
   const { data: { user } } = await supabase.auth.getUser();
 
+  // Allow access to auth routes and onboarding
+  // const publicRoutes = ['/login', '/signup', '/auth', '/onboarding'];
+  // const isPublicRoute = publicRoutes.some(route => request.nextUrl.pathname.startsWith(route));
+
   // Allow access to /chat for non-authenticated users (they can browse but not send messages)
   // The actual message sending authentication check happens in the chat page component
   
@@ -76,6 +80,7 @@ export async function middleware(request: NextRequest) {
     // The actual admin role check will happen in the page/API route
   }
 
+  // Redirect authenticated users away from auth pages
   if (user && (request.nextUrl.pathname.startsWith('/login') || request.nextUrl.pathname.startsWith('/signup'))) {
     return NextResponse.redirect(new URL('/chat', request.url));
   }

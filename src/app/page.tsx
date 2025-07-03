@@ -1,8 +1,26 @@
+'use client';
+
 import { Button } from "@/components/ui/button";
 import Link from "next/link";
 import Image from "next/image";
+import { useEffect, useState } from "react";
+import { createClient } from "@/lib/supabase/client";
+import type { User } from "@supabase/supabase-js";
 
 export default function Home() {
+  const [user, setUser] = useState<User | null>(null);
+  const [loading, setLoading] = useState(true);
+
+  useEffect(() => {
+    const checkUser = async () => {
+      const supabase = createClient();
+      const { data: { user: currentUser } } = await supabase.auth.getUser();
+      setUser(currentUser);
+      setLoading(false);
+    };
+
+    checkUser();
+  }, []);
   return (
     <div className="flex flex-col min-h-screen">
       {/* Hero Section */}
@@ -18,18 +36,39 @@ export default function Home() {
             />
           </div>
           <h1 className="text-4xl md:text-6xl font-bold mb-6 bg-gradient-to-r from-primary to-blue-600 bg-clip-text text-transparent">
-            Your Personal AI Fitness Coach
+            {user ? 'Welcome Back to Your AI Fitness Coach' : 'Your Personal AI Fitness Coach'}
           </h1>
           <p className="text-xl md:text-2xl text-muted-foreground mb-8 max-w-2xl mx-auto">
-            Get personalized workout plans, track your progress, and achieve your fitness goals with the power of artificial intelligence.
+            {user 
+              ? 'Ready to continue your fitness journey? Jump back into your personalized training sessions and track your progress.' 
+              : 'Get personalized workout plans, track your progress, and achieve your fitness goals with the power of artificial intelligence.'
+            }
           </p>
           <div className="flex flex-col sm:flex-row gap-4 justify-center">
-            <Button asChild size="lg" className="text-lg px-8 py-3">
-              <Link href="/signup">Get Started Free</Link>
-            </Button>
-            <Button asChild variant="outline" size="lg" className="text-lg px-8 py-3">
-              <Link href="/login">Sign In</Link>
-            </Button>
+            {loading ? (
+              // Loading state
+              <div className="flex gap-4 justify-center">
+                <div className="h-12 w-32 bg-muted animate-pulse rounded-md"></div>
+                <div className="h-12 w-24 bg-muted animate-pulse rounded-md"></div>
+              </div>
+            ) : user ? (
+              // User is logged in - show "Go to Chat" button
+              <div className="animate-fade-in">
+                <Button asChild size="lg" className="text-lg px-8 py-3">
+                  <Link href="/chat">Go to Chat</Link>
+                </Button>
+              </div>
+            ) : (
+              // User is not logged in - show signup and login buttons
+              <div className="animate-fade-in flex flex-col sm:flex-row gap-4">
+                <Button asChild size="lg" className="text-lg px-8 py-3">
+                  <Link href="/signup">Get Started Free</Link>
+                </Button>
+                <Button asChild variant="outline" size="lg" className="text-lg px-8 py-3">
+                  <Link href="/login">Sign In</Link>
+                </Button>
+              </div>
+            )}
           </div>
         </div>
       </section>
