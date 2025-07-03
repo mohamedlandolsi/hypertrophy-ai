@@ -2,10 +2,11 @@
 
 import { useState, useEffect } from 'react';
 import Link from 'next/link';
+import Image from 'next/image';
 import { AdminSidebar, AdminMobileSidebar } from '@/components/admin-sidebar';
 import { Button } from '@/components/ui/button';
 import { ThemeToggle } from '@/components/theme-toggle';
-import { PanelLeftClose, PanelLeftOpen, Zap, User, Settings, LogOut } from 'lucide-react';
+import { PanelLeftClose, PanelLeftOpen, User, Settings, LogOut } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import { createClient } from '@/lib/supabase/client';
 import type { AuthChangeEvent, Session, User as SupabaseUser } from '@supabase/supabase-js';
@@ -91,12 +92,16 @@ export default function AdminLayout({ children }: AdminLayoutProps) {
             
             {/* Brand Logo */}
             <Link href="/" className="flex items-center space-x-2 transition-colors hover:text-primary">
-              <div className="flex h-8 w-8 items-center justify-center rounded-lg bg-gradient-to-br from-blue-600 to-purple-600 text-white">
-                <Zap className="h-4 w-4" />
-              </div>
+              <Image 
+                src="/logo.png" 
+                alt="AI Coach Logo" 
+                width={32}
+                height={32}
+                className="h-8 w-8 object-contain"
+              />
               <div className="hidden md:block">
                 <span className="text-lg font-bold bg-gradient-to-r from-blue-600 to-purple-600 bg-clip-text text-transparent">
-                  Hypertrophy AI
+                  AI Coach
                 </span>
                 <p className="text-xs text-muted-foreground">Admin Dashboard</p>
               </div>

@@ -2,6 +2,7 @@
 
 import { useState } from 'react';
 import Link from 'next/link';
+import Image from 'next/image';
 import { usePathname } from 'next/navigation';
 import { cn } from '@/lib/utils';
 import { Button } from '@/components/ui/button';
@@ -15,8 +16,7 @@ import {
   ChevronLeft,
   Users,
   BarChart3,
-  FileText,
-  Shield
+  FileText
 } from 'lucide-react';
 
 interface AdminSidebarProps {
@@ -70,11 +70,15 @@ function AdminSidebarContent({ onClose }: { onClose?: () => void }) {
       {/* Header */}
       <div className="flex items-center justify-between p-6 border-b border-border">
         <div className="flex items-center space-x-2">
-          <div className="flex h-8 w-8 items-center justify-center rounded-lg bg-primary text-primary-foreground">
-            <Shield className="h-4 w-4" />
-          </div>
+          <Image 
+            src="/logo.png" 
+            alt="AI Coach Logo" 
+            width={32}
+            height={32}
+            className="h-8 w-8 object-contain"
+          />
           <div>
-            <h2 className="text-lg font-semibold">Admin Panel</h2>
+            <h2 className="text-lg font-semibold">AI Coach Admin</h2>
             <p className="text-xs text-muted-foreground">System Management</p>
           </div>
         </div>

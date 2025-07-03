@@ -60,14 +60,9 @@ export async function middleware(request: NextRequest) {
   // await supabase.auth.getUser()
   const { data: { user } } = await supabase.auth.getUser();
 
-  // Temporarily allow access to /chat for testing
-  // if (!user && request.nextUrl.pathname.startsWith('/chat')) {
-  //   return NextResponse.redirect(new URL('/login', request.url))
-  // }
-  if (!user && request.nextUrl.pathname.startsWith('/chat')) {
-    return NextResponse.redirect(new URL('/login', request.url))
-  }
-
+  // Allow access to /chat for non-authenticated users (they can browse but not send messages)
+  // The actual message sending authentication check happens in the chat page component
+  
   // Admin route protection - only check authentication, role check happens in API routes
   if (request.nextUrl.pathname.startsWith('/admin')) {
     console.log('🔍 Middleware: Admin route accessed');

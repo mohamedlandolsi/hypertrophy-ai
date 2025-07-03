@@ -1,5 +1,6 @@
 import { Button } from "@/components/ui/button";
 import Link from "next/link";
+import Image from "next/image";
 
 export default function Home() {
   return (
@@ -7,6 +8,15 @@ export default function Home() {
       {/* Hero Section */}
       <section className="flex-1 flex items-center justify-center px-4 py-20">
         <div className="text-center max-w-4xl mx-auto">
+          <div className="flex justify-center mb-8">
+            <Image 
+              src="/logo.png" 
+              alt="AI Coach Logo" 
+              width={128}
+              height={128}
+              className="h-24 w-24 md:h-32 md:w-32 object-contain"
+            />
+          </div>
           <h1 className="text-4xl md:text-6xl font-bold mb-6 bg-gradient-to-r from-primary to-blue-600 bg-clip-text text-transparent">
             Your Personal AI Fitness Coach
           </h1>

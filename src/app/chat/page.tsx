@@ -1,10 +1,10 @@
 'use client';
 
 import { createClient } from '@/lib/supabase/client';
-import { useEffect, useState as reactUseState, useRef } from 'react'; // Added useRef
+import { useEffect, useState as reactUseState, useRef, useCallback } from 'react';
 import { Button } from '@/components/ui/button';
 // Updated lucide-react imports
-import { Settings, MessageSquare, Send, ChevronLeft, Menu, User, LogOut, Database, Trash2 } from 'lucide-react';
+import { Settings, MessageSquare, Send, ChevronLeft, Menu, User, LogOut, Database, Trash2, Copy } from 'lucide-react';
 import Link from 'next/link';
 import { ThemeToggle } from '@/components/theme-toggle';
 import { showToast } from '@/lib/toast';
@@ -25,10 +25,9 @@ import {
 import {
   Avatar,
   AvatarFallback,
-  AvatarImage,
 } from "@/components/ui/avatar";
-import { signOut } from '../actions'; // Import the server action
 import { useSearchParams, useRouter } from 'next/navigation';
+import { LoginPromptDialog } from '@/components/login-prompt-dialog';
 
 interface Message {
   id: string;
@@ -49,64 +48,116 @@ const ChatPage = () => {
   const [isSidebarOpen, setIsSidebarOpen] = reactUseState(false); // Default closed on mobile
   const [isMobile, setIsMobile] = reactUseState(false);
   const [user, setUser] = reactUseState<SupabaseUser | null>(null); // Using reactUseState
+  const [userRole, setUserRole] = reactUseState<string>('user'); // Add userRole state
   const [chatHistory, setChatHistory] = reactUseState<Conversation[]>([]);
   const [activeChatId, setActiveChatId] = reactUseState<string | null>(null);
   const [isLoadingHistory, setIsLoadingHistory] = reactUseState(true);
-  const [isLoadingMessages, setIsLoadingMessages] = reactUseState(false);  const [isSendingMessage, setIsSendingMessage] = reactUseState(false);
-  const [isAiThinking, setIsAiThinking] = reactUseState(false);  const [messages, setMessages] = reactUseState<Message[]>([]);  const [input, setInput] = reactUseState('');
+  const [isLoadingMessages, setIsLoadingMessages] = reactUseState(false);
+  const [isSendingMessage, setIsSendingMessage] = reactUseState(false);
+  const [isAiThinking, setIsAiThinking] = reactUseState(false);
+  const [messages, setMessages] = reactUseState<Message[]>([]);
+  const [input, setInput] = reactUseState('');
   const [autoScroll, setAutoScroll] = reactUseState(true);
+  const [showLoginDialog, setShowLoginDialog] = reactUseState(false);
+  const [guestMessageCount, setGuestMessageCount] = reactUseState(0);
+  const [isInitializing, setIsInitializing] = reactUseState(true);
+
+  // Add connection status tracking
+  const [isOnline, setIsOnline] = reactUseState(true);
 
   const searchParams = useSearchParams();
   const router = useRouter();
-  const messagesEndRef = useRef<HTMLDivElement | null>(null);useEffect(() => {
-    const fetchInitialData = async () => {
-      const supabase = createClient();
-      const { data: { user: currentUser } } = await supabase.auth.getUser();
-      
-      // For testing, create a mock user if no authentication
-      let testUser = currentUser;
-      if (!testUser) {
-        testUser = {
-          id: 'test-user-123',
-          email: 'test@example.com',
-          user_metadata: { full_name: 'Test User' },
-          app_metadata: {},
-          aud: 'authenticated',
-          created_at: new Date().toISOString()
-        } as SupabaseUser;
-      }
-      
-      setUser(testUser);
-      // Fetch chat history
-      await loadChatHistory();
+  const messagesEndRef = useRef<HTMLDivElement | null>(null);
 
-      // Check for chatId in URL and load it
-      const chatIdFromUrl = searchParams.get('id');
-      if (chatIdFromUrl) {
-        loadChatSession(chatIdFromUrl);
+  // Add network status monitoring
+  useEffect(() => {
+    const handleOnline = () => setIsOnline(true);
+    const handleOffline = () => setIsOnline(false);
+    
+    // Set initial online status
+    setIsOnline(navigator.onLine);
+    
+    window.addEventListener('online', handleOnline);
+    window.addEventListener('offline', handleOffline);
+    
+    return () => {
+      window.removeEventListener('online', handleOnline);
+      window.removeEventListener('offline', handleOffline);
+    };
+  }, []);
+
+  useEffect(() => {
+    const fetchInitialData = async () => {
+      try {
+        const supabase = createClient();
+        const { data: { user: currentUser } } = await supabase.auth.getUser();
+        
+        setUser(currentUser); // Set actual user or null
+        
+        // Try to get user role if user is authenticated
+        if (currentUser) {
+          try {
+            const response = await fetch('/api/user/role');
+            if (response.ok) {
+              const data = await response.json();
+              setUserRole(data.role || 'user');
+            } else {
+              console.error('Error fetching user role');
+              setUserRole('user'); // Default to user role on error
+            }
+          } catch (error) {
+            console.error('Error fetching user role:', error);
+            setUserRole('user'); // Default to user role on error
+          }
+        } else {
+          setUserRole('user'); // Default for non-authenticated users
+        }
+        
+        // Only fetch chat history for authenticated users
+        if (currentUser) {
+          await loadChatHistory();
+
+          // Check for chatId in URL and load it
+          const chatIdFromUrl = searchParams.get('id');
+          if (chatIdFromUrl) {
+            loadChatSession(chatIdFromUrl);
+          }
+        } else {
+          // For guest users, set loading states to false
+          setIsLoadingHistory(false);
+        }
+      } catch (error) {
+        console.error('Error during initialization:', error);
+      } finally {
+        setIsInitializing(false);
       }
     };
     fetchInitialData();
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
-  // Auto-scroll to bottom when new messages arrive
   // Check for mobile viewport and handle responsive behavior
   useEffect(() => {
     const checkMobile = () => {
       const mobile = window.innerWidth < 768; // md breakpoint
       setIsMobile(mobile);
-      
-      // On desktop, default to open; on mobile, default to closed
-      if (!mobile && !isSidebarOpen) {
-        setIsSidebarOpen(true);
-      }
     };
 
-    checkMobile();
+    // Set initial sidebar state based on screen size only on first load
+    const initializeSidebar = () => {
+      const mobile = window.innerWidth < 768;
+      setIsMobile(mobile);
+      // On desktop, default to open; on mobile, default to closed
+      setIsSidebarOpen(!mobile);
+    };
+
+    // Only initialize on first load
+    initializeSidebar();
+    
+    // Only track mobile state changes, don't force sidebar state
     window.addEventListener('resize', checkMobile);
     return () => window.removeEventListener('resize', checkMobile);
-  }, [isSidebarOpen, setIsMobile, setIsSidebarOpen]);
+  }, [setIsMobile, setIsSidebarOpen]); // Add dependencies but don't use them in the effect
 
   // Auto-close sidebar on mobile when navigating to a chat
   useEffect(() => {
@@ -126,7 +177,18 @@ const ChatPage = () => {
     const { scrollTop, scrollHeight, clientHeight } = e.currentTarget;
     const isAtBottom = scrollHeight - scrollTop === clientHeight;
     setAutoScroll(isAtBottom);
-  };const loadChatHistory = async () => {
+  };  // Enhanced error handling for API calls
+  const handleApiError = useCallback((error: unknown, operation: string) => {
+    console.error(`Error during ${operation}:`, error);
+    
+    if (!isOnline) {
+      showToast.error('Connection Error', 'Please check your internet connection and try again.');
+    } else {
+      showToast.error(`Error`, `Failed to ${operation}. Please try again.`);
+    }
+  }, [isOnline]);
+
+  const loadChatHistory = useCallback(async () => {
     try {
       setIsLoadingHistory(true);
       const response = await fetch('/api/conversations');
@@ -135,13 +197,13 @@ const ChatPage = () => {
         setChatHistory(data.conversations);
       }
     } catch (error) {
-      console.error('Error loading chat history:', error);
+      handleApiError(error, 'load chat history');
     } finally {
       setIsLoadingHistory(false);
     }
-  };
+  }, [handleApiError, setChatHistory, setIsLoadingHistory]);
 
-  const loadChatSession = async (chatId: string) => {
+  const loadChatSession = useCallback(async (chatId: string) => {
     if (activeChatId === chatId && messages.length > 0) return; // Avoid reloading if already active and has messages
 
     setIsLoadingMessages(true);
@@ -160,18 +222,20 @@ const ChatPage = () => {
         router.push('/chat', { scroll: false }); // Clear URL param
       }
     } catch (error) {
-      console.error('Error loading chat session:', error);
-      setActiveChatId(null);    } finally {
+      handleApiError(error, 'load chat session');
+      setActiveChatId(null);
+    } finally {
       setIsLoadingMessages(false);
     }
-  };
+  }, [activeChatId, messages.length, router, handleApiError, setIsLoadingMessages, setActiveChatId, setMessages]);
 
-  const handleNewChat = async () => {
+  const handleNewChat = useCallback(async () => {
     setActiveChatId(null);
     setMessages([]);
     router.push('/chat', { scroll: false });
-  };
-  const handleDeleteChat = async (chatId: string, e: React.MouseEvent) => {
+  }, [router, setActiveChatId, setMessages]);
+
+  const handleDeleteChat = useCallback(async (chatId: string, e: React.MouseEvent) => {
     // Prevent the chat from being selected when delete button is clicked
     e.stopPropagation();
     
@@ -205,24 +269,50 @@ const ChatPage = () => {
         showToast.error('Failed to delete chat', 'Please try again');
       }
     } catch (error) {
-      console.error('Error deleting chat:', error);
-      showToast.networkError('delete chat');
+      handleApiError(error, 'delete chat');
     }
-  };  const handleInputChange = (e: React.ChangeEvent<HTMLTextAreaElement>) => {
+  }, [chatHistory, activeChatId, router, handleApiError, setChatHistory, setActiveChatId, setMessages]);
+
+  const copyMessage = useCallback(async (content: string) => {
+    try {
+      await navigator.clipboard.writeText(content);
+      showToast.success('Copied to clipboard', 'Message content has been copied');
+    } catch (error) {
+      console.error('Failed to copy message:', error);
+      showToast.error('Failed to copy', 'Unable to copy message to clipboard');
+    }
+  }, []);
+
+  const toggleSidebar = useCallback(() => setIsSidebarOpen(!isSidebarOpen), [isSidebarOpen, setIsSidebarOpen]);
+
+  const handleInputChange = useCallback((e: React.ChangeEvent<HTMLTextAreaElement>) => {
     const value = e.target.value;
     if (value.length <= 2000) {
       setInput(value);
     }
-  };
+  }, [setInput]);
 
-  const handleSubmit = async (e: React.FormEvent) => {
+  const handleSubmit = useCallback(async (e: React.FormEvent | KeyboardEvent) => {
     e.preventDefault();
     
     if (!input.trim() || isSendingMessage) return;
 
+    // Check if user is a guest and has reached the message limit (4 messages)
+    if (!user && guestMessageCount >= 4) {
+      setShowLoginDialog(true);
+      return;
+    }
+
     const userMessage = input.trim();
     setInput('');
-    setIsSendingMessage(true);    // Optimistically add user message
+    setIsSendingMessage(true);
+
+    // If the user is a guest, increment their message count
+    if (!user) {
+      setGuestMessageCount(prev => prev + 1);
+    }
+
+    // Optimistically add user message
     const tempUserMessage: Message = {
       id: Date.now().toString(),
       role: 'user',
@@ -241,6 +331,7 @@ const ChatPage = () => {
         body: JSON.stringify({
           conversationId: activeChatId,
           message: userMessage,
+          isGuest: !user, // Send isGuest flag for non-authenticated users
         }),
       });
 
@@ -279,10 +370,7 @@ const ChatPage = () => {
       }
 
     } catch (error) {
-      console.error('Error sending message:', error);
-      
-      // Show error toast
-      showToast.error('Failed to send message', 'Please check your connection and try again');
+      handleApiError(error, 'send message');
       
       // Remove the optimistic message on error
       setMessages(prev => prev.filter(msg => msg.id !== tempUserMessage.id));
@@ -291,12 +379,86 @@ const ChatPage = () => {
       setIsSendingMessage(false);
       setIsAiThinking(false);
     }
-  };
-  
-  const toggleSidebar = () => setIsSidebarOpen(!isSidebarOpen);
+  }, [
+    input, 
+    isSendingMessage, 
+    user, 
+    guestMessageCount, 
+    activeChatId, 
+    router, 
+    loadChatHistory, 
+    handleApiError,
+    setInput,
+    setIsSendingMessage,
+    setShowLoginDialog,
+    setGuestMessageCount,
+    setMessages,
+    setIsAiThinking,
+    setActiveChatId
+  ]);
 
-  if (!user) {
-    return <div className="flex flex-1 items-center justify-center bg-background text-foreground">Loading user data or redirecting...</div>; // Or a loading spinner
+  // Add keyboard shortcuts support
+  useEffect(() => {
+    const handleKeyDown = (e: KeyboardEvent) => {
+      // Cmd/Ctrl + Enter to send message
+      if ((e.metaKey || e.ctrlKey) && e.key === 'Enter' && input.trim() && !isSendingMessage) {
+        e.preventDefault();
+        handleSubmit(e);
+      }
+      
+      // Cmd/Ctrl + N for new chat
+      if ((e.metaKey || e.ctrlKey) && e.key === 'n' && user) {
+        e.preventDefault();
+        handleNewChat();
+      }
+      
+      // Cmd/Ctrl + K to focus search/input
+      if ((e.metaKey || e.ctrlKey) && e.key === 'k') {
+        e.preventDefault();
+        const textarea = document.querySelector('textarea[placeholder*="message"]') as HTMLTextAreaElement;
+        textarea?.focus();
+      }
+      
+      // Escape to close mobile sidebar
+      if (e.key === 'Escape' && isMobile && isSidebarOpen) {
+        setIsSidebarOpen(false);
+      }
+    };
+
+    document.addEventListener('keydown', handleKeyDown);
+    return () => document.removeEventListener('keydown', handleKeyDown);
+  }, [input, isSendingMessage, user, isMobile, isSidebarOpen, handleSubmit, handleNewChat, setIsSidebarOpen]);
+
+  // Add keyboard shortcuts tooltip
+  const [showShortcuts, setShowShortcuts] = reactUseState(false);
+
+  const KeyboardShortcuts = () => (
+    <div className="absolute bottom-full left-0 mb-2 bg-popover border border-border rounded-lg p-3 shadow-lg z-50 min-w-64">
+      <h4 className="text-sm font-medium mb-2">Keyboard Shortcuts</h4>
+      <div className="space-y-1 text-xs">
+        <div className="flex justify-between">
+          <span>Send message</span>
+          <kbd className="px-1 py-0.5 bg-muted rounded text-xs">⌘ Enter</kbd>
+        </div>
+        <div className="flex justify-between">
+          <span>New chat</span>
+          <kbd className="px-1 py-0.5 bg-muted rounded text-xs">⌘ N</kbd>
+        </div>
+        <div className="flex justify-between">
+          <span>Focus input</span>
+          <kbd className="px-1 py-0.5 bg-muted rounded text-xs">⌘ K</kbd>
+        </div>
+        <div className="flex justify-between">
+          <span>Close sidebar</span>
+          <kbd className="px-1 py-0.5 bg-muted rounded text-xs">Esc</kbd>
+        </div>
+      </div>
+    </div>
+  );
+
+  // Show loading state while initializing
+  if (isInitializing) {
+    return <div className="flex flex-1 items-center justify-center bg-background text-foreground">Loading user data...</div>;
   }
 
   return (
@@ -311,10 +473,10 @@ const ChatPage = () => {
 
       {/* Sidebar */}
       <div
-        className={`flex flex-col bg-muted/20 border-r border-border transition-all duration-300 ease-in-out z-50 ${
+        className={`flex flex-col border-r border-border transition-all duration-300 ease-in-out z-50 ${
           isMobile 
-            ? `fixed left-0 top-0 h-full w-80 transform ${isSidebarOpen ? 'translate-x-0' : '-translate-x-full'} shadow-xl`
-            : `relative ${isSidebarOpen ? 'w-64 md:w-72' : 'w-0'} overflow-hidden shadow-sm`
+            ? `fixed left-0 top-0 h-full w-80 transform ${isSidebarOpen ? 'translate-x-0' : '-translate-x-full'} shadow-xl bg-background`
+            : `relative ${isSidebarOpen ? 'w-64 md:w-72' : 'w-0'} overflow-hidden shadow-sm bg-muted/20`
         }`}
       >
         {(isMobile ? isSidebarOpen : true) && (
@@ -338,90 +500,139 @@ const ChatPage = () => {
                 New Chat
               </Button>
               
-              <Link href="/admin/knowledge" passHref>
-                <Button variant="outline" className="w-full justify-start h-10 hover:bg-muted/50">
-                  <Database className="mr-2 h-4 w-4" />
-                  Knowledge Base
-                </Button>
-              </Link>
+              {user && userRole === 'admin' && (
+                <>
+                  <Link href="/admin/knowledge" passHref>
+                    <Button variant="outline" className="w-full justify-start h-10 hover:bg-muted/50">
+                      <Database className="mr-2 h-4 w-4" />
+                      Knowledge Base
+                    </Button>
+                  </Link>
 
-              <Link href="/admin/settings" passHref>
-                <Button variant="outline" className="w-full justify-start h-10 hover:bg-muted/50">
-                  <Settings className="mr-2 h-4 w-4" />
-                  AI Configuration
-                </Button>
-              </Link>
+                  <Link href="/admin/settings" passHref>
+                    <Button variant="outline" className="w-full justify-start h-10 hover:bg-muted/50">
+                      <Settings className="mr-2 h-4 w-4" />
+                      AI Configuration
+                    </Button>
+                  </Link>
+                </>
+              )}
             </div>
             
-            {/* Chat History Section */}
+            {/* Chat History Section for authenticated users or Login prompt for guests */}
             <div className="flex-1 flex flex-col min-h-0">
-              <h3 className="text-sm font-semibold mb-3 text-foreground px-1 flex items-center">
-                Chat History
-                <span className="ml-auto text-xs text-muted-foreground">
-                  {chatHistory.length}
-                </span>
-              </h3>
-              
-              {/* Chat History List */}
-              <div className="flex-1 overflow-y-auto -mr-2 pr-2 space-y-1">
-                {isLoadingHistory ? (
-                  <div className="flex items-center justify-center py-8">
-                    <div className="flex items-center space-x-2 text-muted-foreground">
-                      <div className="w-4 h-4 border-2 border-current border-t-transparent rounded-full animate-spin"></div>
-                      <span className="text-sm">Loading...</span>
-                    </div>
-                  </div>
-                ) : chatHistory.length > 0 ? (
-                  chatHistory.map(chat => (
-                    <div
-                      key={chat.id}
-                      className={`group flex items-center w-full rounded-lg transition-all duration-200 ${
-                        activeChatId === chat.id 
-                          ? "bg-primary/10 border border-primary/20 shadow-sm" 
-                          : "hover:bg-muted/30"
-                      }`}
-                    >
-                      <button
-                        className="flex items-center flex-1 min-w-0 text-left p-3"
-                        onClick={() => loadChatSession(chat.id)}
-                        disabled={isLoadingMessages && activeChatId === chat.id}
-                      >
-                        <MessageSquare className={`mr-3 h-4 w-4 flex-shrink-0 ${
-                          activeChatId === chat.id ? 'text-primary' : 'text-muted-foreground'
-                        }`} />
-                        <div className="flex-1 min-w-0">
-                          <p className={`truncate text-sm font-medium ${
-                            activeChatId === chat.id ? 'text-primary' : 'text-foreground'
-                          }`}>
-                            {chat.title || `Chat ${chat.id.slice(-6)}`}
-                          </p>
-                          <p className="text-xs text-muted-foreground truncate">
-                            {new Date(chat.createdAt).toLocaleDateString('en-US', { 
-                              month: 'short', 
-                              day: 'numeric',
-                              hour: '2-digit',
-                              minute: '2-digit'
-                            })}
-                          </p>
+              {user ? (
+                <>
+                  <h3 className="text-sm font-semibold mb-3 text-foreground px-1 flex items-center">
+                    Chat History
+                    <span className="ml-auto text-xs text-muted-foreground">
+                      {chatHistory.length}
+                    </span>
+                  </h3>
+                  
+                  {/* Chat History List */}
+                  <div className="flex-1 overflow-y-auto -mr-2 pr-2 space-y-1">
+                    {isLoadingHistory ? (
+                      <div className="flex items-center justify-center py-8">
+                        <div className="flex items-center space-x-2 text-muted-foreground">
+                          <div className="w-4 h-4 border-2 border-current border-t-transparent rounded-full animate-spin"></div>
+                          <span className="text-sm">Loading...</span>
                         </div>
-                      </button>
-                      <button
-                        onClick={(e) => handleDeleteChat(chat.id, e)}
-                        className="opacity-0 group-hover:opacity-100 transition-opacity duration-200 p-2 mr-1 rounded hover:bg-destructive/10"
-                        aria-label="Delete chat"
-                      >
-                        <Trash2 className="h-4 w-4 text-destructive hover:text-destructive/80" />
-                      </button>
-                    </div>
-                  ))
-                ) : (
-                  <div className="flex flex-col items-center justify-center py-8 text-center">
-                    <MessageSquare className="h-8 w-8 text-muted-foreground/50 mb-2" />
-                    <p className="text-sm text-muted-foreground">No conversations yet</p>
-                    <p className="text-xs text-muted-foreground/70 mt-1">Start a new chat to begin</p>
+                      </div>
+                    ) : chatHistory.length > 0 ? (
+                      chatHistory.map(chat => (
+                        <div
+                          key={chat.id}
+                          className={`group flex items-center w-full rounded-lg transition-all duration-200 ${
+                            activeChatId === chat.id 
+                              ? "bg-primary/10 border border-primary/20 shadow-sm" 
+                              : "hover:bg-muted/30"
+                          }`}
+                        >
+                          <button
+                            className="flex items-center flex-1 min-w-0 text-left p-3"
+                            onClick={() => loadChatSession(chat.id)}
+                            disabled={isLoadingMessages && activeChatId === chat.id}
+                          >
+                            <MessageSquare className={`mr-3 h-4 w-4 flex-shrink-0 ${
+                              activeChatId === chat.id ? 'text-primary' : 'text-muted-foreground'
+                            }`} />
+                            <div className="flex-1 min-w-0">
+                              <p className={`truncate text-sm font-medium ${
+                                activeChatId === chat.id ? 'text-primary' : 'text-foreground'
+                              }`}>
+                                {chat.title || `Chat ${chat.id.slice(-6)}`}
+                              </p>
+                              <p className="text-xs text-muted-foreground truncate">
+                                {new Date(chat.createdAt).toLocaleDateString('en-US', { 
+                                  month: 'short', 
+                                  day: 'numeric',
+                                  hour: '2-digit',
+                                  minute: '2-digit'
+                                })}
+                              </p>
+                            </div>
+                          </button>
+                          <button
+                            onClick={(e) => handleDeleteChat(chat.id, e)}
+                            className="opacity-0 group-hover:opacity-100 transition-opacity duration-200 p-2 mr-1 rounded hover:bg-destructive/10"
+                            aria-label="Delete chat"
+                          >
+                            <Trash2 className="h-4 w-4 text-destructive hover:text-destructive/80" />
+                          </button>
+                        </div>
+                      ))
+                    ) : (
+                      <div className="flex flex-col items-center justify-center py-8 text-center">
+                        <MessageSquare className="h-8 w-8 text-muted-foreground/50 mb-2" />
+                        <p className="text-sm text-muted-foreground">No conversations yet</p>
+                        <p className="text-xs text-muted-foreground/70 mt-1">Start a new chat to begin</p>
+                      </div>
+                    )}
                   </div>
-                )}
-              </div>
+                </>
+              ) : (
+                <>
+                  <h3 className="text-sm font-semibold mb-3 text-foreground px-1">
+                    Guest Mode
+                  </h3>
+                  
+                  {/* Login prompt for guest users */}
+                  <div className="flex-1 flex flex-col justify-center space-y-4 p-4 bg-muted/30 rounded-lg border border-border">
+                    <div className="text-center space-y-2">
+                      <div className="w-12 h-12 bg-primary/10 rounded-full flex items-center justify-center mx-auto mb-3">
+                        <User className="h-6 w-6 text-primary" />
+                      </div>
+                      <h4 className="text-sm font-medium text-foreground">Save Your Conversations</h4>
+                      <p className="text-xs text-muted-foreground">
+                        You need to login to save your chat history and access all features
+                      </p>
+                    </div>
+                    
+                    <div className="space-y-2">
+                      <Button asChild variant="default" size="sm" className="w-full">
+                        <Link href="/login">
+                          <User className="mr-2 h-4 w-4" />
+                          Login
+                        </Link>
+                      </Button>
+                      
+                      <Button asChild variant="outline" size="sm" className="w-full">
+                        <Link href="/signup">
+                          <MessageSquare className="mr-2 h-4 w-4" />
+                          Create Account
+                        </Link>
+                      </Button>
+                    </div>
+                    
+                    <div className="text-center pt-2 border-t border-border">
+                      <p className="text-xs text-muted-foreground">
+                        Messages left: <span className="font-medium text-foreground">{4 - guestMessageCount}</span>
+                      </p>
+                    </div>
+                  </div>
+                </>
+              )}
             </div>
 
             {/* Footer */}
@@ -457,58 +668,91 @@ const ChatPage = () => {
             </div>
           </div>
 
-          {/* User Avatar Dropdown Menu */}
-          <DropdownMenu>
-            <DropdownMenuTrigger asChild>
-              <Button variant="ghost" className="relative h-8 w-8 md:h-10 md:w-10 rounded-full hover:bg-muted/50 flex-shrink-0">
-                <Avatar className="h-8 w-8 md:h-10 md:w-10">
-                  {/* You can set a dynamic src for AvatarImage e.g., user.imageUrl */}
-                  <AvatarImage src="/placeholder-avatar.png" alt="User Avatar" />
-                  <AvatarFallback className="bg-primary text-primary-foreground">
-                    {user.user_metadata?.full_name?.[0]?.toUpperCase() || user.email?.[0]?.toUpperCase() || 'U'}
-                  </AvatarFallback>
-                </Avatar>
-              </Button>
-            </DropdownMenuTrigger>
-            <DropdownMenuContent className="w-56" align="end" forceMount>
-              <DropdownMenuLabel className="font-normal">
-                <div className="flex flex-col space-y-1">
-                  {/* Replace with dynamic user data */}
-                  <p className="text-sm font-medium leading-none">{user.user_metadata?.full_name || user.email?.split('@')[0] || 'User Name'}</p>
-                  <p className="text-xs leading-none text-muted-foreground">
-                    {user.email || 'user@example.com'}
-                  </p>
-                </div>
-              </DropdownMenuLabel>
-              <DropdownMenuSeparator />
-              <DropdownMenuItem asChild>
-                <Link href="/profile">
-                  <User className="mr-2 h-4 w-4" />
-                  <span>Profile</span>
-                </Link>
-              </DropdownMenuItem>
-              <DropdownMenuItem asChild>
-                <Link href="/admin/knowledge">
-                  <Database className="mr-2 h-4 w-4" />
-                  <span>Knowledge Base</span>
-                </Link>
-              </DropdownMenuItem>
-              <DropdownMenuItem asChild>
-                <Link href="/admin/settings">
-                  <Settings className="mr-2 h-4 w-4" />
-                  <span>AI Configuration</span>
-                </Link>
-              </DropdownMenuItem>
-              <DropdownMenuSeparator />
-              <DropdownMenuItem onClick={async () => { 
-                console.log('Logout action triggered'); 
-                await signOut();
-              }}>
-                <LogOut className="mr-2 h-4 w-4" />
-                <span>Logout</span>
-              </DropdownMenuItem>
-            </DropdownMenuContent>
-          </DropdownMenu>
+          {/* User Avatar Dropdown Menu or Login Button */}
+          {user ? (
+            <DropdownMenu>
+              <DropdownMenuTrigger asChild>
+                <Button variant="ghost" className="relative h-8 w-8 md:h-10 md:w-10 rounded-full hover:bg-muted/50 flex-shrink-0">
+                  <Avatar className="h-8 w-8 md:h-10 md:w-10">
+                    <AvatarFallback className="bg-primary text-primary-foreground">
+                      {user.user_metadata?.full_name?.[0]?.toUpperCase() || user.email?.[0]?.toUpperCase() || 'U'}
+                    </AvatarFallback>
+                  </Avatar>
+                </Button>
+              </DropdownMenuTrigger>
+              <DropdownMenuContent className="w-56" align="end" forceMount>
+                <DropdownMenuLabel className="font-normal">
+                  <div className="flex flex-col space-y-1">
+                    <p className="text-sm font-medium leading-none">{user.user_metadata?.full_name || user.email?.split('@')[0] || 'User Name'}</p>
+                    <p className="text-xs leading-none text-muted-foreground">
+                      {user.email || 'user@example.com'}
+                    </p>
+                  </div>
+                </DropdownMenuLabel>
+                <DropdownMenuSeparator />
+                <DropdownMenuItem asChild>
+                  <Link href="/profile">
+                    <User className="mr-2 h-4 w-4" />
+                    <span>Profile</span>
+                  </Link>
+                </DropdownMenuItem>
+                {userRole === 'admin' && (
+                  <>
+                    <DropdownMenuItem asChild>
+                      <Link href="/admin/knowledge">
+                        <Database className="mr-2 h-4 w-4" />
+                        <span>Knowledge Base</span>
+                      </Link>
+                    </DropdownMenuItem>
+                    <DropdownMenuItem asChild>
+                      <Link href="/admin/settings">
+                        <Settings className="mr-2 h-4 w-4" />
+                        <span>AI Configuration</span>
+                      </Link>
+                    </DropdownMenuItem>
+                  </>
+                )}
+                <DropdownMenuSeparator />
+                <DropdownMenuItem onClick={async () => { 
+                  try {
+                    console.log('Logout action triggered');
+                    
+                    const supabase = createClient();
+                    
+                    // Reset local state immediately for immediate UI update
+                    setUser(null);
+                    setUserRole('user');
+                    setChatHistory([]);
+                    setMessages([]);
+                    setActiveChatId(null);
+                    setGuestMessageCount(0);
+                    
+                    // Sign out from Supabase
+                    await supabase.auth.signOut();
+                    
+                    // Redirect to home or chat page
+                    router.push('/');
+                    showToast.success('Logged out', 'You have been successfully logged out');
+                  } catch (error) {
+                    console.error('Logout error:', error);
+                    showToast.error('Logout failed', 'Please try again');
+                    // If there's an error, we might want to reload the page to ensure clean state
+                    window.location.href = '/';
+                  }
+                }}>
+                  <LogOut className="mr-2 h-4 w-4" />
+                  <span>Logout</span>
+                </DropdownMenuItem>
+              </DropdownMenuContent>
+            </DropdownMenu>
+          ) : (
+            <Button asChild variant="default" size="sm" className="flex-shrink-0">
+              <Link href="/login">
+                <User className="mr-2 h-4 w-4" />
+                Login
+              </Link>
+            </Button>
+          )}
         </div>
 
         {/* Chat Messages Area */}
@@ -516,6 +760,20 @@ const ChatPage = () => {
           className="flex-1 overflow-y-auto pb-32"
           onScroll={handleScroll}
         >
+          {/* Guest user warning banner */}
+          {!user && guestMessageCount === 3 && (
+            <div className="bg-gradient-to-r from-orange-50 to-amber-50 dark:from-orange-950/20 dark:to-amber-950/20 border-l-4 border-orange-400 p-3 m-3 rounded-r-lg">
+              <div className="flex items-center">
+                <div className="flex items-center space-x-2">
+                  <div className="w-2 h-2 bg-orange-400 rounded-full animate-pulse"></div>
+                  <p className="text-sm font-medium text-orange-800 dark:text-orange-200">
+                    This is your last free message! Create a free account to continue chatting.
+                  </p>
+                </div>
+              </div>
+            </div>
+          )}
+          
           <div className="max-w-4xl mx-auto px-3 md:px-4 py-4 md:py-6 space-y-4 md:space-y-6">
             {isLoadingMessages && (
               <div className="flex justify-center items-center h-32">
@@ -540,15 +798,14 @@ const ChatPage = () => {
             {messages.map((msg, index) => (
               <div
                 key={msg.id || `${msg.role}-${index}`}
-                className={`flex items-start space-x-3 ${msg.role === 'user' ? 'flex-row-reverse space-x-reverse' : ''}`}
+                className={`group flex items-start space-x-3 ${msg.role === 'user' ? 'flex-row-reverse space-x-reverse' : ''}`}
               >
                 {/* Avatar */}
                 <div className="flex-shrink-0">
                   {msg.role === 'user' ? (
                     <Avatar className="h-8 w-8">
-                      <AvatarImage src="/placeholder-avatar.png" alt="User" />
                       <AvatarFallback className="bg-primary text-primary-foreground text-xs">
-                        {user.user_metadata?.full_name?.[0]?.toUpperCase() || user.email?.[0]?.toUpperCase() || 'U'}
+                        {user?.user_metadata?.full_name?.[0]?.toUpperCase() || user?.email?.[0]?.toUpperCase() || 'G'}
                       </AvatarFallback>
                     </Avatar>
                   ) : (
@@ -556,21 +813,42 @@ const ChatPage = () => {
                       <span className="text-white text-xs font-bold">AI</span>
                     </div>
                   )}
-                </div>                {/* Message Content */}
+                </div>
+
+                {/* Message Content */}
                 <div className={`flex-1 max-w-[85%] md:max-w-[80%] ${msg.role === 'user' ? 'flex justify-end' : ''}`}>
-                  <div
-                    className={`px-3 md:px-4 py-2 md:py-3 rounded-2xl shadow-sm ${
-                      msg.role === 'user'
-                        ? 'bg-primary text-primary-foreground rounded-br-md'
-                        : 'bg-muted text-foreground rounded-bl-md border'
-                    }`}
-                  >
-                    <MessageContent content={msg.content} role={msg.role} />
-                    {msg.createdAt && (
-                      <p className={`text-xs mt-2 opacity-70 ${msg.role === 'user' ? 'text-right' : 'text-left'}`}>
-                        {new Date(msg.createdAt).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}
-                      </p>
-                    )}
+                  <div className="relative">
+                    <div
+                      className={`px-3 md:px-4 py-2 md:py-3 rounded-2xl shadow-sm ${
+                        msg.role === 'user'
+                          ? 'bg-blue-500 text-white rounded-br-md'
+                          : 'bg-muted text-foreground rounded-bl-md border'
+                      }`}
+                    >
+                      <MessageContent content={msg.content} role={msg.role} />
+                      {msg.createdAt && (
+                        <p className={`text-xs mt-2 opacity-70 ${msg.role === 'user' ? 'text-right text-white/80' : 'text-left'}`}>
+                          {new Date(msg.createdAt).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}
+                        </p>
+                      )}
+                    </div>
+                    
+                    {/* Copy Button */}
+                    <div className={`absolute ${msg.role === 'user' ? 'left-0 -translate-x-8' : 'right-0 translate-x-8'} top-2 opacity-0 group-hover:opacity-100 transition-opacity duration-200`}>
+                      <Button
+                        variant="ghost"
+                        size="sm"
+                        onClick={() => copyMessage(msg.content)}
+                        className={`h-7 w-7 p-0 rounded-full hover:bg-muted/80 ${
+                          msg.role === 'user' 
+                            ? 'text-muted-foreground hover:text-foreground' 
+                            : 'text-muted-foreground hover:text-foreground'
+                        }`}
+                        aria-label="Copy message"
+                      >
+                        <Copy className="h-3 w-3" />
+                      </Button>
+                    </div>
                   </div>
                 </div>
               </div>
@@ -656,12 +934,31 @@ const ChatPage = () => {
               
               {/* Input helper text */}
               <div className="flex items-center justify-between mt-2 px-1">
-                <p className="text-xs text-muted-foreground hidden md:block">
-                  Press Enter to send, Shift+Enter for new line
-                </p>
-                <p className="text-xs text-muted-foreground md:hidden">
-                  Tap send or press Enter
-                </p>
+                <div className="flex items-center gap-2">
+                  <p className="text-xs text-muted-foreground hidden md:block">
+                    Press Enter to send, Shift+Enter for new line
+                  </p>
+                  <button
+                    onMouseEnter={() => setShowShortcuts(true)}
+                    onMouseLeave={() => setShowShortcuts(false)}
+                    className="text-xs text-muted-foreground hover:text-foreground transition-colors relative hidden md:block"
+                  >
+                    Shortcuts
+                    {showShortcuts && <KeyboardShortcuts />}
+                  </button>
+                  <p className="text-xs text-muted-foreground md:hidden">
+                    Tap send or press Enter
+                  </p>
+                  {!user && (
+                    <p className={`text-xs font-medium ${
+                      guestMessageCount >= 3 
+                        ? 'text-orange-500 animate-pulse' 
+                        : 'text-primary/80'
+                    }`}>
+                      {4 - guestMessageCount} free messages remaining
+                    </p>
+                  )}
+                </div>
                 <p className="text-xs text-muted-foreground">
                   {input.length}/2000
                 </p>
@@ -670,6 +967,18 @@ const ChatPage = () => {
           </form>
         </div>
       </div>
+
+      {/* Login Prompt Dialog */}
+      <LoginPromptDialog 
+        open={showLoginDialog} 
+        onOpenChange={setShowLoginDialog} 
+        variant={!user && guestMessageCount >= 4 ? 'messageLimit' : 'initial'}
+      />
+      
+      {/* Keyboard Shortcuts Tooltip - Always show on desktop, toggle on mobile */}
+      {(!isMobile || showShortcuts) && (
+        <KeyboardShortcuts />
+      )}
     </div>
   );
 };

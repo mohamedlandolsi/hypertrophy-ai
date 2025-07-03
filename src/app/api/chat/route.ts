@@ -5,12 +5,47 @@ import { sendToGemini, formatConversationForGemini } from '@/lib/gemini';
 
 export async function POST(request: NextRequest) {
   try {
-    // Get the authenticated user
+    // Get the authenticated user (but don't require it for guest users)
     const supabase = await createClient();
     const { data: { user }, error: authError } = await supabase.auth.getUser();
     
-    if (authError || !user) {
-      return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
+    // Parse request body
+    const body = await request.json();
+    const { conversationId, message, isGuest = false } = body;
+
+    if (!message || typeof message !== 'string') {
+      return NextResponse.json({ error: 'Message is required' }, { status: 400 });
+    }
+
+    // Handle guest users (no database operations)
+    if (isGuest || !user) {
+      // For guest users, just get AI response without saving to database
+      const conversationForGemini = [{ role: 'user' as const, content: message }];
+      
+      // Get AI response from Gemini (pass undefined for user ID since it's a guest)
+      const assistantReply = await sendToGemini(conversationForGemini, undefined);
+
+      return NextResponse.json({
+        conversationId: null, // No conversation ID for guests
+        assistantReply,
+        userMessage: {
+          id: Date.now().toString(), // Temporary ID
+          content: message,
+          role: 'USER',
+          createdAt: new Date().toISOString(),
+        },
+        assistantMessage: {
+          id: (Date.now() + 1).toString(), // Temporary ID
+          content: assistantReply,
+          role: 'ASSISTANT',
+          createdAt: new Date().toISOString(),
+        }
+      });
+    }
+
+    // Handle authenticated users (existing logic)
+    if (authError) {
+      return NextResponse.json({ error: 'Authentication error' }, { status: 401 });
     }
 
     // Ensure user exists in our database
@@ -20,11 +55,7 @@ export async function POST(request: NextRequest) {
       create: { id: user.id }
     });
 
-    // Parse request body
-    const body = await request.json();
-    const { conversationId, message } = body;    if (!message || typeof message !== 'string') {
-      return NextResponse.json({ error: 'Message is required' }, { status: 400 });
-    }    let chatId = conversationId;
+    let chatId = conversationId;
     let existingMessages: Array<{ role: string; content: string }> = [];
 
     // If conversationId is provided, fetch existing messages

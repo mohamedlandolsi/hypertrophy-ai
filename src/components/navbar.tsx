@@ -1,7 +1,8 @@
 'use client';
 
 import Link from 'next/link';
-import { Menu, Zap, User, MessageSquare, Settings, LogOut, LayoutDashboard, UserCircle } from 'lucide-react';
+import Image from 'next/image';
+import { Menu, User, MessageSquare, Settings, LogOut, LayoutDashboard, UserCircle } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Sheet, SheetContent, SheetTrigger, SheetClose, SheetTitle } from '@/components/ui/sheet';
 import { useState, useEffect } from 'react';
@@ -21,13 +22,14 @@ import {
   AvatarFallback,
   AvatarImage,
 } from "@/components/ui/avatar";
-import { signOut } from '../app/actions';
+import { useRouter } from 'next/navigation';
 
 const Navbar = () => {
   const [isMobileMenuOpen, setIsMobileMenuOpen] = useState(false);
   const [user, setUser] = useState<SupabaseUser | null>(null);
   const [isLoadingUser, setIsLoadingUser] = useState(true);
   const [userRole, setUserRole] = useState<string>('user');
+  const router = useRouter();
 
   useEffect(() => {
     const supabase = createClient(); // Define supabase client here
@@ -75,6 +77,27 @@ const Navbar = () => {
     };
   }, []);
 
+  const handleLogout = async () => {
+    try {
+      const supabase = createClient();
+      
+      // Reset local state immediately for immediate UI update
+      setUser(null);
+      setUserRole('user');
+      setIsLoadingUser(false);
+      
+      // Sign out from Supabase
+      await supabase.auth.signOut();
+      
+      // Redirect to home page
+      router.push('/');
+    } catch (error) {
+      console.error('Logout error:', error);
+      // If there's an error, we might want to reload the page to ensure clean state
+      window.location.href = '/';
+    }
+  };
+
   const navLinks = [
     { href: "/profile", label: "Profile", icon: UserCircle },
     { href: "/chat", label: "Chat", icon: MessageSquare },
@@ -89,11 +112,15 @@ const Navbar = () => {
         {/* Logo/Brand - absolutely positioned left */}
         <div className="absolute left-0 top-0 h-full flex items-center pl-2 lg:pl-6" style={{ minWidth: 170 }}>
           <Link href="/" className="flex items-center space-x-2 lg:space-x-3 transition-colors hover:text-primary">
-            <div className="flex h-9 w-9 items-center justify-center rounded-lg bg-gradient-to-br from-blue-600 to-purple-600 text-white">
-              <Zap className="h-5 w-5" />
-            </div>
+            <Image 
+              src="/logo.png" 
+              alt="AI Coach Logo" 
+              width={36}
+              height={36}
+              className="h-9 w-9 object-contain"
+            />
             <span className="text-xl font-bold bg-gradient-to-r from-blue-600 to-purple-600 bg-clip-text text-transparent">
-              Hypertrophy AI
+              AI Coach
             </span>
           </Link>
         </div>
@@ -152,7 +179,7 @@ const Navbar = () => {
                       </div>
                     </div>
                     <DropdownMenuSeparator />
-                    <DropdownMenuItem onClick={async () => await signOut()} className="flex items-center w-full cursor-pointer">
+                    <DropdownMenuItem onClick={handleLogout} className="flex items-center w-full cursor-pointer">
                       <LogOut className="mr-2 h-4 w-4" />
                       <span>Logout</span>
                     </DropdownMenuItem>
@@ -192,10 +219,14 @@ const Navbar = () => {
                     className="mb-6 flex items-center space-x-3 px-2"
                     onClick={() => setIsMobileMenuOpen(false)}
                   >
-                    <div className="flex h-7 w-7 items-center justify-center rounded-md bg-gradient-to-br from-blue-600 to-purple-600 text-white">
-                      <Zap className="h-4 w-4" />
-                    </div>
-                    <span className="font-bold text-lg">Hypertrophy AI</span>
+                    <Image 
+                      src="/logo.png" 
+                      alt="AI Coach Logo" 
+                      width={28}
+                      height={28}
+                      className="h-7 w-7 object-contain"
+                    />
+                    <span className="font-bold text-lg">AI Coach</span>
                   </Link>
                   {navLinks.map((link) => (
                     <SheetClose asChild key={link.href}>
@@ -248,7 +279,7 @@ const Navbar = () => {
                           </Button>
                         </SheetClose>
                         <SheetClose asChild>
-                          <Button variant="outline" className="w-full justify-start h-12 px-4" onClick={async () => { await signOut(); setIsMobileMenuOpen(false);}}>
+                          <Button variant="outline" className="w-full justify-start h-12 px-4" onClick={async () => { await handleLogout(); setIsMobileMenuOpen(false);}}>
                               <LogOut className="mr-2 h-4 w-4" />
                               Logout
                           </Button>

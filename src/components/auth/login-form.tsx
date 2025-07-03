@@ -19,6 +19,7 @@ import { PasswordInput } from "@/components/ui/password-input";
 import { loginSchema, type LoginFormData } from "@/lib/validations/auth";
 import { createClient } from "@/lib/supabase/client";
 import { useRouter, useSearchParams } from "next/navigation";
+import Image from "next/image";
 import { toast } from "sonner";
 import { Loader2 } from "lucide-react";
 
@@ -108,10 +109,31 @@ export default function LoginForm() {
 
   return (
     <div className="flex min-h-screen flex-col items-center justify-center bg-background">
+      <div className="flex flex-col items-center mb-8">
+        <Image 
+          src="/logo.png" 
+          alt="AI Coach Logo" 
+          width={80}
+          height={80}
+          className="h-16 w-16 md:h-20 md:w-20 object-contain mb-4"
+        />
+        <h1 className="text-2xl font-bold bg-gradient-to-r from-blue-600 to-purple-600 bg-clip-text text-transparent">
+          AI Coach
+        </h1>
+      </div>
       <Card className="w-full max-w-md">
         <CardHeader>
-          <CardTitle className="text-2xl">Welcome Back</CardTitle>
-          <CardDescription>
+          <div className="flex justify-center mb-4">
+            <Image 
+              src="/logo.png" 
+              alt="AI Coach Logo" 
+              width={64}
+              height={64}
+              className="h-16 w-16 object-contain"
+            />
+          </div>
+          <CardTitle className="text-2xl text-center">Welcome Back</CardTitle>
+          <CardDescription className="text-center">
             Enter your credentials to access your account.
           </CardDescription>
         </CardHeader>
