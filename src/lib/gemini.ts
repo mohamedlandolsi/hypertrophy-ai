@@ -1,4 +1,4 @@
-import { GoogleGenerativeAI, SchemaType } from '@google/generative-ai';
+import { GoogleGenerativeAI, SchemaType, Part } from '@google/generative-ai';
 import { prisma } from './prisma';
 import { 
   extractAndSaveInformationLegacy, 
@@ -282,7 +282,9 @@ ARABIC FITNESS TERMINOLOGY GUIDE:
 
 export async function sendToGemini(
   conversation: ConversationMessage[], 
-  userId?: string
+  userId?: string,
+  imageBuffer?: Buffer | null,
+  imageMimeType?: string | null
 ): Promise<string> {
   try {
     // Fetch AI configuration - will throw if not properly configured
@@ -301,26 +303,27 @@ export async function sendToGemini(
     const latestUserMessage = conversation[conversation.length - 1];
     const languageInstruction = getLanguageInstruction(conversation);
 
-    // Fetch user's knowledge base content using vector search (if enabled)
+    // Fetch user's knowledge base content using enhanced vector search (if enabled)
     let knowledgeContext = '';
     if (userId && aiConfig.useKnowledgeBase) {
       try {
         // Use the user's latest message to find relevant content
         const userQuery = latestUserMessage.content;
         
-        // Get relevant context using vector search
+        // Get relevant context using enhanced hybrid search with query transformation
         knowledgeContext = await getRelevantContext(
           userId,
           userQuery,
-          5, // Max chunks
-          0.6 // Similarity threshold
+          7, // Max chunks (increased for better context)
+          0.5, // Lower similarity threshold for broader retrieval
+          conversation.map(msg => ({ role: msg.role, content: msg.content }))
         );
 
         if (knowledgeContext) {
           console.log(`📚 Found relevant knowledge context (${knowledgeContext.length} characters)`);
         } else {
           // Fallback to traditional method if no vector search results
-          console.log('📚 No relevant context found via vector search, using fallback');
+          console.log('📚 No relevant context found via enhanced search, using fallback');
           const knowledgeItems = await prisma.knowledgeItem.findMany({
             where: {
               userId: userId,
@@ -359,17 +362,51 @@ export async function sendToGemini(
         console.error('Error fetching client memory:', error);
         // Continue without client memory if there's an error
       }
-    }    // Enhanced system instruction with knowledge context and client memory
+    }    // Enhanced system instruction with structured context and explicit grounding
     const systemInstruction = `${aiConfig.systemPrompt}
 
 ${languageInstruction}
 
 ${clientMemoryContext}
 
-${knowledgeContext ? `SCIENTIFIC REFERENCE MATERIAL (Your Primary Source of Truth):
+${knowledgeContext ? 
+`SCIENTIFIC REFERENCE MATERIAL (Your Primary Source of Truth):
 ${knowledgeContext}
 
-Your Task: Based on the materials above and the client's personal information, provide personalized coaching advice that integrates biomechanical and physiological principles to directly address their specific question and circumstances.` : `IMPORTANT: No knowledge base content is currently available. You are authorized to draw upon your general, pre-trained knowledge base to provide evidence-based fitness guidance.`}`;
+CRITICAL INSTRUCTIONS FOR CONTEXT USAGE:
+1. ALWAYS prioritize information from the Scientific Reference Material above
+2. If the reference material contains information relevant to the user's question, cite it explicitly
+3. If the reference material contradicts your general knowledge, follow the reference material
+4. If the reference material is insufficient, clearly state what additional information might be needed
+5. When making recommendations, directly connect them to specific points in the reference material
+6. If you cannot find relevant information in the reference material, explicitly state this limitation
+
+RESPONSE STRUCTURE:
+- Start with the most relevant information from the reference material
+- Clearly distinguish between reference-based information and general knowledge
+- Provide specific citations when referencing the material (e.g., "According to [Document Title]...")
+- End with actionable recommendations based on the available evidence
+
+Your Task: Provide personalized coaching advice that integrates the scientific evidence from the reference material with the client's specific circumstances and question.` 
+
+: 
+
+`IMPORTANT: No specific knowledge base content is currently available for this query. 
+
+FALLBACK INSTRUCTIONS:
+- You are authorized to draw upon your general, pre-trained knowledge base
+- Provide evidence-based fitness guidance using established scientific principles
+- Clearly indicate when information is from general knowledge vs. specific studies
+- Recommend that the user consider uploading relevant research papers or documents for more personalized advice
+- Focus on well-established, broadly accepted fitness and nutrition principles`}
+
+RESPONSE QUALITY REQUIREMENTS:
+- Be specific and actionable
+- Avoid generic advice that could apply to anyone
+- Connect recommendations to the client's specific situation
+- Use scientific terminology appropriately
+- Provide reasoning for your recommendations
+- Acknowledge any limitations in the available information`;
 
     // Get the generative model with function calling capabilities
     const model = genAI.getGenerativeModel({ 
@@ -406,7 +443,20 @@ Your Task: Based on the materials above and the client's personal information, p
     let aiResponse = '';
     
     try {
-      result = await chat.sendMessage(lastMessage.content);
+      // Prepare the message parts
+      const messageParts: Part[] = [{ text: lastMessage.content }];
+      
+      // Add image if provided
+      if (imageBuffer && imageMimeType) {
+        messageParts.push({
+          inlineData: {
+            data: imageBuffer.toString('base64'),
+            mimeType: imageMimeType,
+          },
+        });
+      }
+      
+      result = await chat.sendMessage(messageParts);
       
       // Check if the response includes function calls
       const functionCalls = result.response.functionCalls();
@@ -486,7 +536,20 @@ Your Task: Based on the materials above and the client's personal information, p
           }))
         });
         
-        const fallbackResult = await fallbackChat.sendMessage(lastMessage.content);
+        // Prepare the message parts for fallback
+        const fallbackMessageParts: Part[] = [{ text: lastMessage.content }];
+        
+        // Add image if provided
+        if (imageBuffer && imageMimeType) {
+          fallbackMessageParts.push({
+            inlineData: {
+              data: imageBuffer.toString('base64'),
+              mimeType: imageMimeType,
+            },
+          });
+        }
+        
+        const fallbackResult = await fallbackChat.sendMessage(fallbackMessageParts);
         aiResponse = fallbackResult.response.text();
         
         // Use legacy extraction as fallback
@@ -526,10 +589,12 @@ Your Task: Based on the materials above and the client's personal information, p
             'progress'
           );
         }
-        
+
+        // Enhanced RAG system monitoring
+        await logRAGSystemPerformance(userId, userQuestion, knowledgeContext);
       } catch (error) {
-        console.error('Error saving coaching insights:', error);
-        // Continue without saving insights if there's an error
+        console.error('Error in conversation processing:', error);
+        // Continue even if conversation processing fails
       }
     }
     
@@ -551,6 +616,73 @@ Your Task: Based on the materials above and the client's personal information, p
     }
     
     throw new Error('Failed to get response from AI');
+  }
+}
+
+/**
+ * Log RAG system performance for monitoring and improvement
+ * 
+ * @param userId User ID
+ * @param query User query
+ * @param retrievedContext Retrieved context
+ */
+async function logRAGSystemPerformance(
+  userId: string,
+  query: string,
+  retrievedContext: string
+) {
+  try {
+    const contextLength = retrievedContext.length;
+    const hasHighRelevance = retrievedContext.includes('[HIGH RELEVANCE]');
+    const sourceCount = (retrievedContext.match(/===/g) || []).length;
+    
+    console.log(`🔍 RAG System Performance:
+    - Query: ${query.substring(0, 50)}${query.length > 50 ? '...' : ''}
+    - Context Length: ${contextLength} chars
+    - High Relevance Items: ${hasHighRelevance ? 'Yes' : 'No'}
+    - Source Count: ${sourceCount}
+    - User ID: ${userId.substring(0, 8)}...`);
+    
+    // Could be extended to store performance metrics in database
+  } catch (error) {
+    console.error('Error logging RAG performance:', error);
+  }
+}
+
+/**
+ * Get enhanced context with fallback strategies
+ * 
+ * @param userId User ID
+ * @param query User query
+ * @param conversationHistory Recent conversation history
+ * @returns Promise<string> Enhanced context
+ */
+export async function getEnhancedContext(
+  userId: string,
+  query: string,
+  conversationHistory: Array<{ role: string; content: string }> = []
+): Promise<string> {
+  try {
+    // Use the enhanced retrieval system
+    const enhancedContext = await getRelevantContext(
+      userId,
+      query,
+      7, // Max chunks
+      0.5, // Lower threshold for broader retrieval
+      conversationHistory
+    );
+
+    if (enhancedContext.length > 0) {
+      return enhancedContext;
+    }
+
+    // Fallback to simpler retrieval if enhanced system fails
+    console.log('⚠️ Enhanced context retrieval failed, using fallback');
+    return await getRelevantContext(userId, query, 5, 0.7);
+    
+  } catch (error) {
+    console.error('Error getting enhanced context:', error);
+    return '';
   }
 }
 

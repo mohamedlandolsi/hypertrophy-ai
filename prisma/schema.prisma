@@ -45,12 +45,14 @@ model Chat {
 }
 
 model Message {
-  id        String   @id @default(cuid())
-  createdAt DateTime @default(now())
-  content   String   @db.Text
-  role      Role
-  chatId    String
-  chat      Chat     @relation(fields: [chatId], references: [id], onDelete: Cascade)
+  id            String   @id @default(cuid())
+  createdAt     DateTime @default(now())
+  content       String   @db.Text
+  role          Role
+  chatId        String
+  chat          Chat     @relation(fields: [chatId], references: [id], onDelete: Cascade)
+  imageData     String?  @db.Text // Base64 encoded image data
+  imageMimeType String?  // MIME type of the image (e.g., "image/jpeg", "image/png")
 }
 
 model KnowledgeItem {

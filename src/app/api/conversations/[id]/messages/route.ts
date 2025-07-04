@@ -49,6 +49,8 @@ export async function GET(
       role: msg.role.toLowerCase(), // Convert 'USER'/'ASSISTANT' to 'user'/'assistant'
       content: msg.content,
       createdAt: msg.createdAt,
+      imageData: msg.imageData ? `data:${msg.imageMimeType};base64,${msg.imageData}` : undefined,
+      imageMimeType: msg.imageMimeType || undefined,
     }));
 
     return NextResponse.json({

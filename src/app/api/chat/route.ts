@@ -9,8 +9,37 @@ export async function POST(request: NextRequest) {
     const supabase = await createClient();
     const { data: { user }, error: authError } = await supabase.auth.getUser();
     
-    // Parse request body
-    const body = await request.json();
+    // Parse request body - handle both JSON and FormData
+    let body: {
+      conversationId?: string;
+      message: string;
+      isGuest?: boolean;
+    };
+    let imageFile: File | null = null;
+    let imageBuffer: Buffer | null = null;
+    let imageMimeType: string | null = null;
+    
+    const contentType = request.headers.get('content-type');
+    
+    if (contentType?.includes('multipart/form-data')) {
+      // Handle multipart/form-data for image uploads
+      const formData = await request.formData();
+      body = {
+        conversationId: formData.get('conversationId') as string,
+        message: formData.get('message') as string,
+        isGuest: formData.get('isGuest') === 'true',
+      };
+      
+      imageFile = formData.get('image') as File;
+      if (imageFile) {
+        imageBuffer = Buffer.from(await imageFile.arrayBuffer());
+        imageMimeType = imageFile.type;
+      }
+    } else {
+      // Handle JSON for text-only messages
+      body = await request.json();
+    }
+    
     const { conversationId, message, isGuest = false } = body;
 
     if (!message || typeof message !== 'string') {
@@ -23,7 +52,7 @@ export async function POST(request: NextRequest) {
       const conversationForGemini = [{ role: 'user' as const, content: message }];
       
       // Get AI response from Gemini (pass undefined for user ID since it's a guest)
-      const assistantReply = await sendToGemini(conversationForGemini, undefined);
+      const assistantReply = await sendToGemini(conversationForGemini, undefined, imageBuffer, imageMimeType);
 
       return NextResponse.json({
         conversationId: null, // No conversation ID for guests
@@ -91,21 +120,23 @@ export async function POST(request: NextRequest) {
       data: {
         content: message,
         role: 'USER',
-        chatId: chatId,
+        chatId: chatId as string,
+        imageData: imageBuffer ? imageBuffer.toString('base64') : null,
+        imageMimeType: imageMimeType,
       }
     });    // Prepare conversation history for Gemini
     const allMessages = [...existingMessages, userMessage];
     const conversationForGemini = formatConversationForGemini(allMessages);
 
     // Get AI response from Gemini with user context for knowledge base
-    const assistantReply = await sendToGemini(conversationForGemini, user.id);
+    const assistantReply = await sendToGemini(conversationForGemini, user.id, imageBuffer, imageMimeType);
 
     // Save assistant message to database
     const assistantMessage = await prisma.message.create({
       data: {
         content: assistantReply,
         role: 'ASSISTANT',
-        chatId: chatId,
+        chatId: chatId as string,
       }
     });
 
@@ -118,6 +149,8 @@ export async function POST(request: NextRequest) {
         content: userMessage.content,
         role: userMessage.role,
         createdAt: userMessage.createdAt,
+        imageData: userMessage.imageData ? `data:${userMessage.imageMimeType};base64,${userMessage.imageData}` : undefined,
+        imageMimeType: userMessage.imageMimeType || undefined,
       },
       assistantMessage: {
         id: assistantMessage.id,

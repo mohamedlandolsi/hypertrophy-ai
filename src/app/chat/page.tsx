@@ -4,7 +4,7 @@ import { createClient } from '@/lib/supabase/client';
 import { useEffect, useState as reactUseState, useRef, useCallback } from 'react';
 import { Button } from '@/components/ui/button';
 // Updated lucide-react imports
-import { Settings, MessageSquare, Send, ChevronLeft, Menu, User, LogOut, Database, Trash2, Copy } from 'lucide-react';
+import { Settings, MessageSquare, Send, ChevronLeft, Menu, User, LogOut, Database, Trash2, Copy, Loader2, Image, X } from 'lucide-react';
 import Link from 'next/link';
 import { ThemeToggle } from '@/components/theme-toggle';
 import { showToast } from '@/lib/toast';
@@ -34,6 +34,8 @@ interface Message {
   role: 'user' | 'assistant';
   content: string;
   createdAt?: string;
+  imageData?: string; // base64 image data
+  imageMimeType?: string; // image MIME type
 }
 
 interface Conversation {
@@ -61,6 +63,10 @@ const ChatPage = () => {
   const [showLoginDialog, setShowLoginDialog] = reactUseState(false);
   const [guestMessageCount, setGuestMessageCount] = reactUseState(0);
   const [isInitializing, setIsInitializing] = reactUseState(true);
+
+  // Image upload state
+  const [selectedImage, setSelectedImage] = reactUseState<File | null>(null);
+  const [imagePreview, setImagePreview] = reactUseState<string | null>(null);
 
   // Add connection status tracking
   const [isOnline, setIsOnline] = reactUseState(true);
@@ -232,8 +238,10 @@ const ChatPage = () => {
   const handleNewChat = useCallback(async () => {
     setActiveChatId(null);
     setMessages([]);
+    setSelectedImage(null);
+    setImagePreview(null);
     router.push('/chat', { scroll: false });
-  }, [router, setActiveChatId, setMessages]);
+  }, [router, setActiveChatId, setMessages, setSelectedImage, setImagePreview]);
 
   const handleDeleteChat = useCallback(async (chatId: string, e: React.MouseEvent) => {
     // Prevent the chat from being selected when delete button is clicked
@@ -292,10 +300,79 @@ const ChatPage = () => {
     }
   }, [setInput]);
 
+  // Image handling functions
+  const handleImageSelect = useCallback((e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    if (file) {
+      // Check file size (limit to 5MB)
+      if (file.size > 5 * 1024 * 1024) {
+        showToast.error('File too large', 'Please select an image smaller than 5MB');
+        return;
+      }
+
+      // Check file type
+      if (!file.type.startsWith('image/')) {
+        showToast.error('Invalid file type', 'Please select an image file');
+        return;
+      }
+
+      setSelectedImage(file);
+      
+      // Create preview
+      const reader = new FileReader();
+      reader.onload = (e) => {
+        setImagePreview(e.target?.result as string);
+      };
+      reader.readAsDataURL(file);
+    }
+  }, [setSelectedImage, setImagePreview]);
+
+  const removeImage = useCallback(() => {
+    setSelectedImage(null);
+    setImagePreview(null);
+  }, [setSelectedImage, setImagePreview]);
+
+  // Handle paste events for image uploads
+  const handlePaste = useCallback((e: React.ClipboardEvent<HTMLTextAreaElement>) => {
+    const clipboardData = e.clipboardData;
+    
+    if (clipboardData && clipboardData.files.length > 0) {
+      const file = clipboardData.files[0];
+      
+      // Check if it's an image file
+      if (file.type.startsWith('image/')) {
+        e.preventDefault(); // Prevent default paste behavior
+        
+        // Check file size (limit to 5MB)
+        if (file.size > 5 * 1024 * 1024) {
+          showToast.error('File too large', 'Please select an image smaller than 5MB');
+          return;
+        }
+        
+        // If there's already an image, ask for confirmation
+        if (selectedImage) {
+          const confirm = window.confirm('Replace current image with pasted image?');
+          if (!confirm) return;
+        }
+        
+        setSelectedImage(file);
+        
+        // Create preview
+        const reader = new FileReader();
+        reader.onload = (e) => {
+          setImagePreview(e.target?.result as string);
+        };
+        reader.readAsDataURL(file);
+        
+        showToast.success('Image pasted', 'Image has been added to your message');
+      }
+    }
+  }, [selectedImage, setSelectedImage, setImagePreview]);
+
   const handleSubmit = useCallback(async (e: React.FormEvent | KeyboardEvent) => {
     e.preventDefault();
     
-    if (!input.trim() || isSendingMessage) return;
+    if ((!input.trim() && !selectedImage) || isSendingMessage) return;
 
     // Check if user is a guest and has reached the message limit (4 messages)
     if (!user && guestMessageCount >= 4) {
@@ -303,8 +380,22 @@ const ChatPage = () => {
       return;
     }
 
-    const userMessage = input.trim();
+    const userMessage = input.trim() || (selectedImage ? '[Image]' : '');
+    const imageFile = selectedImage;
+    let imageDataForMessage = '';
+    
+    // Convert image to base64 for display if present
+    if (imageFile) {
+      imageDataForMessage = await new Promise((resolve) => {
+        const reader = new FileReader();
+        reader.onload = (e) => resolve(e.target?.result as string);
+        reader.readAsDataURL(imageFile);
+      });
+    }
+    
     setInput('');
+    setSelectedImage(null);
+    setImagePreview(null);
     setIsSendingMessage(true);
 
     // If the user is a guest, increment their message count
@@ -318,22 +409,41 @@ const ChatPage = () => {
       role: 'user',
       content: userMessage,
       createdAt: new Date().toISOString(),
+      imageData: imageDataForMessage || undefined,
+      imageMimeType: imageFile?.type || undefined,
     };
     setMessages(prev => [...prev, tempUserMessage]);
     setIsAiThinking(true);
 
     try {
-      const response = await fetch('/api/chat', {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-        },
-        body: JSON.stringify({
-          conversationId: activeChatId,
-          message: userMessage,
-          isGuest: !user, // Send isGuest flag for non-authenticated users
-        }),
-      });
+      let response;
+      
+      if (imageFile) {
+        // Use FormData for multipart/form-data request
+        const formData = new FormData();
+        formData.append('message', userMessage);
+        formData.append('image', imageFile);
+        formData.append('conversationId', activeChatId || '');
+        formData.append('isGuest', (!user).toString());
+
+        response = await fetch('/api/chat', {
+          method: 'POST',
+          body: formData,
+        });
+      } else {
+        // Use JSON for text-only requests
+        response = await fetch('/api/chat', {
+          method: 'POST',
+          headers: {
+            'Content-Type': 'application/json',
+          },
+          body: JSON.stringify({
+            conversationId: activeChatId,
+            message: userMessage,
+            isGuest: !user, // Send isGuest flag for non-authenticated users
+          }),
+        });
+      }
 
       if (!response.ok) {
         throw new Error('Failed to send message');
@@ -351,6 +461,9 @@ const ChatPage = () => {
             role: 'user',
             content: data.userMessage.content,
             createdAt: data.userMessage.createdAt,
+            // Use image data from server response if available, otherwise preserve temporary data
+            imageData: data.userMessage.imageData || tempUserMessage.imageData,
+            imageMimeType: data.userMessage.imageMimeType || tempUserMessage.imageMimeType,
           },
           {
             id: data.assistantMessage.id,
@@ -375,12 +488,17 @@ const ChatPage = () => {
       // Remove the optimistic message on error
       setMessages(prev => prev.filter(msg => msg.id !== tempUserMessage.id));
       setInput(userMessage); // Restore the input
+      if (imageFile) {
+        setSelectedImage(imageFile);
+        setImagePreview(imageDataForMessage || URL.createObjectURL(imageFile));
+      }
     } finally {
       setIsSendingMessage(false);
       setIsAiThinking(false);
     }
   }, [
     input, 
+    selectedImage,
     isSendingMessage, 
     user, 
     guestMessageCount, 
@@ -389,6 +507,8 @@ const ChatPage = () => {
     loadChatHistory, 
     handleApiError,
     setInput,
+    setSelectedImage,
+    setImagePreview,
     setIsSendingMessage,
     setShowLoginDialog,
     setGuestMessageCount,
@@ -401,7 +521,7 @@ const ChatPage = () => {
   useEffect(() => {
     const handleKeyDown = (e: KeyboardEvent) => {
       // Cmd/Ctrl + Enter to send message
-      if ((e.metaKey || e.ctrlKey) && e.key === 'Enter' && input.trim() && !isSendingMessage) {
+      if ((e.metaKey || e.ctrlKey) && e.key === 'Enter' && (input.trim() || selectedImage) && !isSendingMessage) {
         e.preventDefault();
         handleSubmit(e);
       }
@@ -427,7 +547,57 @@ const ChatPage = () => {
 
     document.addEventListener('keydown', handleKeyDown);
     return () => document.removeEventListener('keydown', handleKeyDown);
-  }, [input, isSendingMessage, user, isMobile, isSidebarOpen, handleSubmit, handleNewChat, setIsSidebarOpen]);
+  }, [input, selectedImage, isSendingMessage, user, isMobile, isSidebarOpen, handleSubmit, handleNewChat, setIsSidebarOpen]);
+
+  // Add global paste event listener for images
+  useEffect(() => {
+    const handleGlobalPaste = (e: ClipboardEvent) => {
+      // Only handle if not already handled by textarea
+      const target = e.target as Element;
+      if (target?.tagName === 'TEXTAREA') return;
+      
+      const clipboardData = e.clipboardData;
+      
+      if (clipboardData && clipboardData.files.length > 0) {
+        const file = clipboardData.files[0];
+        
+        // Check if it's an image file
+        if (file.type.startsWith('image/')) {
+          e.preventDefault();
+          
+          // Check file size (limit to 5MB)
+          if (file.size > 5 * 1024 * 1024) {
+            showToast.error('File too large', 'Please select an image smaller than 5MB');
+            return;
+          }
+          
+          // If there's already an image, ask for confirmation
+          if (selectedImage) {
+            const confirm = window.confirm('Replace current image with pasted image?');
+            if (!confirm) return;
+          }
+          
+          setSelectedImage(file);
+          
+          // Create preview
+          const reader = new FileReader();
+          reader.onload = (e) => {
+            setImagePreview(e.target?.result as string);
+          };
+          reader.readAsDataURL(file);
+          
+          showToast.success('Image pasted', 'Image has been added to your message');
+          
+          // Focus the textarea
+          const textarea = document.querySelector('textarea[placeholder*="message"]') as HTMLTextAreaElement;
+          textarea?.focus();
+        }
+      }
+    };
+
+    document.addEventListener('paste', handleGlobalPaste);
+    return () => document.removeEventListener('paste', handleGlobalPaste);
+  }, [selectedImage, setSelectedImage, setImagePreview]);
 
   // Add keyboard shortcuts tooltip
   const [showShortcuts, setShowShortcuts] = reactUseState(false);
@@ -447,6 +617,10 @@ const ChatPage = () => {
         <div className="flex justify-between">
           <span>Focus input</span>
           <kbd className="px-1 py-0.5 bg-muted rounded text-xs">⌘ K</kbd>
+        </div>
+        <div className="flex justify-between">
+          <span>Paste image</span>
+          <kbd className="px-1 py-0.5 bg-muted rounded text-xs">⌘ V</kbd>
         </div>
         <div className="flex justify-between">
           <span>Close sidebar</span>
@@ -726,6 +900,8 @@ const ChatPage = () => {
                     setMessages([]);
                     setActiveChatId(null);
                     setGuestMessageCount(0);
+                    setSelectedImage(null);
+                    setImagePreview(null);
                     
                     // Sign out from Supabase
                     await supabase.auth.signOut();
@@ -799,6 +975,7 @@ const ChatPage = () => {
               <div
                 key={msg.id || `${msg.role}-${index}`}
                 className={`group flex items-start space-x-3 ${msg.role === 'user' ? 'flex-row-reverse space-x-reverse' : ''}`}
+                data-role={msg.role}
               >
                 {/* Avatar */}
                 <div className="flex-shrink-0">
@@ -825,7 +1002,12 @@ const ChatPage = () => {
                           : 'bg-muted text-foreground rounded-bl-md border'
                       }`}
                     >
-                      <MessageContent content={msg.content} role={msg.role} />
+                      <MessageContent 
+                        content={msg.content} 
+                        role={msg.role}
+                        imageData={msg.imageData}
+                        imageMimeType={msg.imageMimeType}
+                      />
                       {msg.createdAt && (
                         <p className={`text-xs mt-2 opacity-70 ${msg.role === 'user' ? 'text-right text-white/80' : 'text-left'}`}>
                           {new Date(msg.createdAt).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}
@@ -885,6 +1067,31 @@ const ChatPage = () => {
         <div className="absolute bottom-0 left-0 right-0 bg-background/95 backdrop-blur-sm border-t border-border">
           <form onSubmit={handleSubmit} className="p-3 md:p-4">
             <div className="max-w-4xl mx-auto">
+              {/* Image Preview */}
+              {imagePreview && (
+                <div className="mb-3 p-3 border border-border rounded-lg bg-muted/30" data-testid="image-preview">
+                  <div className="flex items-center justify-between mb-2">
+                    <span className="text-sm font-medium text-foreground">Selected Image</span>
+                    <Button
+                      type="button"
+                      variant="ghost"
+                      size="sm"
+                      onClick={removeImage}
+                      className="h-6 w-6 p-0 hover:bg-destructive/10 hover:text-destructive"
+                    >
+                      <X className="h-3 w-3" />
+                    </Button>
+                  </div>
+                  <div className="relative">
+                    <img
+                      src={imagePreview}
+                      alt="Selected image"
+                      className="max-w-full max-h-32 object-contain rounded border"
+                    />
+                  </div>
+                </div>
+              )}
+              
               <div className="flex items-end space-x-2 md:space-x-3">
                 <div className="flex-1 relative">
                   <ArabicAwareTextarea
@@ -894,12 +1101,14 @@ const ChatPage = () => {
                     onChange={handleInputChange}
                     disabled={isSendingMessage || isAiThinking}
                     maxLength={2000}
+                    data-testid="chat-input"
                     onKeyDown={(e) => {
                       if (e.key === 'Enter' && !e.shiftKey) {
                         e.preventDefault();
                         handleSubmit(e);
                       }
                     }}
+                    onPaste={handlePaste}
                   />
                   {!autoScroll && (
                     <Button
@@ -917,15 +1126,41 @@ const ChatPage = () => {
                     </Button>
                   )}
                 </div>
+                
+                {/* Image Upload Button */}
+                <div className="relative">
+                  <input
+                    type="file"
+                    accept="image/*"
+                    onChange={handleImageSelect}
+                    className="hidden"
+                    id="image-upload"
+                    disabled={isSendingMessage || isAiThinking}
+                  />
+                  <Button
+                    type="button"
+                    variant="ghost"
+                    size="icon"
+                    className="rounded-full h-10 w-10 md:h-12 md:w-12 hover:bg-muted/50 flex-shrink-0 transition-all duration-200 hover:scale-105 disabled:hover:scale-100 disabled:cursor-not-allowed"
+                    onClick={() => document.getElementById('image-upload')?.click()}
+                    disabled={isSendingMessage || isAiThinking}
+                    aria-label="Upload image"
+                    data-testid="image-upload-button"
+                  >
+                    <Image className="h-4 w-4 md:h-5 md:w-5 text-muted-foreground" />
+                  </Button>
+                </div>
+                
                 <Button
                   type="submit"
                   size="icon"
-                  className="rounded-full h-10 w-10 md:h-12 md:w-12 bg-primary hover:bg-primary/90 flex-shrink-0 shadow-lg transition-all duration-200 hover:scale-105"
+                  className="rounded-full h-10 w-10 md:h-12 md:w-12 bg-primary hover:bg-primary/90 disabled:opacity-40 flex-shrink-0 shadow-lg transition-all duration-200 hover:scale-105 disabled:hover:scale-100 disabled:cursor-not-allowed"
                   aria-label="Send message"
-                  disabled={isSendingMessage || isAiThinking || !input.trim()}
+                  data-testid="send-button"
+                  disabled={isSendingMessage || isAiThinking || (!input.trim() && !selectedImage)}
                 >
-                  {isSendingMessage ? (
-                    <div className="w-3 h-3 md:w-4 md:h-4 border-2 border-primary-foreground border-t-transparent rounded-full animate-spin" />
+                  {isSendingMessage || isAiThinking ? (
+                    <Loader2 className="h-4 w-4 md:h-5 md:w-5 text-primary-foreground animate-spin" />
                   ) : (
                     <Send className="h-4 w-4 md:h-5 md:w-5 text-primary-foreground" />
                   )}
@@ -959,7 +1194,13 @@ const ChatPage = () => {
                     </p>
                   )}
                 </div>
-                <p className="text-xs text-muted-foreground">
+                <p className={`text-xs transition-colors ${
+                  input.length > 1800 
+                    ? 'text-orange-500 font-medium' 
+                    : input.length > 1600 
+                    ? 'text-amber-500' 
+                    : 'text-muted-foreground'
+                }`}>
                   {input.length}/2000
                 </p>
               </div>

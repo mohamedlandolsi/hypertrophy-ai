@@ -6,9 +6,11 @@ import { getTextFormatting } from '@/lib/text-formatting';
 interface MessageContentProps {
   content: string;
   role: 'user' | 'assistant';
+  imageData?: string;
+  imageMimeType?: string;
 }
 
-export const MessageContent: React.FC<MessageContentProps> = ({ content }) => {
+export const MessageContent: React.FC<MessageContentProps> = ({ content, imageData }) => {
   const formatting = getTextFormatting(content);
   
   return (
@@ -18,7 +20,21 @@ export const MessageContent: React.FC<MessageContentProps> = ({ content }) => {
       style={formatting.style}
       className={`message-content ${formatting.className}`}
     >
-      <div className="max-w-none">
+      {/* Display image if present */}
+      {imageData && (
+        <div className={content && content !== '[Image]' ? 'mb-3' : ''}>
+          <img
+            src={imageData}
+            alt="Uploaded image"
+            className="max-w-full max-h-64 object-contain rounded-lg border border-white/20"
+            style={{ maxWidth: '300px' }}
+          />
+        </div>
+      )}
+      
+      {/* Only show text content if it exists and is not just the placeholder */}
+      {content && content !== '[Image]' && (
+        <div className="max-w-none">
         <ReactMarkdown
           remarkPlugins={[remarkGfm]}
           components={{
@@ -143,7 +159,8 @@ export const MessageContent: React.FC<MessageContentProps> = ({ content }) => {
       >
         {content}
       </ReactMarkdown>
-      </div>
+        </div>
+      )}
     </div>
   );
 };

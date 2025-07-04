@@ -9,6 +9,7 @@ interface ArabicAwareTextareaProps {
   className?: string;
   disabled?: boolean;
   onKeyDown?: (e: React.KeyboardEvent<HTMLTextAreaElement>) => void;
+  onPaste?: (e: React.ClipboardEvent<HTMLTextAreaElement>) => void;
   rows?: number;
   maxLength?: number;
 }
@@ -20,6 +21,7 @@ export const ArabicAwareTextarea: React.FC<ArabicAwareTextareaProps> = ({
   className = "",
   disabled = false,
   onKeyDown,
+  onPaste,
   rows = 1,
   maxLength
 }) => {
@@ -64,11 +66,12 @@ export const ArabicAwareTextarea: React.FC<ArabicAwareTextareaProps> = ({
   return (
     <Textarea
       placeholder={getPlaceholder()}
-      className={`${className} ${direction === 'rtl' ? 'text-right' : ''} resize-none overflow-hidden`}
+      className={`${className} ${direction === 'rtl' ? 'text-right' : ''} resize-none overflow-y-auto max-h-[120px] chat-textarea`}
       value={value}
       onChange={handleChange}
       disabled={disabled}
       onKeyDown={handleKeyDown}
+      onPaste={onPaste}
       dir={direction}
       lang={isArabicText(value) ? 'ar' : 'en'}
       rows={rows}
