@@ -310,20 +310,38 @@ export async function sendToGemini(
         // Use the user's latest message to find relevant content
         const userQuery = latestUserMessage.content;
         
-        // Get relevant context using enhanced hybrid search with query transformation
-        knowledgeContext = await getRelevantContext(
-          userId,
-          userQuery,
-          7, // Max chunks (increased for better context)
-          0.5, // Lower similarity threshold for broader retrieval
-          conversation.map(msg => ({ role: msg.role, content: msg.content }))
-        );
+        console.log(`🔍 RAG DEBUG: Starting vector search for query: "${userQuery}"`);
+        console.log(`🔍 RAG DEBUG: User ID: ${userId}`);
+        
+        // TEMPORARY FIX: Use direct vector search instead of enhanced hybrid search
+        console.log('🔍 RAG DEBUG: Using direct vector search (bypassing hybrid search)');
+        
+        // Import the vector search function
+        const { performVectorSearch } = await import('./vector-search');
+        
+        const directResults = await performVectorSearch(userQuery, {
+          limit: 7,
+          threshold: 0.4, // Lower threshold for more results
+          userId
+        });
 
-        if (knowledgeContext) {
-          console.log(`📚 Found relevant knowledge context (${knowledgeContext.length} characters)`);
+        console.log(`🔍 RAG DEBUG: Direct vector search found ${directResults.length} results`);
+
+        if (directResults && directResults.length > 0) {
+          // Format the results similar to getRelevantContext
+          const contextParts = directResults.map(result => 
+            `=== ${result.knowledgeItemTitle} (${(result.similarity * 100).toFixed(1)}%) ===\n${result.content}`
+          );
+          
+          knowledgeContext = contextParts.join('\n\n');
+          console.log(`📚 Direct vector search success: ${knowledgeContext.length} characters`);
+          console.log(`📚 Context preview: ${knowledgeContext.substring(0, 200)}...`);
         } else {
+          console.log('🔍 RAG DEBUG: Direct vector search returned no results, trying fallback');
+          
           // Fallback to traditional method if no vector search results
-          console.log('📚 No relevant context found via enhanced search, using fallback');
+          console.log('📚 No relevant context found via direct search, using fallback');
+          
           const knowledgeItems = await prisma.knowledgeItem.findMany({
             where: {
               userId: userId,
@@ -337,17 +355,22 @@ export async function sendToGemini(
             take: 3 // Limit to prevent context overflow
           });
 
+          console.log(`🔍 RAG DEBUG: Fallback found ${knowledgeItems.length} knowledge items`);
+
           if (knowledgeItems.length > 0) {
             knowledgeContext = '\n\n' + 
               knowledgeItems.map((item) => 
                 `=== ${item.title} ===\n${item.content || '[Content not available for text analysis]'}`
               ).join('\n\n');
+            console.log(`🔍 RAG DEBUG: Fallback context length: ${knowledgeContext.length} characters`);
           }
         }
       } catch (error) {
-        console.error('Error fetching knowledge context:', error);
+        console.error('🔍 RAG DEBUG: Error fetching knowledge context:', error);
         // Continue without knowledge context if there's an error
       }
+    } else {
+      console.log('🔍 RAG DEBUG: Knowledge base disabled or no user ID');
     }
 
     // Fetch client memory for personalized coaching (if enabled)
