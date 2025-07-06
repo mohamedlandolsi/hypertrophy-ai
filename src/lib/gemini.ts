@@ -52,6 +52,8 @@ async function getAIConfiguration() {
 export interface ConversationMessage {
   role: 'user' | 'assistant';
   content: string;
+  imageData?: string; // Base64 image data
+  imageMimeType?: string; // Image MIME type
 }
 
 // Function definition for updating client profile
@@ -451,11 +453,30 @@ RESPONSE QUALITY REQUIREMENTS:
       ]
     });
 
-    // Convert conversation to Gemini format
-    const history = conversation.slice(0, -1).map(msg => ({
-      role: msg.role === 'assistant' ? 'model' : 'user',
-      parts: [{ text: msg.content }]
-    }));
+    // Convert conversation to Gemini format, including images in history
+    const history = conversation.slice(0, -1).map(msg => {
+      const parts: Part[] = [{ text: msg.content }];
+      
+      // Add image if present in this message
+      if (msg.imageData && msg.imageMimeType) {
+        // Convert base64 data URL to just base64 if needed
+        const base64Data = msg.imageData.startsWith('data:') 
+          ? msg.imageData.split(',')[1] 
+          : msg.imageData;
+          
+        parts.push({
+          inlineData: {
+            data: base64Data,
+            mimeType: msg.imageMimeType,
+          },
+        });
+      }
+      
+      return {
+        role: msg.role === 'assistant' ? 'model' : 'user',
+        parts: parts
+      };
+    });
 
     // Start a chat session with history
     const chat = model.startChat({
@@ -469,12 +490,26 @@ RESPONSE QUALITY REQUIREMENTS:
       // Prepare the message parts
       const messageParts: Part[] = [{ text: lastMessage.content }];
       
-      // Add image if provided
+      // Add image if provided via parameters (new image upload)
       if (imageBuffer && imageMimeType) {
         messageParts.push({
           inlineData: {
             data: imageBuffer.toString('base64'),
             mimeType: imageMimeType,
+          },
+        });
+      }
+      // Or add image if present in the message object (from conversation history)
+      else if (lastMessage.imageData && lastMessage.imageMimeType) {
+        // Convert base64 data URL to just base64 if needed
+        const base64Data = lastMessage.imageData.startsWith('data:') 
+          ? lastMessage.imageData.split(',')[1] 
+          : lastMessage.imageData;
+          
+        messageParts.push({
+          inlineData: {
+            data: base64Data,
+            mimeType: lastMessage.imageMimeType,
           },
         });
       }
@@ -553,21 +588,52 @@ RESPONSE QUALITY REQUIREMENTS:
         });
         
         const fallbackChat = fallbackModel.startChat({
-          history: conversation.slice(0, -1).map(msg => ({
-            role: msg.role === 'assistant' ? 'model' : 'user',
-            parts: [{ text: msg.content }]
-          }))
+          history: conversation.slice(0, -1).map(msg => {
+            const parts: Part[] = [{ text: msg.content }];
+            
+            // Add image if present in conversation history
+            if (msg.imageData && msg.imageMimeType) {
+              const base64Data = msg.imageData.startsWith('data:') 
+                ? msg.imageData.split(',')[1] 
+                : msg.imageData;
+                
+              parts.push({
+                inlineData: {
+                  data: base64Data,
+                  mimeType: msg.imageMimeType,
+                },
+              });
+            }
+            
+            return {
+              role: msg.role === 'assistant' ? 'model' : 'user',
+              parts: parts
+            };
+          })
         });
         
         // Prepare the message parts for fallback
         const fallbackMessageParts: Part[] = [{ text: lastMessage.content }];
         
-        // Add image if provided
+        // Add image if provided via parameters (new image upload)
         if (imageBuffer && imageMimeType) {
           fallbackMessageParts.push({
             inlineData: {
               data: imageBuffer.toString('base64'),
               mimeType: imageMimeType,
+            },
+          });
+        }
+        // Or add image if present in the message object (from conversation history)
+        else if (lastMessage.imageData && lastMessage.imageMimeType) {
+          const base64Data = lastMessage.imageData.startsWith('data:') 
+            ? lastMessage.imageData.split(',')[1] 
+            : lastMessage.imageData;
+            
+          fallbackMessageParts.push({
+            inlineData: {
+              data: base64Data,
+              mimeType: lastMessage.imageMimeType,
             },
           });
         }
@@ -710,9 +776,11 @@ export async function getEnhancedContext(
 }
 
 // Helper function to format conversation for Gemini
-export function formatConversationForGemini(messages: Array<{ role: string; content: string }>): ConversationMessage[] {
+export function formatConversationForGemini(messages: Array<{ role: string; content: string; imageData?: string | null; imageMimeType?: string | null }>): ConversationMessage[] {
   return messages.map(msg => ({
     role: msg.role === 'USER' ? 'user' : 'assistant',
-    content: msg.content
+    content: msg.content,
+    imageData: msg.imageData || undefined,
+    imageMimeType: msg.imageMimeType || undefined
   }));
 }

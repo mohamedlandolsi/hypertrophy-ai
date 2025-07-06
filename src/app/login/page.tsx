@@ -1,5 +1,6 @@
 import { Suspense } from "react";
 import LoginForm from "@/components/auth/login-form";
+import { AuthLoading } from "@/components/ui/loading";
 
 function LoginFormWrapper() {
   return <LoginForm />;
@@ -7,7 +8,7 @@ function LoginFormWrapper() {
 
 export default function LoginPage() {
   return (
-    <Suspense fallback={<div>Loading...</div>}>
+    <Suspense fallback={<AuthLoading />}>
       <LoginFormWrapper />
     </Suspense>
   );

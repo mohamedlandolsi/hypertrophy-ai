@@ -4,6 +4,7 @@ import { useEffect, useState, useCallback } from 'react';
 import { useRouter } from 'next/navigation';
 import { createClient } from '@/lib/supabase/client';
 import AdminLayout from '@/components/admin-layout';
+import { PageLoading } from '@/components/ui/loading';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
@@ -223,12 +224,10 @@ export default function AdminSettingsPage() {
   if (loading) {
     return (
       <AdminLayout>
-        <div className="flex items-center justify-center min-h-[60vh]">
-          <div className="text-center">
-            <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-primary mx-auto mb-4"></div>
-            <p className="text-muted-foreground">Loading configuration...</p>
-          </div>
-        </div>
+        <PageLoading 
+          message="Loading Configuration"
+          description="Preparing your admin settings panel"
+        />
       </AdminLayout>
     );
   }

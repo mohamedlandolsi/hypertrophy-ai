@@ -8,6 +8,7 @@ import { Textarea } from '@/components/ui/textarea';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { User, Activity, Target, Edit } from 'lucide-react';
 import type { User as SupabaseUser } from '@supabase/supabase-js';
+import { FitnessLoading } from '@/components/ui/loading';
 import ProfileForm from '@/components/profile-form';
 
 interface ClientMemory {
@@ -68,7 +69,7 @@ export default function ProfilePage() {
   if (loading) {
     return (
       <div className="flex flex-1 items-center justify-center bg-background text-foreground">
-        Loading...
+        <FitnessLoading />
       </div>
     );
   }

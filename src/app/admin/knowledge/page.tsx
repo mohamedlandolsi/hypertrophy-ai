@@ -9,6 +9,7 @@ import { Input } from '@/components/ui/input';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import KnowledgeProcessingMonitor from '@/components/knowledge-processing-monitor';
 import { showToast } from '@/lib/toast';
+import { KnowledgeLoading } from '@/components/ui/loading';
 import type { User as SupabaseUser } from '@supabase/supabase-js';
 import { 
   Upload, 
@@ -50,16 +51,6 @@ interface KnowledgeItem {
   mimeType?: string;
   createdAt: string;
   status: 'PROCESSING' | 'READY' | 'ERROR';
-}
-
-interface UploadResult extends KnowledgeItem {
-  processingResult?: {
-    chunksCreated: number;
-    embeddingsGenerated: number;
-    processingTime: number;
-    warnings: string[];
-    errors?: string[];
-  };
 }
 
 export default function KnowledgePage() {
@@ -172,72 +163,112 @@ export default function KnowledgePage() {
     
     setIsUploading(true);
     
-    // Show loading toast for each file
-    const uploadToasts = selectedFiles.map(file => 
-      showToast.uploadProgress(file.name)
-    );
+    const results = [];
+    const errors = [];
     
     try {
-      const formData = new FormData();
-      selectedFiles.forEach(file => {
-        formData.append('files', file);
-      });
-
-      const response = await fetch('/api/knowledge/upload', {
-        method: 'POST',
-        body: formData,
-      });
-
-      // Dismiss loading toasts
-      uploadToasts.forEach(toastId => showToast.dismiss(toastId));
-
-      if (response.ok) {
-        const data = await response.json();
-        console.log('Files uploaded successfully:', data);
+      // Process each file individually
+      for (const file of selectedFiles) {
+        const uploadToast = showToast.uploadProgress(file.name);
         
-        // Show success messages
-        if (data.knowledgeItems && data.knowledgeItems.length > 0) {
-          data.knowledgeItems.forEach((item: UploadResult) => {
-            if (item.processingResult) {
+        try {
+          console.log(`🚀 Starting upload for: ${file.name}`);
+          
+          // Step 1: Request signed upload URL
+          const startResponse = await fetch('/api/knowledge/upload/start', {
+            method: 'POST',
+            headers: {
+              'Content-Type': 'application/json',
+            },
+            body: JSON.stringify({
+              fileName: file.name,
+              fileSize: file.size,
+              mimeType: file.type,
+            }),
+          });
+
+          if (!startResponse.ok) {
+            const errorData = await startResponse.json();
+            throw new Error(errorData.error || 'Failed to get upload URL');
+          }
+
+          const { uploadUrl, filePath } = await startResponse.json();
+          console.log(`✅ Upload URL obtained for: ${file.name}`);
+
+          // Step 2: Upload file directly to Supabase Storage
+          const uploadResponse = await fetch(uploadUrl, {
+            method: 'PUT',
+            body: file,
+            headers: {
+              'Content-Type': file.type,
+            },
+          });
+
+          if (!uploadResponse.ok) {
+            throw new Error(`Failed to upload file to storage: ${uploadResponse.statusText}`);
+          }
+
+          console.log(`📤 File uploaded to storage: ${file.name}`);
+
+          // Step 3: Process the uploaded file
+          const processResponse = await fetch('/api/knowledge/upload', {
+            method: 'POST',
+            headers: {
+              'Content-Type': 'application/json',
+            },
+            body: JSON.stringify({
+              filePath: filePath,
+              fileName: file.name,
+              fileSize: file.size,
+              mimeType: file.type,
+            }),
+          });
+
+          showToast.dismiss(uploadToast);
+
+          if (processResponse.ok) {
+            const data = await processResponse.json();
+            console.log(`✅ File processed successfully: ${file.name}`, data);
+            
+            if (data.knowledgeItem?.processingResult) {
               showToast.uploadSuccess(
-                item.fileName || item.title,
-                item.processingResult.chunksCreated,
-                item.processingResult.embeddingsGenerated
+                file.name,
+                data.knowledgeItem.processingResult.chunksCreated,
+                data.knowledgeItem.processingResult.embeddingsGenerated
               );
             } else {
-              showToast.success(`Successfully uploaded ${item.fileName || item.title}`);
+              showToast.success(`Successfully uploaded ${file.name}`);
             }
-          });
-        }
-        
-        // Show warnings for skipped files
-        if (data.skippedFiles && data.skippedFiles.length > 0) {
-          data.skippedFiles.forEach((file: { name: string; reason: string }) => {
-            showToast.fileValidationError(file.name, file.reason);
-          });
-        }
-        
-        // Refresh knowledge items
-        await fetchKnowledgeItems();
-        
-        // Clear selected files
-        setSelectedFiles([]);
-      } else {
-        const errorData = await response.json();
-        console.error('Upload failed:', errorData.error);
-        
-        // Show error for each file or general error
-        if (errorData.skippedFiles && errorData.skippedFiles.length > 0) {
-          errorData.skippedFiles.forEach((file: { name: string; reason: string }) => {
-            showToast.uploadError(file.name, file.reason);
-          });
-        } else {
-          showToast.error('Upload failed', errorData.error);
+            
+            results.push(data.knowledgeItem);
+          } else {
+            const errorData = await processResponse.json();
+            console.error(`❌ Processing failed for ${file.name}:`, errorData.error);
+            throw new Error(errorData.error || 'Failed to process file');
+          }
+        } catch (fileError) {
+          console.error(`❌ Error uploading ${file.name}:`, fileError);
+          showToast.dismiss(uploadToast);
+          showToast.uploadError(file.name, (fileError as Error).message);
+          errors.push({ fileName: file.name, error: (fileError as Error).message });
         }
       }
+
+      // Refresh knowledge items if any files were processed successfully
+      if (results.length > 0) {
+        await fetchKnowledgeItems();
+      }
+      
+      // Clear selected files
+      setSelectedFiles([]);
+      
+      // Show summary
+      if (results.length > 0) {
+        console.log(`🎉 Upload completed. Successfully processed ${results.length} file(s), failed ${errors.length} file(s)`);
+      }
+      
     } catch (error) {
-      console.error('Upload error:', error);
-      uploadToasts.forEach(toastId => showToast.dismiss(toastId));
+      console.error('❌ Upload process error:', error);
       showToast.networkError('upload files');
     } finally {
       setIsUploading(false);
@@ -414,14 +445,7 @@ export default function KnowledgePage() {
   if (!user || isLoading) {
     return (
       <AdminLayout>
-        <div className="flex items-center justify-center min-h-[60vh]">
-          <div className="text-center">
-            <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-primary mx-auto mb-4"></div>
-            <p className="text-muted-foreground">
-              {isLoading ? 'Loading knowledge base...' : 'Authenticating...'}
-            </p>
-          </div>
-        </div>
+        <KnowledgeLoading />
       </AdminLayout>
     );
   }

@@ -8,6 +8,7 @@ import { Settings, MessageSquare, Send, ChevronLeft, Menu, User, LogOut, Databas
 import Link from 'next/link';
 import { ThemeToggle } from '@/components/theme-toggle';
 import { showToast } from '@/lib/toast';
+import { InlineLoading, FullPageLoading } from '@/components/ui/loading';
 import type { User as SupabaseUser } from '@supabase/supabase-js';
 import { Suspense } from 'react';
 import { MessageContent } from '@/components/message-content';
@@ -632,7 +633,13 @@ const ChatPage = () => {
 
   // Show loading state while initializing
   if (isInitializing) {
-    return <div className="flex flex-1 items-center justify-center bg-background text-foreground">Loading user data...</div>;
+    return (
+      <FullPageLoading 
+        variant="fitness" 
+        message="Preparing your AI fitness coach..." 
+        description="Loading your personalized workout and nutrition assistant"
+      />
+    );
   }
 
   return (
@@ -708,10 +715,10 @@ const ChatPage = () => {
                   <div className="flex-1 overflow-y-auto -mr-2 pr-2 space-y-1">
                     {isLoadingHistory ? (
                       <div className="flex items-center justify-center py-8">
-                        <div className="flex items-center space-x-2 text-muted-foreground">
-                          <div className="w-4 h-4 border-2 border-current border-t-transparent rounded-full animate-spin"></div>
-                          <span className="text-sm">Loading...</span>
-                        </div>
+                        <InlineLoading 
+                          variant="dots"
+                          message="Loading chat history..."
+                        />
                       </div>
                     ) : chatHistory.length > 0 ? (
                       chatHistory.map(chat => (
@@ -953,10 +960,10 @@ const ChatPage = () => {
           <div className="max-w-4xl mx-auto px-3 md:px-4 py-4 md:py-6 space-y-4 md:space-y-6">
             {isLoadingMessages && (
               <div className="flex justify-center items-center h-32">
-                <div className="flex items-center space-x-2 text-muted-foreground">
-                  <div className="w-4 h-4 border-2 border-current border-t-transparent rounded-full animate-spin"></div>
-                  <span>Loading messages...</span>
-                </div>
+                <InlineLoading 
+                  variant="pulse"
+                  message="Loading messages..."
+                />
               </div>
             )}
             
@@ -1226,7 +1233,7 @@ const ChatPage = () => {
 
 export default function ChatPageWrapper() {
   return (
-    <Suspense fallback={<div className="flex flex-1 items-center justify-center">Loading...</div>}>
+    <Suspense fallback={<FullPageLoading variant="brain" message="Loading AI Chat" description="Preparing your intelligent fitness companion" />}>
       <ChatPage />
     </Suspense>
   );

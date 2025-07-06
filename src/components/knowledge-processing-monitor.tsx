@@ -11,6 +11,7 @@ import { useState, useEffect } from 'react';
 import { showToast } from '@/lib/toast';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
+import { InlineLoading } from '@/components/ui/loading';
 
 interface ProcessingStats {
   totalItems: number;
@@ -143,7 +144,10 @@ export default function KnowledgeProcessingMonitor() {
           <CardDescription>Loading processing statistics...</CardDescription>
         </CardHeader>
         <CardContent>
-          <div className="animate-pulse">Loading...</div>
+          <InlineLoading 
+            variant="brain"
+            message="Loading processing statistics..."
+          />
         </CardContent>
       </Card>
     );

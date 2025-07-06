@@ -7,15 +7,20 @@ export async function GET(
   { params }: { params: Promise<{ id: string }> }
 ) {
   try {
+    console.log('📥 Download API called');
+    
     // Get the authenticated user
     const supabase = await createClient();
     const { data: { user }, error: authError } = await supabase.auth.getUser();
 
     if (authError || !user) {
+      console.log('❌ Authentication failed:', authError);
       return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
     }
 
     const { id } = await params;
+    console.log('📄 Fetching knowledge item:', id);
+    
     // Get the knowledge item
     const knowledgeItem = await prisma.knowledgeItem.findFirst({
       where: {
@@ -26,20 +31,42 @@ export async function GET(
     });
 
     if (!knowledgeItem) {
+      console.log('❌ Knowledge item not found');
       return NextResponse.json({ error: 'Knowledge item not found' }, { status: 404 });
     }
 
-    if (!knowledgeItem.fileName) {
+    if (!knowledgeItem.fileName || !knowledgeItem.filePath) {
+      console.log('❌ File not available for download');
       return NextResponse.json({ error: 'File not available for download' }, { status: 400 });
     }
 
-    // In serverless mode, files are processed in memory and not stored on disk
-    // File downloads are not available in this configuration
-    return NextResponse.json({ 
-      error: 'File downloads are not available in serverless mode. Files are processed in memory for text extraction only.' 
-    }, { status: 400 });
+    console.log('📥 Downloading file from Supabase Storage:', knowledgeItem.filePath);
+    
+    // Download file from Supabase Storage
+    const { data: fileData, error: downloadError } = await supabase.storage
+      .from('knowledge-files')
+      .download(knowledgeItem.filePath);
+
+    if (downloadError) {
+      console.error('❌ Failed to download file from storage:', downloadError);
+      return NextResponse.json(
+        { error: 'Failed to download file from storage' },
+        { status: 500 }
+      );
+    }
+
+    console.log('✅ File downloaded successfully from storage');
+
+    // Return the file as a response
+    return new NextResponse(fileData, {
+      headers: {
+        'Content-Type': knowledgeItem.mimeType || 'application/octet-stream',
+        'Content-Disposition': `attachment; filename="${knowledgeItem.fileName}"`,
+        'Content-Length': fileData.size.toString(),
+      },
+    });
   } catch (error) {
-    console.error('Download error:', error);
+    console.error('❌ Download error:', error);
     return NextResponse.json({ error: 'Internal server error' }, { status: 500 });
   }
 }
