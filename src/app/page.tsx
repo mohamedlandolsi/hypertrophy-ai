@@ -29,14 +29,14 @@ export default function Home() {
           <div className="flex justify-center mb-8">
             <Image 
               src="/logo.png" 
-              alt="AI Coach Logo" 
+              alt="HypertroQ Logo" 
               width={128}
               height={128}
               className="h-24 w-24 md:h-32 md:w-32 object-contain"
             />
           </div>
           <h1 className="text-4xl md:text-6xl font-bold mb-6 bg-gradient-to-r from-primary to-blue-600 bg-clip-text text-transparent">
-            {user ? 'Welcome Back to Your AI Fitness Coach' : 'Your Personal AI Fitness Coach'}
+            {user ? 'Welcome Back to HypertroQ' : 'Your Personal AI Fitness Coach'}
           </h1>
           <p className="text-xl md:text-2xl text-muted-foreground mb-8 max-w-2xl mx-auto">
             {user 

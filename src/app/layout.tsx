@@ -6,6 +6,7 @@ import { ThemeProvider } from "@/components/theme-provider"; // Import ThemeProv
 import { Toaster as SonnerToaster } from "@/components/ui/sonner";
 import { Toaster } from "@/components/ui/toaster";
 import FaviconMeta from "@/components/favicon-meta";
+import ErrorBoundary from "@/components/error-boundary";
 
 const geistSans = Geist({
   variable: "--font-geist-sans",
@@ -72,10 +73,12 @@ export default async function RootLayout({
           enableSystem
           disableTransitionOnChange
         >
-          <ConditionalNavbar /> {/* Use ConditionalNavbar */}
-          <main className="flex-1 flex flex-col">{children}</main>
-          <SonnerToaster richColors position="top-right" />
-          <Toaster />
+          <ErrorBoundary>
+            <ConditionalNavbar /> {/* Use ConditionalNavbar */}
+            <main className="flex-1 flex flex-col">{children}</main>
+            <SonnerToaster richColors position="top-right" />
+            <Toaster />
+          </ErrorBoundary>
         </ThemeProvider>
       </body>
     </html>

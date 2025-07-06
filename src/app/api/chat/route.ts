@@ -2,12 +2,25 @@ import { NextRequest, NextResponse } from 'next/server';
 import { createClient } from '@/lib/supabase/server';
 import { prisma } from '@/lib/prisma';
 import { sendToGemini, formatConversationForGemini } from '@/lib/gemini';
+import { 
+  ApiErrorHandler, 
+  ValidationError, 
+  AuthenticationError, 
+  NotFoundError,
+  logger 
+} from '@/lib/error-handler';
 
 export async function POST(request: NextRequest) {
+  const context = ApiErrorHandler.createContext(request);
+  let user: { id: string } | null = null;
+  
   try {
+    logger.info('Chat API request received', context);
+    
     // Get the authenticated user (but don't require it for guest users)
     const supabase = await createClient();
-    const { data: { user }, error: authError } = await supabase.auth.getUser();
+    const { data: { user: authUser }, error: authError } = await supabase.auth.getUser();
+    user = authUser;
     
     // Parse request body - handle both JSON and FormData
     let body: {
@@ -32,6 +45,12 @@ export async function POST(request: NextRequest) {
       
       imageFile = formData.get('image') as File;
       if (imageFile) {
+        // Validate image file
+        ApiErrorHandler.validateFile(imageFile, {
+          maxSize: 5 * 1024 * 1024, // 5MB
+          allowedTypes: ['image/jpeg', 'image/png', 'image/gif', 'image/webp']
+        });
+        
         imageBuffer = Buffer.from(await imageFile.arrayBuffer());
         imageMimeType = imageFile.type;
       }
@@ -42,12 +61,18 @@ export async function POST(request: NextRequest) {
     
     const { conversationId, message, isGuest = false } = body;
 
+    // Validate required fields
     if (!message || typeof message !== 'string') {
-      return NextResponse.json({ error: 'Message is required' }, { status: 400 });
+      throw new ValidationError('Message is required and must be a non-empty string', 'message');
+    }
+
+    if (message.length > 2000) {
+      throw new ValidationError('Message is too long (maximum 2000 characters)', 'message');
     }
 
     // Handle guest users (no database operations)
     if (isGuest || !user) {
+      logger.info('Processing guest user chat request', { ...context, isGuest: true });
       // For guest users, just get AI response without saving to database
       const conversationForGemini = [{ role: 'user' as const, content: message }];
       
@@ -74,8 +99,14 @@ export async function POST(request: NextRequest) {
 
     // Handle authenticated users (existing logic)
     if (authError) {
-      return NextResponse.json({ error: 'Authentication error' }, { status: 401 });
+      throw new AuthenticationError('Authentication error');
     }
+
+    if (!user) {
+      throw new AuthenticationError('User not authenticated');
+    }
+
+    logger.info('Processing authenticated user chat request', { ...context, userId: user.id });
 
     // Ensure user exists in our database
     await prisma.user.upsert({
@@ -102,8 +133,9 @@ export async function POST(request: NextRequest) {
       });
 
       if (existingChat) {
-        existingMessages = existingChat.messages;      } else {
-        return NextResponse.json({ error: 'Chat not found' }, { status: 404 });
+        existingMessages = existingChat.messages;
+      } else {
+        throw new NotFoundError('Chat conversation');
       }
     } else {
       // Create a new chat if no conversationId provided
@@ -140,6 +172,15 @@ export async function POST(request: NextRequest) {
       }
     });
 
+    logger.info('Chat API request completed successfully', { 
+      ...context, 
+      userId: user.id,
+      chatId,
+      messageLength: message.length,
+      hasImage: !!imageBuffer,
+      responseLength: assistantReply.length
+    });
+
     // Return the response
     return NextResponse.json({
       conversationId: chatId,
@@ -161,10 +202,6 @@ export async function POST(request: NextRequest) {
     });
 
   } catch (error) {
-    console.error('Chat API error:', error);
-    return NextResponse.json(
-      { error: 'Internal server error' },
-      { status: 500 }
-    );
+    return ApiErrorHandler.handleError(error, { ...context, userId: user?.id });
   }
 }

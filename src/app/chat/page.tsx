@@ -188,10 +188,37 @@ const ChatPage = () => {
   const handleApiError = useCallback((error: unknown, operation: string) => {
     console.error(`Error during ${operation}:`, error);
     
-    if (!isOnline) {
-      showToast.error('Connection Error', 'Please check your internet connection and try again.');
+    // Check if it's a structured API error response
+    if (error && typeof error === 'object' && 'message' in error) {
+      const apiError = error as { message: string; type?: string; details?: string };
+      
+      // Show user-friendly message based on error type
+      switch (apiError.type) {
+        case 'VALIDATION':
+          showToast.error('Invalid Input', apiError.message);
+          break;
+        case 'AUTHENTICATION':
+          showToast.authError(apiError.message);
+          break;
+        case 'AUTHORIZATION':
+          showToast.error('Access Denied', apiError.message);
+          break;
+        case 'NOT_FOUND':
+          showToast.error('Not Found', apiError.message);
+          break;
+        case 'FILE_UPLOAD':
+          showToast.fileValidationError('file', apiError.message);
+          break;
+        case 'NETWORK':
+          showToast.networkError(operation);
+          break;
+        default:
+          showToast.error('Error', apiError.message);
+      }
+    } else if (!isOnline) {
+      showToast.networkError(operation);
     } else {
-      showToast.error(`Error`, `Failed to ${operation}. Please try again.`);
+      showToast.error('Error', `Failed to ${operation}. Please try again.`);
     }
   }, [isOnline]);
 
@@ -447,7 +474,14 @@ const ChatPage = () => {
       }
 
       if (!response.ok) {
-        throw new Error('Failed to send message');
+        // Try to parse error response
+        let errorData;
+        try {
+          errorData = await response.json();
+        } catch {
+          errorData = { message: 'Failed to send message' };
+        }
+        throw errorData;
       }
 
       const data = await response.json();
@@ -1102,7 +1136,7 @@ const ChatPage = () => {
               <div className="flex items-end space-x-2 md:space-x-3">
                 <div className="flex-1 relative">
                   <ArabicAwareTextarea
-                    placeholder="Message AI Coach..."
+                    placeholder="Message HypertroQ..."
                     className="w-full rounded-2xl px-3 md:px-4 pr-10 md:pr-12 text-sm border-2 focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-0 focus-visible:border-primary/50"
                     value={input}
                     onChange={handleInputChange}

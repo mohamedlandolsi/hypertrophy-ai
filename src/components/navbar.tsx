@@ -7,6 +7,7 @@ import { Button } from '@/components/ui/button';
 import { Sheet, SheetContent, SheetTrigger, SheetClose, SheetTitle } from '@/components/ui/sheet';
 import { useState, useEffect } from 'react';
 import { ThemeToggle } from '@/components/theme-toggle';
+import { useTheme } from 'next-themes';
 import { createClient } from '@/lib/supabase/client';
 import type { AuthChangeEvent, Session, User as SupabaseUser } from '@supabase/supabase-js';
 import {
@@ -29,7 +30,22 @@ const Navbar = () => {
   const [user, setUser] = useState<SupabaseUser | null>(null);
   const [isLoadingUser, setIsLoadingUser] = useState(true);
   const [userRole, setUserRole] = useState<string>('user');
+  const { theme } = useTheme();
+  const [mounted, setMounted] = useState(false);
   const router = useRouter();
+
+  // Prevent hydration mismatch by only using theme after mounting
+  useEffect(() => {
+    setMounted(true);
+  }, []);
+
+  // Helper function to get logo source safely
+  const getLogoSrc = () => {
+    if (!mounted) {
+      return "/logo.png"; // Default to light logo during SSR
+    }
+    return theme === 'dark' ? "/logo-dark.png" : "/logo.png";
+  };
 
   useEffect(() => {
     const supabase = createClient(); // Define supabase client here
@@ -113,14 +129,14 @@ const Navbar = () => {
         <div className="absolute left-0 top-0 h-full flex items-center pl-2 lg:pl-6" style={{ minWidth: 170 }}>
           <Link href="/" className="flex items-center space-x-2 lg:space-x-3 transition-colors hover:text-primary">
             <Image 
-              src="/logo.png" 
-              alt="AI Coach Logo" 
+              src={getLogoSrc()}
+              alt="HypertroQ Logo" 
               width={36}
               height={36}
               className="h-9 w-9 object-contain"
             />
             <span className="text-xl font-bold bg-gradient-to-r from-blue-600 to-purple-600 bg-clip-text text-transparent">
-              AI Coach
+              HypertroQ
             </span>
           </Link>
         </div>
@@ -220,13 +236,13 @@ const Navbar = () => {
                     onClick={() => setIsMobileMenuOpen(false)}
                   >
                     <Image 
-                      src="/logo.png" 
-                      alt="AI Coach Logo" 
+                      src={getLogoSrc()}
+                      alt="HypertroQ Logo" 
                       width={28}
                       height={28}
                       className="h-7 w-7 object-contain"
                     />
-                    <span className="font-bold text-lg">AI Coach</span>
+                    <span className="font-bold text-lg">HypertroQ</span>
                   </Link>
                   {navLinks.map((link) => (
                     <SheetClose asChild key={link.href}>

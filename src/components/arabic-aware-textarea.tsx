@@ -17,7 +17,7 @@ interface ArabicAwareTextareaProps {
 export const ArabicAwareTextarea: React.FC<ArabicAwareTextareaProps> = ({
   value,
   onChange,
-  placeholder = "Message AI Coach...",
+  placeholder = "Message HypertroQ...",
   className = "",
   disabled = false,
   onKeyDown,

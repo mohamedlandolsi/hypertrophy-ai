@@ -1,4 +1,4 @@
-# Hypertrophy AI - Professional Exercise Science Coach
+# HypertroQ - Professional Exercise Science Coach
 
 An AI-powered fitness coaching application that specializes in muscle hypertrophy training. The system uses your uploaded research, training protocols, and scientific literature to provide evidence-based guidance with the expertise of a professional exercise scientist.
 
@@ -86,7 +86,7 @@ Open [http://localhost:3000](http://localhost:3000) to access the application.
 - Supported formats: PDF, DOC/DOCX, TXT, MD
 - The AI will only use this content for responses
 
-### 2. Chat with Your AI Coach
+### 2. Chat with HypertroQ
 - Go to the **Chat** page
 - Ask questions about training, exercise science, or protocols
 - The AI responds with professional expertise based only on your uploaded content
@@ -100,7 +100,7 @@ Open [http://localhost:3000](http://localhost:3000) to access the application.
 
 ## 🧬 AI Expertise Areas
 
-The AI coach provides guidance in:
+HypertroQ provides guidance in:
 - **Exercise Physiology**: Muscle fiber types, metabolic pathways, adaptation mechanisms
 - **Biomechanics**: Movement patterns, force vectors, joint mechanics
 - **Hypertrophy Science**: Protein synthesis, mechanical tension, metabolic stress

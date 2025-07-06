@@ -72,13 +72,13 @@ function AdminSidebarContent({ onClose }: { onClose?: () => void }) {
         <div className="flex items-center space-x-2">
           <Image 
             src="/logo.png" 
-            alt="AI Coach Logo" 
+            alt="HypertroQ Logo" 
             width={32}
             height={32}
             className="h-8 w-8 object-contain"
           />
           <div>
-            <h2 className="text-lg font-semibold">AI Coach Admin</h2>
+            <h2 className="text-lg font-semibold">HypertroQ Admin</h2>
             <p className="text-xs text-muted-foreground">System Management</p>
           </div>
         </div>

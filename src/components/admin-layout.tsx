@@ -94,14 +94,14 @@ export default function AdminLayout({ children }: AdminLayoutProps) {
             <Link href="/" className="flex items-center space-x-2 transition-colors hover:text-primary">
               <Image 
                 src="/logo.png" 
-                alt="AI Coach Logo" 
+                alt="HypertroQ Logo" 
                 width={32}
                 height={32}
                 className="h-8 w-8 object-contain"
               />
               <div className="hidden md:block">
                 <span className="text-lg font-bold bg-gradient-to-r from-blue-600 to-purple-600 bg-clip-text text-transparent">
-                  AI Coach
+                  HypertroQ
                 </span>
                 <p className="text-xs text-muted-foreground">Admin Dashboard</p>
               </div>

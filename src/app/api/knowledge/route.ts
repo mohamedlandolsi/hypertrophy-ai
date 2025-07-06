@@ -1,16 +1,27 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { createClient } from '@/lib/supabase/server';
 import { prisma } from '@/lib/prisma';
+import { 
+  ApiErrorHandler, 
+  AuthenticationError, 
+  logger 
+} from '@/lib/error-handler';
 
 // GET - Fetch all knowledge items for the authenticated user
-export async function GET() {
+export async function GET(request: NextRequest) {
+  const context = ApiErrorHandler.createContext(request);
+  
   try {
+    logger.info('Knowledge items fetch requested', context);
+    
     const supabase = await createClient();
     const { data: { user }, error: authError } = await supabase.auth.getUser();
 
     if (authError || !user) {
-      return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
+      throw new AuthenticationError();
     }
+
+    logger.info('Fetching knowledge items', { ...context, userId: user.id });
 
     // Ensure user exists in our database
     await prisma.user.upsert({
@@ -29,13 +40,15 @@ export async function GET() {
       }
     });
 
+    logger.info('Knowledge items fetched successfully', { 
+      ...context, 
+      userId: user.id,
+      itemCount: knowledgeItems.length 
+    });
+
     return NextResponse.json({ knowledgeItems });
   } catch (error) {
-    console.error('Error fetching knowledge items:', error);
-    return NextResponse.json(
-      { error: 'Failed to fetch knowledge items' },
-      { status: 500 }
-    );
+    return ApiErrorHandler.handleError(error, context);
   }
 }
 

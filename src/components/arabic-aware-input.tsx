@@ -14,7 +14,7 @@ interface ArabicAwareInputProps {
 export const ArabicAwareInput: React.FC<ArabicAwareInputProps> = ({
   value,
   onChange,
-  placeholder = "Message AI Coach...",
+  placeholder = "Message HypertroQ...",
   className = "",
   disabled = false,
   onKeyDown

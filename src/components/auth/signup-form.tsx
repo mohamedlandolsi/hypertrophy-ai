@@ -101,13 +101,13 @@ export default function SignupForm() {
       <div className="flex flex-col items-center mb-8">
         <Image 
           src="/logo.png" 
-          alt="AI Coach Logo" 
+          alt="HypertroQ Logo" 
           width={80}
           height={80}
           className="h-16 w-16 md:h-20 md:w-20 object-contain mb-4"
         />
         <h1 className="text-2xl font-bold bg-gradient-to-r from-blue-600 to-purple-600 bg-clip-text text-transparent">
-          AI Coach
+          HypertroQ
         </h1>
       </div>
       <Card className="w-full max-w-md">
@@ -115,7 +115,7 @@ export default function SignupForm() {
           <div className="flex justify-center mb-4">
             <Image 
               src="/logo.png" 
-              alt="AI Coach Logo" 
+              alt="HypertroQ Logo" 
               width={64}
               height={64}
               className="h-16 w-16 object-contain"
@@ -123,7 +123,7 @@ export default function SignupForm() {
           </div>
           <CardTitle className="text-2xl text-center">Create Account</CardTitle>
           <CardDescription className="text-center">
-            Create a new account to get started with AI Coach.
+            Create a new account to get started with HypertroQ.
           </CardDescription>
         </CardHeader>
         <form onSubmit={handleSubmit(onSubmit)}>
