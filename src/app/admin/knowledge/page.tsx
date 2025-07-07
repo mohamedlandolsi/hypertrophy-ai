@@ -7,6 +7,7 @@ import AdminLayout from '@/components/admin-layout';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
+import { Tabs, TabsList, TabsTrigger, TabsContent } from '@/components/ui/tabs';
 import KnowledgeProcessingMonitor from '@/components/knowledge-processing-monitor';
 import { showToast } from '@/lib/toast';
 import { KnowledgeLoading } from '@/components/ui/loading';
@@ -24,7 +25,8 @@ import {
   Eye,
   FileImage,
   FileSpreadsheet,
-  RefreshCw
+  RefreshCw,
+  Edit
 } from 'lucide-react';
 import {
   DropdownMenu,
@@ -40,6 +42,15 @@ import {
   DialogTitle,
 } from "@/components/ui/dialog";
 import { Label } from '@/components/ui/label';
+import RichTextEditor from '@/components/ui/rich-text-editor';
+import SafeHtmlRenderer from '@/components/ui/safe-html-renderer';
+
+// Helper function to check if HTML content is empty
+const isHtmlContentEmpty = (html: string): boolean => {
+  // Remove HTML tags and check if there's any meaningful content
+  const textContent = html.replace(/<[^>]*>/g, '').trim();
+  return textContent === '';
+};
 
 interface KnowledgeItem {
   id: string;
@@ -65,8 +76,15 @@ export default function KnowledgePage() {
   const [filterType, setFilterType] = useState<'all' | 'file' | 'text'>('all');
   const [viewModalOpen, setViewModalOpen] = useState(false);
   const [selectedItem, setSelectedItem] = useState<KnowledgeItem | null>(null);
+  const [editModalOpen, setEditModalOpen] = useState(false);
+  const [editTitle, setEditTitle] = useState('');
+  const [editContent, setEditContent] = useState('');
+  const [isUpdating, setIsUpdating] = useState(false);
   const [isLoading, setIsLoading] = useState(true);
   const [adminAccessError, setAdminAccessError] = useState<string | null>(null);
+  const [deleteModalOpen, setDeleteModalOpen] = useState(false);
+  const [itemToDelete, setItemToDelete] = useState<KnowledgeItem | null>(null);
+  const [isDeleting, setIsDeleting] = useState(false);
   const router = useRouter();
 
   const checkAdminAccess = useCallback(async () => {
@@ -275,7 +293,7 @@ export default function KnowledgePage() {
     }
   };
   const handleTextSubmit = async () => {
-    if (!textInput.trim() || !textTitle.trim()) return;
+    if (isHtmlContentEmpty(textInput) || !textTitle.trim()) return;
     
     setIsUploading(true);
     const loadingToast = showToast.processing('Adding text content', 'Processing and generating embeddings...');
@@ -321,14 +339,21 @@ export default function KnowledgePage() {
     }
   };
   const handleDeleteKnowledgeItem = async (id: string) => {
-    if (!confirm('Are you sure you want to delete this knowledge item?')) {
-      return;
-    }
+    const item = knowledgeItems.find(item => item.id === id);
+    if (!item) return;
+    
+    setItemToDelete(item);
+    setDeleteModalOpen(true);
+  };
 
+  const confirmDeleteKnowledgeItem = async () => {
+    if (!itemToDelete) return;
+
+    setIsDeleting(true);
     const loadingToast = showToast.processing('Deleting knowledge item', 'Removing item and associated data...');
 
     try {
-      const response = await fetch(`/api/knowledge/${id}`, {
+      const response = await fetch(`/api/knowledge/${itemToDelete.id}`, {
         method: 'DELETE',
       });
 
@@ -338,6 +363,9 @@ export default function KnowledgePage() {
         showToast.success('Knowledge item deleted', 'The item has been removed from your knowledge base');
         // Refresh knowledge items
         await fetchKnowledgeItems();
+        // Close modal and reset state
+        setDeleteModalOpen(false);
+        setItemToDelete(null);
       } else {
         const errorData = await response.json();
         console.error('Delete failed:', errorData.error);
@@ -347,7 +375,14 @@ export default function KnowledgePage() {
       console.error('Delete error:', error);
       showToast.dismiss(loadingToast);
       showToast.networkError('delete knowledge item');
+    } finally {
+      setIsDeleting(false);
     }
+  };
+
+  const cancelDeleteKnowledgeItem = () => {
+    setDeleteModalOpen(false);
+    setItemToDelete(null);
   };
 
   const handleViewKnowledgeItem = (item: KnowledgeItem) => {
@@ -398,6 +433,85 @@ export default function KnowledgePage() {
       showToast.networkError('download file');
     }
   };
+
+  const handleEditKnowledgeItem = (item: KnowledgeItem) => {
+    if (item.type !== 'TEXT') {
+      showToast.warning('Edit not available', 'Only text content can be edited');
+      return;
+    }
+    
+    setSelectedItem(item);
+    setEditTitle(item.title);
+    setEditContent(item.content || '');
+    setEditModalOpen(true);
+  };
+
+  const handleUpdateKnowledgeItem = async () => {
+    if (!selectedItem || isHtmlContentEmpty(editContent) || !editTitle.trim()) {
+      showToast.warning('Validation error', 'Please provide both title and content');
+      return;
+    }
+
+    setIsUpdating(true);
+    const loadingToast = showToast.processing('Updating content', 'Saving changes and regenerating embeddings...');
+
+    try {
+      const response = await fetch(`/api/knowledge/${selectedItem.id}`, {
+        method: 'PUT',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({
+          title: editTitle.trim(),
+          content: editContent,
+        }),
+      });
+
+      showToast.dismiss(loadingToast);
+
+      if (response.ok) {
+        await response.json();
+        
+        // Update the knowledge items list
+        setKnowledgeItems(prev => 
+          prev.map(item => 
+            item.id === selectedItem.id 
+              ? { ...item, title: editTitle.trim(), content: editContent }
+              : item
+          )
+        );
+
+        // Update selected item if view modal is open
+        if (viewModalOpen && selectedItem) {
+          setSelectedItem({ ...selectedItem, title: editTitle.trim(), content: editContent });
+        }
+
+        setEditModalOpen(false);
+        setEditTitle('');
+        setEditContent('');
+        
+        showToast.success('Content updated', 'Knowledge item has been updated successfully');
+      } else {
+        const errorData = await response.json();
+        console.error('Update failed:', errorData.error);
+        showToast.error('Failed to update content', errorData.error);
+      }
+    } catch (error) {
+      console.error('Update error:', error);
+      showToast.dismiss(loadingToast);
+      showToast.networkError('update content');
+    } finally {
+      setIsUpdating(false);
+    }
+  };
+
+  const handleCancelEdit = () => {
+    setEditModalOpen(false);
+    setEditTitle('');
+    setEditContent('');
+    setSelectedItem(null);
+  };
+
   const getFileTypeInfo = (mimeType?: string) => {
     if (!mimeType) return { type: 'Unknown', icon: File, color: 'text-muted-foreground' };
       switch (mimeType) {
@@ -487,128 +601,143 @@ export default function KnowledgePage() {
           </div>
 
         {/* Upload Section */}
-        <div className="grid grid-cols-1 lg:grid-cols-2 gap-6 mb-8">
-          {/* File Upload Card */}
-          <Card>
-            <CardHeader>
-              <CardTitle className="flex items-center">
-                <Upload className="mr-2 h-5 w-5" />
+        <div className="mb-8">
+          <Tabs defaultValue="upload" className="w-full">
+            <TabsList className="grid w-full grid-cols-2">
+              <TabsTrigger value="upload" className="flex items-center gap-2">
+                <Upload className="h-4 w-4" />
                 Upload Files
-              </CardTitle>
-              <CardDescription>
-                Upload PDFs, documents, or text files to add to the knowledge base
-              </CardDescription>
-            </CardHeader>
-            <CardContent className="space-y-4">
-              {/* Drag & Drop Area */}
-              <div
-                className={`border-2 border-dashed rounded-lg p-8 text-center transition-colors ${
-                  dragActive
-                    ? 'border-primary bg-primary/5'
-                    : 'border-muted-foreground/25 hover:border-muted-foreground/50'
-                }`}
-                onDragEnter={handleDrag}
-                onDragLeave={handleDrag}
-                onDragOver={handleDrag}
-                onDrop={handleDrop}
-              >                <Upload className="mx-auto h-12 w-12 text-muted-foreground mb-4" />
-                <p className="text-sm text-muted-foreground mb-2">
-                  Drag and drop files here, or
-                </p>
-                <Button variant="outline" asChild>
-                  <label className="cursor-pointer">
-                    Choose Files
-                    <input
-                      type="file"
-                      multiple
-                      accept=".pdf,.doc,.docx,.txt,.md,.xls,.xlsx"
-                      onChange={handleFileSelect}
-                      className="hidden"
-                    />
-                  </label>
-                </Button>
-                <p className="text-xs text-muted-foreground mt-2">
-                  Supports: PDF, Word, Text, Markdown, Excel files
-                </p>
-                <p className="text-xs text-muted-foreground mt-2">
-                  Supported: PDF, DOC, DOCX, TXT, MD (Max 10MB each)
-                </p>
-              </div>
+              </TabsTrigger>
+              <TabsTrigger value="text" className="flex items-center gap-2">
+                <FileText className="h-4 w-4" />
+                Add Text Content
+              </TabsTrigger>
+            </TabsList>
+            
+            <TabsContent value="upload">
+              <Card>
+                <CardHeader>
+                  <CardTitle className="flex items-center">
+                    <Upload className="mr-2 h-5 w-5" />
+                    Upload Files
+                  </CardTitle>
+                  <CardDescription>
+                    Upload PDFs, documents, or text files to add to the knowledge base
+                  </CardDescription>
+                </CardHeader>
+                <CardContent className="space-y-4">
+                  {/* Drag & Drop Area */}
+                  <div
+                    className={`border-2 border-dashed rounded-lg p-8 text-center transition-colors ${
+                      dragActive
+                        ? 'border-primary bg-primary/5'
+                        : 'border-muted-foreground/25 hover:border-muted-foreground/50'
+                    }`}
+                    onDragEnter={handleDrag}
+                    onDragLeave={handleDrag}
+                    onDragOver={handleDrag}
+                    onDrop={handleDrop}
+                  >
+                    <Upload className="mx-auto h-12 w-12 text-muted-foreground mb-4" />
+                    <p className="text-sm text-muted-foreground mb-2">
+                      Drag and drop files here, or
+                    </p>
+                    <Button variant="outline" asChild>
+                      <label className="cursor-pointer">
+                        Choose Files
+                        <input
+                          type="file"
+                          multiple
+                          accept=".pdf,.doc,.docx,.txt,.md,.xls,.xlsx"
+                          onChange={handleFileSelect}
+                          className="hidden"
+                        />
+                      </label>
+                    </Button>
+                    <p className="text-xs text-muted-foreground mt-2">
+                      Supports: PDF, Word, Text, Markdown, Excel files
+                    </p>
+                    <p className="text-xs text-muted-foreground mt-2">
+                      Supported: PDF, DOC, DOCX, TXT, MD (Max 10MB each)
+                    </p>
+                  </div>
 
-              {/* Selected Files */}
-              {selectedFiles.length > 0 && (
-                <div className="space-y-2">
-                  <Label className="text-sm font-medium">Selected Files:</Label>
-                  {selectedFiles.map((file, index) => (
-                    <div key={index} className="flex items-center justify-between p-2 bg-muted rounded-lg">
-                      <div className="flex items-center">
-                        <File className="h-4 w-4 text-muted-foreground mr-2" />
-                        <span className="text-sm truncate">{file.name}</span>
-                        <span className="text-xs text-muted-foreground ml-2">
-                          ({formatFileSize(file.size)})
-                        </span>
-                      </div>
-                      <Button
-                        variant="ghost"
-                        size="sm"
-                        onClick={() => removeSelectedFile(index)}
+                  {/* Selected Files */}
+                  {selectedFiles.length > 0 && (
+                    <div className="space-y-2">
+                      <Label className="text-sm font-medium">Selected Files:</Label>
+                      {selectedFiles.map((file, index) => (
+                        <div key={index} className="flex items-center justify-between p-2 bg-muted rounded-lg">
+                          <div className="flex items-center">
+                            <File className="h-4 w-4 text-muted-foreground mr-2" />
+                            <span className="text-sm truncate">{file.name}</span>
+                            <span className="text-xs text-muted-foreground ml-2">
+                              ({formatFileSize(file.size)})
+                            </span>
+                          </div>
+                          <Button
+                            variant="ghost"
+                            size="sm"
+                            onClick={() => removeSelectedFile(index)}
+                          >
+                            <X className="h-4 w-4" />
+                          </Button>
+                        </div>
+                      ))}
+                      <Button 
+                        onClick={handleFileUpload} 
+                        disabled={isUploading}
+                        className="w-full"
                       >
-                        <X className="h-4 w-4" />
+                        {isUploading ? 'Uploading...' : `Upload ${selectedFiles.length} File(s)`}
                       </Button>
                     </div>
-                  ))}
+                  )}
+                </CardContent>
+              </Card>
+            </TabsContent>
+
+            <TabsContent value="text">
+              <Card>
+                <CardHeader>
+                  <CardTitle className="flex items-center">
+                    <FileText className="mr-2 h-5 w-5" />
+                    Add Text Content
+                  </CardTitle>
+                  <CardDescription>
+                    Directly input text content to add to the knowledge base
+                  </CardDescription>
+                </CardHeader>
+                <CardContent className="space-y-4">
+                  <div className="space-y-2">
+                    <Label htmlFor="text-title">Title</Label>
+                    <Input
+                      id="text-title"
+                      placeholder="Enter a title for this content..."
+                      value={textTitle}
+                      onChange={(e) => setTextTitle(e.target.value)}
+                    />
+                  </div>
+                  <div className="space-y-2">
+                    <Label htmlFor="text-content">Content</Label>
+                    <RichTextEditor
+                      content={textInput}
+                      onChange={setTextInput}
+                      placeholder="Enter your fitness knowledge, guidelines, protocols, or any relevant information..."
+                      className="min-h-[250px]"
+                    />
+                  </div>
                   <Button 
-                    onClick={handleFileUpload} 
-                    disabled={isUploading}
+                    onClick={handleTextSubmit}
+                    disabled={isUploading || isHtmlContentEmpty(textInput) || !textTitle.trim()}
                     className="w-full"
                   >
-                    {isUploading ? 'Uploading...' : `Upload ${selectedFiles.length} File(s)`}
+                    {isUploading ? 'Adding...' : 'Add to Knowledge Base'}
                   </Button>
-                </div>
-              )}
-            </CardContent>
-          </Card>
-
-          {/* Text Input Card */}
-          <Card>
-            <CardHeader>
-              <CardTitle className="flex items-center">
-                <FileText className="mr-2 h-5 w-5" />
-                Add Text Content
-              </CardTitle>
-              <CardDescription>
-                Directly input text content to add to the knowledge base
-              </CardDescription>
-            </CardHeader>
-            <CardContent className="space-y-4">
-              <div className="space-y-2">
-                <Label htmlFor="text-title">Title</Label>
-                <Input
-                  id="text-title"
-                  placeholder="Enter a title for this content..."
-                  value={textTitle}
-                  onChange={(e) => setTextTitle(e.target.value)}
-                />
-              </div>
-              <div className="space-y-2">
-                <Label htmlFor="text-content">Content</Label>
-                <textarea
-                  id="text-content"
-                  className="flex min-h-[200px] w-full rounded-md border border-input bg-background px-3 py-2 text-sm ring-offset-background placeholder:text-muted-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 disabled:cursor-not-allowed disabled:opacity-50 resize-none"
-                  placeholder="Enter your fitness knowledge, guidelines, protocols, or any relevant information..."
-                  value={textInput}
-                  onChange={(e) => setTextInput(e.target.value)}
-                />
-              </div>
-              <Button 
-                onClick={handleTextSubmit}
-                disabled={isUploading || !textInput.trim() || !textTitle.trim()}
-                className="w-full"
-              >
-                {isUploading ? 'Adding...' : 'Add to Knowledge Base'}
-              </Button>
-            </CardContent>
-          </Card>
+                </CardContent>
+              </Card>
+            </TabsContent>
+          </Tabs>
         </div>
 
         {/* Processing Monitor */}
@@ -757,6 +886,12 @@ export default function KnowledgePage() {
                           <Eye className="mr-2 h-4 w-4" />
                           View
                         </DropdownMenuItem>
+                        {item.type === 'TEXT' && (
+                          <DropdownMenuItem onClick={() => handleEditKnowledgeItem(item)}>
+                            <Edit className="mr-2 h-4 w-4" />
+                            Edit
+                          </DropdownMenuItem>
+                        )}
                         {item.type === 'FILE' && (
                           <DropdownMenuItem onClick={() => handleDownloadKnowledgeItem(item)}>
                             <Download className="mr-2 h-4 w-4" />
@@ -1007,8 +1142,22 @@ export default function KnowledgePage() {
                               {selectedItem.content}
                             </div>
                           </div>
+                        ) : selectedItem.type === 'TEXT' ? (
+                          // Rich text content from the editor
+                          <div className="space-y-2">
+                            <div className="text-xs text-muted-foreground bg-blue-50 dark:bg-blue-900/20 px-2 py-1 rounded">
+                              📝 Rich text content
+                            </div>
+                            <SafeHtmlRenderer 
+                              content={selectedItem.content} 
+                              className="bg-muted/50 rounded-lg max-h-96 overflow-auto text-sm"
+                            />
+                          </div>
                         ) : (
-                          selectedItem.content
+                          // Regular file content
+                          <div className="whitespace-pre-wrap bg-muted/50 p-4 rounded-lg max-h-96 overflow-auto text-sm">
+                            {selectedItem.content}
+                          </div>
                         )}
                       </div>
                     )}
@@ -1030,33 +1179,137 @@ export default function KnowledgePage() {
           )}        </DialogContent>
       </Dialog>
 
-      {/* Help Section */}
-      <div className="mt-8 p-4 bg-muted/30 rounded-lg border">
-        <h3 className="font-semibold mb-2 flex items-center">
-          <FileText className="mr-2 h-4 w-4" />
-          💡 Tips for Better Knowledge Management
-        </h3>
-        <div className="grid grid-cols-1 md:grid-cols-2 gap-4 text-sm text-muted-foreground">
-          <div>
-            <p className="mb-2"><strong>Supported Files:</strong></p>
-            <ul className="list-disc pl-4 space-y-1">
-              <li>PDF documents (text will be extracted)</li>
-              <li>Word documents (.doc, .docx)</li>
-              <li>Text files (.txt, .md)</li>
-              <li>Excel spreadsheets</li>
-            </ul>
+      {/* Edit Modal */}
+      <Dialog open={editModalOpen} onOpenChange={setEditModalOpen}>
+        <DialogContent className="max-w-4xl max-h-[90vh] overflow-auto">
+          <DialogHeader>
+            <DialogTitle className="flex items-center gap-2">
+              <Edit className="h-5 w-5" />
+              Edit Knowledge Item
+            </DialogTitle>
+            <DialogDescription>
+              Modify the title and content of this knowledge item. Changes will update the AI&apos;s knowledge base.
+            </DialogDescription>
+          </DialogHeader>
+          
+          <div className="space-y-6 mt-4">
+            {/* Title Input */}
+            <div className="space-y-2">
+              <Label htmlFor="edit-title">Title</Label>
+              <Input
+                id="edit-title"
+                placeholder="Enter a title for this content..."
+                value={editTitle}
+                onChange={(e) => setEditTitle(e.target.value)}
+              />
+            </div>
+            
+            {/* Content Editor */}
+            <div className="space-y-2">
+              <Label htmlFor="edit-content">Content</Label>
+              <RichTextEditor
+                content={editContent}
+                onChange={setEditContent}
+                placeholder="Enter your fitness knowledge, guidelines, protocols, or any relevant information..."
+                className="min-h-[300px]"
+              />
+            </div>
+            
+            {/* Action Buttons */}
+            <div className="flex justify-end gap-3 pt-4 border-t">
+              <Button 
+                variant="outline" 
+                onClick={handleCancelEdit}
+                disabled={isUpdating}
+              >
+                Cancel
+              </Button>
+              <Button 
+                onClick={handleUpdateKnowledgeItem}
+                disabled={isUpdating || isHtmlContentEmpty(editContent) || !editTitle.trim()}
+              >
+                {isUpdating ? 'Updating...' : 'Update Knowledge Item'}
+              </Button>
+            </div>
           </div>
-          <div>
-            <p className="mb-2"><strong>Best Practices:</strong></p>
-            <ul className="list-disc pl-4 space-y-1">
-              <li>Use descriptive titles for better searchability</li>
-              <li>Organize content by topic or category</li>
-              <li>Check the status indicator after uploading</li>
-              <li>Use the search function to find specific content</li>
-            </ul>
-          </div>
-        </div>
-      </div>
+        </DialogContent>
+      </Dialog>
+
+      {/* Delete Confirmation Modal */}
+      <Dialog open={deleteModalOpen} onOpenChange={setDeleteModalOpen}>
+        <DialogContent className="max-w-md">
+          <DialogHeader>
+            <DialogTitle className="flex items-center gap-2">
+              <Trash2 className="h-5 w-5 text-destructive" />
+              Delete Knowledge Item
+            </DialogTitle>
+            <DialogDescription>
+              Are you sure you want to delete this knowledge item? This action cannot be undone.
+            </DialogDescription>
+          </DialogHeader>
+          
+          {itemToDelete && (
+            <div className="space-y-4 mt-4">
+              {/* Item Preview */}
+              <div className="p-3 bg-muted/50 rounded-lg border">
+                <div className="flex items-center gap-3">
+                  <div className="p-2 rounded-lg bg-primary/10">
+                    {itemToDelete.type === 'FILE' ? (
+                      <File className="h-4 w-4 text-primary" />
+                    ) : (
+                      <FileText className="h-4 w-4 text-primary" />
+                    )}
+                  </div>
+                  <div className="flex-1 min-w-0">
+                    <p className="font-medium text-sm truncate">{itemToDelete.title}</p>
+                    <p className="text-xs text-muted-foreground">
+                      {itemToDelete.type === 'FILE' ? (
+                        itemToDelete.fileName
+                      ) : (
+                        'Text Content'
+                      )} • {new Date(itemToDelete.createdAt).toLocaleDateString()}
+                    </p>
+                  </div>
+                </div>
+              </div>
+              
+              {/* Warning Message */}
+              <div className="bg-destructive/10 border border-destructive/20 rounded-lg p-3">
+                <div className="flex items-start gap-2">
+                  <span className="text-destructive text-lg">⚠️</span>
+                  <div className="text-sm">
+                    <p className="font-medium text-destructive mb-1">This action is permanent</p>
+                    <ul className="text-destructive/80 text-xs space-y-1">
+                      <li>• The knowledge item will be completely removed</li>
+                      <li>• Associated embeddings and search data will be deleted</li>
+                      <li>• This cannot be undone</li>
+                    </ul>
+                  </div>
+                </div>
+              </div>
+              
+              {/* Action Buttons */}
+              <div className="flex justify-end gap-3 pt-2">
+                <Button 
+                  variant="outline" 
+                  onClick={cancelDeleteKnowledgeItem}
+                  disabled={isDeleting}
+                >
+                  Cancel
+                </Button>
+                <Button 
+                  variant="destructive"
+                  onClick={confirmDeleteKnowledgeItem}
+                  disabled={isDeleting}
+                >
+                  {isDeleting ? 'Deleting...' : 'Delete Permanently'}
+                </Button>
+              </div>
+            </div>
+          )}
+        </DialogContent>
+      </Dialog>
+
       </div>
     </AdminLayout>
   );
