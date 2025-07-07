@@ -162,7 +162,7 @@ export function FullPageLoading({
         {/* App branding */}
         <div className="flex items-center justify-center space-x-2 text-primary">
           <Zap className="h-6 w-6" />
-          <span className="text-lg font-semibold">Hypertrophy AI</span>
+          <span className="text-lg font-semibold">HypertroQ</span>
         </div>
       </div>
     </div>

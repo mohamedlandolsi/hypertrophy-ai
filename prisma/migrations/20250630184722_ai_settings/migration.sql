@@ -4,7 +4,7 @@ ALTER TABLE "User" ADD COLUMN     "role" TEXT NOT NULL DEFAULT 'user';
 -- CreateTable
 CREATE TABLE "AIConfiguration" (
     "id" TEXT NOT NULL DEFAULT 'singleton',
-    "systemPrompt" TEXT NOT NULL DEFAULT 'You are a helpful fitness and hypertrophy AI assistant. You help users with workout planning, nutrition advice, and achieving their fitness goals.',
+    "systemPrompt" TEXT NOT NULL DEFAULT 'You are HypertroQ, a helpful fitness and hypertrophy AI assistant. You help users with workout planning, nutrition advice, and achieving their fitness goals.',
     "modelName" TEXT NOT NULL DEFAULT 'gemini-1.5-flash',
     "temperature" DOUBLE PRECISION NOT NULL DEFAULT 0.7,
     "maxTokens" INTEGER NOT NULL DEFAULT 8192,

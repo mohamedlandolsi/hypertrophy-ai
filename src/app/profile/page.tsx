@@ -108,7 +108,7 @@ export default function ProfilePage() {
                     Coach Summary
                   </CardTitle>
                   <CardDescription>
-                    What your AI coach knows about you
+                    What HypertroQ knows about you
                   </CardDescription>
                 </CardHeader>
                 <CardContent>
@@ -118,7 +118,7 @@ export default function ProfilePage() {
                         value={memorySummary}
                         readOnly
                         className="min-h-[120px] resize-none"
-                        placeholder="Your AI coach will learn about you as you chat..."
+                        placeholder="HypertroQ will learn about you as you chat..."
                       />
                       <p className="text-xs text-muted-foreground">
                         This summary is automatically generated from your conversations and profile
@@ -128,7 +128,7 @@ export default function ProfilePage() {
                     <div className="text-center py-8">
                       <Activity className="mx-auto h-12 w-12 text-muted-foreground/50" />
                       <p className="text-sm text-muted-foreground mt-2">
-                        Start chatting with your AI coach or edit your profile to build your coaching context
+                        Start chatting with HypertroQ or edit your profile to build your coaching context
                       </p>
                       <Button 
                         variant="outline" 

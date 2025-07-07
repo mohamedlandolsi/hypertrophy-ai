@@ -699,7 +699,7 @@ const ChatPage = () => {
             {/* Header */}
             <div className="mb-6">
               <Link href="/" className="block hover:opacity-80 transition-opacity">
-                <h2 className="text-lg font-bold text-foreground mb-1">Hypertrophy AI</h2>
+                <h2 className="text-lg font-bold text-foreground mb-1">HypertroQ</h2>
                 <p className="text-xs text-muted-foreground">Your AI fitness coach</p>
               </Link>
             </div>
@@ -854,7 +854,7 @@ const ChatPage = () => {
             <div className="mt-4 pt-4 border-t border-border space-y-2">
               <ThemeToggle />
               <div className="text-xs text-muted-foreground text-center">
-                Hypertrophy AI v1.0
+                HypertroQ v1.0
               </div>
             </div>
           </div>
@@ -874,7 +874,7 @@ const ChatPage = () => {
               {isSidebarOpen ? <ChevronLeft className="h-5 w-5" /> : <Menu className="h-5 w-5" />}
             </Button>
             <div className="flex flex-col min-w-0">
-              <h1 className="text-lg md:text-xl font-bold text-foreground truncate">Hypertrophy AI</h1>
+              <h1 className="text-lg md:text-xl font-bold text-foreground truncate">HypertroQ</h1>
               {activeChatId && (
                 <p className="text-xs text-muted-foreground truncate">
                   {chatHistory.find(chat => chat.id === activeChatId)?.title || 'Active Chat'}

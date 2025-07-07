@@ -75,7 +75,7 @@ export default function LoadingDemo() {
           <h1 className="text-4xl font-bold">Enhanced Loading Components</h1>
           <p className="text-muted-foreground text-lg max-w-2xl mx-auto">
             A comprehensive collection of modern, accessible loading indicators and skeleton screens 
-            designed for the Hypertrophy AI application.
+            designed for the HypertroQ application.
           </p>
         </div>
 

@@ -35,7 +35,7 @@ export function LoginPromptDialog({ open, onOpenChange, variant = 'initial' }: L
           <DialogDescription className="text-center">
             {isMessageLimit 
               ? "You've reached the message limit for guest users. Create a free account or log in to continue your session and save your progress."
-              : "You need to be logged in to chat with AI Coach. Create an account or sign in to continue."
+              : "You need to be logged in to chat with HypertroQ. Create an account or sign in to continue."
             }
           </DialogDescription>
         </DialogHeader>
@@ -56,7 +56,7 @@ export function LoginPromptDialog({ open, onOpenChange, variant = 'initial' }: L
         <div className="text-center text-sm text-muted-foreground mt-4">
           {isMessageLimit 
             ? "Keep your workout plans and progress by creating a free account"
-            : "Join thousands of users getting personalized fitness guidance with AI Coach"
+            : "Join thousands of users getting personalized fitness guidance with HypertroQ"
           }
         </div>
       </DialogContent>

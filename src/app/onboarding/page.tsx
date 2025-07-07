@@ -62,7 +62,7 @@ export default function OnboardingPage() {
       if (result.success) {
         // Show success message briefly before redirect
         toast({
-          title: 'Welcome to Hypertrophy AI!',
+          title: 'Welcome to HypertroQ!',
           description: 'You can complete your profile anytime from the Profile page.',
         });
         
@@ -112,7 +112,7 @@ export default function OnboardingPage() {
       
       if (result.success) {
         toast({
-          title: 'Welcome to Hypertrophy AI!',
+          title: 'Welcome to HypertroQ!',
           description: 'Your profile has been set up successfully.',
         });
         
@@ -138,7 +138,7 @@ export default function OnboardingPage() {
         {/* Header */}
         <div className="text-center mb-8">
           <h1 className="text-3xl font-bold text-foreground mb-2">
-            Welcome to Hypertrophy AI
+            Welcome to HypertroQ
           </h1>
           <p className="text-muted-foreground">
             Let&apos;s set up your profile to personalize your fitness journey

@@ -25,7 +25,7 @@ export default function FaviconMeta() {
       {/* Apple Web App */}
       <meta name="apple-mobile-web-app-capable" content="yes" />
       <meta name="apple-mobile-web-app-status-bar-style" content="default" />
-      <meta name="apple-mobile-web-app-title" content="AI Coach" />
+      <meta name="apple-mobile-web-app-title" content="HypertroQ" />
     </>
   );
 }
