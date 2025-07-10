@@ -124,8 +124,8 @@ export async function POST(request: NextRequest) {
           item.id,
           {
             generateEmbeddings: true,
-            chunkSize: 800,
-            chunkOverlap: 150,
+            chunkSize: 512,      // Updated to improved chunking parameters
+            chunkOverlap: 100,   // Updated to improved chunking parameters
             batchSize: 5
           }
         );

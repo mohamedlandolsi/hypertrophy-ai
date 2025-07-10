@@ -19,7 +19,7 @@ const geistMono = Geist_Mono({
 });
 
 export const metadata: Metadata = {
-  title: "AI Coach",
+  title: "HypertroQ",
   description: "Your personal AI fitness coach",
   icons: {
     icon: [
@@ -39,7 +39,7 @@ export const metadata: Metadata = {
   appleWebApp: {
     capable: true,
     statusBarStyle: 'default',
-    title: 'AI Coach'
+    title: 'HypertroQ'
   },
   other: {
     'msapplication-TileColor': '#ffffff',

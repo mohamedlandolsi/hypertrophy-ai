@@ -106,8 +106,8 @@ export async function POST(request: NextRequest) {
         knowledgeItem.id,
         {
           generateEmbeddings: true,
-          chunkSize: 800,
-          chunkOverlap: 150,
+          chunkSize: 512,        // Updated to use improved chunking
+          chunkOverlap: 100,     // Updated to use improved chunking
           batchSize: 5 // Smaller batch size for API
         }
       );

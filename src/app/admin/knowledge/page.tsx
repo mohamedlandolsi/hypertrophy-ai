@@ -3,6 +3,7 @@
 import { createClient } from '@/lib/supabase/client';
 import { useEffect, useState, useCallback } from 'react';
 import { useRouter } from 'next/navigation';
+import Link from 'next/link';
 import AdminLayout from '@/components/admin-layout';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
@@ -26,7 +27,8 @@ import {
   FileImage,
   FileSpreadsheet,
   RefreshCw,
-  Edit
+  Edit,
+  ExternalLink
 } from 'lucide-react';
 import {
   DropdownMenu,
@@ -850,7 +852,15 @@ export default function KnowledgePage() {
                         )}
                       </div>
                       <div className="flex-1">
-                        <h3 className="font-medium text-foreground">{item.title}</h3>                        <div className="flex items-center space-x-4 mt-1">
+                        <Link 
+                          href={`/knowledge/${item.id}`}
+                          target="_blank"
+                          rel="noopener noreferrer"
+                          className="font-medium text-foreground hover:text-primary transition-colors cursor-pointer inline-flex items-center gap-1 group"
+                        >
+                          <h3 className="hover:underline">{item.title}</h3>
+                          <ExternalLink className="h-3 w-3 opacity-0 group-hover:opacity-100 transition-opacity" />
+                        </Link>                        <div className="flex items-center space-x-4 mt-1">
                           {item.type === 'FILE' && item.fileName && (
                             <span className="text-sm text-muted-foreground">
                               {item.fileName}
@@ -943,7 +953,7 @@ export default function KnowledgePage() {
 
       {/* View Modal */}
       <Dialog open={viewModalOpen} onOpenChange={setViewModalOpen}>
-        <DialogContent className="max-w-4xl max-h-[80vh] overflow-auto">          <DialogHeader>            <DialogTitle className="flex items-center gap-2">
+        <DialogContent className="max-w-7xl max-h-[95vh] w-[95vw] overflow-auto">          <DialogHeader>            <DialogTitle className="flex items-center gap-2">
               {selectedItem?.type === 'FILE' ? (
                 (() => {
                   const fileInfo = getFileTypeInfo(selectedItem.mimeType);
@@ -1003,7 +1013,7 @@ export default function KnowledgePage() {
                   <div className="border rounded-lg overflow-hidden bg-white">
                     <iframe
                       src={`/api/knowledge/${selectedItem.id}/download?inline=true`}
-                      className="w-full h-[600px]"
+                      className="w-full h-[70vh]"
                       title={`PDF: ${selectedItem.fileName}`}
                       style={{ border: 'none' }}
                     />

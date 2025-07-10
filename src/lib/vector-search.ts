@@ -275,6 +275,7 @@ export async function getRelevantContext(
     
     // Format the context with source attribution and relevance scores
     const contextParts = Object.entries(groupedChunks).map(([title, chunks]) => {
+      const knowledgeItemId = chunks[0].knowledgeItemId; // Get the ID from the first chunk
       const sortedChunks = chunks.sort((a, b) => a.chunkIndex - b.chunkIndex);
       const avgSimilarity = chunks.reduce((sum, chunk) => sum + chunk.similarity, 0) / chunks.length;
       
@@ -282,7 +283,8 @@ export async function getRelevantContext(
         `${chunk.content}${chunk.similarity > 0.8 ? ' [HIGH RELEVANCE]' : ''}`
       ).join('\n\n');
       
-      return `=== ${title} (Relevance: ${(avgSimilarity * 100).toFixed(1)}%) ===\n${chunkTexts}`;
+      // Add the id to the context header
+      return `=== ${title} id:${knowledgeItemId} (Relevance: ${(avgSimilarity * 100).toFixed(1)}%) ===\n${chunkTexts}`;
     });
 
     return contextParts.join('\n\n');
@@ -614,37 +616,45 @@ export async function performHybridSearch(
   } = {}
 ): Promise<VectorSearchResult[]> {
   const {
-    vectorWeight = 0.7,
-    keywordWeight = 0.3,
+    vectorWeight = 0.6,
+    keywordWeight = 0.4,
     limit = 5,
-    threshold = 0.4,
+    threshold = 0.3,
     rerank = true
   } = options;
 
   try {
+    console.log(`🔍 HYBRID SEARCH: Starting hybrid search for query: "${query}"`);
+    
     // Get more candidates for re-ranking
     const candidateLimit = rerank ? limit * 3 : limit;
     
-    // Perform vector search
+    // Perform vector search with lower threshold for more recall
     const vectorResults = await performVectorSearch(query, {
       limit: candidateLimit,
-      threshold: threshold * 0.6, // Lower threshold for initial retrieval
+      threshold: threshold * 0.5, // Lower threshold for initial retrieval
       userId
     });
 
-    // Perform keyword search
-    const keywordResults = await performKeywordSearch(query, userId, {
+    console.log(`🔍 HYBRID SEARCH: Vector search found ${vectorResults.length} results`);
+
+    // Perform enhanced keyword search
+    const keywordResults = await performEnhancedKeywordSearch(query, userId, {
       limit: candidateLimit,
       threshold: 0.1
     });
 
-    // Combine and deduplicate results
-    const combinedResults = combineSearchResults(
+    console.log(`🔍 HYBRID SEARCH: Keyword search found ${keywordResults.length} results`);
+
+    // Combine and deduplicate results with improved scoring
+    const combinedResults = combineSearchResultsWithRRF(
       vectorResults,
       keywordResults,
       vectorWeight,
       keywordWeight
     );
+
+    console.log(`🔍 HYBRID SEARCH: Combined results: ${combinedResults.length}`);
 
     // Apply re-ranking if enabled
     let finalResults = combinedResults;
@@ -653,10 +663,17 @@ export async function performHybridSearch(
     }
 
     // Filter by threshold and limit
-    return finalResults
+    const filteredResults = finalResults
       .filter(result => result.similarity >= threshold)
       .sort((a, b) => b.similarity - a.similarity)
       .slice(0, limit);
+
+    console.log(`🔍 HYBRID SEARCH: Final results: ${filteredResults.length}`);
+    filteredResults.forEach(result => {
+      console.log(`  - ${result.knowledgeItemTitle} (${result.knowledgeItemId}): ${(result.similarity * 100).toFixed(1)}%`);
+    });
+
+    return filteredResults;
 
   } catch (error) {
     console.error('Error performing hybrid search:', error);
@@ -666,14 +683,14 @@ export async function performHybridSearch(
 }
 
 /**
- * Perform keyword-based search using BM25-like scoring
+ * Enhanced keyword-based search with better term matching
  * 
  * @param query Search query
  * @param userId User ID
  * @param options Search options
  * @returns Promise<VectorSearchResult[]>
  */
-export async function performKeywordSearch(
+export async function performEnhancedKeywordSearch(
   query: string,
   userId: string,
   options: {
@@ -684,38 +701,82 @@ export async function performKeywordSearch(
   const { limit = 10, threshold = 0.1 } = options;
 
   try {
-    // Get query terms
+    console.log(`🔍 ENHANCED KEYWORD SEARCH: Starting for query: "${query}"`);
+    
+    // Extract and clean query terms
     const queryTerms = extractQueryTerms(query);
-    if (queryTerms.length === 0) {
+    const originalQuery = query.toLowerCase().trim();
+    
+    console.log(`🔍 ENHANCED KEYWORD SEARCH: Query terms: ${queryTerms.join(', ')}`);
+    
+    if (queryTerms.length === 0 && originalQuery.length === 0) {
       return [];
     }
 
-    // Build search conditions for content matching
-    const searchConditions = queryTerms.map(term => ({
-      content: {
-        contains: term,
-        mode: 'insensitive' as const
-      }
-    }));
+    // Build comprehensive search conditions
+    const searchConditions = [];
+    
+    // 1. Exact phrase matching (highest priority)
+    if (originalQuery.length > 0) {
+      searchConditions.push({
+        OR: [
+          { content: { contains: originalQuery, mode: 'insensitive' as const } },
+          { knowledgeItem: { title: { contains: originalQuery, mode: 'insensitive' as const } } }
+        ]
+      });
+    }
 
-    // Get all chunks that match any search terms
+    // 2. Individual term matching
+    queryTerms.forEach(term => {
+      searchConditions.push({
+        OR: [
+          { content: { contains: term, mode: 'insensitive' as const } },
+          { knowledgeItem: { title: { contains: term, mode: 'insensitive' as const } } }
+        ]
+      });
+    });
+
+    // 3. Fuzzy/partial matching for key terms
+    queryTerms.forEach(term => {
+      if (term.length >= 4) { // Only for longer terms
+        searchConditions.push({
+          OR: [
+            { content: { contains: term.substring(0, term.length - 1), mode: 'insensitive' as const } },
+            { knowledgeItem: { title: { contains: term.substring(0, term.length - 1), mode: 'insensitive' as const } } }
+          ]
+        });
+      }
+    });
+
+    // Get matching chunks
     const matchingChunks = await prisma.knowledgeChunk.findMany({
       where: {
-        knowledgeItem: { userId },
+        knowledgeItem: { 
+          userId: userId,
+          status: 'READY'
+        },
         OR: searchConditions
       },
       include: {
         knowledgeItem: {
-          select: { title: true }
+          select: { title: true, id: true }
         }
-      }
+      },
+      take: limit * 2 // Get more for better scoring
     });
 
-    // Calculate BM25-like scores
+    console.log(`🔍 ENHANCED KEYWORD SEARCH: Found ${matchingChunks.length} matching chunks`);
+
+    // Calculate enhanced relevance scores
     const results: VectorSearchResult[] = [];
     
     for (const chunk of matchingChunks) {
-      const score = calculateBM25Score(queryTerms, chunk.content);
+      const score = calculateEnhancedRelevanceScore(
+        originalQuery,
+        queryTerms,
+        chunk.content,
+        chunk.knowledgeItem.title
+      );
       
       if (score >= threshold) {
         results.push({
@@ -730,18 +791,25 @@ export async function performKeywordSearch(
     }
 
     // Sort by score and return top results
-    return results
+    const sortedResults = results
       .sort((a, b) => b.similarity - a.similarity)
       .slice(0, limit);
 
+    console.log(`🔍 ENHANCED KEYWORD SEARCH: Returning ${sortedResults.length} results`);
+    sortedResults.forEach(result => {
+      console.log(`  - ${result.knowledgeItemTitle}: ${(result.similarity * 100).toFixed(1)}%`);
+    });
+
+    return sortedResults;
+
   } catch (error) {
-    console.error('Error performing keyword search:', error);
+    console.error('Error performing enhanced keyword search:', error);
     return [];
   }
 }
 
 /**
- * Combine vector and keyword search results with weighted scoring
+ * Combine vector and keyword search results using Reciprocal Rank Fusion (RRF)
  * 
  * @param vectorResults Vector search results
  * @param keywordResults Keyword search results
@@ -749,7 +817,7 @@ export async function performKeywordSearch(
  * @param keywordWeight Weight for keyword scores
  * @returns Combined and deduplicated results
  */
-function combineSearchResults(
+function combineSearchResultsWithRRF(
   vectorResults: VectorSearchResult[],
   keywordResults: VectorSearchResult[],
   vectorWeight: number,
@@ -757,29 +825,105 @@ function combineSearchResults(
 ): VectorSearchResult[] {
   // Create a map to combine scores for the same chunks
   const combinedMap = new Map<string, VectorSearchResult>();
-
-  // Add vector results
-  for (const result of vectorResults) {
+  
+  // RRF parameters
+  const k = 60; // Standard RRF parameter
+  
+  // Process vector results
+  vectorResults.forEach((result, index) => {
+    const rrfScore = 1 / (k + index + 1);
     combinedMap.set(result.id, {
       ...result,
-      similarity: result.similarity * vectorWeight
+      similarity: rrfScore * vectorWeight + result.similarity * vectorWeight * 0.5
     });
-  }
+  });
 
-  // Add keyword results, combining scores if chunk already exists
-  for (const result of keywordResults) {
+  // Process keyword results
+  keywordResults.forEach((result, index) => {
+    const rrfScore = 1 / (k + index + 1);
     const existing = combinedMap.get(result.id);
+    
     if (existing) {
-      existing.similarity += result.similarity * keywordWeight;
+      // Combine scores for chunks found in both searches
+      existing.similarity += rrfScore * keywordWeight + result.similarity * keywordWeight * 0.5;
     } else {
       combinedMap.set(result.id, {
         ...result,
-        similarity: result.similarity * keywordWeight
+        similarity: rrfScore * keywordWeight + result.similarity * keywordWeight * 0.5
       });
     }
-  }
+  });
 
   return Array.from(combinedMap.values());
+}
+
+/**
+ * Calculate enhanced relevance score for keyword matching
+ * 
+ * @param originalQuery Original search query
+ * @param queryTerms Extracted query terms
+ * @param content Document content
+ * @param title Document title
+ * @returns Enhanced relevance score
+ */
+function calculateEnhancedRelevanceScore(
+  originalQuery: string,
+  queryTerms: string[],
+  content: string,
+  title: string
+): number {
+  const contentLower = content.toLowerCase();
+  const titleLower = title.toLowerCase();
+  const queryLower = originalQuery.toLowerCase();
+  
+  let score = 0;
+  
+  // 1. Exact phrase matching (highest weight)
+  if (contentLower.includes(queryLower)) {
+    score += 0.8;
+  }
+  if (titleLower.includes(queryLower)) {
+    score += 0.9; // Title matches are very important
+  }
+  
+  // 2. Individual term matching
+  let termMatchCount = 0;
+  let titleTermMatchCount = 0;
+  
+  for (const term of queryTerms) {
+    if (contentLower.includes(term)) {
+      termMatchCount++;
+    }
+    if (titleLower.includes(term)) {
+      titleTermMatchCount++;
+    }
+  }
+  
+  // Term frequency score
+  const termFreqScore = queryTerms.length > 0 ? termMatchCount / queryTerms.length : 0;
+  const titleTermFreqScore = queryTerms.length > 0 ? titleTermMatchCount / queryTerms.length : 0;
+  
+  score += termFreqScore * 0.4;
+  score += titleTermFreqScore * 0.5;
+  
+  // 3. Position-based scoring (earlier is better)
+  const firstOccurrenceIndex = contentLower.indexOf(queryLower);
+  if (firstOccurrenceIndex !== -1) {
+    const positionScore = Math.max(0, 1 - (firstOccurrenceIndex / content.length));
+    score += positionScore * 0.2;
+  }
+  
+  // 4. Length normalization (prefer moderate length content)
+  const lengthScore = calculateLengthScore(content);
+  score += lengthScore * 0.1;
+  
+  // 5. Density bonus (multiple occurrences)
+  const queryOccurrences = (contentLower.match(new RegExp(queryLower, 'g')) || []).length;
+  if (queryOccurrences > 1) {
+    score += Math.min(queryOccurrences * 0.1, 0.3);
+  }
+  
+  return Math.min(score, 1.0); // Cap at 1.0
 }
 
 /**
@@ -833,34 +977,6 @@ function extractQueryTerms(query: string): string[] {
     .split(/\s+/)
     .filter(term => term.length > 2 && !stopWords.has(term))
     .slice(0, 10); // Limit to top 10 terms
-}
-
-/**
- * Calculate BM25-like score for keyword matching
- * 
- * @param queryTerms Array of query terms
- * @param document Document text
- * @returns BM25-like score
- */
-function calculateBM25Score(queryTerms: string[], document: string): number {
-  const k1 = 1.2;
-  const b = 0.75;
-  const docLength = document.length;
-  const avgDocLength = 1000; // Approximate average document length
-
-  let score = 0;
-  const docLower = document.toLowerCase();
-
-  for (const term of queryTerms) {
-    const termFreq = (docLower.match(new RegExp(term, 'g')) || []).length;
-    if (termFreq > 0) {
-      const idf = Math.log((1 + 1) / (1 + termFreq)); // Simplified IDF
-      const normTF = (termFreq * (k1 + 1)) / (termFreq + k1 * (1 - b + b * (docLength / avgDocLength)));
-      score += idf * normTF;
-    }
-  }
-
-  return Math.min(score / queryTerms.length, 1.0); // Normalize to [0, 1]
 }
 
 /**

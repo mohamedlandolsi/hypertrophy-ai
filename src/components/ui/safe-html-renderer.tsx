@@ -1,6 +1,6 @@
 'use client';
 
-import React from 'react';
+import React, { useEffect, useState } from 'react';
 import DOMPurify from 'dompurify';
 
 interface SafeHtmlRendererProps {
@@ -9,6 +9,12 @@ interface SafeHtmlRendererProps {
 }
 
 export default function SafeHtmlRenderer({ content, className = '' }: SafeHtmlRendererProps) {
+  const [isClient, setIsClient] = useState(false);
+
+  useEffect(() => {
+    setIsClient(true);
+  }, []);
+
   // Function to detect if content is HTML
   const isHtmlContent = (text: string): boolean => {
     // Check for common HTML tags that would be in rich text content
@@ -18,6 +24,10 @@ export default function SafeHtmlRenderer({ content, className = '' }: SafeHtmlRe
 
   // Function to safely render HTML
   const renderSafeHtml = (htmlContent: string) => {
+    if (!isClient) {
+      return { __html: '' }; // Return empty during SSR
+    }
+
     const cleanHtml = DOMPurify.sanitize(htmlContent, {
       ALLOWED_TAGS: [
         'h1', 'h2', 'h3', 'h4', 'h5', 'h6',
@@ -35,6 +45,17 @@ export default function SafeHtmlRenderer({ content, className = '' }: SafeHtmlRe
       __html: cleanHtml
     };
   };
+
+  // Show loading state during SSR or initial client hydration
+  if (!isClient) {
+    return (
+      <div className={`animate-pulse ${className}`}>
+        <div className="h-4 bg-gray-200 rounded w-3/4 mb-2"></div>
+        <div className="h-4 bg-gray-200 rounded w-1/2 mb-2"></div>
+        <div className="h-4 bg-gray-200 rounded w-5/6"></div>
+      </div>
+    );
+  }
 
   if (isHtmlContent(content)) {
     return (

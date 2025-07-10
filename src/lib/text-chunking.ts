@@ -21,11 +21,11 @@ export interface ChunkingOptions {
 }
 
 const DEFAULT_CHUNKING_OPTIONS: ChunkingOptions = {
-  chunkSize: 1000, // Target characters per chunk
-  chunkOverlap: 200, // Overlap between chunks to maintain context
+  chunkSize: 512, // Reduced from 1000 for more focused semantic meaning
+  chunkOverlap: 100, // Increased from 200 for better context preservation
   preserveSentences: true, // Try to keep sentences intact
   preserveParagraphs: true, // Try to keep paragraphs intact
-  minChunkSize: 100 // Minimum chunk size to avoid tiny fragments
+  minChunkSize: 50 // Reduced minimum to capture more specific concepts
 };
 
 /**
@@ -182,11 +182,11 @@ export function calculateChunkOverlap(chunk1: TextChunk, chunk2: TextChunk): num
  */
 export function chunkFitnessContent(text: string): TextChunk[] {
   return chunkText(text, {
-    chunkSize: 800, // Smaller chunks for better semantic matching
-    chunkOverlap: 150, // Good overlap for fitness protocols
+    chunkSize: 512,      // Updated to improved chunking parameters
+    chunkOverlap: 100,   // Updated to improved chunking parameters  
     preserveSentences: true,
     preserveParagraphs: true,
-    minChunkSize: 100
+    minChunkSize: 50     // Updated to match new defaults
   });
 }
 

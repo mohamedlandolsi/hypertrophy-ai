@@ -1,3 +1,5 @@
+"use client";
+
 import React, { useState } from 'react';
 import ReactMarkdown from 'react-markdown';
 import remarkGfm from 'remark-gfm';
@@ -163,16 +165,19 @@ export const MessageContent: React.FC<MessageContentProps> = ({ content, imageDa
             </td>
           ),
           // Links
-          a: ({ children, href }) => (
-            <a 
-              href={href} 
-              className="text-primary dark:text-primary underline hover:no-underline"
-              target="_blank"
-              rel="noopener noreferrer"
-            >
-              {children}
-            </a>
-          ),
+          a: ({ children, href }) => {
+            // Regular external links only (article links are handled separately now)
+            return (
+              <a 
+                href={href} 
+                className="text-primary dark:text-primary underline hover:no-underline"
+                target="_blank"
+                rel="noopener noreferrer"
+              >
+                {children}
+              </a>
+            );
+          },
           // Horizontal rules
           hr: () => (
             <hr className="my-4 border-border dark:border-border" />

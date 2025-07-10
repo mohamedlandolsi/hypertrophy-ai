@@ -12,6 +12,8 @@ import { InlineLoading, FullPageLoading } from '@/components/ui/loading';
 import type { User as SupabaseUser } from '@supabase/supabase-js';
 import { Suspense } from 'react';
 import { MessageContent } from '@/components/message-content';
+import { ArticleLinks } from '@/components/article-links';
+import { processMessageContent } from '@/lib/article-links';
 import { ArabicAwareTextarea } from '@/components/arabic-aware-textarea';
 
 // Imports for DropdownMenu and Avatar
@@ -1036,25 +1038,41 @@ const ChatPage = () => {
                 {/* Message Content */}
                 <div className={`flex-1 max-w-[85%] md:max-w-[80%] ${msg.role === 'user' ? 'flex justify-end' : ''}`}>
                   <div className="relative">
-                    <div
-                      className={`px-3 md:px-4 py-2 md:py-3 rounded-2xl shadow-sm ${
-                        msg.role === 'user'
-                          ? 'bg-blue-500 text-white rounded-br-md'
-                          : 'bg-muted text-foreground rounded-bl-md border'
-                      }`}
-                    >
-                      <MessageContent 
-                        content={msg.content} 
-                        role={msg.role}
-                        imageData={msg.imageData}
-                        imageMimeType={msg.imageMimeType}
-                      />
-                      {msg.createdAt && (
-                        <p className={`text-xs mt-2 opacity-70 ${msg.role === 'user' ? 'text-right text-white/80' : 'text-left'}`}>
-                          {new Date(msg.createdAt).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}
-                        </p>
-                      )}
-                    </div>
+                    {(() => {
+                      // Process message content to extract article links
+                      const { content, articleLinks } = processMessageContent(msg.content);
+                      
+                      return (
+                        <div
+                          className={`px-3 md:px-4 py-2 md:py-3 rounded-2xl shadow-sm ${
+                            msg.role === 'user'
+                              ? 'bg-blue-500 text-white rounded-br-md'
+                              : 'bg-muted text-foreground rounded-bl-md border'
+                          }`}
+                        >
+                          <MessageContent 
+                            content={content} 
+                            role={msg.role}
+                            imageData={msg.imageData}
+                            imageMimeType={msg.imageMimeType}
+                          />
+                          
+                          {/* Article Links at bottom of message bubble */}
+                          {articleLinks && (
+                            <ArticleLinks 
+                              links={articleLinks} 
+                              messageRole={msg.role}
+                            />
+                          )}
+                          
+                          {msg.createdAt && (
+                            <p className={`text-xs mt-2 opacity-70 ${msg.role === 'user' ? 'text-right text-white/80' : 'text-left'}`}>
+                              {new Date(msg.createdAt).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}
+                            </p>
+                          )}
+                        </div>
+                      );
+                    })()}
                     
                     {/* Copy Button */}
                     <div className={`absolute ${msg.role === 'user' ? 'left-0 -translate-x-8' : 'right-0 translate-x-8'} top-2 opacity-0 group-hover:opacity-100 transition-opacity duration-200`}>

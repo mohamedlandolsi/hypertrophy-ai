@@ -247,6 +247,58 @@ function detectConversationLanguage(conversation: ConversationMessage[]): 'arabi
   return arabicScore > totalMessages * 0.5 ? 'arabic' : 'english';
 }
 
+// Function to expand query for better retrieval
+async function expandQueryForRetrieval(query: string): Promise<string> {
+  try {
+    // Skip expansion for very short queries or if API key is not available
+    if (query.length < 8 || !process.env.GEMINI_API_KEY) {
+      return query;
+    }
+
+    const model = genAI.getGenerativeModel({ 
+      model: "gemini-1.5-flash",
+      generationConfig: {
+        temperature: 0.3,
+        maxOutputTokens: 100,
+      }
+    });
+
+    const prompt = `You are a query expansion expert for fitness and hypertrophy knowledge retrieval.
+
+Original query: "${query}"
+
+Task: Expand this query to improve retrieval from a fitness science knowledge base. Add relevant synonyms, scientific terms, and related concepts that would help find the right information.
+
+Rules:
+- Keep it concise (1-2 sentences max)
+- Add scientific terminology
+- Include alternative phrasings
+- Focus on fitness, training, nutrition, and exercise science
+- Don't change the core meaning
+
+For example:
+- "perception of effort" → "perception of effort RPE rate of perceived exertion RIR repetitions in reserve training intensity subjective effort"
+- "forearm training" → "forearm training wrist flexors extensors grip strength hand muscle development"
+
+Expanded query:`;
+
+    const result = await model.generateContent(prompt);
+    const expandedQuery = result.response.text().trim();
+
+    // Use expanded query if it's reasonable, otherwise fall back to original
+    if (expandedQuery.length > 5 && expandedQuery.length < 300) {
+      console.log(`🔍 Query expansion: "${query}" → "${expandedQuery}"`);
+      return expandedQuery;
+    } else {
+      return query;
+    }
+
+  } catch (error) {
+    console.error('Error expanding query:', error);
+    return query; // Fallback to original query
+  }
+}
+
 // Function to get the appropriate language instruction
 function getLanguageInstruction(conversation: ConversationMessage[]): string {
   const detectedLanguage = detectConversationLanguage(conversation);
@@ -312,63 +364,102 @@ export async function sendToGemini(
         // Use the user's latest message to find relevant content
         const userQuery = latestUserMessage.content;
         
-        console.log(`🔍 RAG DEBUG: Starting vector search for query: "${userQuery}"`);
+        console.log(`🔍 RAG DEBUG: Starting enhanced retrieval for query: "${userQuery}"`);
         console.log(`🔍 RAG DEBUG: User ID: ${userId}`);
         
-        // TEMPORARY FIX: Use direct vector search instead of enhanced hybrid search
-        console.log('🔍 RAG DEBUG: Using direct vector search (bypassing hybrid search)');
+        // Use the enhanced hybrid search approach
+        const { performHybridSearch } = await import('./vector-search');
         
-        // Import the vector search function
-        const { performVectorSearch } = await import('./vector-search');
-        
-        const directResults = await performVectorSearch(userQuery, {
-          limit: 7,
-          threshold: 0.4, // Lower threshold for more results
-          userId
+        const searchResults = await performHybridSearch(userQuery, userId, {
+          limit: 8,
+          threshold: 0.25, // Lower threshold for better recall
+          vectorWeight: 0.6,
+          keywordWeight: 0.4,
+          rerank: true
         });
 
-        console.log(`🔍 RAG DEBUG: Direct vector search found ${directResults.length} results`);
+        console.log(`🔍 RAG DEBUG: Enhanced hybrid search found ${searchResults.length} results`);
 
-        if (directResults && directResults.length > 0) {
-          // Format the results similar to getRelevantContext
-          const contextParts = directResults.map(result => 
-            `=== ${result.knowledgeItemTitle} (${(result.similarity * 100).toFixed(1)}%) ===\n${result.content}`
-          );
-          
-          knowledgeContext = contextParts.join('\n\n');
-          console.log(`📚 Direct vector search success: ${knowledgeContext.length} characters`);
-          console.log(`📚 Context preview: ${knowledgeContext.substring(0, 200)}...`);
-        } else {
-          console.log('🔍 RAG DEBUG: Direct vector search returned no results, trying fallback');
-          
-          // Fallback to traditional method if no vector search results
-          console.log('📚 No relevant context found via direct search, using fallback');
-          
-          const knowledgeItems = await prisma.knowledgeItem.findMany({
-            where: {
-              userId: userId,
-              status: 'READY'
-            },
-            select: {
-              title: true,
-              content: true,
-              type: true
-            },
-            take: 3 // Limit to prevent context overflow
+        if (searchResults && searchResults.length > 0) {
+          // Group chunks by knowledge item and format with better context
+          const groupedChunks = searchResults.reduce((groups, result) => {
+            const title = result.knowledgeItemTitle;
+            if (!groups[title]) {
+              groups[title] = [];
+            }
+            groups[title].push(result);
+            return groups;
+          }, {} as Record<string, typeof searchResults>);
+
+          // Format the context with source attribution and relevance scores
+          const contextParts = Object.entries(groupedChunks).map(([title, chunks]) => {
+            const knowledgeItemId = chunks[0].knowledgeItemId;
+            const sortedChunks = chunks.sort((a, b) => a.chunkIndex - b.chunkIndex);
+            const avgSimilarity = chunks.reduce((sum, chunk) => sum + chunk.similarity, 0) / chunks.length;
+            
+            const chunkTexts = sortedChunks.map(chunk => {
+              const relevanceMarker = chunk.similarity > 0.7 ? ' [HIGH RELEVANCE]' : 
+                                     chunk.similarity > 0.5 ? ' [MEDIUM RELEVANCE]' : '';
+              return `${chunk.content}${relevanceMarker}`;
+            }).join('\n\n');
+            
+            return `=== ${title} id:${knowledgeItemId} (Relevance: ${(avgSimilarity * 100).toFixed(1)}%) ===\n${chunkTexts}`;
           });
 
-          console.log(`🔍 RAG DEBUG: Fallback found ${knowledgeItems.length} knowledge items`);
+          knowledgeContext = contextParts.join('\n\n');
+          console.log(`📚 Enhanced RAG success: ${knowledgeContext.length} characters from ${searchResults.length} chunks`);
+          console.log(`📚 Knowledge items found: ${Object.keys(groupedChunks).join(', ')}`);
+        } else {
+          console.log('🔍 RAG DEBUG: Enhanced search returned no results, trying fallback approach');
+          
+          // Enhanced fallback: Try with query expansion
+          const expandedQuery = await expandQueryForRetrieval(userQuery);
+          console.log(`🔍 RAG DEBUG: Expanded query: "${expandedQuery}"`);
+          
+          const fallbackResults = await performHybridSearch(expandedQuery, userId, {
+            limit: 6,
+            threshold: 0.2,
+            vectorWeight: 0.5,
+            keywordWeight: 0.5,
+            rerank: false
+          });
+          
+          if (fallbackResults && fallbackResults.length > 0) {
+            const contextParts = fallbackResults.map(result => 
+              `=== ${result.knowledgeItemTitle} id:${result.knowledgeItemId} (${(result.similarity * 100).toFixed(1)}%) ===\n${result.content}`
+            );
+            knowledgeContext = contextParts.join('\n\n');
+            console.log(`📚 Fallback RAG success: ${knowledgeContext.length} characters`);
+          } else {
+            console.log('🔍 RAG DEBUG: Both enhanced and fallback searches failed, using basic fallback');
+            
+            // Last resort: Get recent documents
+            const knowledgeItems = await prisma.knowledgeItem.findMany({
+              where: {
+                userId: userId,
+                status: 'READY'
+              },
+              select: {
+                id: true,
+                title: true,
+                content: true,
+                type: true
+              },
+              orderBy: { createdAt: 'desc' },
+              take: 3
+            });
 
-          if (knowledgeItems.length > 0) {
-            knowledgeContext = '\n\n' + 
-              knowledgeItems.map((item) => 
-                `=== ${item.title} ===\n${item.content || '[Content not available for text analysis]'}`
-              ).join('\n\n');
-            console.log(`🔍 RAG DEBUG: Fallback context length: ${knowledgeContext.length} characters`);
+            if (knowledgeItems.length > 0) {
+              knowledgeContext = '\n\n' + 
+                knowledgeItems.map((item) => 
+                  `=== ${item.title} id:${item.id} ===\n${item.content || '[Content not available for text analysis]'}`
+                ).join('\n\n');
+              console.log(`🔍 RAG DEBUG: Basic fallback context length: ${knowledgeContext.length} characters`);
+            }
           }
         }
       } catch (error) {
-        console.error('🔍 RAG DEBUG: Error fetching knowledge context:', error);
+        console.error('🔍 RAG DEBUG: Error in enhanced retrieval:', error);
         // Continue without knowledge context if there's an error
       }
     } else {
@@ -400,16 +491,17 @@ ${knowledgeContext}
 
 CRITICAL INSTRUCTIONS FOR CONTEXT USAGE:
 1. ALWAYS prioritize information from the Scientific Reference Material above
-2. If the reference material contains information relevant to the user's question, cite it explicitly
-3. If the reference material contradicts your general knowledge, follow the reference material
-4. If the reference material is insufficient, clearly state what additional information might be needed
-5. When making recommendations, directly connect them to specific points in the reference material
-6. If you cannot find relevant information in the reference material, explicitly state this limitation
+2. When you use information from a knowledge base article, you MUST cite it by including a link in the following format at the end of the sentence: [Article Title](article:article-id). You can get the title and id from the context header (=== Title id:article-id ===)
+3. If the reference material contains information relevant to the user's question, cite it explicitly with clickable links
+4. If the reference material contradicts your general knowledge, follow the reference material
+5. If the reference material is insufficient, clearly state what additional information might be needed
+6. When making recommendations, directly connect them to specific points in the reference material with proper citations
+7. If you cannot find relevant information in the reference material, explicitly state this limitation
 
 RESPONSE STRUCTURE:
 - Start with the most relevant information from the reference material
 - Clearly distinguish between reference-based information and general knowledge
-- Provide specific citations when referencing the material (e.g., "According to [Document Title]...")
+- Provide specific citations when referencing the material using the format: [Article Title](article:article-id)
 - End with actionable recommendations based on the available evidence
 
 Your Task: Provide personalized coaching advice that integrates the scientific evidence from the reference material with the client's specific circumstances and question.` 
