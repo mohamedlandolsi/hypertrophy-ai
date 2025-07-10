@@ -7,6 +7,7 @@ import { Button } from '@/components/ui/button';
 import { Settings, MessageSquare, Send, ChevronLeft, Menu, User, LogOut, Database, Trash2, Copy, Loader2, Image, X } from 'lucide-react';
 import Link from 'next/link';
 import { ThemeToggle } from '@/components/theme-toggle';
+import { useTheme } from 'next-themes';
 import { showToast } from '@/lib/toast';
 import { InlineLoading, FullPageLoading } from '@/components/ui/loading';
 import type { User as SupabaseUser } from '@supabase/supabase-js';
@@ -74,9 +75,26 @@ const ChatPage = () => {
   // Add connection status tracking
   const [isOnline, setIsOnline] = reactUseState(true);
 
+  // Theme hook for logo
+  const { theme } = useTheme();
+  const [mounted, setMounted] = reactUseState(false);
+
+  // Helper function to get logo source safely
+  const getLogoSrc = () => {
+    if (!mounted) {
+      return "/logo.png"; // Default to light logo during SSR
+    }
+    return theme === 'dark' ? "/logo-dark.png" : "/logo.png";
+  };
+
   const searchParams = useSearchParams();
   const router = useRouter();
   const messagesEndRef = useRef<HTMLDivElement | null>(null);
+
+  // Mounted effect for theme
+  useEffect(() => {
+    setMounted(true);
+  }, []);  // Empty dependency array is correct here
 
   // Add network status monitoring
   useEffect(() => {
@@ -1029,8 +1047,12 @@ const ChatPage = () => {
                       </AvatarFallback>
                     </Avatar>
                   ) : (
-                    <div className="h-8 w-8 rounded-full bg-gradient-to-br from-blue-500 to-purple-600 flex items-center justify-center">
-                      <span className="text-white text-xs font-bold">AI</span>
+                    <div className="h-8 w-8 rounded-full bg-background border-2 border-border flex items-center justify-center overflow-hidden">
+                      <img 
+                        src={getLogoSrc()} 
+                        alt="HyperTroQ AI" 
+                        className="h-6 w-6 object-contain"
+                      />
                     </div>
                   )}
                 </div>

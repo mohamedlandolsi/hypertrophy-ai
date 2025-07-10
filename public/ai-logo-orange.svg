@@ -1,0 +1,30 @@
+<!-- AI Logo (Orange version) -->
+<svg width="100" height="100" viewBox="0 0 100 100" fill="none" xmlns="http://www.w3.org/2000/svg">
+  <!-- Brain outline -->
+  <path d="M25 35C25 20 35 10 50 10C65 10 75 20 75 35C75 40 73 45 70 48C72 50 75 55 75 60C75 70 70 75 65 75C60 75 55 70 50 70C45 70 40 75 35 75C30 75 25 70 25 60C25 55 28 50 30 48C27 45 25 40 25 35Z" stroke="#FF6B00" stroke-width="2" fill="none"/>
+  
+  <!-- Brain details -->
+  <path d="M35 25C35 25 45 20 55 25" stroke="#FF6B00" stroke-width="2" fill="none"/>
+  <path d="M30 40C30 40 40 35 50 40" stroke="#FF6B00" stroke-width="2" fill="none"/>
+  <path d="M35 55C35 55 45 50 55 55" stroke="#FF6B00" stroke-width="2" fill="none"/>
+  
+  <!-- Brain stem -->
+  <path d="M50 70L50 85" stroke="#FF6B00" stroke-width="2"/>
+  <path d="M45 85L55 85" stroke="#FF6B00" stroke-width="2"/>
+  
+  <!-- Neural connections -->
+  <path d="M35 30L25 25" stroke="#FF6B00" stroke-width="1.5" opacity="0.7"/>
+  <path d="M65 30L75 25" stroke="#FF6B00" stroke-width="1.5" opacity="0.7"/>
+  <path d="M35 45L25 50" stroke="#FF6B00" stroke-width="1.5" opacity="0.7"/>
+  <path d="M65 45L75 50" stroke="#FF6B00" stroke-width="1.5" opacity="0.7"/>
+  
+  <!-- Sound waves -->
+  <rect x="80" y="30" width="4" height="20" fill="#44D7B6" rx="2"/>
+  <rect x="85" y="25" width="4" height="30" fill="#44D7B6" rx="2"/>
+  <rect x="90" y="35" width="4" height="10" fill="#44D7B6" rx="2"/>
+  
+  <!-- Microphone -->
+  <rect x="78" y="55" width="8" height="12" fill="#666" rx="4"/>
+  <rect x="80" y="67" width="4" height="8" fill="#666"/>
+  <rect x="78" y="75" width="8" height="2" fill="#666"/>
+</svg>
