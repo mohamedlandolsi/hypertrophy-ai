@@ -44,26 +44,26 @@
 }
 
 :root {
-  --radius: 0.625rem;
-  /* Light mode - softer, less bright colors */
-  --background: oklch(0.98 0.005 0);  /* Soft off-white instead of pure white */
-  --foreground: oklch(0.18 0.01 0);   /* Warmer dark gray instead of pure black */
-  --card: oklch(0.99 0.002 0);        /* Very subtle warm tint */
-  --card-foreground: oklch(0.18 0.01 0);
-  --popover: oklch(0.99 0.002 0);
-  --popover-foreground: oklch(0.18 0.01 0);
-  --primary: oklch(0.35 0.08 240);    /* Softer blue-gray primary */
-  --primary-foreground: oklch(0.98 0.005 0);
-  --secondary: oklch(0.94 0.01 0);    /* Warmer light gray */
-  --secondary-foreground: oklch(0.25 0.02 0);
-  --muted: oklch(0.95 0.008 0);       /* Slightly warmer muted background */
-  --muted-foreground: oklch(0.48 0.02 0); /* Better contrast muted text */
-  --accent: oklch(0.94 0.01 220);     /* Subtle blue accent */
-  --accent-foreground: oklch(0.25 0.02 0);
-  --destructive: oklch(0.55 0.18 25); /* Softer red */
-  --border: oklch(0.88 0.01 0);       /* Warmer border */
-  --input: oklch(0.92 0.008 0);       /* Softer input background */
-  --ring: oklch(0.55 0.08 240);       /* Matching focus ring */
+  --radius: 0.75rem;
+  /* Light mode - softer, premium colors */
+  --background: oklch(0.98 0.003 240);  /* Subtle blue-tinted white */
+  --foreground: oklch(0.15 0.015 240);  /* Warmer dark with blue undertone */
+  --card: oklch(0.99 0.002 240);       /* Card with subtle blue tint */
+  --card-foreground: oklch(0.15 0.015 240);
+  --popover: oklch(0.995 0.002 240);
+  --popover-foreground: oklch(0.15 0.015 240);
+  --primary: oklch(0.55 0.12 240);     /* Rich blue primary */
+  --primary-foreground: oklch(0.98 0.003 240);
+  --secondary: oklch(0.94 0.008 240);  /* Blue-tinted gray */
+  --secondary-foreground: oklch(0.25 0.02 240);
+  --muted: oklch(0.96 0.005 240);      /* Warmer muted with blue hint */
+  --muted-foreground: oklch(0.45 0.02 240); /* Better contrast muted text */
+  --accent: oklch(0.92 0.015 260);     /* Purple accent */
+  --accent-foreground: oklch(0.25 0.02 260);
+  --destructive: oklch(0.58 0.16 20);  /* Softer orange-red */
+  --border: oklch(0.87 0.008 240);     /* Blue-tinted border */
+  --input: oklch(0.94 0.005 240);      /* Input with blue undertone */
+  --ring: oklch(0.55 0.12 240);        /* Matching focus ring */
   --chart-1: oklch(0.55 0.18 250);
   --chart-2: oklch(0.52 0.15 180);
   --chart-3: oklch(0.48 0.12 140);
@@ -80,24 +80,25 @@
 }
 
 .dark {
-  /* Dark mode - lighter, more balanced colors for better clarity */
-  --background: oklch(0.12 0.01 0);   /* Lighter than pure black but still dark */
-  --foreground: oklch(0.92 0.01 0);   /* Softer white, easier on eyes */
-  --card: oklch(0.16 0.01 0);         /* Lighter card background */
-  --card-foreground: oklch(0.92 0.01 0);
-  --popover: oklch(0.16 0.01 0);
-  --popover-foreground: oklch(0.92 0.01 0);
-  --primary: oklch(0.75 0.12 240);    /* Brighter blue for better visibility */
-  --primary-foreground: oklch(0.12 0.01 0);
-  --secondary: oklch(0.22 0.01 0);    /* Lighter secondary background */
-  --secondary-foreground: oklch(0.88 0.01 0);
-  --muted: oklch(0.20 0.01 0);        /* More visible muted areas */
-  --muted-foreground: oklch(0.65 0.02 0); /* Better contrast for muted text */
-  --accent: oklch(0.22 0.02 220);     /* Slightly colored accent */
-  --accent-foreground: oklch(0.88 0.01 0);
-  --destructive: oklch(0.65 0.15 20); /* Softer red, less aggressive */
-  --border: oklch(0.92 0.01 0 / 15%); /* More visible borders */
-  --input: oklch(0.92 0.01 0 / 12%);  /* Subtle input backgrounds */
+  /* Dark mode - premium charcoal with blue undertones */
+  --background: oklch(0.11 0.008 240);   /* Dark slate with blue hint */
+  --foreground: oklch(0.92 0.005 240);   /* Soft white with blue undertone */
+  --card: oklch(0.13 0.01 240);          /* Lighter card with blue tint */
+  --card-foreground: oklch(0.92 0.005 240);
+  --popover: oklch(0.13 0.01 240);
+  --popover-foreground: oklch(0.92 0.005 240);
+  --primary: oklch(0.65 0.15 240);       /* Vibrant blue for dark mode */
+  --primary-foreground: oklch(0.11 0.008 240);
+  --secondary: oklch(0.18 0.008 240);    /* Blue-tinted secondary */
+  --secondary-foreground: oklch(0.88 0.005 240);
+  --muted: oklch(0.16 0.006 240);        /* Muted with blue undertone */
+  --muted-foreground: oklch(0.68 0.015 240); /* Better contrast for muted text */
+  --accent: oklch(0.20 0.015 260);       /* Purple accent for dark */
+  --accent-foreground: oklch(0.88 0.005 260);
+  --destructive: oklch(0.62 0.15 15);    /* Softer red for dark mode */
+  --border: oklch(0.92 0.005 240 / 12%); /* Subtle blue-tinted borders */
+  --input: oklch(0.92 0.005 240 / 8%);   /* Very subtle input backgrounds */
+  --ring: oklch(0.65 0.15 240);          /* Matching focus ring */
   --ring: oklch(0.75 0.12 240);       /* Matching focus ring */
   --chart-1: oklch(0.65 0.18 260);
   --chart-2: oklch(0.68 0.15 170);
@@ -173,7 +174,7 @@
   }
 }
 
-/* Custom animations */
+/* Custom animations for modern UI */
 @keyframes fade-in {
   from {
     opacity: 0;
@@ -185,11 +186,177 @@
   }
 }
 
+@keyframes slide-in-left {
+  from {
+    opacity: 0;
+    transform: translateX(-20px);
+  }
+  to {
+    opacity: 1;
+    transform: translateX(0);
+  }
+}
+
+@keyframes slide-in-right {
+  from {
+    opacity: 0;
+    transform: translateX(20px);
+  }
+  to {
+    opacity: 1;
+    transform: translateX(0);
+  }
+}
+
+@keyframes scale-in {
+  from {
+    opacity: 0;
+    transform: scale(0.95);
+  }
+  to {
+    opacity: 1;
+    transform: scale(1);
+  }
+}
+
+@keyframes glow {
+  0%, 100% {
+    box-shadow: 0 0 0 0 oklch(var(--primary) / 0.4);
+  }
+  50% {
+    box-shadow: 0 0 0 4px oklch(var(--primary) / 0.1);
+  }
+}
+
 .animate-fade-in {
   animation: fade-in 0.5s ease-out forwards;
 }
 
-/* Custom scrollbar styling for chat textarea */
+.animate-slide-in-left {
+  animation: slide-in-left 0.6s ease-out forwards;
+}
+
+.animate-slide-in-right {
+  animation: slide-in-right 0.6s ease-out forwards;
+}
+
+.animate-scale-in {
+  animation: scale-in 0.4s ease-out forwards;
+}
+
+.animate-glow {
+  animation: glow 2s ease-in-out infinite;
+}
+
+/* Glassmorphism effects */
+.glass-sidebar {
+  background: oklch(var(--background) / 0.85);
+  backdrop-filter: blur(12px) saturate(1.5);
+  -webkit-backdrop-filter: blur(12px) saturate(1.5);
+  border: 1px solid oklch(var(--border) / 0.3);
+}
+
+.glass-input {
+  background: oklch(var(--background) / 0.8);
+  backdrop-filter: blur(8px) saturate(1.2);
+  -webkit-backdrop-filter: blur(8px) saturate(1.2);
+  border: 1px solid oklch(var(--border) / 0.4);
+}
+
+.glass-header {
+  background: oklch(var(--background) / 0.95);
+  backdrop-filter: blur(16px) saturate(1.8);
+  -webkit-backdrop-filter: blur(16px) saturate(1.8);
+  border-bottom: 1px solid oklch(var(--border) / 0.2);
+}
+
+/* Gradient effects for modern buttons */
+.gradient-primary {
+  background: linear-gradient(135deg, 
+    oklch(0.55 0.12 240), 
+    oklch(0.50 0.15 260)
+  );
+  transition: all 0.3s ease;
+}
+
+.gradient-primary:hover {
+  background: linear-gradient(135deg, 
+    oklch(0.50 0.15 240), 
+    oklch(0.45 0.18 260)
+  );
+  transform: translateY(-1px);
+  box-shadow: 
+    0 4px 12px oklch(var(--primary) / 0.3),
+    0 2px 4px oklch(var(--primary) / 0.2);
+}
+
+/* Floating input bar styling */
+.floating-input {
+  background: oklch(var(--background) / 0.95);
+  backdrop-filter: blur(12px) saturate(1.2);
+  -webkit-backdrop-filter: blur(12px) saturate(1.2);
+  border: 1px solid oklch(var(--border) / 0.3);
+  box-shadow: 
+    0 8px 32px oklch(var(--foreground) / 0.08),
+    0 2px 8px oklch(var(--foreground) / 0.04);
+  border-radius: 2rem;
+}
+
+/* Chat bubble enhancements */
+.chat-bubble-user {
+  background: linear-gradient(135deg, 
+    oklch(0.55 0.12 240), 
+    oklch(0.50 0.15 260)
+  );
+  color: oklch(0.98 0.003 240);
+  border-radius: 1.5rem 1.5rem 0.5rem 1.5rem;
+  box-shadow: 
+    0 4px 12px oklch(var(--primary) / 0.25),
+    0 2px 4px oklch(var(--primary) / 0.15);
+}
+
+.chat-bubble-ai {
+  background: oklch(var(--card));
+  border: 1px solid oklch(var(--border) / 0.6);
+  border-radius: 1.5rem 1.5rem 1.5rem 0.5rem;
+  box-shadow: 
+    0 2px 8px oklch(var(--foreground) / 0.06),
+    0 1px 3px oklch(var(--foreground) / 0.04);
+}
+
+/* Improved hover states */
+.hover-lift {
+  transition: all 0.2s cubic-bezier(0.4, 0, 0.2, 1);
+}
+
+.hover-lift:hover {
+  transform: translateY(-2px);
+  box-shadow: 
+    0 4px 12px oklch(var(--foreground) / 0.1),
+    0 2px 4px oklch(var(--foreground) / 0.06);
+}
+
+/* Active chat glow */
+.active-chat-glow {
+  position: relative;
+}
+
+.active-chat-glow::before {
+  content: '';
+  position: absolute;
+  left: 0;
+  top: 0;
+  bottom: 0;
+  width: 3px;
+  background: linear-gradient(135deg, 
+    oklch(0.55 0.12 240), 
+    oklch(0.50 0.15 260)
+  );
+  border-radius: 0 2px 2px 0;
+  box-shadow: 0 0 8px oklch(var(--primary) / 0.4);
+}
+
+/* Custom scrollbar styling for chat textarea and messages */
 .chat-textarea::-webkit-scrollbar {
   width: 6px;
 }
@@ -199,19 +366,71 @@
 }
 
 .chat-textarea::-webkit-scrollbar-thumb {
-  background: hsl(var(--muted-foreground) / 0.5);
+  background: oklch(var(--muted-foreground) / 0.3);
   border-radius: 3px;
   transition: background 0.2s ease;
 }
 
 .chat-textarea::-webkit-scrollbar-thumb:hover {
-  background: hsl(var(--muted-foreground) / 0.7);
+  background: oklch(var(--muted-foreground) / 0.5);
 }
 
 /* Firefox scrollbar */
 .chat-textarea {
   scrollbar-width: thin;
-  scrollbar-color: hsl(var(--muted-foreground) / 0.5) transparent;
+  scrollbar-color: oklch(var(--muted-foreground) / 0.3) transparent;
+}
+
+/* Message area scrollbar */
+.message-area::-webkit-scrollbar {
+  width: 8px;
+}
+
+.message-area::-webkit-scrollbar-track {
+  background: transparent;
+}
+
+.message-area::-webkit-scrollbar-thumb {
+  background: oklch(var(--muted-foreground) / 0.2);
+  border-radius: 4px;
+  transition: background 0.2s ease;
+}
+
+.message-area::-webkit-scrollbar-thumb:hover {
+  background: oklch(var(--muted-foreground) / 0.4);
+}
+
+/* Smooth scrolling for message area */
+.message-area {
+  scroll-behavior: smooth;
+  scrollbar-width: thin;
+  scrollbar-color: oklch(var(--muted-foreground) / 0.2) transparent;
+}
+
+/* Enhanced focus states */
+.focus-ring-enhanced:focus-visible {
+  outline: 2px solid oklch(var(--primary));
+  outline-offset: 2px;
+  box-shadow: 0 0 0 4px oklch(var(--primary) / 0.1);
+}
+
+/* Sidebar animation for desktop */
+@media (min-width: 768px) {
+  .sidebar-animate {
+    transition: width 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+  }
+}
+
+/* Page load animation */
+.page-enter {
+  opacity: 0;
+  transform: translateY(20px);
+}
+
+.page-enter-active {
+  opacity: 1;
+  transform: translateY(0);
+  transition: opacity 0.6s ease-out, transform 0.6s ease-out;
 }
 
 /* Rich Text Editor Styles */
@@ -479,4 +698,115 @@
 
 .rich-text-content:last-child {
   margin-bottom: 0;
+}
+
+/* Mobile-specific optimizations */
+@media (max-width: 768px) {
+  /* Enhanced glassmorphism for mobile */
+  .glass-sidebar {
+    background: oklch(var(--background) / 0.92);
+    backdrop-filter: blur(20px) saturate(1.8);
+    -webkit-backdrop-filter: blur(20px) saturate(1.8);
+    box-shadow: 
+      0 20px 64px oklch(var(--foreground) / 0.15),
+      0 8px 32px oklch(var(--foreground) / 0.1);
+  }
+
+  .glass-header {
+    background: oklch(var(--background) / 0.98);
+    backdrop-filter: blur(20px) saturate(2);
+    -webkit-backdrop-filter: blur(20px) saturate(2);
+  }
+
+  .floating-input {
+    background: oklch(var(--background) / 0.98);
+    backdrop-filter: blur(16px) saturate(1.5);
+    -webkit-backdrop-filter: blur(16px) saturate(1.5);
+    box-shadow: 
+      0 12px 48px oklch(var(--foreground) / 0.12),
+      0 4px 16px oklch(var(--foreground) / 0.08);
+  }
+
+  /* Mobile chat bubble spacing */
+  .chat-bubble-user,
+  .chat-bubble-ai {
+    border-radius: 1.25rem 1.25rem 0.5rem 1.25rem;
+  }
+
+  /* Improved mobile touch targets */
+  .hover-lift {
+    transition: transform 0.2s ease, box-shadow 0.2s ease;
+  }
+
+  .hover-lift:active {
+    transform: translateY(1px);
+  }
+
+  /* Mobile-optimized message spacing and centering */
+  .message-area {
+    scroll-padding-bottom: 6rem;
+    width: 100%;
+    overflow-x: hidden;
+  }
+
+  /* Ensure full width utilization on mobile */
+  .message-area > div {
+    width: 100%;
+    margin: 0 auto;
+  }
+
+  /* Mobile content centering */
+  body {
+    overflow-x: hidden;
+  }
+
+  /* Additional mobile-specific adjustments */
+  .mobile-centered-content {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    width: 100%;
+    padding-left: 0.75rem;
+    padding-right: 0.75rem;
+  }
+
+  /* Ensure proper mobile viewport */
+  html {
+    overflow-x: hidden;
+  }
+
+  /* Better mobile text wrapping */
+  .chat-bubble-user,
+  .chat-bubble-ai {
+    word-wrap: break-word;
+    overflow-wrap: break-word;
+    hyphens: auto;
+  }
+
+  /* Mobile input centering */
+  .floating-input {
+    width: calc(100% - 1rem);
+    margin-left: 0.5rem;
+    margin-right: 0.5rem;
+  }
+}
+
+/* Touch-specific enhancements */
+@media (hover: none) and (pointer: coarse) {
+  .hover-lift:hover {
+    transform: none;
+  }
+  
+  .hover-lift:active {
+    transform: scale(0.98);
+  }
+
+  /* Enhanced touch feedback for buttons */
+  .gradient-primary:active {
+    transform: scale(0.98);
+    background: linear-gradient(135deg, 
+      oklch(0.45 0.18 240), 
+      oklch(0.40 0.20 260)
+    );
+  }
 }

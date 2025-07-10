@@ -654,32 +654,35 @@ const ChatPage = () => {
     return () => document.removeEventListener('paste', handleGlobalPaste);
   }, [selectedImage, setSelectedImage, setImagePreview]);
 
-  // Add keyboard shortcuts tooltip
+  // Enhanced keyboard shortcuts tooltip
   const [showShortcuts, setShowShortcuts] = reactUseState(false);
 
   const KeyboardShortcuts = () => (
-    <div className="absolute bottom-full left-0 mb-2 bg-popover border border-border rounded-lg p-3 shadow-lg z-50 min-w-64">
-      <h4 className="text-sm font-medium mb-2">Keyboard Shortcuts</h4>
-      <div className="space-y-1 text-xs">
-        <div className="flex justify-between">
-          <span>Send message</span>
-          <kbd className="px-1 py-0.5 bg-muted rounded text-xs">⌘ Enter</kbd>
+    <div className="absolute bottom-full left-0 mb-3 glass-input rounded-xl p-4 shadow-xl z-50 min-w-72 animate-scale-in border border-border/50">
+      <h4 className="text-sm font-semibold mb-3 text-foreground flex items-center">
+        <span className="w-2 h-2 bg-gradient-to-r from-blue-500 to-purple-600 rounded-full mr-2"></span>
+        Keyboard Shortcuts
+      </h4>
+      <div className="space-y-2 text-xs">
+        <div className="flex justify-between items-center py-1">
+          <span className="text-muted-foreground">Send message</span>
+          <kbd className="px-2 py-1 bg-muted/60 rounded-md text-xs font-mono border border-border/40">⌘ + Enter</kbd>
         </div>
-        <div className="flex justify-between">
-          <span>New chat</span>
-          <kbd className="px-1 py-0.5 bg-muted rounded text-xs">⌘ N</kbd>
+        <div className="flex justify-between items-center py-1">
+          <span className="text-muted-foreground">New chat</span>
+          <kbd className="px-2 py-1 bg-muted/60 rounded-md text-xs font-mono border border-border/40">⌘ + N</kbd>
         </div>
-        <div className="flex justify-between">
-          <span>Focus input</span>
-          <kbd className="px-1 py-0.5 bg-muted rounded text-xs">⌘ K</kbd>
+        <div className="flex justify-between items-center py-1">
+          <span className="text-muted-foreground">Focus input</span>
+          <kbd className="px-2 py-1 bg-muted/60 rounded-md text-xs font-mono border border-border/40">⌘ + K</kbd>
         </div>
-        <div className="flex justify-between">
-          <span>Paste image</span>
-          <kbd className="px-1 py-0.5 bg-muted rounded text-xs">⌘ V</kbd>
+        <div className="flex justify-between items-center py-1">
+          <span className="text-muted-foreground">Paste image</span>
+          <kbd className="px-2 py-1 bg-muted/60 rounded-md text-xs font-mono border border-border/40">⌘ + V</kbd>
         </div>
-        <div className="flex justify-between">
-          <span>Close sidebar</span>
-          <kbd className="px-1 py-0.5 bg-muted rounded text-xs">Esc</kbd>
+        <div className="flex justify-between items-center py-1">
+          <span className="text-muted-foreground">Close sidebar</span>
+          <kbd className="px-2 py-1 bg-muted/60 rounded-md text-xs font-mono border border-border/40">Esc</kbd>
         </div>
       </div>
     </div>
@@ -697,59 +700,77 @@ const ChatPage = () => {
   }
 
   return (
-    <div className="flex h-screen bg-background text-foreground overflow-hidden relative">
+    <div className="flex h-screen bg-background text-foreground overflow-hidden relative animate-fade-in">
       {/* Mobile Backdrop Overlay */}
       {isMobile && isSidebarOpen && (
         <div 
-          className="fixed inset-0 bg-black/50 z-40 transition-opacity"
+          className="fixed inset-0 bg-black/50 z-40 transition-opacity backdrop-blur-sm"
           onClick={() => setIsSidebarOpen(false)}
         />
       )}
 
-      {/* Sidebar */}
+      {/* Enhanced Mobile Sidebar with Consolidated Navigation */}
       <div
-        className={`flex flex-col border-r border-border transition-all duration-300 ease-in-out z-50 ${
+        className={`flex flex-col transition-all duration-300 ease-in-out z-50 ${
           isMobile 
-            ? `fixed left-0 top-0 h-full w-80 transform ${isSidebarOpen ? 'translate-x-0' : '-translate-x-full'} shadow-xl bg-background`
-            : `relative ${isSidebarOpen ? 'w-64 md:w-72' : 'w-0'} overflow-hidden shadow-sm bg-muted/20`
+            ? `fixed left-0 top-0 h-full w-80 transform ${isSidebarOpen ? 'translate-x-0' : '-translate-x-full'} shadow-2xl glass-sidebar animate-slide-in-left`
+            : `relative ${isSidebarOpen ? 'w-64 md:w-72' : 'w-0'} overflow-hidden glass-sidebar border-r border-border/30`
         }`}
       >
         {(isMobile ? isSidebarOpen : true) && (
-          <div className="p-4 h-full flex flex-col">
-            {/* Header */}
+          <div className="p-4 md:p-5 h-full flex flex-col">
+            {/* Enhanced Header with Logo */}
             <div className="mb-6">
-              <Link href="/" className="block hover:opacity-80 transition-opacity">
-                <h2 className="text-lg font-bold text-foreground mb-1">HypertroQ</h2>
-                <p className="text-xs text-muted-foreground">Your AI fitness coach</p>
+              <Link href="/" className="block hover:opacity-80 transition-all duration-200 hover-lift">
+                <div className="flex items-center space-x-3">
+                  <div className="w-10 h-10 bg-gradient-to-br from-blue-500 to-purple-600 rounded-xl flex items-center justify-center shadow-lg overflow-hidden">
+                    <img 
+                      src="/logo.png" 
+                      alt="HypertroQ Logo" 
+                      className="w-8 h-8 object-contain"
+                    />
+                  </div>
+                  <div>
+                    <h2 className="text-lg font-bold text-foreground">HypertroQ</h2>
+                    <p className="text-xs text-muted-foreground">AI Fitness Coach</p>
+                  </div>
+                </div>
               </Link>
             </div>
 
-            {/* Action Buttons */}
+            {/* Main Navigation Section */}
             <div className="space-y-3 mb-6">
+              {/* New Chat - Always Prominent */}
               <Button 
                 variant="default" 
-                className="w-full justify-start h-10 bg-primary hover:bg-primary/90 shadow-sm" 
+                className="w-full justify-start h-11 gradient-primary hover-lift text-white font-medium shadow-lg" 
                 onClick={handleNewChat}
               >
-                <MessageSquare className="mr-2 h-4 w-4" />
+                <MessageSquare className="mr-3 h-5 w-5" />
                 New Chat
               </Button>
-              
+
+              {/* Admin Navigation - Only for Admins */}
               {user && userRole === 'admin' && (
                 <>
-                  <Link href="/admin/knowledge" passHref>
-                    <Button variant="outline" className="w-full justify-start h-10 hover:bg-muted/50">
-                      <Database className="mr-2 h-4 w-4" />
-                      Knowledge Base
-                    </Button>
-                  </Link>
+                  <div className="pt-3 border-t border-border/30">
+                    <p className="text-xs font-semibold text-muted-foreground mb-3 px-1">ADMIN TOOLS</p>
+                    <div className="space-y-2">
+                      <Link href="/admin/knowledge" passHref>
+                        <Button variant="ghost" className="w-full justify-start h-10 hover:bg-muted/50 hover-lift text-left">
+                          <Database className="mr-3 h-4 w-4" />
+                          Knowledge Base
+                        </Button>
+                      </Link>
 
-                  <Link href="/admin/settings" passHref>
-                    <Button variant="outline" className="w-full justify-start h-10 hover:bg-muted/50">
-                      <Settings className="mr-2 h-4 w-4" />
-                      AI Configuration
-                    </Button>
-                  </Link>
+                      <Link href="/admin/settings" passHref>
+                        <Button variant="ghost" className="w-full justify-start h-10 hover:bg-muted/50 hover-lift text-left">
+                          <Settings className="mr-3 h-4 w-4" />
+                          AI Configuration
+                        </Button>
+                      </Link>
+                    </div>
+                  </div>
                 </>
               )}
             </div>
@@ -778,10 +799,10 @@ const ChatPage = () => {
                       chatHistory.map(chat => (
                         <div
                           key={chat.id}
-                          className={`group flex items-center w-full rounded-lg transition-all duration-200 ${
+                          className={`group flex items-center w-full rounded-xl transition-all duration-300 hover-lift ${
                             activeChatId === chat.id 
-                              ? "bg-primary/10 border border-primary/20 shadow-sm" 
-                              : "hover:bg-muted/30"
+                              ? "bg-primary/10 border border-primary/20 shadow-md active-chat-glow" 
+                              : "hover:bg-muted/40 hover:shadow-sm"
                           }`}
                         >
                           <button
@@ -832,27 +853,27 @@ const ChatPage = () => {
                     Guest Mode
                   </h3>
                   
-                  {/* Login prompt for guest users */}
-                  <div className="flex-1 flex flex-col justify-center space-y-4 p-4 bg-muted/30 rounded-lg border border-border">
-                    <div className="text-center space-y-2">
-                      <div className="w-12 h-12 bg-primary/10 rounded-full flex items-center justify-center mx-auto mb-3">
-                        <User className="h-6 w-6 text-primary" />
+                  {/* Enhanced Login prompt for guest users */}
+                  <div className="flex-1 flex flex-col justify-center space-y-5 p-5 glass-input rounded-xl border border-border/50 animate-scale-in">
+                    <div className="text-center space-y-3">
+                      <div className="w-14 h-14 bg-gradient-to-br from-blue-500 to-purple-600 rounded-full flex items-center justify-center mx-auto mb-4 shadow-lg">
+                        <User className="h-7 w-7 text-white" />
                       </div>
-                      <h4 className="text-sm font-medium text-foreground">Save Your Conversations</h4>
-                      <p className="text-xs text-muted-foreground">
-                        You need to login to save your chat history and access all features
+                      <h4 className="text-sm font-semibold text-foreground">Save Your Conversations</h4>
+                      <p className="text-xs text-muted-foreground leading-relaxed">
+                        Create an account to save your chat history, access all features, and get personalized fitness coaching
                       </p>
                     </div>
                     
-                    <div className="space-y-2">
-                      <Button asChild variant="default" size="sm" className="w-full">
+                    <div className="space-y-3">
+                      <Button asChild variant="default" size="sm" className="w-full gradient-primary hover-lift text-white font-medium">
                         <Link href="/login">
                           <User className="mr-2 h-4 w-4" />
-                          Login
+                          Sign In
                         </Link>
                       </Button>
                       
-                      <Button asChild variant="outline" size="sm" className="w-full">
+                      <Button asChild variant="outline" size="sm" className="w-full hover-lift border-border/60">
                         <Link href="/signup">
                           <MessageSquare className="mr-2 h-4 w-4" />
                           Create Account
@@ -860,9 +881,12 @@ const ChatPage = () => {
                       </Button>
                     </div>
                     
-                    <div className="text-center pt-2 border-t border-border">
+                    <div className="text-center pt-3 border-t border-border/50">
                       <p className="text-xs text-muted-foreground">
-                        Messages left: <span className="font-medium text-foreground">{4 - guestMessageCount}</span>
+                        Messages remaining: 
+                        <span className={`ml-1 font-semibold ${guestMessageCount >= 3 ? 'text-orange-500' : 'text-primary'}`}>
+                          {4 - guestMessageCount}
+                        </span>
                       </p>
                     </div>
                   </div>
@@ -870,32 +894,65 @@ const ChatPage = () => {
               )}
             </div>
 
-            {/* Footer */}
-            <div className="mt-4 pt-4 border-t border-border space-y-2">
-              <ThemeToggle />
+            {/* Enhanced Footer with User Profile */}
+            <div className="mt-6 pt-5 border-t border-border/50 space-y-4">
+              {/* User Profile Section for Mobile */}
+              {user && isMobile && (
+                <Link href="/profile" className="block hover:opacity-80 transition-all duration-200">
+                  <div className="flex items-center space-x-3 p-3 rounded-xl glass-input border border-border/50 hover-lift">
+                    <Avatar className="h-10 w-10 shadow-md">
+                      <AvatarFallback className="bg-gradient-to-br from-blue-500 to-purple-600 text-white font-semibold text-sm">
+                        {user.user_metadata?.full_name?.[0]?.toUpperCase() || user.email?.[0]?.toUpperCase() || 'U'}
+                      </AvatarFallback>
+                    </Avatar>
+                    <div className="flex-1 min-w-0">
+                      <p className="text-sm font-medium text-foreground truncate">
+                        {user.user_metadata?.full_name || user.email?.split('@')[0] || 'User'}
+                      </p>
+                      <p className="text-xs text-muted-foreground truncate">
+                        Tap to view profile
+                      </p>
+                    </div>
+                    <User className="h-4 w-4 text-muted-foreground" />
+                  </div>
+                </Link>
+              )}
+              
+              <div className="flex justify-center">
+                <ThemeToggle />
+              </div>
               <div className="text-xs text-muted-foreground text-center">
-                HypertroQ v1.0
+                <div className="flex items-center justify-center space-x-2">
+                  <div className="w-1 h-1 bg-gradient-to-r from-blue-500 to-purple-600 rounded-full"></div>
+                  <span>HypertroQ v1.0</span>
+                  <div className="w-1 h-1 bg-gradient-to-r from-blue-500 to-purple-600 rounded-full"></div>
+                </div>
               </div>
             </div>
           </div>
         )}
       </div>      {/* Main Chat Area */}
       <div className={`flex-1 flex flex-col bg-background relative ${isMobile && isSidebarOpen ? 'pointer-events-none' : ''}`}>
-        {/* Header */}
-        <div className="p-3 md:p-4 border-b border-border flex items-center justify-between h-14 md:h-16 flex-shrink-0 bg-background/95 backdrop-blur-sm sticky top-0 z-10">
+        {/* Enhanced Header with Glassmorphism */}
+        <div className="p-3 md:p-4 flex items-center justify-between h-14 md:h-16 flex-shrink-0 glass-header sticky top-0 z-10">
           <div className="flex items-center min-w-0 flex-1">
             <Button
               variant="ghost"
               size="icon"
               onClick={toggleSidebar}
-              className="mr-2 md:mr-3 hover:bg-muted/50 flex-shrink-0"
+              className="mr-2 md:mr-3 hover:bg-muted/50 flex-shrink-0 hover-lift rounded-xl"
               aria-label={isSidebarOpen ? "Close sidebar" : "Open sidebar"}
             >
               {isSidebarOpen ? <ChevronLeft className="h-5 w-5" /> : <Menu className="h-5 w-5" />}
             </Button>
             <div className="flex flex-col min-w-0">
-              <h1 className="text-lg md:text-xl font-bold text-foreground truncate">HypertroQ</h1>
-              {activeChatId && (
+              <h1 className="text-lg md:text-xl font-bold text-foreground truncate">
+                {isMobile && activeChatId ? 
+                  (chatHistory.find(chat => chat.id === activeChatId)?.title || 'Chat') 
+                  : 'HypertroQ'
+                }
+              </h1>
+              {!isMobile && activeChatId && (
                 <p className="text-xs text-muted-foreground truncate">
                   {chatHistory.find(chat => chat.id === activeChatId)?.title || 'Active Chat'}
                 </p>
@@ -903,8 +960,23 @@ const ChatPage = () => {
             </div>
           </div>
 
-          {/* User Avatar Dropdown Menu or Login Button */}
-          {user ? (
+          {/* Mobile: New Chat Button + User Menu | Desktop: User Menu Only */}
+          <div className="flex items-center space-x-2">
+            {/* Mobile New Chat Button */}
+            {isMobile && user && (
+              <Button
+                variant="ghost"
+                size="icon"
+                onClick={handleNewChat}
+                className="h-9 w-9 rounded-xl hover:bg-muted/50 hover-lift"
+                aria-label="Start new chat"
+              >
+                <MessageSquare className="h-5 w-5" />
+              </Button>
+            )}
+
+            {/* User Avatar Dropdown Menu or Login Button */}
+            {user ? (
             <DropdownMenu>
               <DropdownMenuTrigger asChild>
                 <Button variant="ghost" className="relative h-8 w-8 md:h-10 md:w-10 rounded-full hover:bg-muted/50 flex-shrink-0">
@@ -983,23 +1055,24 @@ const ChatPage = () => {
               </DropdownMenuContent>
             </DropdownMenu>
           ) : (
-            <Button asChild variant="default" size="sm" className="flex-shrink-0">
+            <Button asChild variant="default" size="sm" className="flex-shrink-0 gradient-primary text-white">
               <Link href="/login">
                 <User className="mr-2 h-4 w-4" />
                 Login
               </Link>
             </Button>
           )}
+          </div>
         </div>
 
-        {/* Chat Messages Area */}
+        {/* Enhanced Chat Messages Area */}
         <div 
-          className="flex-1 overflow-y-auto pb-32"
+          className="flex-1 overflow-y-auto pb-40 message-area w-full"
           onScroll={handleScroll}
         >
           {/* Guest user warning banner */}
           {!user && guestMessageCount === 3 && (
-            <div className="bg-gradient-to-r from-orange-50 to-amber-50 dark:from-orange-950/20 dark:to-amber-950/20 border-l-4 border-orange-400 p-3 m-3 rounded-r-lg">
+            <div className="bg-gradient-to-r from-orange-50 to-amber-50 dark:from-orange-950/20 dark:to-amber-950/20 border-l-4 border-orange-400 p-3 mx-3 md:mx-6 rounded-r-xl animate-scale-in">
               <div className="flex items-center">
                 <div className="flex items-center space-x-2">
                   <div className="w-2 h-2 bg-orange-400 rounded-full animate-pulse"></div>
@@ -1011,7 +1084,7 @@ const ChatPage = () => {
             </div>
           )}
           
-          <div className="max-w-4xl mx-auto px-3 md:px-4 py-4 md:py-6 space-y-4 md:space-y-6">
+          <div className="w-full max-w-5xl mx-auto px-4 md:px-6 py-4 md:py-8 space-y-4 md:space-y-8">
             {isLoadingMessages && (
               <div className="flex justify-center items-center h-32">
                 <InlineLoading 
@@ -1022,12 +1095,43 @@ const ChatPage = () => {
             )}
             
             {!isLoadingMessages && messages.length === 0 && (
-              <div className="flex flex-col items-center justify-center h-64 text-center space-y-4">
-                <MessageSquare className="h-16 w-16 text-muted-foreground/50" />
-                <div className="space-y-2">
-                  <h3 className="text-lg font-semibold text-foreground">Start a new conversation</h3>                  <p className="text-muted-foreground max-w-md">
+              <div className="flex flex-col items-center justify-center min-h-[50vh] text-center space-y-6 animate-scale-in px-2 md:px-4">
+                <div className="relative">
+                  <div className="w-16 h-16 md:w-20 md:h-20 bg-gradient-to-br from-blue-500/10 to-purple-600/10 rounded-2xl flex items-center justify-center">
+                    <img 
+                      src="/logo.png" 
+                      alt="HypertroQ AI" 
+                      className="w-12 h-12 md:w-14 md:h-14 object-contain"
+                    />
+                  </div>
+                  <div className="absolute -top-1 -right-1 w-5 h-5 md:w-6 md:h-6 bg-gradient-to-br from-blue-500 to-purple-600 rounded-full flex items-center justify-center">
+                    <span className="text-white text-xs font-bold">AI</span>
+                  </div>
+                </div>
+                <div className="space-y-3 w-full">
+                  <h3 className="text-lg md:text-2xl font-semibold text-foreground">Start a new conversation</h3>
+                  <p className="text-muted-foreground max-w-sm md:max-w-md leading-relaxed mx-auto">
                     Ask me anything about hypertrophy, muscle building, training programs, or nutrition. I&apos;m here to help you achieve your fitness goals!
                   </p>
+                </div>
+                
+                {/* Enhanced Example prompt buttons for mobile */}
+                <div className="flex flex-wrap gap-2 justify-center w-full max-w-xs md:max-w-2xl mt-6">
+                  {[
+                    "Best rep range for muscle growth?",
+                    "Weekly training structure?", 
+                    "Supplement recommendations?"
+                  ].map((prompt, index) => (
+                    <Button
+                      key={index}
+                      variant="outline"
+                      size="sm"
+                      className="text-xs md:text-sm hover-lift border-border/60 hover:bg-muted/60 rounded-full px-3 md:px-4 py-2"
+                      onClick={() => setInput(prompt)}
+                    >
+                      {prompt}
+                    </Button>
+                  ))}
                 </div>
               </div>
             )}
@@ -1035,30 +1139,30 @@ const ChatPage = () => {
             {messages.map((msg, index) => (
               <div
                 key={msg.id || `${msg.role}-${index}`}
-                className={`group flex items-start space-x-3 ${msg.role === 'user' ? 'flex-row-reverse space-x-reverse' : ''}`}
+                className={`group flex items-start space-x-3 md:space-x-4 animate-fade-in ${msg.role === 'user' ? 'flex-row-reverse space-x-reverse' : ''}`}
                 data-role={msg.role}
               >
-                {/* Avatar */}
+                {/* Enhanced Mobile-Optimized Avatar */}
                 <div className="flex-shrink-0">
                   {msg.role === 'user' ? (
-                    <Avatar className="h-8 w-8">
-                      <AvatarFallback className="bg-primary text-primary-foreground text-xs">
+                    <Avatar className="h-8 w-8 md:h-10 md:w-10 shadow-md hover-lift">
+                      <AvatarFallback className="bg-gradient-to-br from-blue-500 to-purple-600 text-white font-semibold text-xs md:text-sm">
                         {user?.user_metadata?.full_name?.[0]?.toUpperCase() || user?.email?.[0]?.toUpperCase() || 'G'}
                       </AvatarFallback>
                     </Avatar>
                   ) : (
-                    <div className="h-8 w-8 rounded-full bg-background border-2 border-border flex items-center justify-center overflow-hidden">
+                    <div className="h-8 w-8 md:h-10 md:w-10 rounded-full bg-gradient-to-br from-slate-100 to-slate-200 dark:from-slate-800 dark:to-slate-700 border-2 border-border/50 flex items-center justify-center overflow-hidden shadow-md hover-lift">
                       <img 
                         src={getLogoSrc()} 
                         alt="HyperTroQ AI" 
-                        className="h-6 w-6 object-contain"
+                        className="h-5 w-5 md:h-7 md:w-7 object-contain"
                       />
                     </div>
                   )}
                 </div>
 
-                {/* Message Content */}
-                <div className={`flex-1 max-w-[85%] md:max-w-[80%] ${msg.role === 'user' ? 'flex justify-end' : ''}`}>
+                {/* Enhanced Mobile-Optimized Message Content */}
+                <div className={`flex-1 max-w-[85%] md:max-w-[75%] ${msg.role === 'user' ? 'flex justify-end' : ''}`}>
                   <div className="relative">
                     {(() => {
                       // Process message content to extract article links
@@ -1066,11 +1170,11 @@ const ChatPage = () => {
                       
                       return (
                         <div
-                          className={`px-3 md:px-4 py-2 md:py-3 rounded-2xl shadow-sm ${
+                          className={`px-3 md:px-5 py-2.5 md:py-4 ${
                             msg.role === 'user'
-                              ? 'bg-blue-500 text-white rounded-br-md'
-                              : 'bg-muted text-foreground rounded-bl-md border'
-                          }`}
+                              ? 'chat-bubble-user'
+                              : 'chat-bubble-ai'
+                          } transition-all duration-200 hover:shadow-lg`}
                         >
                           <MessageContent 
                             content={content} 
@@ -1088,7 +1192,7 @@ const ChatPage = () => {
                           )}
                           
                           {msg.createdAt && (
-                            <p className={`text-xs mt-2 opacity-70 ${msg.role === 'user' ? 'text-right text-white/80' : 'text-left'}`}>
+                            <p className={`text-xs mt-2 md:mt-3 opacity-70 ${msg.role === 'user' ? 'text-right text-white/80' : 'text-left text-muted-foreground'}`}>
                               {new Date(msg.createdAt).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}
                             </p>
                           )}
@@ -1096,20 +1200,20 @@ const ChatPage = () => {
                       );
                     })()}
                     
-                    {/* Copy Button */}
-                    <div className={`absolute ${msg.role === 'user' ? 'left-0 -translate-x-8' : 'right-0 translate-x-8'} top-2 opacity-0 group-hover:opacity-100 transition-opacity duration-200`}>
+                    {/* Enhanced Mobile-Optimized Copy Button */}
+                    <div className={`absolute ${msg.role === 'user' ? 'left-0 -translate-x-8 md:-translate-x-10' : 'right-0 translate-x-8 md:translate-x-10'} top-2 md:top-3 opacity-0 group-hover:opacity-100 transition-all duration-300`}>
                       <Button
                         variant="ghost"
                         size="sm"
                         onClick={() => copyMessage(msg.content)}
-                        className={`h-7 w-7 p-0 rounded-full hover:bg-muted/80 ${
+                        className={`h-7 w-7 md:h-8 md:w-8 p-0 rounded-full hover:bg-background/80 backdrop-blur-sm shadow-md hover-lift ${
                           msg.role === 'user' 
-                            ? 'text-muted-foreground hover:text-foreground' 
-                            : 'text-muted-foreground hover:text-foreground'
+                            ? 'text-muted-foreground hover:text-foreground border border-border/30' 
+                            : 'text-muted-foreground hover:text-foreground border border-border/30'
                         }`}
                         aria-label="Copy message"
                       >
-                        <Copy className="h-3 w-3" />
+                        <Copy className="h-3 w-3 md:h-3.5 md:w-3.5" />
                       </Button>
                     </div>
                   </div>
@@ -1117,23 +1221,27 @@ const ChatPage = () => {
               </div>
             ))}
             
-            {/* AI Thinking Indicator */}
+            {/* Enhanced Mobile-Optimized AI Thinking Indicator */}
             {isAiThinking && (
-              <div className="flex items-start space-x-3">
+              <div className="flex items-start space-x-3 md:space-x-4 animate-fade-in">
                 <div className="flex-shrink-0">
-                  <div className="h-8 w-8 rounded-full bg-gradient-to-br from-blue-500 to-purple-600 flex items-center justify-center">
-                    <span className="text-white text-xs font-bold">AI</span>
+                  <div className="h-8 w-8 md:h-10 md:w-10 rounded-full bg-gradient-to-br from-blue-500/20 to-purple-600/20 flex items-center justify-center shadow-md animate-glow border border-primary/20">
+                    <img 
+                      src="/logo.png" 
+                      alt="HypertroQ AI" 
+                      className="h-5 w-5 md:h-6 md:w-6 object-contain"
+                    />
                   </div>
                 </div>
                 <div className="flex-1">
-                  <div className="px-4 py-3 rounded-2xl rounded-bl-md bg-muted text-foreground border shadow-sm">
-                    <div className="flex items-center space-x-2">
+                  <div className="px-3 md:px-5 py-3 md:py-4 chat-bubble-ai">
+                    <div className="flex items-center space-x-2 md:space-x-3">
                       <div className="flex space-x-1">
-                        <div className="w-2 h-2 bg-muted-foreground/60 rounded-full animate-bounce [animation-delay:-0.3s]"></div>
-                        <div className="w-2 h-2 bg-muted-foreground/60 rounded-full animate-bounce [animation-delay:-0.15s]"></div>
-                        <div className="w-2 h-2 bg-muted-foreground/60 rounded-full animate-bounce"></div>
+                        <div className="w-2 h-2 md:w-2.5 md:h-2.5 bg-primary/80 rounded-full animate-bounce [animation-delay:-0.3s]"></div>
+                        <div className="w-2 h-2 md:w-2.5 md:h-2.5 bg-primary/80 rounded-full animate-bounce [animation-delay:-0.15s]"></div>
+                        <div className="w-2 h-2 md:w-2.5 md:h-2.5 bg-primary/80 rounded-full animate-bounce"></div>
                       </div>
-                      <span className="text-sm text-muted-foreground">AI is thinking...</span>
+                      <span className="text-xs md:text-sm text-muted-foreground font-medium">AI is analyzing your question...</span>
                     </div>
                   </div>
                 </div>
@@ -1144,44 +1252,45 @@ const ChatPage = () => {
           </div>
         </div>
 
-        {/* Message Input Area - Fixed at Bottom */}
-        <div className="absolute bottom-0 left-0 right-0 bg-background/95 backdrop-blur-sm border-t border-border">
-          <form onSubmit={handleSubmit} className="p-3 md:p-4">
-            <div className="max-w-4xl mx-auto">
+        {/* Enhanced Mobile-Optimized Floating Message Input Area */}
+        <div className="absolute bottom-0 left-0 right-0 p-2 md:p-6">
+          <form onSubmit={handleSubmit} className="w-full max-w-5xl mx-auto">
+            <div className="floating-input p-3 md:p-5 animate-scale-in mx-2 md:mx-0">
               {/* Image Preview */}
               {imagePreview && (
-                <div className="mb-3 p-3 border border-border rounded-lg bg-muted/30" data-testid="image-preview">
+                <div className="mb-3 md:mb-4 p-2 md:p-3 bg-muted/50 rounded-xl border border-border/50" data-testid="image-preview">
                   <div className="flex items-center justify-between mb-2">
-                    <span className="text-sm font-medium text-foreground">Selected Image</span>
+                    <span className="text-xs md:text-sm font-medium text-foreground">Selected Image</span>
                     <Button
                       type="button"
                       variant="ghost"
                       size="sm"
                       onClick={removeImage}
-                      className="h-6 w-6 p-0 hover:bg-destructive/10 hover:text-destructive"
+                      className="h-6 w-6 md:h-7 md:w-7 p-0 hover:bg-destructive/10 hover:text-destructive rounded-full hover-lift"
                     >
-                      <X className="h-3 w-3" />
+                      <X className="h-3 w-3 md:h-3.5 md:w-3.5" />
                     </Button>
                   </div>
                   <div className="relative">
                     <img
                       src={imagePreview}
                       alt="Selected image"
-                      className="max-w-full max-h-32 object-contain rounded border"
+                      className="max-w-full max-h-24 md:max-h-32 object-contain rounded-lg border shadow-sm"
                     />
                   </div>
                 </div>
               )}
               
-              <div className="flex items-end space-x-2 md:space-x-3">
+              <div className="flex items-end space-x-2 md:space-x-4">
                 <div className="flex-1 relative">
                   <ArabicAwareTextarea
                     placeholder="Message HypertroQ..."
-                    className="w-full rounded-2xl px-3 md:px-4 pr-10 md:pr-12 text-sm border-2 focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-0 focus-visible:border-primary/50"
+                    className="w-full rounded-2xl px-3 md:px-5 pr-10 md:pr-14 py-2.5 md:py-4 text-sm md:text-base border-0 bg-muted/30 focus-visible:ring-2 focus-visible:ring-primary/50 focus-visible:ring-offset-0 resize-none leading-relaxed chat-textarea"
                     value={input}
                     onChange={handleInputChange}
                     disabled={isSendingMessage || isAiThinking}
                     maxLength={2000}
+                    rows={1}
                     data-testid="chat-input"
                     onKeyDown={(e) => {
                       if (e.key === 'Enter' && !e.shiftKey) {
@@ -1196,19 +1305,19 @@ const ChatPage = () => {
                       type="button"
                       variant="ghost"
                       size="sm"
-                      className="absolute right-12 md:right-14 top-1/2 -translate-y-1/2 h-8 w-8 p-0 hover:bg-muted/50"
+                      className="absolute right-12 md:right-16 top-1/2 -translate-y-1/2 h-7 w-7 md:h-8 md:w-8 p-0 hover:bg-muted/50 rounded-full hover-lift"
                       onClick={() => {
                         setAutoScroll(true);
                         messagesEndRef.current?.scrollIntoView({ behavior: 'smooth' });
                       }}
                       aria-label="Scroll to bottom"
                     >
-                      <ChevronLeft className="h-4 w-4 rotate-90" />
+                      <ChevronLeft className="h-3 w-3 md:h-4 md:w-4 rotate-90" />
                     </Button>
                   )}
                 </div>
                 
-                {/* Image Upload Button */}
+                {/* Enhanced Mobile-Optimized Image Upload Button */}
                 <div className="relative">
                   <input
                     type="file"
@@ -1222,42 +1331,43 @@ const ChatPage = () => {
                     type="button"
                     variant="ghost"
                     size="icon"
-                    className="rounded-full h-10 w-10 md:h-12 md:w-12 hover:bg-muted/50 flex-shrink-0 transition-all duration-200 hover:scale-105 disabled:hover:scale-100 disabled:cursor-not-allowed"
+                    className="rounded-full h-10 w-10 md:h-14 md:w-14 hover:bg-muted/60 flex-shrink-0 hover-lift transition-all duration-200 disabled:cursor-not-allowed border border-border/30"
                     onClick={() => document.getElementById('image-upload')?.click()}
                     disabled={isSendingMessage || isAiThinking}
                     aria-label="Upload image"
                     data-testid="image-upload-button"
                   >
-                    <Image className="h-4 w-4 md:h-5 md:w-5 text-muted-foreground" />
+                    <Image className="h-4 w-4 md:h-6 md:w-6 text-muted-foreground" />
                   </Button>
                 </div>
                 
+                {/* Enhanced Mobile-Optimized Send Button */}
                 <Button
                   type="submit"
                   size="icon"
-                  className="rounded-full h-10 w-10 md:h-12 md:w-12 bg-primary hover:bg-primary/90 disabled:opacity-40 flex-shrink-0 shadow-lg transition-all duration-200 hover:scale-105 disabled:hover:scale-100 disabled:cursor-not-allowed"
+                  className="rounded-full h-10 w-10 md:h-14 md:w-14 gradient-primary disabled:opacity-40 flex-shrink-0 shadow-lg transition-all duration-300 hover-lift disabled:cursor-not-allowed"
                   aria-label="Send message"
                   data-testid="send-button"
                   disabled={isSendingMessage || isAiThinking || (!input.trim() && !selectedImage)}
                 >
                   {isSendingMessage || isAiThinking ? (
-                    <Loader2 className="h-4 w-4 md:h-5 md:w-5 text-primary-foreground animate-spin" />
+                    <Loader2 className="h-4 w-4 md:h-6 md:w-6 text-white animate-spin" />
                   ) : (
-                    <Send className="h-4 w-4 md:h-5 md:w-5 text-primary-foreground" />
+                    <Send className="h-4 w-4 md:h-6 md:w-6 text-white" />
                   )}
                 </Button>
               </div>
               
-              {/* Input helper text */}
-              <div className="flex items-center justify-between mt-2 px-1">
-                <div className="flex items-center gap-2">
+              {/* Enhanced Mobile-Optimized Input helper text */}
+              <div className="flex items-center justify-between mt-2 md:mt-3 px-1">
+                <div className="flex items-center gap-2 md:gap-3">
                   <p className="text-xs text-muted-foreground hidden md:block">
-                    Press Enter to send, Shift+Enter for new line
+                    Press ⌘ + Enter to send, Shift + Enter for new line
                   </p>
                   <button
                     onMouseEnter={() => setShowShortcuts(true)}
                     onMouseLeave={() => setShowShortcuts(false)}
-                    className="text-xs text-muted-foreground hover:text-foreground transition-colors relative hidden md:block"
+                    className="text-xs text-muted-foreground hover:text-foreground transition-colors relative hidden md:block hover-lift"
                   >
                     Shortcuts
                     {showShortcuts && <KeyboardShortcuts />}
@@ -1266,7 +1376,7 @@ const ChatPage = () => {
                     Tap send or press Enter
                   </p>
                   {!user && (
-                    <p className={`text-xs font-medium ${
+                    <p className={`text-xs font-medium transition-colors ${
                       guestMessageCount >= 3 
                         ? 'text-orange-500 animate-pulse' 
                         : 'text-primary/80'

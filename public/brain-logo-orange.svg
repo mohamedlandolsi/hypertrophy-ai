@@ -1,0 +1,32 @@
+<svg viewBox="0 0 800 600" xmlns="http://www.w3.org/2000/svg">
+  <!-- Orange brain with barbell -->
+  <g>
+    <!-- Brain outline -->
+    <path d="M200 150 C150 120, 100 140, 80 180 C60 220, 70 260, 90 290 C110 320, 140 340, 170 350 C200 360, 230 350, 260 340 C290 330, 320 310, 350 290 C380 270, 400 240, 410 210 C420 180, 410 150, 390 130 C370 110, 340 100, 310 110 C280 120, 250 140, 220 150 Z" 
+          fill="none" stroke="#FF6B1A" stroke-width="12" stroke-linejoin="round"/>
+    
+    <!-- Brain internal structure -->
+    <path d="M180 180 C200 170, 220 175, 240 185 C260 195, 280 210, 300 225 C320 240, 340 255, 360 270" 
+          fill="none" stroke="#FF6B1A" stroke-width="8" stroke-linejoin="round"/>
+    <path d="M160 220 C180 210, 200 215, 220 225 C240 235, 260 250, 280 265" 
+          fill="none" stroke="#FF6B1A" stroke-width="8" stroke-linejoin="round"/>
+    <path d="M170 260 C190 250, 210 255, 230 265 C250 275, 270 290, 290 305" 
+          fill="none" stroke="#FF6B1A" stroke-width="8" stroke-linejoin="round"/>
+    
+    <!-- Barbell handle -->
+    <rect x="450" y="280" width="200" height="20" fill="#4A4A4A" rx="10"/>
+    <rect x="460" y="290" width="20" height="8" fill="#1ECBE1"/>
+    
+    <!-- Barbell weights -->
+    <rect x="650" y="200" width="80" height="200" fill="#4A4A4A" rx="15"/>
+    <rect x="665" y="220" width="50" height="50" fill="#6A6A6A" rx="5"/>
+    <rect x="665" y="270" width="50" height="50" fill="#6A6A6A" rx="5"/>
+    <rect x="665" y="320" width="50" height="50" fill="#6A6A6A" rx="5"/>
+    
+    <rect x="730" y="240" width="60" height="120" fill="#4A4A4A" rx="10"/>
+    <rect x="740" y="260" width="40" height="30" fill="#6A6A6A" rx="3"/>
+    <rect x="740" y="310" width="40" height="30" fill="#6A6A6A" rx="3"/>
+    
+    <rect x="790" y="280" width="50" height="40" fill="#4A4A4A" rx="8"/>
+  </g>
+</svg>
