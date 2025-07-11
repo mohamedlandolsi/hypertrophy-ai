@@ -12,12 +12,25 @@ const GA_MEASUREMENT_ID = process.env.NEXT_PUBLIC_GA_MEASUREMENT_ID;
 
 export const GoogleAnalytics = () => {
   useEffect(() => {
-    if (!GA_MEASUREMENT_ID) return;
+    console.log('Google Analytics: All env vars:', {
+      GA_MEASUREMENT_ID,
+      NODE_ENV: process.env.NODE_ENV,
+      ALL_NEXT_PUBLIC: Object.keys(process.env).filter(key => key.startsWith('NEXT_PUBLIC_'))
+    });
+
+    if (!GA_MEASUREMENT_ID) {
+      console.warn('Google Analytics: GA_MEASUREMENT_ID is not set');
+      return;
+    }
+
+    console.log('Google Analytics: Loading with ID:', GA_MEASUREMENT_ID);
 
     // Load Google Analytics
     const script1 = document.createElement('script');
     script1.async = true;
     script1.src = `https://www.googletagmanager.com/gtag/js?id=${GA_MEASUREMENT_ID}`;
+    script1.onload = () => console.log('Google Analytics: gtag.js loaded successfully');
+    script1.onerror = () => console.error('Google Analytics: Failed to load gtag.js');
     document.head.appendChild(script1);
 
     const script2 = document.createElement('script');
@@ -29,6 +42,7 @@ export const GoogleAnalytics = () => {
         page_title: document.title,
         page_location: window.location.href,
       });
+      console.log('Google Analytics: Configuration loaded');
     `;
     document.head.appendChild(script2);
 

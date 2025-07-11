@@ -9,7 +9,7 @@ import FaviconMeta from "@/components/favicon-meta";
 import ErrorBoundary from "@/components/error-boundary";
 import { Analytics } from '@vercel/analytics/react';
 import { generateMetadata as generateSEOMetadata } from "@/lib/seo";
-import { GoogleAnalytics } from '@/components/google-analytics';
+// import { GoogleAnalytics } from '@/components/google-analytics'; // Now using direct implementation
 
 const geistSans = Geist({
   variable: "--font-geist-sans",
@@ -55,6 +55,19 @@ export default async function RootLayout({
       <head>
         <FaviconMeta />
         <script src="https://app.lemonsqueezy.com/js/lemon.js" defer></script>
+        {/* Google Analytics - Direct Implementation */}
+        <script async src="https://www.googletagmanager.com/gtag/js?id=G-1SDWNDGJHG"></script>
+        <script
+          dangerouslySetInnerHTML={{
+            __html: `
+              window.dataLayer = window.dataLayer || [];
+              function gtag(){dataLayer.push(arguments);}
+              gtag('js', new Date());
+              gtag('config', 'G-1SDWNDGJHG');
+              console.log('Google Analytics: Direct implementation loaded');
+            `,
+          }}
+        />
       </head>
       <body
         className={`${geistSans.variable} ${geistMono.variable} font-sans antialiased flex flex-col h-full`}
@@ -71,7 +84,7 @@ export default async function RootLayout({
             <SonnerToaster richColors position="top-right" />
             <Toaster />
             <Analytics />
-            <GoogleAnalytics />
+            {/* GoogleAnalytics now loaded directly in head */}
           </ErrorBoundary>
         </ThemeProvider>
       </body>
