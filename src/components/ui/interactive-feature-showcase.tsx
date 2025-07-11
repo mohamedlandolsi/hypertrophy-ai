@@ -39,11 +39,11 @@ const features: FeatureShowcase[] = [
           animate={{ opacity: 1, scale: 1 }}
           transition={{ delay: 0.8 }}
         >
-          <div className="text-sm font-semibold mb-2">✨ Plan Ready!</div>
+          <div className="text-sm font-semibold mb-2">✨ Program Ready!</div>
           <div className="text-xs space-y-1">
-            <div>• Bench Press: 4x6-8 @RPE 8</div>
-            <div>• Rows: 3x8-10 @RPE 7</div>
-            <div>• Overhead Press: 3x6-8 @RPE 8</div>
+            <div>• Upper Body: Push & Pull Movements</div>
+            <div>• Lower Body: Squats & Hinges</div>
+            <div>• Progressive Overload Focus</div>
           </div>
         </motion.div>
       </div>
@@ -52,33 +52,33 @@ const features: FeatureShowcase[] = [
   {
     id: 'progress',
     icon: ChartBar,
-    title: 'Visualize Your Victories',
-    description: 'Track every rep, set, and milestone with detailed analytics that show your transformation.',
+    title: 'Evidence-Based Guidance',
+    description: 'Get answers backed by scientific research and expert-curated knowledge for optimal results.',
     mockup: (
       <div className="space-y-3">
-        <div className="text-sm font-medium mb-2">Strength Progress</div>
+        <div className="text-sm font-medium mb-2">Research-Based Insights</div>
         <div className="space-y-2">
           {[
-            { exercise: 'Bench Press', progress: 85 },
-            { exercise: 'Squat', progress: 92 },
-            { exercise: 'Deadlift', progress: 78 }
+            { topic: 'Hypertrophy Rep Ranges', confidence: 'High Evidence' },
+            { topic: 'Rest Period Optimization', confidence: 'Peer-Reviewed' },
+            { topic: 'Progressive Overload', confidence: 'Meta-Analysis' }
           ].map((item, index) => (
             <motion.div 
-              key={item.exercise}
+              key={item.topic}
               className="space-y-1"
               initial={{ opacity: 0, x: -20 }}
               animate={{ opacity: 1, x: 0 }}
               transition={{ delay: index * 0.2 }}
             >
               <div className="flex justify-between text-xs">
-                <span>{item.exercise}</span>
-                <span>{item.progress}%</span>
+                <span>{item.topic}</span>
+                <span className="text-green-500">{item.confidence}</span>
               </div>
               <div className="h-2 bg-gray-200 dark:bg-gray-700 rounded-full overflow-hidden">
                 <motion.div 
                   className="h-full bg-gradient-to-r from-green-400 to-blue-500 rounded-full"
                   initial={{ width: 0 }}
-                  animate={{ width: `${item.progress}%` }}
+                  animate={{ width: '100%' }}
                   transition={{ delay: index * 0.2 + 0.5, duration: 1 }}
                 />
               </div>

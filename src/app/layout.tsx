@@ -63,6 +63,7 @@ export default async function RootLayout({
     <html lang="en" suppressHydrationWarning className="h-full">
       <head>
         <FaviconMeta />
+        <script src="https://app.lemonsqueezy.com/js/lemon.js" defer></script>
       </head>
       <body
         className={`${geistSans.variable} ${geistMono.variable} font-sans antialiased flex flex-col h-full`}

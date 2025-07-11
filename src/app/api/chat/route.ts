@@ -9,6 +9,7 @@ import {
   NotFoundError,
   logger 
 } from '@/lib/error-handler';
+import { canUserSendMessage, incrementUserMessageCount } from '@/lib/subscription';
 
 export async function POST(request: NextRequest) {
   const context = ApiErrorHandler.createContext(request);
@@ -108,6 +109,17 @@ export async function POST(request: NextRequest) {
 
     logger.info('Processing authenticated user chat request', { ...context, userId: user.id });
 
+    // Check message limits for authenticated users
+    const messageCheck = await canUserSendMessage();
+    if (!messageCheck.canSend) {
+      return NextResponse.json({
+        error: 'MESSAGE_LIMIT_REACHED',
+        message: messageCheck.reason,
+        messagesRemaining: messageCheck.messagesRemaining || 0,
+        requiresUpgrade: true
+      }, { status: 429 });
+    }
+
     // Ensure user exists in our database
     await prisma.user.upsert({
       where: { id: user.id },
@@ -171,6 +183,9 @@ export async function POST(request: NextRequest) {
         chatId: chatId as string,
       }
     });
+
+    // Increment user's daily message count (for subscription tracking)
+    await incrementUserMessageCount();
 
     logger.info('Chat API request completed successfully', { 
       ...context, 

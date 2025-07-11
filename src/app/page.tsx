@@ -101,7 +101,7 @@ export default function Home() {
                 animate={{ opacity: 1, y: 0 }}
                 transition={{ duration: 0.8, delay: 0.4 }}
               >
-                Ready to continue your fitness journey? Jump back into your personalized training sessions and track your progress.
+                Ready to continue your fitness journey? Come back to the HypertroQ chat to ask questions and get personalized coaching.
               </motion.p>
             </>
           ) : (
@@ -208,7 +208,7 @@ export default function Home() {
       >
         <div className="max-w-4xl mx-auto text-center">
           <p className="text-lg font-medium text-muted-foreground">
-            <span className="text-primary font-semibold">Grounded in Evidence:</span> Our AI is powered by peer-reviewed research and your own curated knowledge.
+            <span className="text-primary font-semibold">Grounded in Evidence:</span> Our AI is powered by peer-reviewed research and carefully curated knowledge by experts.
           </p>
         </div>
       </motion.section>
@@ -369,9 +369,9 @@ export default function Home() {
                 </motion.div>
                 <div className="absolute -top-2 -right-2 w-8 h-8 bg-primary text-white rounded-full flex items-center justify-center text-sm font-bold">1</div>
               </div>
-              <h3 className="text-xl font-semibold mb-2">Curate Your Brain</h3>
+              <h3 className="text-xl font-semibold mb-2">Expert Knowledge Base</h3>
               <p className="text-muted-foreground">
-                Upload the research papers and training protocols you trust. Build your personalized knowledge base.
+                Access carefully curated research papers and training protocols vetted by fitness experts. Get evidence-based answers.
               </p>
             </motion.div>
 
@@ -395,7 +395,7 @@ export default function Home() {
               </div>
               <h3 className="text-xl font-semibold mb-2">Chat with Your Coach</h3>
               <p className="text-muted-foreground">
-                Get instant, personalized answers based only on the knowledge you provided. No generic advice.
+                Get instant, evidence-based answers from our expert-curated knowledge base. No generic advice.
               </p>
             </motion.div>
 
@@ -507,7 +507,7 @@ export default function Home() {
             viewport={{ once: true }}
             transition={{ duration: 0.8, delay: 0.4 }}
           >
-            Build your personalized, science-backed fitness coach today.
+            Get access to your science-backed fitness coaching platform today.
           </motion.p>
           <motion.div
             className="flex justify-center"

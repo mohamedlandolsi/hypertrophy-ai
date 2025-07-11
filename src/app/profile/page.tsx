@@ -6,10 +6,28 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/com
 import { Button } from '@/components/ui/button';
 import { Textarea } from '@/components/ui/textarea';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
-import { User, Activity, Target, Edit } from 'lucide-react';
+import { Badge } from '@/components/ui/badge';
+import { Alert, AlertDescription } from '@/components/ui/alert';
+import { Progress } from '@/components/ui/progress';
+import { 
+  Activity, 
+  Target, 
+  Edit, 
+  Crown, 
+  CreditCard, 
+  Calendar, 
+  MessageSquare, 
+  TrendingUp, 
+  Settings, 
+  AlertTriangle,
+  CheckCircle
+} from 'lucide-react';
+import Link from 'next/link';
 import type { User as SupabaseUser } from '@supabase/supabase-js';
 import { FitnessLoading } from '@/components/ui/loading';
 import ProfileForm from '@/components/profile-form';
+import { UpgradeButton } from '@/components/upgrade-button';
+import { PlanBadge } from '@/components/plan-badge';
 
 interface ClientMemory {
   id: string;
@@ -34,12 +52,25 @@ interface ClientMemory {
   currentOHP?: number;
 }
 
+interface UserPlanData {
+  plan: 'FREE' | 'PRO';
+  messagesUsedToday: number;
+  dailyLimit: number;
+  subscription?: {
+    id: string;
+    status: string;
+    lemonSqueezyId: string | null;
+    currentPeriodEnd: Date | null;
+  };
+}
+
 export default function ProfilePage() {
   const [user, setUser] = useState<SupabaseUser | null>(null);
   const [loading, setLoading] = useState(true);
   const [clientMemory, setClientMemory] = useState<ClientMemory | null>(null);
   const [memorySummary, setMemorySummary] = useState<string>('');
   const [activeTab, setActiveTab] = useState('overview');
+  const [userPlan, setUserPlan] = useState<UserPlanData | null>(null);
 
   useEffect(() => {
     const fetchUserData = async () => {
@@ -58,6 +89,17 @@ export default function ProfilePage() {
           }
         } catch (error) {
           console.error('Error fetching client memory:', error);
+        }
+
+        // Fetch user plan data
+        try {
+          const planResponse = await fetch('/api/user/plan');
+          if (planResponse.ok) {
+            const planData = await planResponse.json();
+            setUserPlan(planData);
+          }
+        } catch (error) {
+          console.error('Error fetching user plan:', error);
         }
       }
       
@@ -220,46 +262,224 @@ export default function ProfilePage() {
           </TabsContent>
 
           <TabsContent value="account">
-            <Card>
-              <CardHeader>
-                <CardTitle className="flex items-center">
-                  <User className="mr-2 h-5 w-5" />
-                  Account Information
-                </CardTitle>
-                <CardDescription>
-                  Your basic account details
-                </CardDescription>
-              </CardHeader>
-              <CardContent className="space-y-4">
-                <div className="grid grid-cols-1 gap-4">
-                  <div>
-                    <label className="text-sm font-medium text-foreground">Email</label>
-                    <p className="text-sm text-muted-foreground">{user.email}</p>
+            <div className="space-y-6">
+              {/* Account Overview */}
+              <Card>
+                <CardHeader>
+                  <CardTitle className="flex items-center gap-2">
+                    <Settings className="h-5 w-5" />
+                    Account Overview
+                  </CardTitle>
+                </CardHeader>
+                <CardContent className="space-y-4">
+                  <div className="grid md:grid-cols-2 gap-4">
+                    <div>
+                      <label className="text-sm font-medium text-muted-foreground">Email</label>
+                      <p className="text-foreground">{user.email}</p>
+                    </div>
+                    <div>
+                      <label className="text-sm font-medium text-muted-foreground">Current Plan</label>
+                      <div className="mt-1">
+                        <PlanBadge plan={userPlan?.plan || 'FREE'} />
+                      </div>
+                    </div>
+                    <div>
+                      <label className="text-sm font-medium text-muted-foreground">User ID</label>
+                      <p className="text-sm text-muted-foreground font-mono">{user.id}</p>
+                    </div>
+                    <div>
+                      <label className="text-sm font-medium text-muted-foreground">Member Since</label>
+                      <p className="text-sm text-muted-foreground">
+                        {new Date(user.created_at).toLocaleDateString()}
+                      </p>
+                    </div>
+                    <div>
+                      <label className="text-sm font-medium text-muted-foreground">Last Sign In</label>
+                      <p className="text-sm text-muted-foreground">
+                        {user.last_sign_in_at ? new Date(user.last_sign_in_at).toLocaleDateString() : 'N/A'}
+                      </p>
+                    </div>
                   </div>
-                  <div>
-                    <label className="text-sm font-medium text-foreground">User ID</label>
-                    <p className="text-sm text-muted-foreground font-mono">{user.id}</p>
+                </CardContent>
+              </Card>
+
+              {/* Usage Stats */}
+              {userPlan?.plan === 'FREE' && (
+                <Card>
+                  <CardHeader>
+                    <CardTitle className="flex items-center gap-2">
+                      <MessageSquare className="h-5 w-5" />
+                      Daily Usage
+                    </CardTitle>
+                    <CardDescription>
+                      Track your daily message usage
+                    </CardDescription>
+                  </CardHeader>
+                  <CardContent className="space-y-4">
+                    <div className="space-y-2">
+                      <div className="flex justify-between text-sm">
+                        <span>Messages used today</span>
+                        <span>{userPlan.messagesUsedToday} / {userPlan.dailyLimit}</span>
+                      </div>
+                      <Progress 
+                        value={Math.round((userPlan.messagesUsedToday / userPlan.dailyLimit) * 100)} 
+                        className="h-2" 
+                      />
+                    </div>
+                    
+                    {Math.round((userPlan.messagesUsedToday / userPlan.dailyLimit) * 100) >= 80 && (
+                      <Alert>
+                        <AlertTriangle className="h-4 w-4" />
+                        <AlertDescription>
+                          You&apos;re running low on messages. Consider upgrading to Pro for unlimited conversations.
+                        </AlertDescription>
+                      </Alert>
+                    )}
+                  </CardContent>
+                </Card>
+              )}
+
+              {/* Subscription Details */}
+              <Card>
+                <CardHeader>
+                  <CardTitle className="flex items-center gap-2">
+                    <CreditCard className="h-5 w-5" />
+                    Subscription Details
+                  </CardTitle>
+                </CardHeader>
+                <CardContent className="space-y-6">
+                  {userPlan?.plan === 'PRO' && userPlan.subscription ? (
+                    <div className="space-y-4">
+                      <div className="flex items-center justify-between p-4 bg-green-50 dark:bg-green-900/20 rounded-lg border border-green-200 dark:border-green-800">
+                        <div className="flex items-center gap-3">
+                          <CheckCircle className="h-6 w-6 text-green-600" />
+                          <div>
+                            <p className="font-semibold text-green-900 dark:text-green-100">HypertroQ Pro</p>
+                            <p className="text-sm text-green-700 dark:text-green-300">Active subscription</p>
+                          </div>
+                        </div>
+                        <Badge className="bg-green-600">
+                          <Crown className="mr-1 h-3 w-3" />
+                          Pro
+                        </Badge>
+                      </div>
+
+                      <div className="grid md:grid-cols-2 gap-4">
+                        <div>
+                          <label className="text-sm font-medium text-muted-foreground">Status</label>
+                          <p className="text-foreground capitalize">{userPlan.subscription.status}</p>
+                        </div>
+                        <div>
+                          <label className="text-sm font-medium text-muted-foreground">Next Billing</label>
+                          <p className="text-foreground">
+                            {userPlan.subscription.currentPeriodEnd 
+                              ? new Date(userPlan.subscription.currentPeriodEnd).toLocaleDateString()
+                              : 'N/A'
+                            }
+                          </p>
+                        </div>
+                      </div>
+
+                      <div className="space-y-3">
+                        <h4 className="font-medium text-foreground">Pro Features Active:</h4>
+                        <div className="grid md:grid-cols-2 gap-2">
+                          <div className="flex items-center gap-2 text-sm text-muted-foreground">
+                            <CheckCircle className="h-4 w-4 text-green-500" />
+                            Unlimited messages
+                          </div>
+                          <div className="flex items-center gap-2 text-sm text-muted-foreground">
+                            <CheckCircle className="h-4 w-4 text-green-500" />
+                            Conversation memory
+                          </div>
+                          <div className="flex items-center gap-2 text-sm text-muted-foreground">
+                            <CheckCircle className="h-4 w-4 text-green-500" />
+                            Progress tracking
+                          </div>
+                          <div className="flex items-center gap-2 text-sm text-muted-foreground">
+                            <CheckCircle className="h-4 w-4 text-green-500" />
+                            Priority support
+                          </div>
+                        </div>
+                      </div>
+
+                      <div className="pt-4 border-t">
+                        <p className="text-sm text-muted-foreground mb-3">
+                          Manage your subscription through the customer portal:
+                        </p>
+                        <Button variant="outline" className="w-full md:w-auto">
+                          <Calendar className="mr-2 h-4 w-4" />
+                          Manage Billing
+                        </Button>
+                      </div>
+                    </div>
+                  ) : (
+                    <div className="space-y-4">
+                      <div className="text-center p-8 bg-muted/50 rounded-lg border-2 border-dashed border-muted-foreground/20">
+                        <Crown className="h-12 w-12 text-muted-foreground mx-auto mb-4" />
+                        <h3 className="text-lg font-semibold text-foreground mb-2">
+                          Upgrade to Pro
+                        </h3>
+                        <p className="text-muted-foreground mb-6">
+                          Unlock unlimited messages, conversation memory, and advanced features
+                        </p>
+                        <UpgradeButton 
+                          variant="default" 
+                          size="lg" 
+                          className="bg-blue-600 hover:bg-blue-700"
+                          showDialog={true}
+                        />
+                      </div>
+
+                      <div className="grid md:grid-cols-2 gap-4 text-sm text-muted-foreground">
+                        <div className="space-y-2">
+                          <h4 className="font-medium text-foreground">Free Plan Includes:</h4>
+                          <ul className="space-y-1">
+                            <li>• 15 messages per day</li>
+                            <li>• Basic AI guidance</li>
+                            <li>• Access to knowledge base</li>
+                          </ul>
+                        </div>
+                        <div className="space-y-2">
+                          <h4 className="font-medium text-foreground">Pro Plan Adds:</h4>
+                          <ul className="space-y-1">
+                            <li>• Unlimited messages</li>
+                            <li>• Conversation memory</li>
+                            <li>• Progress tracking</li>
+                            <li>• Priority support</li>
+                          </ul>
+                        </div>
+                      </div>
+                    </div>
+                  )}
+                </CardContent>
+              </Card>
+
+              {/* Quick Actions */}
+              <Card>
+                <CardHeader>
+                  <CardTitle className="flex items-center gap-2">
+                    <TrendingUp className="h-5 w-5" />
+                    Quick Actions
+                  </CardTitle>
+                </CardHeader>
+                <CardContent>
+                  <div className="grid md:grid-cols-2 gap-4">
+                    <Link href="/chat">
+                      <Button className="w-full" variant="outline">
+                        <MessageSquare className="mr-2 h-4 w-4" />
+                        Start Coaching Session
+                      </Button>
+                    </Link>
+                    <Link href="/pricing">
+                      <Button className="w-full" variant="outline">
+                        <Crown className="mr-2 h-4 w-4" />
+                        View Plans & Pricing
+                      </Button>
+                    </Link>
                   </div>
-                  <div>
-                    <label className="text-sm font-medium text-foreground">Created</label>
-                    <p className="text-sm text-muted-foreground">
-                      {new Date(user.created_at).toLocaleDateString()}
-                    </p>
-                  </div>
-                  <div>
-                    <label className="text-sm font-medium text-foreground">Last Sign In</label>
-                    <p className="text-sm text-muted-foreground">
-                      {user.last_sign_in_at ? new Date(user.last_sign_in_at).toLocaleDateString() : 'N/A'}
-                    </p>
-                  </div>
-                </div>
-                <div className="pt-4">
-                  <Button variant="outline">
-                    Edit Account Settings
-                  </Button>
-                </div>
-              </CardContent>
-            </Card>
+                </CardContent>
+              </Card>
+            </div>
           </TabsContent>
         </Tabs>
       </div>

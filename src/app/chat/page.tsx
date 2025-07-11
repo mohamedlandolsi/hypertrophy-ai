@@ -32,6 +32,9 @@ import {
 } from "@/components/ui/avatar";
 import { useSearchParams, useRouter } from 'next/navigation';
 import { LoginPromptDialog } from '@/components/login-prompt-dialog';
+import { MessageLimitIndicator } from '@/components/message-limit-indicator';
+import { PlanBadge } from '@/components/plan-badge';
+import { UpgradeButton } from '@/components/upgrade-button';
 
 interface Message {
   id: string;
@@ -55,6 +58,11 @@ const ChatPage = () => {
   const [isMobile, setIsMobile] = reactUseState(false);
   const [user, setUser] = reactUseState<SupabaseUser | null>(null); // Using reactUseState
   const [userRole, setUserRole] = reactUseState<string>('user'); // Add userRole state
+  const [userPlan, setUserPlan] = reactUseState<{
+    plan: 'FREE' | 'PRO';
+    messagesUsedToday: number;
+    dailyLimit: number;
+  } | null>(null);
   const [chatHistory, setChatHistory] = reactUseState<Conversation[]>([]);
   const [activeChatId, setActiveChatId] = reactUseState<string | null>(null);
   const [isLoadingHistory, setIsLoadingHistory] = reactUseState(true);
@@ -136,8 +144,30 @@ const ChatPage = () => {
             console.error('Error fetching user role:', error);
             setUserRole('user'); // Default to user role on error
           }
+
+          // Fetch user plan information
+          try {
+            const planResponse = await fetch('/api/user/plan');
+            if (planResponse.ok) {
+              const planData = await planResponse.json();
+              setUserPlan({
+                plan: planData.plan,
+                messagesUsedToday: planData.messagesUsedToday,
+                dailyLimit: planData.limits.dailyMessages === -1 ? Infinity : planData.limits.dailyMessages,
+              });
+            }
+          } catch (error) {
+            console.error('Error fetching user plan:', error);
+            // Default to free plan for authenticated users
+            setUserPlan({
+              plan: 'FREE',
+              messagesUsedToday: 0,
+              dailyLimit: 15,
+            });
+          }
         } else {
           setUserRole('user'); // Default for non-authenticated users
+          setUserPlan(null); // No plan for guest users
         }
         
         // Only fetch chat history for authenticated users
@@ -501,6 +531,17 @@ const ChatPage = () => {
         } catch {
           errorData = { message: 'Failed to send message' };
         }
+        
+        // Handle subscription limit errors specifically
+        if (response.status === 429 && errorData.error === 'MESSAGE_LIMIT_REACHED') {
+          // Update user plan state to reflect the limit
+          if (userPlan) {
+            setUserPlan(prev => prev ? { ...prev, messagesUsedToday: prev.dailyLimit } : null);
+          }
+          showToast.error('Daily limit reached', errorData.message || 'You\'ve reached your daily message limit. Upgrade to Pro for unlimited messages.');
+          return; // Don't throw, just return early
+        }
+        
         throw errorData;
       }
 
@@ -535,6 +576,14 @@ const ChatPage = () => {
         router.push(`/chat?id=${data.conversationId}`, { scroll: false });
         // Refresh chat history
         loadChatHistory();
+      }
+
+      // Update user plan state to reflect the new message count
+      if (user && userPlan && userPlan.plan === 'FREE') {
+        setUserPlan(prev => prev ? { 
+          ...prev, 
+          messagesUsedToday: Math.min(prev.messagesUsedToday + 1, prev.dailyLimit)
+        } : null);
       }
 
     } catch (error) {
@@ -774,6 +823,41 @@ const ChatPage = () => {
                 </>
               )}
             </div>
+            
+            {/* Subscription Status Section for authenticated users */}
+            {user && userPlan && (
+              <div className="pt-3 border-t border-border/30">
+                <div className="space-y-3">
+                  {/* Plan Badge */}
+                  <div className="flex items-center justify-between px-1">
+                    <span className="text-xs font-semibold text-muted-foreground">SUBSCRIPTION</span>
+                    <PlanBadge plan={userPlan.plan} />
+                  </div>
+                  
+                  {/* Message Limit Indicator for Free Users */}
+                  {userPlan.plan === 'FREE' && (
+                    <>
+                      <MessageLimitIndicator
+                        messagesUsed={userPlan.messagesUsedToday}
+                        dailyLimit={userPlan.dailyLimit}
+                        plan={userPlan.plan}
+                        className="px-1"
+                      />
+                      
+                      {/* Upgrade Button for Free Users */}
+                      <div className="px-1">
+                        <UpgradeButton 
+                          variant="outline" 
+                          size="sm" 
+                          className="w-full"
+                          showDialog={true}
+                        />
+                      </div>
+                    </>
+                  )}
+                </div>
+              </div>
+            )}
             
             {/* Chat History Section for authenticated users or Login prompt for guests */}
             <div className="flex-1 flex flex-col min-h-0">
