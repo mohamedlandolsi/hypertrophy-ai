@@ -102,7 +102,7 @@ const ChatPage = () => {
   // Mounted effect for theme
   useEffect(() => {
     setMounted(true);
-  }, []);  // Empty dependency array is correct here
+  }, []); // eslint-disable-line react-hooks/exhaustive-deps
 
   // Add network status monitoring
   useEffect(() => {
@@ -618,7 +618,9 @@ const ChatPage = () => {
     setGuestMessageCount,
     setMessages,
     setIsAiThinking,
-    setActiveChatId
+    setActiveChatId,
+    userPlan,
+    setUserPlan
   ]);
 
   // Add keyboard shortcuts support

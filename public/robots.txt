@@ -1,0 +1,11 @@
+User-agent: *
+Allow: /
+Disallow: /api/
+Disallow: /admin/
+Disallow: /debug/
+Disallow: /onboarding/
+Disallow: /reset-password/
+Disallow: /update-password/
+
+# Sitemap
+Sitemap: https://hypertroq.com/sitemap.xml

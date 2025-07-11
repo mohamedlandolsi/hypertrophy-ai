@@ -5,6 +5,7 @@ import { Badge } from '@/components/ui/badge';
 import { Crown, Check, X, Loader2 } from 'lucide-react';
 import { useState, useEffect } from 'react';
 import { createClient } from '@/lib/supabase/client';
+import { trackEvent } from '@/components/google-analytics';
 import {
   Dialog,
   DialogContent,
@@ -58,6 +59,9 @@ export function UpgradeButton({
       return;
     }
 
+    // Track upgrade button click
+    trackEvent('upgrade_button_click', 'subscription', 'pro_plan_click');
+
     setIsLoading(true);
     
     try {
@@ -73,6 +77,9 @@ export function UpgradeButton({
 
       // Create checkout URL with custom data
       const checkoutUrl = `https://${storeId}.lemonsqueezy.com/checkout/buy/${variantId}?checkout[custom][user_id]=${userId}`;
+      
+      // Track checkout initiation
+      trackEvent('begin_checkout', 'subscription', 'pro_plan', 9.99);
       
       // Open Lemon Squeezy checkout overlay if available, otherwise redirect
       if (window.LemonSqueezy?.Url?.Open) {

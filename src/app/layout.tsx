@@ -7,6 +7,9 @@ import { Toaster as SonnerToaster } from "@/components/ui/sonner";
 import { Toaster } from "@/components/ui/toaster";
 import FaviconMeta from "@/components/favicon-meta";
 import ErrorBoundary from "@/components/error-boundary";
+import { Analytics } from '@vercel/analytics/react';
+import { generateMetadata as generateSEOMetadata } from "@/lib/seo";
+import { GoogleAnalytics } from '@/components/google-analytics';
 
 const geistSans = Geist({
   variable: "--font-geist-sans",
@@ -18,34 +21,22 @@ const geistMono = Geist_Mono({
   subsets: ["latin"],
 });
 
-export const metadata: Metadata = {
-  title: "HypertroQ",
-  description: "Your personal AI fitness coach",
-  icons: {
-    icon: [
-      { url: '/favicon/favicon-16x16.png', sizes: '16x16', type: 'image/png' },
-      { url: '/favicon/favicon-32x32.png', sizes: '32x32', type: 'image/png' },
-      { url: '/favicon/favicon.ico', sizes: 'any' }
-    ],
-    apple: [
-      { url: '/favicon/apple-touch-icon.png', sizes: '180x180', type: 'image/png' }
-    ],
-    other: [
-      { url: '/favicon/android-chrome-192x192.png', sizes: '192x192', type: 'image/png' },
-      { url: '/favicon/android-chrome-512x512.png', sizes: '512x512', type: 'image/png' }
-    ]
-  },
-  manifest: '/favicon/site.webmanifest',
-  appleWebApp: {
-    capable: true,
-    statusBarStyle: 'default',
-    title: 'HypertroQ'
-  },
-  other: {
-    'msapplication-TileColor': '#ffffff',
-    'msapplication-config': '/favicon/browserconfig.xml'
-  }
-};
+export const metadata: Metadata = generateSEOMetadata({
+  title: "HypertroQ - AI-Powered Personal Fitness Coach",
+  description: "Transform your fitness journey with HypertroQ, your AI-powered personal trainer. Get personalized workout plans, nutrition guidance, and expert coaching available 24/7.",
+  keywords: [
+    "AI fitness coach",
+    "personal trainer", 
+    "workout plans",
+    "fitness coaching",
+    "AI personal trainer",
+    "fitness app",
+    "hypertrophy training",
+    "muscle building",
+    "strength training",
+    "fitness guidance"
+  ]
+});
 
 export const viewport = {
   width: 'device-width',
@@ -79,6 +70,8 @@ export default async function RootLayout({
             <main className="flex-1 flex flex-col">{children}</main>
             <SonnerToaster richColors position="top-right" />
             <Toaster />
+            <Analytics />
+            <GoogleAnalytics />
           </ErrorBoundary>
         </ThemeProvider>
       </body>

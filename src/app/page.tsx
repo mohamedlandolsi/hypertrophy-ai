@@ -17,6 +17,8 @@ import Typewriter from "@/components/ui/typewriter";
 import ConnectingPath from "@/components/ui/connecting-path";
 import InteractiveFeatureShowcase from "@/components/ui/interactive-feature-showcase";
 import ClientOnly from "@/components/ui/client-only";
+import Head from "next/head";
+import { generateSchema } from "@/lib/seo";
 
 export default function Home() {
   const [user, setUser] = useState<User | null>(null);
@@ -47,35 +49,50 @@ export default function Home() {
   }, []);
 
   return (
-    <div className="flex flex-col min-h-screen">
-      {/* Enhanced Hero Section */}
-      <section className="relative flex-1 flex items-center justify-center px-4 py-20 overflow-hidden">
-        {/* Animated Background */}
-        <ClientOnly fallback={<div className="absolute inset-0 bg-gradient-to-br from-blue-50/50 via-purple-50/50 to-background dark:from-blue-950/20 dark:via-purple-950/20 dark:to-background" />}>
-          <AnimatedBackground />
-        </ClientOnly>
-        
-        <div className="relative z-10 text-center max-w-6xl mx-auto">
-          <motion.div 
-            className="flex justify-center mb-8"
-            initial={{ opacity: 0, scale: 0.5 }}
-            animate={{ opacity: 1, scale: 1 }}
-            transition={{ duration: 0.8, ease: "easeOut" }}
-          >
-            <ClientOnly fallback={
-              <div className="h-24 w-24 md:h-32 md:w-32">
-                <Image 
+    <>
+      <Head>
+        <script
+          type="application/ld+json"
+          dangerouslySetInnerHTML={{
+            __html: JSON.stringify([
+              generateSchema('WebSite'),
+              generateSchema('Organization'),
+              generateSchema('Product')
+            ])
+          }}
+        />
+      </Head>
+      
+      <main className="flex flex-col min-h-screen">
+        {/* Enhanced Hero Section */}
+        <section className="relative flex-1 flex items-center justify-center px-4 py-20 overflow-hidden">
+          {/* Animated Background */}
+          <ClientOnly fallback={<div className="absolute inset-0 bg-gradient-to-br from-blue-50/50 via-purple-50/50 to-background dark:from-blue-950/20 dark:via-purple-950/20 dark:to-background" />}>
+            <AnimatedBackground />
+          </ClientOnly>
+          
+          <div className="relative z-10 text-center max-w-6xl mx-auto">
+            <motion.div 
+              className="flex justify-center mb-8"
+              initial={{ opacity: 0, scale: 0.5 }}
+              animate={{ opacity: 1, scale: 1 }}
+              transition={{ duration: 0.8, ease: "easeOut" }}
+            >
+              <ClientOnly fallback={
+                <div className="h-24 w-24 md:h-32 md:w-32">
+                  <Image 
+                    src="/logo.png"
+                    alt="HypertroQ - AI-Powered Personal Fitness Coach Logo"
+                    width={128}
+                    height={128}
+                    className="h-24 w-24 md:h-32 md:w-32 object-contain"
+                    priority
+                  />
+                </div>
+              }>
+                <InteractiveLogo 
                   src="/logo.png"
-                  alt="HypertroQ Logo"
-                  width={128}
-                  height={128}
-                  className="h-24 w-24 md:h-32 md:w-32 object-contain"
-                />
-              </div>
-            }>
-              <InteractiveLogo 
-                src="/logo.png"
-                alt="HypertroQ Logo"
+                  alt="HypertroQ - AI-Powered Personal Fitness Coach Logo"
                 width={128}
                 height={128}
                 className="h-24 w-24 md:h-32 md:w-32"
@@ -534,6 +551,7 @@ export default function Home() {
           </motion.p>
         </div>
       </motion.section>
-    </div>
+    </main>
+    </>
   );
 }
