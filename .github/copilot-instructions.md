@@ -17,10 +17,13 @@
 ### Essential Build Commands
 ```bash
 npm run dev              # Development server
-npm run dev:turbo        # Development with turbopack (faster)
+npm run dev:turbo        # Development with turbopack (faster) 
 npm run build           # Prisma generate + Next.js build
+npm start               # Production server
+npm run lint            # ESLint validation
 npx prisma migrate dev  # Apply schema changes  
 npx prisma studio       # Visual database browser
+npm run postinstall     # Generate Prisma client (auto-run after install)
 ```
 
 ### Debug Scripts (Run from root, not src/)
@@ -31,8 +34,11 @@ npx prisma studio       # Visual database browser
 - `find-users.js` - Get actual user IDs for testing
 - `knowledge-test.js` - Test knowledge base functionality
 - `create-admin.js` - Create admin user accounts
+- `manage-user-plans.js` - Admin tool for managing user subscriptions and billing
+- `check-user-plan.js` - Verify individual user subscription status
 - `test-subscription-tiers.js` - Test subscription functionality end-to-end
-- `manage-user-plans.js` - Admin tool for managing user subscriptions
+- `check-pdf-items.js` - Debug PDF processing and chunking
+- `final-google-oauth-onboarding-verification.js` - Verify OAuth onboarding flow
 
 ### Critical Environment Variables
 ```bash
@@ -67,6 +73,7 @@ await getRelevantContext(query, { userId, limit: 10, threshold: 0.7 })
 - Call `updateClientMemory()` function for any personal data mentioned
 - Structured storage in `ClientMemory` table with 50+ profile fields
 - Includes training history, goals, limitations, preferences, sleep patterns
+- **Training Structure Support**: Handles both weekly (1-7 days/week) and cycle-based patterns (1 on/1 off, 2 on/1 off, custom cycles)
 
 ### 4. Arabic Language Support (`/src/lib/text-formatting.ts`)
 - Automatic language detection via `isArabicText()` function (30% threshold)
@@ -94,6 +101,8 @@ await incrementUserMessageCount() // Track usage
 - Pro tier: Unlimited messages, persistent memory, progress tracking
 - Daily usage tracking with automatic reset at midnight
 - Lemon Squeezy integration for payment processing
+- Webhook handling: `/src/app/api/webhooks/lemon-squeezy/route.ts`
+- Plan management: Use `manage-user-plans.js` script for admin operations
 
 ## 🔧 Key Integration Points
 
@@ -112,6 +121,12 @@ await incrementUserMessageCount() // Track usage
 - Handle both JSON and FormData (for image uploads) in POST routes
 - User authentication via `createClient()` from `@/lib/supabase/server`
 - Structure: validate → authenticate → process → return with error handling
+
+### Component Patterns
+- **Arabic-aware components**: Use `arabic-aware-input.tsx`, `arabic-aware-textarea.tsx` for proper RTL support
+- **Plan badges**: Use `PlanBadge` component with `UserPlan` enum (FREE/PRO)
+- **Subscription UI**: `UpgradeButton` handles Lemon Squeezy checkout flow
+- **Theme support**: All components support dark/light mode via `next-themes`
 
 ### Database Schema Highlights (`/prisma/schema.prisma`)
 - `KnowledgeChunk` - Chunked content with embeddings (chunkIndex for ordering)
@@ -136,6 +151,8 @@ await incrementUserMessageCount() // Track usage
 - **Hydration mismatches** → Use `ClientOnly` wrapper for dynamic content
 - **Auth issues during onboarding** → Check `hasCompletedOnboarding` flag in User table
 - **Arabic text rendering issues** → Verify `isArabicText()` detection and direction handling
+- **Subscription plan issues** → Use `check-user-plan.js` to verify billing status
+- **PDF processing failures** → Check `check-pdf-items.js` for chunking issues
 
 ## 📝 File Naming Conventions
 

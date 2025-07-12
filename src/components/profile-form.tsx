@@ -23,7 +23,10 @@ interface ProfileFormData {
 
   // Training Information
   trainingExperience?: string;
+  trainingStructureType?: string;
   weeklyTrainingDays?: number;
+  trainingCycle?: string;
+  customCyclePattern?: string;
   preferredTrainingStyle?: string;
   trainingSchedule?: string;
   availableTime?: number;
@@ -347,17 +350,62 @@ export default function ProfileForm() {
             </Select>
           </div>
           <div>
-            <Label htmlFor="weeklyDays">Training Days per Week</Label>
-            <Input
-              id="weeklyDays"
-              type="number"
-              min="1"
-              max="7"
-              value={formData.weeklyTrainingDays || ''}
-              onChange={(e) => updateField('weeklyTrainingDays', e.target.value ? parseInt(e.target.value) : undefined)}
-              placeholder="How many days per week?"
-            />
+            <Label htmlFor="trainingStructure">Training Structure</Label>
+            <Select value={formData.trainingStructureType || ''} onValueChange={(value) => updateField('trainingStructureType', value)}>
+              <SelectTrigger>
+                <SelectValue placeholder="How do you structure your training?" />
+              </SelectTrigger>
+              <SelectContent>
+                <SelectItem value="weekly">Weekly (fixed days per week)</SelectItem>
+                <SelectItem value="cycle">Cycle-based (days on/off pattern)</SelectItem>
+              </SelectContent>
+            </Select>
           </div>
+          {formData.trainingStructureType === 'weekly' && (
+            <div>
+              <Label htmlFor="weeklyDays">Training Days per Week</Label>
+              <Input
+                id="weeklyDays"
+                type="number"
+                min="1"
+                max="7"
+                value={formData.weeklyTrainingDays || ''}
+                onChange={(e) => updateField('weeklyTrainingDays', e.target.value ? parseInt(e.target.value) : undefined)}
+                placeholder="How many days per week?"
+              />
+            </div>
+          )}
+          {formData.trainingStructureType === 'cycle' && (
+            <div className="space-y-4">
+              <div>
+                <Label htmlFor="trainingCycle">Training Cycle Pattern</Label>
+                <Select value={formData.trainingCycle || ''} onValueChange={(value) => updateField('trainingCycle', value)}>
+                  <SelectTrigger>
+                    <SelectValue placeholder="Select your training cycle" />
+                  </SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="1_on_1_off">1 day on, 1 day off</SelectItem>
+                    <SelectItem value="2_on_1_off">2 days on, 1 day off</SelectItem>
+                    <SelectItem value="3_on_1_off">3 days on, 1 day off</SelectItem>
+                    <SelectItem value="2_on_2_off">2 days on, 2 days off</SelectItem>
+                    <SelectItem value="3_on_2_off">3 days on, 2 days off</SelectItem>
+                    <SelectItem value="custom">Custom pattern</SelectItem>
+                  </SelectContent>
+                </Select>
+              </div>
+              {formData.trainingCycle === 'custom' && (
+                <div>
+                  <Label htmlFor="customCycle">Custom Cycle Description</Label>
+                  <Input
+                    id="customCycle"
+                    value={formData.customCyclePattern || ''}
+                    onChange={(e) => updateField('customCyclePattern', e.target.value)}
+                    placeholder="Describe your custom training cycle (e.g., '4 days on, 3 days off')"
+                  />
+                </div>
+              )}
+            </div>
+          )}
           <div>
             <Label htmlFor="activityLevel">Activity Level</Label>
             <Select value={formData.activityLevel || ''} onValueChange={(value) => updateField('activityLevel', value)}>

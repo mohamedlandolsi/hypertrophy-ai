@@ -833,8 +833,8 @@ const ChatPage = () => {
                 <div className="space-y-3">
                   {/* Plan Badge */}
                   <div className="flex items-center justify-between px-1">
-                    <span className="text-xs font-semibold text-muted-foreground">SUBSCRIPTION</span>
-                    <PlanBadge plan={userPlan.plan} />
+                    <span className="text-xs font-semibold text-muted-foreground uppercase tracking-wide">Plan</span>
+                    <PlanBadge plan={userPlan.plan} className="px-3 py-1 text-xs" />
                   </div>
                   
                   {/* Message Limit Indicator for Free Users */}

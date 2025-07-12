@@ -25,7 +25,7 @@ import {
 import Link from 'next/link';
 import type { User as SupabaseUser } from '@supabase/supabase-js';
 import { FitnessLoading } from '@/components/ui/loading';
-import ProfileForm from '@/components/profile-form';
+import EnhancedProfileForm from '@/components/enhanced-profile-form';
 import { UpgradeButton } from '@/components/upgrade-button';
 import { PlanBadge } from '@/components/plan-badge';
 
@@ -248,17 +248,7 @@ export default function ProfilePage() {
           </TabsContent>
 
           <TabsContent value="edit">
-            <Card>
-              <CardHeader>
-                <CardTitle>Edit Your Training Profile</CardTitle>
-                <CardDescription>
-                  Provide detailed information to help your AI coach give you personalized advice
-                </CardDescription>
-              </CardHeader>
-              <CardContent>
-                <ProfileForm />
-              </CardContent>
-            </Card>
+            <EnhancedProfileForm />
           </TabsContent>
 
           <TabsContent value="account">

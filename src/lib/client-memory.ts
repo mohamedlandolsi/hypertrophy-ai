@@ -12,7 +12,10 @@ export interface MemoryUpdate {
   
   // Training Information
   trainingExperience?: string;
+  trainingStructureType?: string;
   weeklyTrainingDays?: number;
+  trainingCycle?: string;
+  customCyclePattern?: string;
   preferredTrainingStyle?: string;
   trainingSchedule?: string;
   availableTime?: number;
@@ -274,10 +277,22 @@ export async function generateMemorySummary(userId: string): Promise<string> {
   }
   
   // Training info with activity level
-  if (memory.trainingExperience || memory.weeklyTrainingDays || memory.preferredTrainingStyle || memory.activityLevel) {
+  if (memory.trainingExperience || memory.weeklyTrainingDays || memory.trainingStructureType || memory.preferredTrainingStyle || memory.activityLevel) {
     const training = [];
     if (memory.trainingExperience) training.push(`Experience: ${memory.trainingExperience}`);
-    if (memory.weeklyTrainingDays) training.push(`Training Days: ${memory.weeklyTrainingDays}/week`);
+    
+    // Handle training structure
+    if (memory.trainingStructureType === 'weekly' && memory.weeklyTrainingDays) {
+      training.push(`Training Days: ${memory.weeklyTrainingDays}/week`);
+    } else if (memory.trainingStructureType === 'cycle') {
+      if (memory.trainingCycle === 'custom' && memory.customCyclePattern) {
+        training.push(`Training Cycle: ${memory.customCyclePattern}`);
+      } else if (memory.trainingCycle) {
+        const cycleDisplay = memory.trainingCycle.replace(/_/g, ' ').replace(/on/g, 'on').replace(/off/g, 'off');
+        training.push(`Training Cycle: ${cycleDisplay}`);
+      }
+    }
+    
     if (memory.activityLevel) training.push(`Activity Level: ${memory.activityLevel.toLowerCase()}`);
     if (memory.preferredTrainingStyle) training.push(`Style: ${memory.preferredTrainingStyle}`);
     if (memory.availableTime) training.push(`Session Time: ${memory.availableTime}min`);

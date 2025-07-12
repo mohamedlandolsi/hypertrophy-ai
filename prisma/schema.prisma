@@ -91,7 +91,10 @@ model ClientMemory {
 
   // Training Information
   trainingExperience     String? // "beginner", "intermediate", "advanced"
-  weeklyTrainingDays     Int? // 1-7
+  trainingStructureType  String? // "weekly", "cycle"
+  weeklyTrainingDays     Int? // 1-7 (for weekly structure)
+  trainingCycle          String? // "1_on_1_off", "2_on_1_off", "3_on_1_off", "custom" (for cycle structure)
+  customCyclePattern     String? // custom cycle description
   preferredTrainingStyle String? // "strength", "hypertrophy", "powerlifting", "bodybuilding"
   trainingSchedule       String? // "morning", "evening", "flexible"
   availableTime          Int? // minutes per session
