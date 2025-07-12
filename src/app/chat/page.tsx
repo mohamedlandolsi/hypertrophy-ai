@@ -29,6 +29,7 @@ import {
 import {
   Avatar,
   AvatarFallback,
+  AvatarImage,
 } from "@/components/ui/avatar";
 import { useSearchParams, useRouter } from 'next/navigation';
 import { LoginPromptDialog } from '@/components/login-prompt-dialog';
@@ -987,6 +988,10 @@ const ChatPage = () => {
                 <Link href="/profile" className="block hover:opacity-80 transition-all duration-200">
                   <div className="flex items-center space-x-3 p-3 rounded-xl glass-input border border-border/50 hover-lift">
                     <Avatar className="h-10 w-10 shadow-md">
+                      <AvatarImage 
+                        src={user.user_metadata?.avatar_url || user.user_metadata?.picture || "/placeholder-avatar.png"} 
+                        alt="User Avatar" 
+                      />
                       <AvatarFallback className="bg-gradient-to-br from-blue-500 to-purple-600 text-white font-semibold text-sm">
                         {user.user_metadata?.full_name?.[0]?.toUpperCase() || user.email?.[0]?.toUpperCase() || 'U'}
                       </AvatarFallback>
@@ -1067,6 +1072,10 @@ const ChatPage = () => {
               <DropdownMenuTrigger asChild>
                 <Button variant="ghost" className="relative h-8 w-8 md:h-10 md:w-10 rounded-full hover:bg-muted/50 flex-shrink-0">
                   <Avatar className="h-8 w-8 md:h-10 md:w-10">
+                    <AvatarImage 
+                      src={user.user_metadata?.avatar_url || user.user_metadata?.picture || "/placeholder-avatar.png"} 
+                      alt="User Avatar" 
+                    />
                     <AvatarFallback className="bg-primary text-primary-foreground">
                       {user.user_metadata?.full_name?.[0]?.toUpperCase() || user.email?.[0]?.toUpperCase() || 'U'}
                     </AvatarFallback>
@@ -1232,6 +1241,10 @@ const ChatPage = () => {
                 <div className="flex-shrink-0">
                   {msg.role === 'user' ? (
                     <Avatar className="h-8 w-8 md:h-10 md:w-10 shadow-md hover-lift">
+                      <AvatarImage 
+                        src={user?.user_metadata?.avatar_url || user?.user_metadata?.picture || "/placeholder-avatar.png"} 
+                        alt="User Avatar" 
+                      />
                       <AvatarFallback className="bg-gradient-to-br from-blue-500 to-purple-600 text-white font-semibold text-xs md:text-sm">
                         {user?.user_metadata?.full_name?.[0]?.toUpperCase() || user?.email?.[0]?.toUpperCase() || 'G'}
                       </AvatarFallback>
