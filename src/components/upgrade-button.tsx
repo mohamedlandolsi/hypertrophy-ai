@@ -66,17 +66,16 @@ export function UpgradeButton({
     
     try {
       // Get environment variables for Lemon Squeezy
-      const storeId = process.env.NEXT_PUBLIC_LEMONSQUEEZY_STORE_ID;
-      const variantId = process.env.NEXT_PUBLIC_LEMONSQUEEZY_PRO_VARIANT_ID;
+      const storeSubdomain = process.env.NEXT_PUBLIC_LEMONSQUEEZY_STORE_SUBDOMAIN || 'hypertroq';
+      const variantId = process.env.NEXT_PUBLIC_LEMONSQUEEZY_PRO_VARIANT_ID || '9c872ed8-6ef8-47b2-a2dd-00a832697ebb';
       
-      if (!storeId || !variantId) {
-        console.error('Lemon Squeezy environment variables not configured');
-        alert('Payment system not configured. Please contact support.');
-        return;
-      }
+      console.log('Lemon Squeezy config:', { storeSubdomain, variantId }); // Debug log
 
-      // Create checkout URL with custom data
-      const checkoutUrl = `https://${storeId}.lemonsqueezy.com/checkout/buy/${variantId}?checkout[custom][user_id]=${userId}`;
+      // Create checkout URL with correct Lemon Squeezy format
+      const checkoutUrl = `https://${storeSubdomain}.lemonsqueezy.com/buy/${variantId}?embed=1&checkout[custom][user_id]=${userId}`;
+      
+      console.log('Checkout URL:', checkoutUrl); // Debug log
+      console.log('Store Subdomain:', storeSubdomain, 'Variant ID:', variantId); // Debug log
       
       // Track checkout initiation
       trackEvent('begin_checkout', 'subscription', 'pro_plan', 9.99);
