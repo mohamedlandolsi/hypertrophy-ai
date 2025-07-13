@@ -71,6 +71,11 @@ export function UpgradeButton({
     getUserId();
   }, []);
 
+  // Sync internal selectedInterval with defaultInterval prop changes
+  useEffect(() => {
+    setSelectedInterval(defaultInterval);
+  }, [defaultInterval]);
+
   useEffect(() => {
     // Initialize currency if not provided
     const initializeCurrency = async () => {
@@ -120,6 +125,11 @@ export function UpgradeButton({
       return;
     }
 
+    console.log('handleUpgrade called with interval:', interval);
+    console.log('selectedInterval state:', selectedInterval);
+    console.log('defaultInterval prop:', defaultInterval);
+    console.log('Final interval being used:', interval);
+
     // Track upgrade button click
     trackEvent('upgrade_button_click', 'subscription', `pro_plan_${interval}`);
 
@@ -127,15 +137,18 @@ export function UpgradeButton({
     
     try {
       // Create checkout URL via API
+      const requestBody = { 
+        interval,
+        currency: selectedCurrency 
+      };
+      console.log('Sending request body:', requestBody);
+      
       const response = await fetch('/api/checkout/create', {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
         },
-        body: JSON.stringify({ 
-          interval,
-          currency: selectedCurrency 
-        }),
+        body: JSON.stringify(requestBody),
       });
 
       if (!response.ok) {

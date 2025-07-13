@@ -26,6 +26,9 @@ export async function POST(request: NextRequest) {
     const body = await request.json();
     const { interval = 'month' } = body;
     
+    console.log('Checkout API received body:', body);
+    console.log('Parsed interval:', interval);
+    
     // Validate interval
     if (!['month', 'year'].includes(interval)) {
       throw new ValidationError('Interval must be "month" or "year"');

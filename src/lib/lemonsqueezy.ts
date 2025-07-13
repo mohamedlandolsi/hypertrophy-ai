@@ -97,13 +97,18 @@ class LemonSqueezyService {
    * Generate a checkout URL for a product
    */
   async createCheckoutUrl(options: CheckoutOptions): Promise<string> {
+    // Search by variant ID first (should be unique), then by product ID
     const product = Object.values(LEMONSQUEEZY_PRODUCTS).find(
-      p => p.id === options.productId || p.variantId === options.variantId
+      p => p.variantId === options.variantId
+    ) || Object.values(LEMONSQUEEZY_PRODUCTS).find(
+      p => p.id === options.productId
     );
 
     if (!product) {
-      throw new Error(`Product not found: ${options.productId}`);
+      throw new Error(`Product not found for productId: ${options.productId}, variantId: ${options.variantId}`);
     }
+
+    console.log(`Selected product: ${product.name} (${product.interval}) with variant ID: ${product.variantId}`);
 
     const checkoutData = {
       data: {
@@ -150,7 +155,11 @@ class LemonSqueezyService {
       body: JSON.stringify(checkoutData),
     });
 
-    return response.data.attributes.url;
+    const checkoutUrl = response.data.attributes.url;
+    console.log(`Generated checkout URL: ${checkoutUrl}`);
+    console.log(`URL should contain variant: ${product.variantId}`);
+    
+    return checkoutUrl;
   }
 
   /**
@@ -244,6 +253,14 @@ export async function createProCheckoutUrl(
     
     const service = getLemonSqueezyService();
     const product = interval === 'year' ? LEMONSQUEEZY_PRODUCTS.PRO_YEARLY : LEMONSQUEEZY_PRODUCTS.PRO_MONTHLY;
+    
+    console.log(`createProCheckoutUrl called with interval: ${interval}`);
+    console.log(`Selected product for ${interval}:`, {
+      name: product.name,
+      id: product.id,
+      variantId: product.variantId,
+      interval: product.interval
+    });
     
     // Check if product configuration is valid
     if (!product.id || product.id === 'your_monthly_product_id' || product.id === 'your_yearly_product_id' || product.id === '') {
