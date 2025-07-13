@@ -54,6 +54,8 @@ export function UpgradeButton({
   currency,
   pricingData: externalPricingData = null
 }: UpgradeButtonProps) {
+  console.log('UpgradeButton rendered with:', { defaultInterval, showDialog });
+  
   const [isLoading, setIsLoading] = useState(false);
   const [userId, setUserId] = useState<string | null>(null);
   const [selectedInterval, setSelectedInterval] = useState<'month' | 'year'>(defaultInterval);
@@ -73,7 +75,9 @@ export function UpgradeButton({
 
   // Sync internal selectedInterval with defaultInterval prop changes
   useEffect(() => {
+    console.log('UpgradeButton: defaultInterval changed to:', defaultInterval);
     setSelectedInterval(defaultInterval);
+    console.log('UpgradeButton: selectedInterval updated to:', defaultInterval);
   }, [defaultInterval]);
 
   useEffect(() => {
