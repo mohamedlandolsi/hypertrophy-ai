@@ -63,8 +63,12 @@ class LemonSqueezyService {
     this.apiKey = process.env.LEMONSQUEEZY_API_KEY || '';
     this.storeId = process.env.LEMONSQUEEZY_STORE_ID || '';
     
-    if (!this.apiKey || !this.storeId) {
-      throw new Error('LemonSqueezy API key and store ID must be configured');
+    if (!this.apiKey) {
+      throw new Error('LEMONSQUEEZY_API_KEY environment variable is required');
+    }
+    
+    if (!this.storeId || this.storeId === 'your_store_id_here') {
+      throw new Error('LEMONSQUEEZY_STORE_ID environment variable must be configured with actual store ID');
     }
   }
 
@@ -118,8 +122,8 @@ class LemonSqueezyService {
           },
           product_options: {
             enabled_variants: [product.variantId],
-            redirect_url: options.successUrl || `${process.env.NEXTAUTH_URL}/dashboard?upgraded=true`,
-            receipt_link_url: options.successUrl || `${process.env.NEXTAUTH_URL}/dashboard`,
+            redirect_url: options.successUrl || `${process.env.NEXT_PUBLIC_SITE_URL}/dashboard?upgraded=true`,
+            receipt_link_url: options.successUrl || `${process.env.NEXT_PUBLIC_SITE_URL}/dashboard`,
             receipt_thank_you_note: 'Welcome to HypertroQ Pro! Enjoy unlimited AI coaching.',
           },
           expires_at: new Date(Date.now() + 24 * 60 * 60 * 1000).toISOString(), // 24 hours
@@ -225,15 +229,41 @@ export async function createProCheckoutUrl(
   userEmail?: string, 
   interval: 'month' | 'year' = 'month'
 ): Promise<string> {
-  const service = getLemonSqueezyService();
-  const product = interval === 'year' ? LEMONSQUEEZY_PRODUCTS.PRO_YEARLY : LEMONSQUEEZY_PRODUCTS.PRO_MONTHLY;
-  
-  return service.createCheckoutUrl({
-    productId: product.id,
-    variantId: product.variantId,
-    userId,
-    userEmail,
-  });
+  try {
+    // Check if LemonSqueezy is properly configured
+    const apiKey = process.env.LEMONSQUEEZY_API_KEY;
+    const storeId = process.env.LEMONSQUEEZY_STORE_ID;
+    
+    if (!apiKey) {
+      throw new Error('LemonSqueezy API key not configured. Please set LEMONSQUEEZY_API_KEY environment variable.');
+    }
+    
+    if (!storeId || storeId === 'your_store_id_here') {
+      throw new Error('LemonSqueezy store ID not configured. Please set LEMONSQUEEZY_STORE_ID environment variable with your actual store ID.');
+    }
+    
+    const service = getLemonSqueezyService();
+    const product = interval === 'year' ? LEMONSQUEEZY_PRODUCTS.PRO_YEARLY : LEMONSQUEEZY_PRODUCTS.PRO_MONTHLY;
+    
+    // Check if product configuration is valid
+    if (!product.id || product.id === 'your_monthly_product_id' || product.id === 'your_yearly_product_id' || product.id === '') {
+      throw new Error(`LemonSqueezy product not configured for interval: ${interval}. Please configure LEMONSQUEEZY_PRO_${interval.toUpperCase()}_PRODUCT_ID environment variable.`);
+    }
+    
+    if (!product.variantId || product.variantId === 'your_monthly_variant_id' || product.variantId === 'your_yearly_variant_id' || product.variantId === '') {
+      throw new Error(`LemonSqueezy variant not configured for interval: ${interval}. Please configure LEMONSQUEEZY_PRO_${interval.toUpperCase()}_VARIANT_ID environment variable.`);
+    }
+    
+    return service.createCheckoutUrl({
+      productId: product.id,
+      variantId: product.variantId,
+      userId,
+      userEmail,
+    });
+  } catch (error) {
+    console.error('LemonSqueezy checkout creation failed:', error);
+    throw error;
+  }
 }
 
 export { LemonSqueezyService };
