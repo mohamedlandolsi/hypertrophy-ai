@@ -5,6 +5,82 @@
  * that are suitable for vector embeddings and semantic search.
  */
 
+/**
+ * Clean and preprocess text before chunking
+ * 
+ * @param text Raw text to clean
+ * @returns Cleaned text ready for chunking
+ */
+export function cleanText(text: string): string {
+  if (!text) return '';
+  
+  return text
+    // Normalize whitespace
+    .replace(/\r\n/g, '\n')  // Windows line endings to Unix
+    .replace(/\r/g, '\n')    // Mac line endings to Unix
+    .replace(/\t/g, ' ')     // Tabs to spaces
+    .replace(/ +/g, ' ')     // Multiple spaces to single space
+    
+    // Fix common PDF extraction issues
+    .replace(/([a-z])([A-Z])/g, '$1 $2')  // Add space between camelCase
+    .replace(/([.!?])([A-Z])/g, '$1 $2')  // Add space after sentence endings
+    .replace(/(\d+)([A-Z])/g, '$1 $2')    // Add space between number and letter
+    
+    // Clean up punctuation spacing
+    .replace(/\s+([.!?,;:])/g, '$1')      // Remove space before punctuation
+    .replace(/([.!?])\s*\n\s*/g, '$1\n\n') // Ensure paragraph breaks after sentences
+    
+    // Remove excessive newlines but preserve paragraph structure
+    .replace(/\n{3,}/g, '\n\n')           // Max 2 consecutive newlines
+    .replace(/^\s+|\s+$/g, '');           // Trim start and end
+}
+
+/**
+ * Enhanced sentence splitting that handles scientific text better
+ * 
+ * @param text Text to split into sentences
+ * @returns Array of sentences
+ */
+export function splitIntoSentences(text: string): string[] {
+  const sentences: string[] = [];
+  
+  // Enhanced regex that handles abbreviations common in fitness/science
+  const sentencePattern = /[.!?]+(?:\s+|$)/g;
+  
+  // Common abbreviations that shouldn't end sentences
+  const abbreviations = /\b(?:Dr|Mr|Mrs|Ms|vs|etc|i\.e|e\.g|rep|reps|max|min|kg|lb|cm|ft|in|sec|vol|no|fig|ref|al|pp)\./gi;
+  
+  // Replace abbreviations temporarily
+  const protectedText = text.replace(abbreviations, (match) => match.replace('.', '§TEMP§'));
+  
+  let lastIndex = 0;
+  let match;
+  
+  while ((match = sentencePattern.exec(protectedText)) !== null) {
+    const sentence = protectedText.slice(lastIndex, match.index + match[0].length)
+      .replace(/§TEMP§/g, '.')
+      .trim();
+    
+    if (sentence.length > 10) { // Filter out very short "sentences"
+      sentences.push(sentence);
+    }
+    
+    lastIndex = match.index + match[0].length;
+  }
+  
+  // Add remaining text if any
+  if (lastIndex < protectedText.length) {
+    const remaining = protectedText.slice(lastIndex)
+      .replace(/§TEMP§/g, '.')
+      .trim();
+    if (remaining.length > 10) {
+      sentences.push(remaining);
+    }
+  }
+  
+  return sentences;
+}
+
 export interface TextChunk {
   content: string;
   index: number;
@@ -41,15 +117,79 @@ export function chunkText(
 ): TextChunk[] {
   const opts = { ...DEFAULT_CHUNKING_OPTIONS, ...options };
   
-  if (!text || text.trim().length < opts.minChunkSize) {
+  // Step 1: Clean the text
+  const cleanedText = cleanText(text);
+  
+  if (!cleanedText || cleanedText.trim().length < opts.minChunkSize) {
     return [{
-      content: text.trim(),
+      content: cleanedText.trim(),
       index: 0,
       startChar: 0,
-      endChar: text.length
+      endChar: cleanedText.length
     }];
   }
 
+  // Step 2: For better chunking, split into sentences first
+  const sentences = splitIntoSentences(cleanedText);
+  
+  // Step 3: Group sentences into chunks
+  const chunks: TextChunk[] = [];
+  let currentChunk = '';
+  let currentStartChar = 0;
+  let chunkIndex = 0;
+
+  for (let i = 0; i < sentences.length; i++) {
+    const sentence = sentences[i];
+    const testChunk = currentChunk + (currentChunk ? ' ' : '') + sentence;
+    
+    // If adding this sentence would exceed chunk size, finalize current chunk
+    if (testChunk.length > opts.chunkSize && currentChunk.length >= opts.minChunkSize) {
+      chunks.push({
+        content: currentChunk.trim(),
+        index: chunkIndex,
+        startChar: currentStartChar,
+        endChar: currentStartChar + currentChunk.length
+      });
+      
+      chunkIndex++;
+      
+      // Start new chunk with overlap if configured
+      if (opts.chunkOverlap > 0 && currentChunk.length > opts.chunkOverlap) {
+        const overlapText = currentChunk.slice(-opts.chunkOverlap);
+        currentChunk = overlapText + ' ' + sentence;
+        currentStartChar = currentStartChar + currentChunk.length - overlapText.length - sentence.length - 1;
+      } else {
+        currentChunk = sentence;
+        currentStartChar = currentStartChar + currentChunk.length;
+      }
+    } else {
+      // Add sentence to current chunk
+      currentChunk = testChunk;
+    }
+  }
+  
+  // Add final chunk if it has content
+  if (currentChunk.trim().length >= opts.minChunkSize) {
+    chunks.push({
+      content: currentChunk.trim(),
+      index: chunkIndex,
+      startChar: currentStartChar,
+      endChar: currentStartChar + currentChunk.length
+    });
+  }
+
+  // Fallback to character-based chunking if sentence-based didn't work well
+  if (chunks.length === 0) {
+    return characterBasedChunking(cleanedText, opts);
+  }
+
+  return chunks;
+}
+
+/**
+ * Fallback character-based chunking for when sentence splitting doesn't work
+ */
+function characterBasedChunking(text: string, opts: ChunkingOptions): TextChunk[] {
   const chunks: TextChunk[] = [];
   let currentPosition = 0;
   let chunkIndex = 0;

@@ -8,12 +8,25 @@ import { useState, useEffect } from 'react';
 import { createClient } from '@/lib/supabase/client';
 import Link from 'next/link';
 import { UpgradeButton } from '@/components/upgrade-button';
+import { CurrencySelector } from '@/components/currency-selector';
 import Head from 'next/head';
 import { generateSchema } from '@/lib/seo';
+import { 
+  type CurrencyCode, 
+  type PricingData,
+  getPricingForCurrency,
+  getDefaultCurrency,
+  getDefaultCurrencySync,
+  SUPPORTED_CURRENCIES 
+} from '@/lib/currency';
 
 export default function PricingPage() {
   const [isAuthenticated, setIsAuthenticated] = useState(false);
   const [userPlan, setUserPlan] = useState<'FREE' | 'PRO' | null>(null);
+  const [billingInterval, setBillingInterval] = useState<'month' | 'year'>('month');
+  const [selectedCurrency, setSelectedCurrency] = useState<CurrencyCode>('TND');
+  const [pricingData, setPricingData] = useState<PricingData | null>(null);
+  const [isLoadingPricing, setIsLoadingPricing] = useState(true);
 
   useEffect(() => {
     const checkAuth = async () => {
@@ -38,6 +51,44 @@ export default function PricingPage() {
 
     checkAuth();
   }, []);
+
+  useEffect(() => {
+    const initializeCurrency = async () => {
+      setIsLoadingPricing(true);
+      try {
+        // Start with sync default for immediate UI
+        const syncCurrency = getDefaultCurrencySync();
+        setSelectedCurrency(syncCurrency);
+        
+        // Get async location-based currency
+        const defaultCurrency = await getDefaultCurrency();
+        setSelectedCurrency(defaultCurrency);
+        
+        const pricing = await getPricingForCurrency(defaultCurrency);
+        setPricingData(pricing);
+      } catch (error) {
+        console.error('Error initializing currency:', error);
+        // Fallback to sync default
+        const fallbackCurrency = getDefaultCurrencySync();
+        setSelectedCurrency(fallbackCurrency);
+        try {
+          const pricing = await getPricingForCurrency(fallbackCurrency);
+          setPricingData(pricing);
+        } catch (fallbackError) {
+          console.error('Error with fallback currency:', fallbackError);
+        }
+      } finally {
+        setIsLoadingPricing(false);
+      }
+    };
+
+    initializeCurrency();
+  }, []);
+
+  const handleCurrencyChange = (currency: CurrencyCode, pricing: PricingData) => {
+    setSelectedCurrency(currency);
+    setPricingData(pricing);
+  };
 
   const features = {
     free: [
@@ -82,10 +133,17 @@ export default function PricingPage() {
                   },
                   {
                     '@type': 'Offer',
-                    name: 'Pro Plan',
+                    name: 'Pro Plan - Monthly',
                     price: '9.99',
                     priceCurrency: 'USD',
                     description: 'Unlimited messages, conversation memory, personalized training',
+                  },
+                  {
+                    '@type': 'Offer',
+                    name: 'Pro Plan - Yearly',
+                    price: '99.99',
+                    priceCurrency: 'USD',
+                    description: 'Unlimited messages, conversation memory, personalized training - billed annually',
                   }
                 ]
               })
@@ -105,9 +163,42 @@ export default function PricingPage() {
             <h1 className="text-4xl md:text-6xl font-bold bg-gradient-to-r from-blue-600 to-purple-600 bg-clip-text text-transparent mb-6">
             Choose Your Fitness Journey
           </h1>
-          <p className="text-xl text-gray-600 dark:text-gray-300 max-w-3xl mx-auto">
+          <p className="text-xl text-gray-600 dark:text-gray-300 max-w-3xl mx-auto mb-8">
             Transform your fitness goals with AI-powered coaching. Start free or unlock unlimited potential with Pro.
           </p>
+          
+          {/* Currency Selector */}
+          <div className="flex justify-center mb-8">
+            <CurrencySelector
+              selectedCurrency={selectedCurrency}
+              onCurrencyChange={handleCurrencyChange}
+            />
+          </div>
+          
+          {/* Billing Toggle */}
+          <div className="flex items-center justify-center gap-4 mb-12">
+            <span className={`text-sm font-medium ${billingInterval === 'month' ? 'text-gray-900 dark:text-gray-100' : 'text-gray-500 dark:text-gray-400'}`}>
+              Monthly
+            </span>
+            <button
+              onClick={() => setBillingInterval(billingInterval === 'month' ? 'year' : 'month')}
+              className={`relative inline-flex h-6 w-11 items-center rounded-full transition-colors ${
+                billingInterval === 'year' ? 'bg-blue-600' : 'bg-gray-200 dark:bg-gray-700'
+              }`}
+            >
+              <span className={`inline-block h-4 w-4 transform rounded-full bg-white transition-transform ${
+                billingInterval === 'year' ? 'translate-x-6' : 'translate-x-1'
+              }`} />
+            </button>
+            <span className={`text-sm font-medium ${billingInterval === 'year' ? 'text-gray-900 dark:text-gray-100' : 'text-gray-500 dark:text-gray-400'}`}>
+              Yearly
+            </span>
+            {billingInterval === 'year' && pricingData && (
+              <Badge className="bg-green-100 text-green-800 dark:bg-green-900 dark:text-green-300">
+                Save {pricingData.savingsPercentage}%
+              </Badge>
+            )}
+          </div>
         </div>
 
         {/* Pricing Cards */}
@@ -170,8 +261,31 @@ export default function PricingPage() {
                 Unlock unlimited AI coaching and advanced features
               </CardDescription>
               <div className="mt-4">
-                <span className="text-4xl font-bold text-blue-900 dark:text-blue-100">$9.99</span>
-                <span className="text-blue-700 dark:text-blue-300">/month</span>
+                {isLoadingPricing || !pricingData ? (
+                  <div className="animate-pulse">
+                    <div className="h-12 bg-gray-200 dark:bg-gray-700 rounded mb-2"></div>
+                    <div className="h-4 bg-gray-200 dark:bg-gray-700 rounded w-3/4 mx-auto"></div>
+                  </div>
+                ) : (
+                  <>
+                    <span className="text-4xl font-bold text-blue-900 dark:text-blue-100">
+                      {billingInterval === 'year' 
+                        ? pricingData.formattedYearly 
+                        : pricingData.formattedMonthly
+                      }
+                    </span>
+                    {billingInterval === 'year' ? (
+                      <span className="text-blue-700 dark:text-blue-300">/year</span>
+                    ) : (
+                      <span className="text-blue-700 dark:text-blue-300">/month</span>
+                    )}
+                    {billingInterval === 'year' && (
+                      <div className="text-sm text-blue-600 dark:text-blue-400 mt-1">
+                        Equivalent to {SUPPORTED_CURRENCIES[selectedCurrency].symbol}{(pricingData.yearly / 12).toFixed(2)}/month
+                      </div>
+                    )}
+                  </>
+                )}
               </div>
               <p className="text-sm text-blue-600 dark:text-blue-400 mt-2">Cancel anytime</p>
             </CardHeader>
@@ -204,6 +318,9 @@ export default function PricingPage() {
                     size="lg" 
                     className="w-full bg-blue-600 hover:bg-blue-700"
                     showDialog={false}
+                    defaultInterval={billingInterval}
+                    currency={selectedCurrency}
+                    pricingData={pricingData}
                   />
                 )}
               </div>

@@ -88,57 +88,117 @@ export async function generateEmbedding(
 export async function generateEmbeddingsBatch(
   texts: string[],
   metadata?: Record<string, unknown>[],
-  batchSize: number = 10
+  batchSize: number = 5 // Reduced default batch size for better reliability
 ): Promise<EmbeddingResult[]> {
   const results: EmbeddingResult[] = [];
+  const failedIndices: number[] = [];
+  
+  console.log(`🧠 Generating embeddings for ${texts.length} texts in batches of ${batchSize}`);
   
   // Process in batches to avoid rate limits
   for (let i = 0; i < texts.length; i += batchSize) {
     const batch = texts.slice(i, i + batchSize);
     const batchMetadata = metadata ? metadata.slice(i, i + batchSize) : undefined;
     
-    // Process batch in parallel
-    const batchPromises = batch.map((text, index) =>
-      generateEmbedding(
-        text,
-        batchMetadata ? batchMetadata[index] : undefined
-      )
-    );
+    console.log(`Processing batch ${Math.floor(i / batchSize) + 1}/${Math.ceil(texts.length / batchSize)}`);
     
-    try {
-      const batchResults = await Promise.all(batchPromises);
-      results.push(...batchResults);
-      
-      // Add delay between batches to respect rate limits
-      if (i + batchSize < texts.length) {
-        await new Promise(resolve => setTimeout(resolve, 1000));
+    // Process batch with exponential backoff retry
+    let batchAttempts = 0;
+    const maxBatchAttempts = 3;
+    
+    while (batchAttempts < maxBatchAttempts) {
+      try {
+        // Process batch in parallel
+        const batchPromises = batch.map((text, index) =>
+          generateEmbedding(
+            text,
+            batchMetadata ? batchMetadata[index] : undefined
+          )
+        );
+        
+        const batchResults = await Promise.allSettled(batchPromises);
+        
+        // Process results and track failures
+        batchResults.forEach((result, index) => {
+          const globalIndex = i + index;
+          if (result.status === 'fulfilled') {
+            results[globalIndex] = result.value;
+          } else {
+            console.warn(`Failed to generate embedding for text ${globalIndex}:`, result.reason);
+            failedIndices.push(globalIndex);
+          }
+        });
+        
+        break; // Batch succeeded, move to next
+        
+      } catch (error) {
+        batchAttempts++;
+        console.error(`Batch ${Math.floor(i / batchSize) + 1} attempt ${batchAttempts} failed:`, error);
+        
+        if (batchAttempts < maxBatchAttempts) {
+          // Exponential backoff: 1s, 2s, 4s
+          const delay = Math.pow(2, batchAttempts - 1) * 1000;
+          console.log(`Retrying batch in ${delay}ms...`);
+          await new Promise(resolve => setTimeout(resolve, delay));
+        } else {
+          // Mark all items in this batch as failed
+          for (let j = 0; j < batch.length; j++) {
+            failedIndices.push(i + j);
+          }
+        }
       }
-    } catch (error) {
-      console.error(`Error processing batch ${i / batchSize + 1}:`, error);
+    }
+    
+    // Add delay between successful batches to respect rate limits
+    if (i + batchSize < texts.length) {
+      await new Promise(resolve => setTimeout(resolve, 1000));
+    }
+  }
+  
+  // Retry failed items individually with more aggressive retry logic
+  if (failedIndices.length > 0) {
+    console.log(`🔄 Retrying ${failedIndices.length} failed embeddings individually...`);
+    
+    for (const index of failedIndices) {
+      let attempts = 0;
+      const maxAttempts = 5;
       
-      // Try to process failed batch items individually
-      for (let j = 0; j < batch.length; j++) {
+      while (attempts < maxAttempts) {
         try {
           const result = await generateEmbedding(
-            batch[j],
-            batchMetadata ? batchMetadata[j] : undefined
+            texts[index],
+            metadata ? metadata[index] : undefined
           );
-          results.push(result);
-        } catch (itemError) {
-          console.error(`Failed to process text ${i + j}:`, itemError);
-          // Add a placeholder result to maintain array consistency
-          results.push({
-            embedding: new Array(768).fill(0), // Gemini embeddings are 768-dimensional
-            text: batch[j],
-            metadata: { error: 'Failed to generate embedding' }
-          });
+          results[index] = result;
+          break; // Success, move to next
+          
+        } catch (error) {
+          attempts++;
+          console.warn(`Individual retry ${attempts}/${maxAttempts} failed for text ${index}:`, error);
+          
+          if (attempts < maxAttempts) {
+            // Longer delays for individual retries
+            const delay = Math.pow(2, attempts) * 1000; // 2s, 4s, 8s, 16s
+            await new Promise(resolve => setTimeout(resolve, delay));
+          } else {
+            // Final fallback: create zero vector
+            console.error(`All retries failed for text ${index}, using zero vector`);
+            results[index] = {
+              embedding: new Array(768).fill(0), // Gemini embeddings are 768-dimensional
+              text: texts[index],
+              metadata: { 
+                error: 'Failed to generate embedding after multiple retries',
+                ...((metadata && metadata[index]) || {})
+              }
+            };
+          }
         }
-        
-        // Small delay between individual retries
-        await new Promise(resolve => setTimeout(resolve, 200));
       }
     }
   }
+  
+  const successCount = results.filter(r => !r.metadata?.error).length;
+  console.log(`✅ Successfully generated ${successCount}/${texts.length} embeddings`);
   
   return results;
 }

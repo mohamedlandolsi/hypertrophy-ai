@@ -6,7 +6,7 @@
  */
 
 import { extractTextFromFile } from './file-processor';
-import { chunkFitnessContent, validateChunks, type TextChunk } from './text-chunking';
+import { chunkFitnessContent, validateChunks, cleanText, type TextChunk } from './text-chunking';
 import { generateEmbeddingsBatch } from './vector-embeddings';
 import { storeEmbedding } from './vector-search';
 import { prisma } from './prisma';
@@ -103,9 +103,14 @@ export async function processFileWithEmbeddings(
       };
     }
 
-    // Step 2: Chunk the text
-    console.log(`📄 Chunking text (${extractedText.length} characters)...`);
-    const chunks = chunkFitnessContent(extractedText);
+    // Step 1.5: Clean the extracted text
+    console.log(`🧹 Cleaning extracted text (${extractedText.length} characters)...`);
+    const cleanedText = cleanText(extractedText);
+    console.log(`✨ Text cleaned (${cleanedText.length} characters after cleaning)`);
+
+    // Step 2: Chunk the cleaned text
+    console.log(`📄 Chunking text...`);
+    const chunks = chunkFitnessContent(cleanedText);
     
     if (chunks.length === 0) {
       errors.push('Text chunking failed - no chunks were created');

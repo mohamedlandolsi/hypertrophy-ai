@@ -33,6 +33,8 @@ model User {
   plan                    UserPlan        @default(FREE) // Subscription tier
   messagesUsedToday       Int             @default(0) // Track daily message usage for free tier
   lastMessageReset        DateTime        @default(now()) // When messages were last reset
+  uploadsThisMonth        Int             @default(0) // Track monthly upload usage for free tier
+  lastUploadReset         DateTime        @default(now()) // When uploads were last reset
   chats                   Chat[]
   knowledgeItems          KnowledgeItem[]
   clientMemory            ClientMemory?

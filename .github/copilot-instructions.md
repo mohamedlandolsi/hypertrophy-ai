@@ -11,6 +11,7 @@
 - **Authentication**: Supabase Auth with role-based access (user/admin) + onboarding flow
 - **File Processing**: Multi-format support (PDF, DOC, TXT, MD) with semantic chunking
 - **Error Handling**: Centralized `ApiErrorHandler` with correlation IDs and structured logging
+- **Subscription System**: Two-tier model (FREE/PRO) with daily usage tracking and Lemon Squeezy integration
 
 ## 🚀 Development Workflows
 
@@ -25,6 +26,11 @@ npx prisma migrate dev  # Apply schema changes
 npx prisma studio       # Visual database browser
 npm run postinstall     # Generate Prisma client (auto-run after install)
 ```
+
+### Windows Environment Notes
+- Use PowerShell as the default shell when running terminal commands
+- Debug scripts are Node.js files, run with `node script-name.js`
+- File paths use backslashes in Windows but forward slashes work in most contexts
 
 ### Debug Scripts (Run from root, not src/)
 - `debug-rag-system.js` - Test vector search and context retrieval
@@ -115,12 +121,14 @@ await incrementUserMessageCount() // Track usage
 - Centralized `ApiErrorHandler` with request context tracking
 - Structured logging with correlation IDs for debugging
 - Validates files, auth states, and request bodies with typed errors
+- Uses `AppError` class with specific error types (VALIDATION, AUTHENTICATION, etc.)
 
 ### API Route Patterns (`/src/app/api/*/route.ts`)
 - Always use `ApiErrorHandler.createContext(request)` for logging
 - Handle both JSON and FormData (for image uploads) in POST routes
 - User authentication via `createClient()` from `@/lib/supabase/server`
 - Structure: validate → authenticate → process → return with error handling
+- Use try-catch with structured error responses
 
 ### Component Patterns
 - **Arabic-aware components**: Use `arabic-aware-input.tsx`, `arabic-aware-textarea.tsx` for proper RTL support
@@ -136,6 +144,16 @@ await incrementUserMessageCount() // Track usage
 - `User.plan` - Subscription tier (FREE/PRO) with message tracking
 - `Subscription` - Lemon Squeezy integration with billing periods
 
+### Tech Stack Essentials
+- **Framework**: Next.js 15 with App Router and Server Components
+- **Database**: PostgreSQL with Prisma ORM (vector embeddings as JSON, pgvector migration pending)
+- **AI/ML**: Google Gemini API (`text-embedding-004` model, 768 dimensions)
+- **Authentication**: Supabase SSR with role-based access control
+- **UI**: Tailwind CSS + shadcn/ui components with `next-themes` dark mode
+- **File Processing**: `mammoth` (DOC), `pdf-parse` (PDF), `@tiptap/react` (rich text)
+- **Payments**: Lemon Squeezy webhook integration
+- **Development**: TypeScript, ESLint, Prisma Studio for DB management
+
 ## 🎯 Testing & Debugging
 
 ### Manual Testing Scripts
@@ -144,6 +162,14 @@ await incrementUserMessageCount() // Track usage
 - Test knowledge base with `knowledge-test.js`
 - Check PDF processing with `check-pdf-items.js`
 - Verify Google OAuth onboarding with `final-google-oauth-onboarding-verification.js`
+
+### Debug Script Architecture
+```javascript
+// All debug scripts use CommonJS (require/module.exports)
+const { PrismaClient } = require('@prisma/client');
+const { functionName } = require('./src/lib/module-name');
+// Execute from project root: node debug-script-name.js
+```
 
 ### Common Issues
 - **"AI Configuration not found"** → Run `/admin` setup first

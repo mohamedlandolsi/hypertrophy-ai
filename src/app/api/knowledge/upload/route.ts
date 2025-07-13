@@ -3,6 +3,11 @@ import { createClient } from '@/lib/supabase/server';
 import { prisma } from '@/lib/prisma';
 import { extractTextFromFile, isFileTypeSupported, getMaxFileSize } from '@/lib/file-processor';
 import { processFileWithEmbeddings, type ProcessingResult } from '@/lib/enhanced-file-processor';
+import { 
+  canUserUploadFile, 
+  canUserCreateKnowledgeItem, 
+  incrementUserUploadCount 
+} from '@/lib/subscription';
 
 interface ProcessFileRequest {
   filePath: string;
@@ -46,7 +51,37 @@ export async function POST(request: NextRequest) {
       create: { id: user.id }
     });
 
-    // Validate file size
+    // Check subscription limits before processing
+    console.log('🔒 Checking subscription limits...');
+    
+    const fileSizeInMB = fileSize / (1024 * 1024);
+    
+    // Check upload limits
+    const uploadCheck = await canUserUploadFile(fileSizeInMB);
+    if (!uploadCheck.canUpload) {
+      console.log('❌ Upload not allowed:', uploadCheck.reason);
+      return NextResponse.json({ 
+        error: uploadCheck.reason,
+        upgradeRequired: true,
+        maxFileSize: uploadCheck.maxFileSize,
+        uploadsRemaining: uploadCheck.uploadsRemaining
+      }, { status: 429 }); // Too Many Requests
+    }
+    
+    // Check knowledge item limits
+    const knowledgeCheck = await canUserCreateKnowledgeItem();
+    if (!knowledgeCheck.canCreate) {
+      console.log('❌ Knowledge item creation not allowed:', knowledgeCheck.reason);
+      return NextResponse.json({ 
+        error: knowledgeCheck.reason,
+        upgradeRequired: true,
+        itemsRemaining: knowledgeCheck.itemsRemaining
+      }, { status: 429 }); // Too Many Requests
+    }
+
+    console.log('✅ Subscription limits OK');
+
+    // Validate file size against plan limits (double check)
     const maxSize = getMaxFileSize();
     if (fileSize > maxSize) {
       const reason = `File size ${Math.round(fileSize / 1024 / 1024)}MB exceeds the ${Math.round(maxSize / 1024 / 1024)}MB limit`;
@@ -126,6 +161,15 @@ export async function POST(request: NextRequest) {
         });
 
         console.log(`✅ Successfully processed: ${fileName} (${processingResult.chunksCreated} chunks, ${processingResult.embeddingsGenerated} embeddings)`);
+        
+        // Increment user's upload count for subscription tracking
+        try {
+          await incrementUserUploadCount();
+          console.log('📊 User upload count incremented');
+        } catch (error) {
+          console.warn('⚠️ Failed to increment upload count:', error);
+          // Don't fail the entire request for this
+        }
         
         const result = {
           ...knowledgeItem,

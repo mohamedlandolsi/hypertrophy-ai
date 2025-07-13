@@ -116,7 +116,7 @@ const Navbar = () => {
 
   const navLinks = [
     { href: "/pricing", label: "Pricing", icon: Crown },
-    { href: "/profile", label: "Profile", icon: UserCircle },
+    ...(user ? [{ href: "/profile", label: "Profile", icon: UserCircle }] : []),
     { href: "/chat", label: "Chat", icon: MessageSquare },
     ...(userRole === 'admin' ? [{ href: "/admin", label: "Dashboard", icon: LayoutDashboard }] : []),
   ];
@@ -181,12 +181,14 @@ const Navbar = () => {
                         <span>Profile</span>
                       </Link>
                     </DropdownMenuItem>
-                    <DropdownMenuItem asChild>
-                      <Link href="/admin/settings" className="flex items-center w-full">
-                        <Settings className="mr-2 h-4 w-4" />
-                        <span>AI Configuration</span>
-                      </Link>
-                    </DropdownMenuItem>
+                    {userRole === 'admin' && (
+                      <DropdownMenuItem asChild>
+                        <Link href="/admin/settings" className="flex items-center w-full">
+                          <Settings className="mr-2 h-4 w-4" />
+                          <span>AI Configuration</span>
+                        </Link>
+                      </DropdownMenuItem>
+                    )}
                     <DropdownMenuSeparator />
                     {/* ThemeToggle within Dropdown */}
                     <div className="px-1 py-1">
@@ -287,14 +289,16 @@ const Navbar = () => {
                             </Link>
                           </Button>
                         </SheetClose>
-                        <SheetClose asChild>
-                          <Button variant="outline" className="w-full justify-start h-12 px-4" asChild>
-                            <Link href="/admin/settings">
-                              <Settings className="mr-2 h-4 w-4" />
-                              AI Configuration
-                            </Link>
-                          </Button>
-                        </SheetClose>
+                        {userRole === 'admin' && (
+                          <SheetClose asChild>
+                            <Button variant="outline" className="w-full justify-start h-12 px-4" asChild>
+                              <Link href="/admin/settings">
+                                <Settings className="mr-2 h-4 w-4" />
+                                AI Configuration
+                              </Link>
+                            </Button>
+                          </SheetClose>
+                        )}
                         <SheetClose asChild>
                           <Button variant="outline" className="w-full justify-start h-12 px-4" onClick={async () => { await handleLogout(); setIsMobileMenuOpen(false);}}>
                               <LogOut className="mr-2 h-4 w-4" />
