@@ -14,7 +14,7 @@ const nextConfig: NextConfig = {
     }
     return config;
   },
-  // PWA Configuration
+  // PWA Configuration and Security Headers
   async headers() {
     return [
       {
@@ -29,7 +29,42 @@ const nextConfig: NextConfig = {
             value: '/'
           }
         ]
-      }
+      },
+      // Temporarily disable CSP in development to allow LemonSqueezy checkout
+      ...(process.env.NODE_ENV === 'production' ? [{
+        source: '/(.*)',
+        headers: [
+          {
+            key: 'Content-Security-Policy',
+            value: [
+              "default-src 'self'",
+              "script-src 'self' 'unsafe-inline' 'unsafe-eval' https://www.googletagmanager.com https://www.google-analytics.com https://play.google.com https://www.gstatic.com https://*.lemonsqueezy.com https://assets.lemonsqueezy.com",
+              "style-src 'self' 'unsafe-inline' https://fonts.googleapis.com",
+              "font-src 'self' https://fonts.gstatic.com",
+              "img-src 'self' data: blob: https: http:",
+              "media-src 'self' data: blob:",
+              "connect-src 'self' https://www.google-analytics.com https://vitals.vercel-analytics.com https://*.supabase.co https://*.lemonsqueezy.com https://api.lemonsqueezy.com https://auth.lemonsqueezy.com https://checkout.lemonsqueezy.com https://play.google.com https://www.paypal.com https://*.paypal.com https://stats.g.doubleclick.net https://www.google.com https://accounts.google.com",
+              "frame-src 'self' https://checkout.lemonsqueezy.com https://www.paypal.com https://*.paypal.com https://play.google.com",
+              "object-src 'none'",
+              "base-uri 'self'",
+              "form-action 'self' https://checkout.lemonsqueezy.com",
+              "frame-ancestors 'none'"
+            ].join('; ')
+          },
+          {
+            key: 'X-Frame-Options',
+            value: 'DENY'
+          },
+          {
+            key: 'X-Content-Type-Options',
+            value: 'nosniff'
+          },
+          {
+            key: 'Referrer-Policy',
+            value: 'strict-origin-when-cross-origin'
+          }
+        ]
+      }] : [])
     ];
   },
   // Image optimization
