@@ -129,10 +129,14 @@ export function UpgradeButton({
       return;
     }
 
-    console.log('handleUpgrade called with interval:', interval);
-    console.log('selectedInterval state:', selectedInterval);
-    console.log('defaultInterval prop:', defaultInterval);
-    console.log('Final interval being used:', interval);
+    const isProduction = process.env.NODE_ENV === 'production';
+    const environment = isProduction ? 'PRODUCTION' : 'DEVELOPMENT';
+    
+    console.log(`[${environment}] handleUpgrade called with interval:`, interval);
+    console.log(`[${environment}] selectedInterval state:`, selectedInterval);
+    console.log(`[${environment}] defaultInterval prop:`, defaultInterval);
+    console.log(`[${environment}] Final interval being used:`, interval);
+    console.log(`[${environment}] showDialog:`, showDialog);
 
     // Track upgrade button click
     trackEvent('upgrade_button_click', 'subscription', `pro_plan_${interval}`);

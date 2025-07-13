@@ -181,7 +181,11 @@ export default function PricingPage() {
               Monthly
             </span>
             <button
-              onClick={() => setBillingInterval(billingInterval === 'month' ? 'year' : 'month')}
+              onClick={() => {
+                const newInterval = billingInterval === 'month' ? 'year' : 'month';
+                console.log('Pricing page: billing interval changing from', billingInterval, 'to', newInterval);
+                setBillingInterval(newInterval);
+              }}
               className={`relative inline-flex h-6 w-11 items-center rounded-full transition-colors ${
                 billingInterval === 'year' ? 'bg-blue-600' : 'bg-gray-200 dark:bg-gray-700'
               }`}
