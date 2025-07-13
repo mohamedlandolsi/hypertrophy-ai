@@ -3,8 +3,6 @@
  * Converts from TND (Tunisian Dinar) to various currencies
  */
 
-import axios from 'axios';
-
 // Base prices in TND (Tunisian Dinar)
 export const BASE_PRICES_TND = {
   MONTHLY: 29,
@@ -52,8 +50,7 @@ let ratesCache: CacheEntry | null = null;
 const CACHE_TTL = 60 * 60 * 1000; // 1 hour in milliseconds
 
 /**
- * Fetch exchange rates from a free API
- * Using exchangerate-api.com which provides free tier with 1500 requests/month
+ * Fetch exchange rates from server-side API to avoid CORS issues
  */
 async function fetchExchangeRates(): Promise<ExchangeRates> {
   // Check cache first
@@ -62,36 +59,35 @@ async function fetchExchangeRates(): Promise<ExchangeRates> {
   }
 
   try {
-    // Using exchangerate-api.com (free tier, no API key required for basic usage)
-    const response = await axios.get(
-      `https://api.exchangerate-api.com/v4/latest/TND`,
-      {
-        timeout: 5000,
-        headers: {
-          'Accept': 'application/json',
-        },
-      }
-    );
+    // Use our server-side API route to avoid CORS issues
+    const response = await fetch('/api/exchange-rates?base=TND', {
+      method: 'GET',
+      headers: {
+        'Accept': 'application/json',
+        'Cache-Control': 'no-cache',
+      },
+      // Add timeout using AbortController
+      signal: AbortSignal.timeout(10000)
+    });
 
-    if (response.data && response.data.rates) {
-      const rates = response.data.rates;
+    if (response.ok) {
+      const data = await response.json();
       
-      // Cache the rates
-      ratesCache = {
-        rates,
-        timestamp: Date.now(),
-        ttl: CACHE_TTL,
-      };
+      if (data.rates) {
+        // Cache the rates
+        ratesCache = {
+          rates: data.rates,
+          timestamp: Date.now(),
+          ttl: CACHE_TTL,
+        };
 
-      return rates;
-    } else {
-      throw new Error('Invalid response format from exchange rate API');
+        return data.rates;
+      }
     }
-  } catch (error) {
-    console.warn('Failed to fetch live exchange rates, using fallback rates:', error);
-    
-    // Fallback exchange rates (approximate values as of July 2025)
-    // These should be updated periodically
+
+    throw new Error('Invalid response from exchange rate API');
+  } catch {
+    // Use fallback rates silently in production
     const fallbackRates: ExchangeRates = {
       TND: 1,
       USD: 0.32,
@@ -233,42 +229,29 @@ interface GeolocationResponse {
 
 /**
  * Get user's country code using IP geolocation
+ * Uses server-side API route to avoid CORS issues
  */
 async function getUserCountryCode(): Promise<string | null> {
   try {
-    // Try multiple geolocation services for better reliability
-    const services = [
-      'https://ipapi.co/json',
-      'https://api.ipgeolocation.io/ipgeo?apiKey=free',
-      'https://freegeoip.app/json/',
-    ];
+    // Use our server-side API route to avoid CORS issues
+    const response = await fetch('/api/geolocation', {
+      method: 'GET',
+      headers: {
+        'Accept': 'application/json',
+      },
+      signal: AbortSignal.timeout(8000)
+    });
 
-    for (const service of services) {
-      try {
-        const response = await fetch(service, {
-          method: 'GET',
-          headers: {
-            'Accept': 'application/json',
-          },
-          // Add timeout
-          signal: AbortSignal.timeout(5000)
-        });
-
-        if (response.ok) {
-          const data: GeolocationResponse = await response.json();
-          if (data.country_code) {
-            return data.country_code.toUpperCase();
-          }
-        }
-      } catch (serviceError) {
-        console.warn(`Geolocation service ${service} failed:`, serviceError);
-        continue; // Try next service
+    if (response.ok) {
+      const data: GeolocationResponse = await response.json();
+      if (data.country_code) {
+        return data.country_code.toUpperCase();
       }
     }
 
     return null;
-  } catch (error) {
-    console.warn('Failed to get user location:', error);
+  } catch {
+    // Silently fail and use locale-based detection
     return null;
   }
 }
@@ -329,9 +312,9 @@ export async function getDefaultCurrency(): Promise<CurrencyCode> {
     console.log(`Currency detected from locale: ${localeCurrency}`);
     return localeCurrency;
 
-  } catch (error) {
-    console.warn('Error detecting user currency, using default:', error);
-    return 'TND'; // Final fallback
+  } catch {
+    // Silently use locale-based detection
+    return getCurrencyFromLocale();
   }
 }
 

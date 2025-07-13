@@ -4,6 +4,7 @@ import React, { useState } from 'react';
 import ReactMarkdown from 'react-markdown';
 import remarkGfm from 'remark-gfm';
 import { getTextFormatting } from '@/lib/text-formatting';
+import Image from 'next/image';
 import {
   Dialog,
   DialogContent,
@@ -34,21 +35,29 @@ export const MessageContent: React.FC<MessageContentProps> = ({ content, imageDa
         <div className={content && content !== '[Image]' ? 'mb-3' : ''}>
           <Dialog open={isImageDialogOpen} onOpenChange={setIsImageDialogOpen}>
             <DialogTrigger asChild>
-              <img
-                src={imageData}
-                alt="Uploaded image"
-                className="max-w-full max-h-64 object-contain rounded-lg border border-white/20 cursor-pointer hover:opacity-80 transition-opacity"
-                style={{ maxWidth: '300px' }}
-                title="Click to view full size"
-              />
+              <div className="relative cursor-pointer hover:opacity-80 transition-opacity">
+                <Image
+                  src={imageData}
+                  alt="Uploaded image"
+                  width={300}
+                  height={256}
+                  className="max-w-full max-h-64 object-contain rounded-lg border border-white/20"
+                  style={{ maxWidth: '300px' }}
+                  title="Click to view full size"
+                  unoptimized={imageData.startsWith('data:')}
+                />
+              </div>
             </DialogTrigger>
             <DialogContent className="max-w-[90vw] max-h-[90vh] p-2" showCloseButton={true}>
               <DialogTitle className="sr-only">Image Preview</DialogTitle>
               <div className="flex items-center justify-center">
-                <img
+                <Image
                   src={imageData}
                   alt="Uploaded image - Full size"
+                  width={800}
+                  height={600}
                   className="max-w-full max-h-[80vh] object-contain rounded-lg"
+                  unoptimized={imageData.startsWith('data:')}
                 />
               </div>
             </DialogContent>

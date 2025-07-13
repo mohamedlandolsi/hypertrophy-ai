@@ -9,6 +9,8 @@ import FaviconMeta from "@/components/favicon-meta";
 import ErrorBoundary from "@/components/error-boundary";
 import { Analytics } from '@vercel/analytics/react';
 import { generateMetadata as generateSEOMetadata } from "@/lib/seo";
+import { OfflineBanner } from "@/components/offline-banner";
+import { ServiceWorkerRegister } from "@/components/service-worker-register";
 // import { GoogleAnalytics } from '@/components/google-analytics'; // Now using direct implementation
 
 const geistSans = Geist({
@@ -54,6 +56,11 @@ export default async function RootLayout({
     <html lang="en" suppressHydrationWarning className="h-full">
       <head>
         <FaviconMeta />
+        <link rel="manifest" href="/manifest.json" />
+        <meta name="theme-color" content="#1e40af" />
+        <meta name="apple-mobile-web-app-status-bar-style" content="default" />
+        <meta name="apple-mobile-web-app-title" content="HypertroQ" />
+        <link rel="apple-touch-icon" href="/logo.png" />
         <script src="https://assets.lemonsqueezy.com/lemon.js" defer></script>
         {/* Google Analytics - Direct Implementation */}
         <script async src="https://www.googletagmanager.com/gtag/js?id=G-1SDWNDGJHG"></script>
@@ -79,6 +86,8 @@ export default async function RootLayout({
           disableTransitionOnChange
         >
           <ErrorBoundary>
+            <ServiceWorkerRegister />
+            <OfflineBanner />
             <ConditionalNavbar /> {/* Use ConditionalNavbar */}
             <main className="flex-1 flex flex-col">{children}</main>
             <SonnerToaster richColors position="top-right" />

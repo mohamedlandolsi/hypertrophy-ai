@@ -78,9 +78,9 @@ export function UpgradeButton({
         try {
           const detectedCurrency = await getDefaultCurrency();
           setSelectedCurrency(detectedCurrency);
-        } catch (error) {
-          console.error('Failed to detect currency:', error);
-          // Keep the sync default
+        } catch {
+          // Silently fall back to sync default
+          setSelectedCurrency(getDefaultCurrencySync());
         }
       }
     };
@@ -97,8 +97,17 @@ export function UpgradeButton({
         try {
           const pricing = await getPricingForCurrency(selectedCurrency);
           setPricingData(pricing);
-        } catch (error) {
-          console.error('Failed to load pricing data:', error);
+        } catch {
+          // Silently use fallback pricing
+          setPricingData({
+            currency: selectedCurrency,
+            monthly: 29,
+            yearly: 278,
+            savings: 6,
+            savingsPercentage: 20,
+            formattedMonthly: '29 TND',
+            formattedYearly: '278 TND'
+          });
         }
       };
       loadPricingData();

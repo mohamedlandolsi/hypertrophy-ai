@@ -3,9 +3,9 @@
 import { createClient } from '@/lib/supabase/client';
 import { useEffect, useState as reactUseState, useRef, useCallback } from 'react';
 import { Button } from '@/components/ui/button';
-// Updated lucide-react imports
-import { Settings, MessageSquare, Send, ChevronLeft, Menu, User, LogOut, Database, Trash2, Copy, Loader2, Image, X } from 'lucide-react';
+import { Settings, MessageSquare, Send, ChevronLeft, Menu, User, LogOut, Database, Trash2, Copy, Loader2, Image as ImageIcon, X } from 'lucide-react';
 import Link from 'next/link';
+import Image from 'next/image';
 import { ThemeToggle } from '@/components/theme-toggle';
 import { useTheme } from 'next-themes';
 import { showToast } from '@/lib/toast';
@@ -36,6 +36,7 @@ import { LoginPromptDialog } from '@/components/login-prompt-dialog';
 import { MessageLimitIndicator } from '@/components/message-limit-indicator';
 import { PlanBadge } from '@/components/plan-badge';
 import { UpgradeButton } from '@/components/upgrade-button';
+import { useOnlineStatus } from '@/hooks/use-online-status';
 
 interface Message {
   id: string;
@@ -82,7 +83,7 @@ const ChatPage = () => {
   const [imagePreview, setImagePreview] = reactUseState<string | null>(null);
 
   // Add connection status tracking
-  const [isOnline, setIsOnline] = reactUseState(true);
+  const { isOnline } = useOnlineStatus();
 
   // Theme hook for logo
   const { theme } = useTheme();
@@ -104,23 +105,6 @@ const ChatPage = () => {
   useEffect(() => {
     setMounted(true);
   }, []); // eslint-disable-line react-hooks/exhaustive-deps
-
-  // Add network status monitoring
-  useEffect(() => {
-    const handleOnline = () => setIsOnline(true);
-    const handleOffline = () => setIsOnline(false);
-    
-    // Set initial online status
-    setIsOnline(navigator.onLine);
-    
-    window.addEventListener('online', handleOnline);
-    window.addEventListener('offline', handleOffline);
-    
-    return () => {
-      window.removeEventListener('online', handleOnline);
-      window.removeEventListener('offline', handleOffline);
-    };
-  }, [setIsOnline]);
 
   useEffect(() => {
     const fetchInitialData = async () => {
@@ -776,9 +760,11 @@ const ChatPage = () => {
               <Link href="/" className="block hover:opacity-80 transition-all duration-200 hover-lift">
                 <div className="flex items-center space-x-3">
                   <div className="w-10 h-10 bg-gradient-to-br from-blue-500 to-purple-600 rounded-xl flex items-center justify-center shadow-lg overflow-hidden">
-                    <img 
+                    <Image 
                       src="/logo.png" 
                       alt="HypertroQ Logo" 
+                      width={32}
+                      height={32}
                       className="w-8 h-8 object-contain"
                     />
                   </div>
@@ -1165,6 +1151,19 @@ const ChatPage = () => {
           className="flex-1 overflow-y-auto pb-40 message-area w-full"
           onScroll={handleScroll}
         >
+          {/* Offline warning banner */}
+          {!isOnline && (
+            <div className="bg-gradient-to-r from-orange-50 to-red-50 dark:from-orange-950/20 dark:to-red-950/20 border-l-4 border-orange-500 p-3 mx-3 md:mx-6 mb-4 rounded-r-xl animate-scale-in">
+              <div className="flex items-center">
+                <div className="flex items-center space-x-2">
+                  <span className="text-orange-600 dark:text-orange-400 font-medium text-sm">
+                    You&apos;re currently offline. Messages will be sent when connection is restored.
+                  </span>
+                </div>
+              </div>
+            </div>
+          )}
+
           {/* Guest user warning banner */}
           {!user && guestMessageCount === 3 && (
             <div className="bg-gradient-to-r from-orange-50 to-amber-50 dark:from-orange-950/20 dark:to-amber-950/20 border-l-4 border-orange-400 p-3 mx-3 md:mx-6 rounded-r-xl animate-scale-in">
@@ -1193,9 +1192,11 @@ const ChatPage = () => {
               <div className="flex flex-col items-center justify-center min-h-[50vh] text-center space-y-6 animate-scale-in px-2 md:px-4">
                 <div className="relative">
                   <div className="w-16 h-16 md:w-20 md:h-20 bg-gradient-to-br from-blue-500/10 to-purple-600/10 rounded-2xl flex items-center justify-center">
-                    <img 
+                    <Image 
                       src="/logo.png" 
                       alt="HypertroQ AI" 
+                      width={56}
+                      height={56}
                       className="w-12 h-12 md:w-14 md:h-14 object-contain"
                     />
                   </div>
@@ -1251,9 +1252,11 @@ const ChatPage = () => {
                     </Avatar>
                   ) : (
                     <div className="h-8 w-8 md:h-10 md:w-10 rounded-full bg-gradient-to-br from-slate-100 to-slate-200 dark:from-slate-800 dark:to-slate-700 border-2 border-border/50 flex items-center justify-center overflow-hidden shadow-md hover-lift">
-                      <img 
+                      <Image 
                         src={getLogoSrc()} 
                         alt="HyperTroQ AI" 
+                        width={28}
+                        height={28}
                         className="h-5 w-5 md:h-7 md:w-7 object-contain"
                       />
                     </div>
@@ -1325,9 +1328,11 @@ const ChatPage = () => {
               <div className="flex items-start space-x-3 md:space-x-4 animate-fade-in">
                 <div className="flex-shrink-0">
                   <div className="h-8 w-8 md:h-10 md:w-10 rounded-full bg-gradient-to-br from-blue-500/20 to-purple-600/20 flex items-center justify-center shadow-md animate-glow border border-primary/20">
-                    <img 
+                    <Image 
                       src="/logo.png" 
                       alt="HypertroQ AI" 
+                      width={24}
+                      height={24}
                       className="h-5 w-5 md:h-6 md:w-6 object-contain"
                     />
                   </div>
@@ -1371,10 +1376,13 @@ const ChatPage = () => {
                     </Button>
                   </div>
                   <div className="relative">
-                    <img
-                      src={imagePreview}
+                    <Image
+                      src={imagePreview || ''}
                       alt="Selected image"
+                      width={200}
+                      height={128}
                       className="max-w-full max-h-24 md:max-h-32 object-contain rounded-lg border shadow-sm"
+                      unoptimized={imagePreview?.startsWith('data:') || false}
                     />
                   </div>
                 </div>
@@ -1436,7 +1444,7 @@ const ChatPage = () => {
                     aria-label="Upload image"
                     data-testid="image-upload-button"
                   >
-                    <Image className="h-4 w-4 md:h-6 md:w-6 text-muted-foreground" />
+                    <ImageIcon className="h-4 w-4 md:h-6 md:w-6 text-muted-foreground" />
                   </Button>
                 </div>
                 
