@@ -201,7 +201,13 @@ export function UpgradeButton({
           variant={variant} 
           size={size} 
           className={className}
-          onClick={() => handleUpgrade(selectedInterval)}
+          onClick={() => {
+            console.log('Button clicked - Debug info:');
+            console.log('  defaultInterval prop:', defaultInterval);
+            console.log('  selectedInterval state:', selectedInterval);
+            console.log('  About to call handleUpgrade with:', selectedInterval);
+            handleUpgrade(selectedInterval);
+          }}
           disabled={isLoading}
         >
           {isLoading ? (
