@@ -12,6 +12,20 @@ export async function POST(request: NextRequest) {
   const context = ApiErrorHandler.createContext(request);
   
   try {
+    // Aggressive logging for production debugging
+    const lsKey = process.env.LEMONSQUEEZY_API_KEY || 'NOT_SET';
+    logger.info('LemonSqueezy Production Environment Check', {
+      ...context,
+      storeId: process.env.LEMONSQUEEZY_STORE_ID,
+      apiKeyFirst5: lsKey.substring(0, 5),
+      apiKeyLast5: lsKey.substring(lsKey.length - 5),
+      apiKeyLength: lsKey.length,
+      monthlyProductId: process.env.LEMONSQUEEZY_PRO_MONTHLY_PRODUCT_ID,
+      monthlyVariantId: process.env.LEMONSQUEEZY_PRO_MONTHLY_VARIANT_ID,
+      yearlyProductId: process.env.LEMONSQUEEZY_PRO_YEARLY_PRODUCT_ID,
+      yearlyVariantId: process.env.LEMONSQUEEZY_PRO_YEARLY_VARIANT_ID,
+    });
+
     logger.info('Checkout URL generation requested', context);
     
     // Get the authenticated user
