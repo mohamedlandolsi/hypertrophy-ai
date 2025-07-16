@@ -28,10 +28,26 @@ import { CurrencySelector } from '@/components/currency-selector';
 declare global {
   interface Window {
     LemonSqueezy?: {
+      /**
+       * Initializes a LemonSqueezy checkout overlay
+       * @param options - Checkout configuration options
+       */
+      Setup: (options: {
+        eventHandler?: (event: { event: string; data?: any }) => void;
+      }) => void;
+      /**
+       * Opens a checkout URL in the LemonSqueezy overlay
+       * @param url - The checkout URL to open
+       */
       Url: {
         Open: (url: string) => void;
       };
+      /**
+       * Refreshes the checkout session
+       */
+      Refresh: () => void;
     };
+    createLemonSqueezy?: () => void;
   }
 }
 
@@ -71,6 +87,39 @@ export function UpgradeButton({
       }
     };
     getUserId();
+
+    // Initialize LemonSqueezy when component mounts
+    const initializeLemonSqueezy = () => {
+      if (window.LemonSqueezy) {
+        window.LemonSqueezy.Setup({
+          eventHandler: (event) => {
+            console.log('LemonSqueezy event:', event);
+            if (event.event === 'Checkout.Success') {
+              // Track successful checkout
+              trackEvent('purchase', 'subscription', 'pro_plan', event.data?.total);
+              // Redirect to success page
+              window.location.href = '/dashboard?upgraded=true';
+            }
+          }
+        });
+      }
+    };
+
+    // Try to initialize immediately or wait for script to load
+    if (window.LemonSqueezy) {
+      initializeLemonSqueezy();
+    } else {
+      // Wait for the script to load
+      const checkLemonSqueezy = setInterval(() => {
+        if (window.LemonSqueezy) {
+          initializeLemonSqueezy();
+          clearInterval(checkLemonSqueezy);
+        }
+      }, 100);
+      
+      // Clear interval after 10 seconds to prevent memory leaks
+      setTimeout(() => clearInterval(checkLemonSqueezy), 10000);
+    }
   }, []);
 
   // Sync internal selectedInterval with defaultInterval prop changes
@@ -132,15 +181,12 @@ export function UpgradeButton({
     const isProduction = process.env.NODE_ENV === 'production';
     const environment = isProduction ? 'PRODUCTION' : 'DEVELOPMENT';
     
-    console.log(`🚀 [${environment}] handleUpgrade called with interval:`, interval);
-    console.log(`🚀 [${environment}] selectedInterval state:`, selectedInterval);
-    console.log(`🚀 [${environment}] defaultInterval prop:`, defaultInterval);
-    console.log(`🚀 [${environment}] Final interval being used:`, interval);
-    console.log(`🚀 [${environment}] showDialog:`, showDialog);
-    console.log(`🚀 [${environment}] Currency:`, selectedCurrency);
-
-    // Alert for debugging - we'll remove this later
-    alert(`HandleUpgrade called with interval: ${interval}`);
+    console.log(`[${environment}] handleUpgrade called with interval:`, interval);
+    console.log(`[${environment}] selectedInterval state:`, selectedInterval);
+    console.log(`[${environment}] defaultInterval prop:`, defaultInterval);
+    console.log(`[${environment}] Final interval being used:`, interval);
+    console.log(`[${environment}] showDialog:`, showDialog);
+    console.log(`[${environment}] Currency:`, selectedCurrency);
 
     // Track upgrade button click
     trackEvent('upgrade_button_click', 'subscription', `pro_plan_${interval}`);
@@ -179,16 +225,45 @@ export function UpgradeButton({
       // Track checkout initiation
       trackEvent('begin_checkout', 'subscription', `pro_plan_${interval}`, interval === 'year' ? 99.99 : 9.99);
       
+      // In development mode, show warning about checkout
+      if (!isProduction) {
+        const proceed = confirm(
+          `Development Mode: You are about to be redirected to the checkout page.\n\n` +
+          `URL: ${checkoutUrl}\n\n` +
+          `Click OK to proceed or Cancel to abort.`
+        );
+        if (!proceed) {
+          setIsLoading(false);
+          return;
+        }
+      }
+      
       // Open Lemon Squeezy checkout overlay if available, otherwise redirect
       if (window.LemonSqueezy?.Url?.Open) {
+        console.log(`[${environment}] Opening LemonSqueezy overlay with URL:`, checkoutUrl);
         window.LemonSqueezy.Url.Open(checkoutUrl);
       } else {
-        // Fallback to opening in new tab
-        window.open(checkoutUrl, '_blank');
+        console.log(`[${environment}] LemonSqueezy overlay not available, redirecting to:`, checkoutUrl);
+        // Fallback to direct redirect (same tab to avoid popup blockers)
+        window.location.href = checkoutUrl;
       }
     } catch (error) {
       console.error(`[${environment}] Error initiating checkout:`, error);
-      alert('Something went wrong. Please try again.');
+      
+      // Show more specific error messages
+      let errorMessage = 'Something went wrong with the checkout process. Please try again.';
+      
+      if (error instanceof Error) {
+        if (error.message.includes('network')) {
+          errorMessage = 'Network error. Please check your connection and try again.';
+        } else if (error.message.includes('authentication')) {
+          errorMessage = 'Authentication error. Please sign in and try again.';
+        } else if (error.message.includes('checkout')) {
+          errorMessage = 'Checkout service temporarily unavailable. Please try again in a few minutes.';
+        }
+      }
+      
+      alert(errorMessage);
     } finally {
       setIsLoading(false);
     }
@@ -205,14 +280,10 @@ export function UpgradeButton({
           size={size} 
           className={className}
           onClick={() => {
-            console.log('🔥 UPGRADE BUTTON CLICKED - Debug info:');
+            console.log('Button clicked - Debug info:');
             console.log('  defaultInterval prop:', defaultInterval);
             console.log('  selectedInterval state:', selectedInterval);
             console.log('  About to call handleUpgrade with:', selectedInterval);
-            
-            // Alert for debugging - we'll remove this later
-            alert(`Debug: defaultInterval=${defaultInterval}, selectedInterval=${selectedInterval}, calling handleUpgrade with ${selectedInterval}`);
-            
             handleUpgrade(selectedInterval);
           }}
           disabled={isLoading}

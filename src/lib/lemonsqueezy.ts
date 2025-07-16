@@ -45,7 +45,7 @@ export const LEMONSQUEEZY_PRODUCTS: Record<string, LemonSqueezyProduct> = {
     price: BASE_PRICES_TND.MONTHLY, // 29 TND
     variantId: process.env.LEMONSQUEEZY_PRO_MONTHLY_VARIANT_ID || '',
     interval: 'month',
-    checkoutUrl: 'https://hypertroq.lemonsqueezy.com/buy/3670ca61-2fe7-4fbf-a0ba-01f9f0313099?enabled=898912'
+    checkoutUrl: 'https://hypertroq.lemonsqueezy.com/buy/3670ca61-2fe7-4fbf-a0ba-01f9f0313099'
   },
   PRO_YEARLY: {
     id: process.env.LEMONSQUEEZY_PRO_YEARLY_PRODUCT_ID || '',
@@ -53,7 +53,7 @@ export const LEMONSQUEEZY_PRODUCTS: Record<string, LemonSqueezyProduct> = {
     price: BASE_PRICES_TND.YEARLY, // 278 TND (20% discount)
     variantId: process.env.LEMONSQUEEZY_PRO_YEARLY_VARIANT_ID || '',
     interval: 'year',
-    checkoutUrl: 'https://hypertroq.lemonsqueezy.com/buy/9c872ed8-6ef8-47b2-a2dd-00a832697ebb?enabled=896458'
+    checkoutUrl: 'https://hypertroq.lemonsqueezy.com/buy/9c872ed8-6ef8-47b2-a2dd-00a832697ebb'
   }
 };
 
@@ -287,12 +287,17 @@ export async function createProCheckoutUrl(
     
     let checkoutUrl = product.checkoutUrl;
     
-    // Add user data as query parameters if needed
+    // Add user data and success URL as query parameters
     const params = new URLSearchParams();
     if (userEmail) {
       params.append('checkout[email]', userEmail);
     }
     params.append('checkout[custom][user_id]', userId);
+    
+    // Add success and cancel URLs
+    const baseUrl = process.env.NEXT_PUBLIC_SITE_URL || 'https://hypertroq.com';
+    params.append('checkout[success_url]', `${baseUrl}/checkout/success`);
+    params.append('checkout[cancel_url]', `${baseUrl}/pricing`);
     
     if (params.toString()) {
       const separator = checkoutUrl.includes('?') ? '&' : '?';
