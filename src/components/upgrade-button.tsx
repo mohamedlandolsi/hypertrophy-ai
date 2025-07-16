@@ -132,12 +132,15 @@ export function UpgradeButton({
     const isProduction = process.env.NODE_ENV === 'production';
     const environment = isProduction ? 'PRODUCTION' : 'DEVELOPMENT';
     
-    console.log(`[${environment}] handleUpgrade called with interval:`, interval);
-    console.log(`[${environment}] selectedInterval state:`, selectedInterval);
-    console.log(`[${environment}] defaultInterval prop:`, defaultInterval);
-    console.log(`[${environment}] Final interval being used:`, interval);
-    console.log(`[${environment}] showDialog:`, showDialog);
-    console.log(`[${environment}] Currency:`, selectedCurrency);
+    console.log(`🚀 [${environment}] handleUpgrade called with interval:`, interval);
+    console.log(`🚀 [${environment}] selectedInterval state:`, selectedInterval);
+    console.log(`🚀 [${environment}] defaultInterval prop:`, defaultInterval);
+    console.log(`🚀 [${environment}] Final interval being used:`, interval);
+    console.log(`🚀 [${environment}] showDialog:`, showDialog);
+    console.log(`🚀 [${environment}] Currency:`, selectedCurrency);
+
+    // Alert for debugging - we'll remove this later
+    alert(`HandleUpgrade called with interval: ${interval}`);
 
     // Track upgrade button click
     trackEvent('upgrade_button_click', 'subscription', `pro_plan_${interval}`);
@@ -202,10 +205,14 @@ export function UpgradeButton({
           size={size} 
           className={className}
           onClick={() => {
-            console.log('Button clicked - Debug info:');
+            console.log('🔥 UPGRADE BUTTON CLICKED - Debug info:');
             console.log('  defaultInterval prop:', defaultInterval);
             console.log('  selectedInterval state:', selectedInterval);
             console.log('  About to call handleUpgrade with:', selectedInterval);
+            
+            // Alert for debugging - we'll remove this later
+            alert(`Debug: defaultInterval=${defaultInterval}, selectedInterval=${selectedInterval}, calling handleUpgrade with ${selectedInterval}`);
+            
             handleUpgrade(selectedInterval);
           }}
           disabled={isLoading}
