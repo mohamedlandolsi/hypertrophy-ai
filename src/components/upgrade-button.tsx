@@ -201,7 +201,7 @@ export function UpgradeButton({
           variant={variant} 
           size={size} 
           className={className}
-          onClick={() => handleUpgrade(defaultInterval)}
+          onClick={() => handleUpgrade(selectedInterval)}
           disabled={isLoading}
         >
           {isLoading ? (
