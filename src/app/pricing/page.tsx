@@ -90,6 +90,11 @@ export default function PricingPage() {
     setPricingData(pricing);
   };
 
+  // Add effect to track billingInterval changes
+  useEffect(() => {
+    console.log('Pricing page: billingInterval changed to:', billingInterval);
+  }, [billingInterval]);
+
   const features = {
     free: [
       '15 messages per day',
@@ -185,6 +190,7 @@ export default function PricingPage() {
                 const newInterval = billingInterval === 'month' ? 'year' : 'month';
                 console.log('Pricing page: billing interval changing from', billingInterval, 'to', newInterval);
                 setBillingInterval(newInterval);
+                console.log('Pricing page: billingInterval state will be updated to', newInterval);
               }}
               className={`relative inline-flex h-6 w-11 items-center rounded-full transition-colors ${
                 billingInterval === 'year' ? 'bg-blue-600' : 'bg-gray-200 dark:bg-gray-700'

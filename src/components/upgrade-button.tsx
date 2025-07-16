@@ -137,6 +137,7 @@ export function UpgradeButton({
     console.log(`[${environment}] defaultInterval prop:`, defaultInterval);
     console.log(`[${environment}] Final interval being used:`, interval);
     console.log(`[${environment}] showDialog:`, showDialog);
+    console.log(`[${environment}] Currency:`, selectedCurrency);
 
     // Track upgrade button click
     trackEvent('upgrade_button_click', 'subscription', `pro_plan_${interval}`);
@@ -149,7 +150,7 @@ export function UpgradeButton({
         interval,
         currency: selectedCurrency 
       };
-      console.log('Sending request body:', requestBody);
+      console.log(`[${environment}] Sending request body:`, requestBody);
       
       const response = await fetch('/api/checkout/create', {
         method: 'POST',
@@ -160,12 +161,17 @@ export function UpgradeButton({
       });
 
       if (!response.ok) {
+        const errorText = await response.text();
+        console.error(`[${environment}] Checkout API error:`, errorText);
         throw new Error('Failed to create checkout URL');
       }
 
-      const { checkoutUrl } = await response.json();
+      const responseData = await response.json();
+      console.log(`[${environment}] Checkout API response:`, responseData);
       
-      console.log('Checkout URL:', checkoutUrl); // Debug log
+      const { checkoutUrl } = responseData;
+      
+      console.log(`[${environment}] Checkout URL:`, checkoutUrl);
       
       // Track checkout initiation
       trackEvent('begin_checkout', 'subscription', `pro_plan_${interval}`, interval === 'year' ? 99.99 : 9.99);
@@ -178,7 +184,7 @@ export function UpgradeButton({
         window.open(checkoutUrl, '_blank');
       }
     } catch (error) {
-      console.error('Error initiating checkout:', error);
+      console.error(`[${environment}] Error initiating checkout:`, error);
       alert('Something went wrong. Please try again.');
     } finally {
       setIsLoading(false);
@@ -195,7 +201,7 @@ export function UpgradeButton({
           variant={variant} 
           size={size} 
           className={className}
-          onClick={() => handleUpgrade(selectedInterval)}
+          onClick={() => handleUpgrade(defaultInterval)}
           disabled={isLoading}
         >
           {isLoading ? (

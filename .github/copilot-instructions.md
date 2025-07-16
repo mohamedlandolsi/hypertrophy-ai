@@ -13,6 +13,13 @@
 - **Error Handling**: Centralized `ApiErrorHandler` with correlation IDs and structured logging
 - **Subscription System**: Two-tier model (FREE/PRO) with daily usage tracking and Lemon Squeezy integration
 
+### Critical Architecture Decisions
+- **Guest Mode Support**: Chat API handles both authenticated and guest users (no DB persistence for guests)
+- **Singleton AI Config**: Single row configuration table prevents system usage without admin setup
+- **Hybrid Search**: Vector similarity + keyword matching for better fitness content retrieval
+- **Chunking Strategy**: 512 chars with 100 char overlap optimized for fitness/scientific content
+- **Embedding Storage**: JSON strings (temporary) until pgvector migration - not efficient for large scale
+
 ## 🚀 Development Workflows
 
 ### Essential Build Commands
@@ -129,12 +136,52 @@ await incrementUserMessageCount() // Track usage
 - User authentication via `createClient()` from `@/lib/supabase/server`
 - Structure: validate → authenticate → process → return with error handling
 - Use try-catch with structured error responses
+- **Guest Mode**: Check `isGuest` parameter and skip DB operations for guest users
+- **Content-Type Detection**: Use `request.headers.get('content-type')` to handle multipart vs JSON
+
+### API Route Example Pattern
+```typescript
+export async function POST(request: NextRequest) {
+  const context = ApiErrorHandler.createContext(request);
+  
+  try {
+    // Auth (optional for guest endpoints)
+    const supabase = await createClient();
+    const { data: { user } } = await supabase.auth.getUser();
+    
+    // Handle both JSON and FormData
+    const contentType = request.headers.get('content-type');
+    let body, imageFile;
+    
+    if (contentType?.includes('multipart/form-data')) {
+      const formData = await request.formData();
+      body = { message: formData.get('message') as string };
+      imageFile = formData.get('image') as File;
+    } else {
+      body = await request.json();
+    }
+    
+    // Validate, process, return
+    // ...
+  } catch (error) {
+    return ApiErrorHandler.handleError(error, context);
+  }
+}
+```
 
 ### Component Patterns
 - **Arabic-aware components**: Use `arabic-aware-input.tsx`, `arabic-aware-textarea.tsx` for proper RTL support
 - **Plan badges**: Use `PlanBadge` component with `UserPlan` enum (FREE/PRO)
 - **Subscription UI**: `UpgradeButton` handles Lemon Squeezy checkout flow
 - **Theme support**: All components support dark/light mode via `next-themes`
+- **Text Direction**: Use `getTextDirection()` from `@/lib/text-formatting` for mixed Arabic/English content
+- **Client-Only Wrapping**: Use `ClientOnly` wrapper for components with hydration issues
+
+### Error Handling Integration
+- Import `AppError`, `ValidationError`, `AuthenticationError` from `@/lib/error-handler`
+- Use `ApiErrorHandler.validateFile()` for file uploads with size/type constraints
+- Wrap API routes with `ApiErrorHandler.handleError(error, context)` in catch blocks
+- Error types: `VALIDATION`, `AUTHENTICATION`, `AUTHORIZATION`, `NOT_FOUND`, `RATE_LIMIT`
 
 ### Database Schema Highlights (`/prisma/schema.prisma`)
 - `KnowledgeChunk` - Chunked content with embeddings (chunkIndex for ordering)
@@ -143,6 +190,14 @@ await incrementUserMessageCount() // Track usage
 - `User.hasCompletedOnboarding` - Tracks onboarding completion for user flow
 - `User.plan` - Subscription tier (FREE/PRO) with message tracking
 - `Subscription` - Lemon Squeezy integration with billing periods
+- `Message.imageData` - Base64 encoded image storage with `imageMimeType`
+- `ProcessingStatus` - Tracks file processing states (`PROCESSING`, `READY`, `FAILED`)
+
+### Database Operation Patterns
+- Use `@/lib/prisma` for database client (single instance)
+- Cascade deletes: `KnowledgeChunk` → `KnowledgeItem`, `Message` → `Chat`
+- Include patterns: Always include related data needed for UI in single queries
+- Transaction usage: Wrap multi-table operations in `prisma.$transaction()`
 
 ### Tech Stack Essentials
 - **Framework**: Next.js 15 with App Router and Server Components
@@ -170,6 +225,13 @@ const { PrismaClient } = require('@prisma/client');
 const { functionName } = require('./src/lib/module-name');
 // Execute from project root: node debug-script-name.js
 ```
+
+### Development Environment Setup
+- **Database**: PostgreSQL with connection pooling via Prisma
+- **Local Development**: `npm run dev` or `npm run dev:turbo` (faster with turbopack)
+- **Build Process**: `npm run build` includes Prisma client generation
+- **Environment**: Windows PowerShell default - use forward slashes in paths
+- **Debugging**: VS Code with Prisma extension for schema management
 
 ### Common Issues
 - **"AI Configuration not found"** → Run `/admin` setup first
