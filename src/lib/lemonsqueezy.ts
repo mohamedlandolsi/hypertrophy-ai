@@ -109,6 +109,16 @@ class LemonSqueezyService {
     }
 
     console.log(`Selected product: ${product.name} (${product.interval}) with variant ID: ${product.variantId}`);
+    console.log(`Environment check - Store ID: ${this.storeId}, API Key: ${this.apiKey ? 'SET' : 'NOT SET'}`);
+
+    // Validate that the product and variant IDs are properly configured
+    if (!product.id || product.id === '') {
+      throw new Error(`Product ID is not configured for ${product.name}`);
+    }
+    
+    if (!product.variantId || product.variantId === '') {
+      throw new Error(`Variant ID is not configured for ${product.name}`);
+    }
 
     const checkoutData = {
       data: {
@@ -156,6 +166,12 @@ class LemonSqueezyService {
       method: 'POST',
       body: JSON.stringify(checkoutData),
     });
+
+    console.log('LemonSqueezy API Response:', JSON.stringify(response, null, 2));
+
+    if (!response.data || !response.data.attributes || !response.data.attributes.url) {
+      throw new Error('Invalid response from LemonSqueezy API: missing checkout URL');
+    }
 
     let checkoutUrl = response.data.attributes.url;
     
@@ -273,6 +289,14 @@ export async function createProCheckoutUrl(
       interval: product.interval
     });
     
+    // Validate environment variables match the expected format
+    console.log('Environment variable validation:');
+    console.log(`LEMONSQUEEZY_PRO_MONTHLY_PRODUCT_ID: ${process.env.LEMONSQUEEZY_PRO_MONTHLY_PRODUCT_ID}`);
+    console.log(`LEMONSQUEEZY_PRO_MONTHLY_VARIANT_ID: ${process.env.LEMONSQUEEZY_PRO_MONTHLY_VARIANT_ID}`);
+    console.log(`LEMONSQUEEZY_PRO_YEARLY_PRODUCT_ID: ${process.env.LEMONSQUEEZY_PRO_YEARLY_PRODUCT_ID}`);
+    console.log(`LEMONSQUEEZY_PRO_YEARLY_VARIANT_ID: ${process.env.LEMONSQUEEZY_PRO_YEARLY_VARIANT_ID}`);
+    console.log(`LEMONSQUEEZY_STORE_ID: ${process.env.LEMONSQUEEZY_STORE_ID}`);
+    
     // Check if product configuration is valid
     if (!product.id || product.id === 'your_monthly_product_id' || product.id === 'your_yearly_product_id' || product.id === '') {
       throw new Error(`LemonSqueezy product not configured for interval: ${interval}. Please configure LEMONSQUEEZY_PRO_${interval.toUpperCase()}_PRODUCT_ID environment variable.`);
@@ -281,6 +305,18 @@ export async function createProCheckoutUrl(
     if (!product.variantId || product.variantId === 'your_monthly_variant_id' || product.variantId === 'your_yearly_variant_id' || product.variantId === '') {
       throw new Error(`LemonSqueezy variant not configured for interval: ${interval}. Please configure LEMONSQUEEZY_PRO_${interval.toUpperCase()}_VARIANT_ID environment variable.`);
     }
+    
+    // Validate variant ID format (should be numeric for LemonSqueezy)
+    if (!/^\d+$/.test(product.variantId)) {
+      throw new Error(`Invalid variant ID format for ${interval}: ${product.variantId}. LemonSqueezy variant IDs should be numeric.`);
+    }
+    
+    // Validate product ID format (should be numeric for LemonSqueezy)
+    if (!/^\d+$/.test(product.id)) {
+      throw new Error(`Invalid product ID format for ${interval}: ${product.id}. LemonSqueezy product IDs should be numeric.`);
+    }
+    
+    console.log('All validations passed, creating checkout URL...');
     
     return service.createCheckoutUrl({
       productId: product.id,
