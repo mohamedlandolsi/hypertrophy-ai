@@ -150,14 +150,25 @@ class LemonSqueezyService {
       },
     };
 
+    console.log('Creating checkout with data:', JSON.stringify(checkoutData, null, 2));
+
     const response = await this.makeRequest('/checkouts', {
       method: 'POST',
       body: JSON.stringify(checkoutData),
     });
 
-    const checkoutUrl = response.data.attributes.url;
+    let checkoutUrl = response.data.attributes.url;
+    
+    // Ensure the URL has the correct variant enabled
+    // If the URL doesn't already have the enabled parameter, add it
+    if (!checkoutUrl.includes('enabled=')) {
+      const separator = checkoutUrl.includes('?') ? '&' : '?';
+      checkoutUrl = `${checkoutUrl}${separator}enabled=${product.variantId}`;
+    }
+    
     console.log(`Generated checkout URL: ${checkoutUrl}`);
     console.log(`URL should contain variant: ${product.variantId}`);
+    console.log(`Product interval: ${product.interval}`);
     
     return checkoutUrl;
   }

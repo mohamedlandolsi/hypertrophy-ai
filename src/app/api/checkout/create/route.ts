@@ -41,6 +41,10 @@ export async function POST(request: NextRequest) {
       interval 
     });
     
+    console.log('Checkout API: Creating checkout URL with interval:', interval);
+    console.log('Checkout API: User ID:', user.id);
+    console.log('Checkout API: User email:', user.email);
+    
     // Create checkout URL
     const checkoutUrl = await createProCheckoutUrl(
       user.id, 
@@ -48,10 +52,18 @@ export async function POST(request: NextRequest) {
       interval as 'month' | 'year'
     );
     
+    console.log('Checkout API: Generated checkout URL:', checkoutUrl);
+    console.log('Checkout API: URL contains interval-specific variant?', 
+      interval === 'month' ? 
+        checkoutUrl.includes('898912') : 
+        checkoutUrl.includes('896458')
+    );
+    
     logger.info('Checkout URL created successfully', { 
       ...context, 
       userId: user.id,
-      interval 
+      interval,
+      checkoutUrl
     });
     
     return NextResponse.json({
