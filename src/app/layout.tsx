@@ -1,5 +1,6 @@
 import type { Metadata } from "next";
 import { Geist, Geist_Mono } from "next/font/google";
+import Script from "next/script";
 import "./globals.css";
 import ConditionalNavbar from '@/components/conditional-navbar'; // Import ConditionalNavbar
 import { ThemeProvider } from "@/components/theme-provider"; // Import ThemeProvider
@@ -61,24 +62,31 @@ export default async function RootLayout({
         <meta name="apple-mobile-web-app-status-bar-style" content="default" />
         <meta name="apple-mobile-web-app-title" content="HypertroQ" />
         <link rel="apple-touch-icon" href="/logo.png" />
-        <script src="https://app.lemonsqueezy.com/js/lemon.js" defer></script>
-        {/* Google Analytics - Direct Implementation */}
-        <script async src="https://www.googletagmanager.com/gtag/js?id=G-1SDWNDGJHG"></script>
-        <script
-          dangerouslySetInnerHTML={{
-            __html: `
-              window.dataLayer = window.dataLayer || [];
-              function gtag(){dataLayer.push(arguments);}
-              gtag('js', new Date());
-              gtag('config', 'G-1SDWNDGJHG');
-              console.log('Google Analytics: Direct implementation loaded');
-            `,
-          }}
-        />
       </head>
       <body
         className={`${geistSans.variable} ${geistMono.variable} font-sans antialiased flex flex-col h-full`}
       >
+        {/* LemonSqueezy Script */}
+        <Script
+          src="https://app.lemonsqueezy.com/js/lemon.js"
+          strategy="afterInteractive"
+        />
+        
+        {/* Google Analytics - Using next/script component */}
+        <Script
+          src="https://www.googletagmanager.com/gtag/js?id=G-1SDWNDGJHG"
+          strategy="afterInteractive"
+        />
+        <Script id="google-analytics" strategy="afterInteractive">
+          {`
+            window.dataLayer = window.dataLayer || [];
+            function gtag(){dataLayer.push(arguments);}
+            gtag('js', new Date());
+            gtag('config', 'G-1SDWNDGJHG');
+            console.log('Google Analytics: Next.js Script component loaded');
+          `}
+        </Script>
+        
         <ThemeProvider
           attribute="class"
           defaultTheme="system"

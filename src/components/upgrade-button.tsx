@@ -33,7 +33,7 @@ declare global {
        * @param options - Checkout configuration options
        */
       Setup: (options: {
-        eventHandler?: (event: { event: string; data?: any }) => void;
+        eventHandler?: (event: { event: string; data?: { total?: number; orderId?: string; [key: string]: unknown } }) => void;
       }) => void;
       /**
        * Opens a checkout URL in the LemonSqueezy overlay
