@@ -11,6 +11,7 @@ interface LemonSqueezyProduct {
   price: number;
   variantId: string;
   interval?: 'month' | 'year';
+  checkoutUrl?: string;
 }
 
 interface CheckoutOptions {
@@ -43,14 +44,16 @@ export const LEMONSQUEEZY_PRODUCTS: Record<string, LemonSqueezyProduct> = {
     name: 'HypertroQ Pro - Monthly',
     price: BASE_PRICES_TND.MONTHLY, // 29 TND
     variantId: process.env.LEMONSQUEEZY_PRO_MONTHLY_VARIANT_ID || '',
-    interval: 'month'
+    interval: 'month',
+    checkoutUrl: 'https://hypertroq.lemonsqueezy.com/buy/3670ca61-2fe7-4fbf-a0ba-01f9f0313099?enabled=898912'
   },
   PRO_YEARLY: {
     id: process.env.LEMONSQUEEZY_PRO_YEARLY_PRODUCT_ID || '',
     name: 'HypertroQ Pro - Yearly',
     price: BASE_PRICES_TND.YEARLY, // 278 TND (20% discount)
     variantId: process.env.LEMONSQUEEZY_PRO_YEARLY_VARIANT_ID || '',
-    interval: 'year'
+    interval: 'year',
+    checkoutUrl: 'https://hypertroq.lemonsqueezy.com/buy/9c872ed8-6ef8-47b2-a2dd-00a832697ebb?enabled=896458'
   }
 };
 
@@ -266,66 +269,43 @@ export async function createProCheckoutUrl(
   interval: 'month' | 'year' = 'month'
 ): Promise<string> {
   try {
-    // Check if LemonSqueezy is properly configured
-    const apiKey = process.env.LEMONSQUEEZY_API_KEY;
-    const storeId = process.env.LEMONSQUEEZY_STORE_ID;
+    console.log(`createProCheckoutUrl called with interval: ${interval}`);
     
-    if (!apiKey) {
-      throw new Error('LemonSqueezy API key not configured. Please set LEMONSQUEEZY_API_KEY environment variable.');
-    }
-    
-    if (!storeId || storeId === 'your_store_id_here') {
-      throw new Error('LemonSqueezy store ID not configured. Please set LEMONSQUEEZY_STORE_ID environment variable with your actual store ID.');
-    }
-    
-    const service = getLemonSqueezyService();
+    // Use pre-created checkout URLs instead of dynamic API creation
     const product = interval === 'year' ? LEMONSQUEEZY_PRODUCTS.PRO_YEARLY : LEMONSQUEEZY_PRODUCTS.PRO_MONTHLY;
     
-    console.log(`createProCheckoutUrl called with interval: ${interval}`);
     console.log(`Selected product for ${interval}:`, {
       name: product.name,
       id: product.id,
       variantId: product.variantId,
-      interval: product.interval
+      checkoutUrl: product.checkoutUrl
     });
     
-    // Validate environment variables match the expected format
-    console.log('Environment variable validation:');
-    console.log(`LEMONSQUEEZY_PRO_MONTHLY_PRODUCT_ID: ${process.env.LEMONSQUEEZY_PRO_MONTHLY_PRODUCT_ID}`);
-    console.log(`LEMONSQUEEZY_PRO_MONTHLY_VARIANT_ID: ${process.env.LEMONSQUEEZY_PRO_MONTHLY_VARIANT_ID}`);
-    console.log(`LEMONSQUEEZY_PRO_YEARLY_PRODUCT_ID: ${process.env.LEMONSQUEEZY_PRO_YEARLY_PRODUCT_ID}`);
-    console.log(`LEMONSQUEEZY_PRO_YEARLY_VARIANT_ID: ${process.env.LEMONSQUEEZY_PRO_YEARLY_VARIANT_ID}`);
-    console.log(`LEMONSQUEEZY_STORE_ID: ${process.env.LEMONSQUEEZY_STORE_ID}`);
-    
-    // Check if product configuration is valid
-    if (!product.id || product.id === 'your_monthly_product_id' || product.id === 'your_yearly_product_id' || product.id === '') {
-      throw new Error(`LemonSqueezy product not configured for interval: ${interval}. Please configure LEMONSQUEEZY_PRO_${interval.toUpperCase()}_PRODUCT_ID environment variable.`);
+    if (!product.checkoutUrl) {
+      throw new Error(`No checkout URL configured for ${interval} plan`);
     }
     
-    if (!product.variantId || product.variantId === 'your_monthly_variant_id' || product.variantId === 'your_yearly_variant_id' || product.variantId === '') {
-      throw new Error(`LemonSqueezy variant not configured for interval: ${interval}. Please configure LEMONSQUEEZY_PRO_${interval.toUpperCase()}_VARIANT_ID environment variable.`);
+    let checkoutUrl = product.checkoutUrl;
+    
+    // Add user data as query parameters if needed
+    const params = new URLSearchParams();
+    if (userEmail) {
+      params.append('checkout[email]', userEmail);
+    }
+    params.append('checkout[custom][user_id]', userId);
+    
+    if (params.toString()) {
+      const separator = checkoutUrl.includes('?') ? '&' : '?';
+      checkoutUrl = `${checkoutUrl}${separator}${params.toString()}`;
     }
     
-    // Validate variant ID format (should be numeric for LemonSqueezy)
-    if (!/^\d+$/.test(product.variantId)) {
-      throw new Error(`Invalid variant ID format for ${interval}: ${product.variantId}. LemonSqueezy variant IDs should be numeric.`);
-    }
+    console.log(`Generated checkout URL: ${checkoutUrl}`);
+    console.log(`URL contains correct variant: ${checkoutUrl.includes(product.variantId)}`);
     
-    // Validate product ID format (should be numeric for LemonSqueezy)
-    if (!/^\d+$/.test(product.id)) {
-      throw new Error(`Invalid product ID format for ${interval}: ${product.id}. LemonSqueezy product IDs should be numeric.`);
-    }
+    return checkoutUrl;
     
-    console.log('All validations passed, creating checkout URL...');
-    
-    return service.createCheckoutUrl({
-      productId: product.id,
-      variantId: product.variantId,
-      userId,
-      userEmail,
-    });
   } catch (error) {
-    console.error('LemonSqueezy checkout creation failed:', error);
+    console.error('Error creating checkout URL:', error);
     throw error;
   }
 }
