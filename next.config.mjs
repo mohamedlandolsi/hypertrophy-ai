@@ -6,9 +6,10 @@ const cspHeader = `
   font-src 'self';
   object-src 'none';
   base-uri 'self';
-  form-action 'self';
-  frame-ancestors 'none';
-  connect-src 'self' https://*.supabase.co wss://*.supabase.co https://api.lemonsqueezy.com https://api.exchangerate-api.com;
+  form-action 'self' https://hypertroq.lemonsqueezy.com;
+  frame-ancestors 'self';
+  frame-src 'self' https://hypertroq.lemonsqueezy.com https://*.lemonsqueezy.com;
+  connect-src 'self' https://*.supabase.co wss://*.supabase.co https://api.lemonsqueezy.com https://api.exchangerate-api.com https://hypertroq.lemonsqueezy.com;
   worker-src 'self' blob:;
 `;
 
