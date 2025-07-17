@@ -24,6 +24,7 @@ import {
   BarChart3
 } from 'lucide-react';
 import Link from 'next/link';
+import Image from 'next/image';
 import type { User as SupabaseUser } from '@supabase/supabase-js';
 import { FitnessLoading } from '@/components/ui/loading';
 import EnhancedProfileForm from '@/components/enhanced-profile-form';
@@ -160,8 +161,18 @@ export default function ProfilePage() {
                     </p>
                   </div>
                   <div className="hidden md:block">
-                    <div className="h-16 w-16 rounded-full bg-white/20 flex items-center justify-center">
-                      <MessageSquare className="h-8 w-8" />
+                    <div className="h-16 w-16 rounded-full bg-white/20 flex items-center justify-center overflow-hidden">
+                      {user.user_metadata?.avatar_url ? (
+                        <Image 
+                          src={user.user_metadata.avatar_url} 
+                          alt="Profile" 
+                          width={64}
+                          height={64}
+                          className="w-full h-full object-cover"
+                        />
+                      ) : (
+                        <MessageSquare className="h-8 w-8" />
+                      )}
                     </div>
                   </div>
                 </div>

@@ -24,6 +24,7 @@ import {
   Loader2
 } from 'lucide-react';
 import { useToast } from '@/hooks/use-toast';
+import type { User as SupabaseUser } from '@supabase/supabase-js';
 import { 
   ProfileAvatar, 
   StepperInput, 
@@ -181,25 +182,35 @@ export default function EnhancedProfileForm() {
   const [formData, setFormData] = useState<ProfileFormData>({});
   const [isLoading, setIsLoading] = useState(false);
   const [isSaving, setIsSaving] = useState(false);
+  const [user, setUser] = useState<SupabaseUser | null>(null);
+  const [avatarUrl, setAvatarUrl] = useState<string>('');
 
-  // Load existing profile data
+  // Load existing profile data and user info
   useEffect(() => {
-    const loadProfile = async () => {
+    const loadProfileAndUser = async () => {
       setIsLoading(true);
       try {
+        // Load user info first
+        const { createClient } = await import('@/lib/supabase/client');
+        const supabase = createClient();
+        const { data: { user: currentUser } } = await supabase.auth.getUser();
+        setUser(currentUser);
+        setAvatarUrl(currentUser?.user_metadata?.avatar_url || '');
+
+        // Load profile data
         const response = await fetch('/api/profile');
         if (response.ok) {
           const data = await response.json();
-          setFormData(data);
+          setFormData(data.profile || {});
         }
       } catch (error) {
-        console.error('Error loading profile:', error);
+        console.error('Error loading profile and user:', error);
       } finally {
         setIsLoading(false);
       }
     };
 
-    loadProfile();
+    loadProfileAndUser();
   }, []);
 
   const updateField = (field: keyof ProfileFormData, value: ProfileFormData[keyof ProfileFormData]) => {
@@ -304,10 +315,14 @@ export default function EnhancedProfileForm() {
         <Card>
           <CardContent className="pt-6">
             <ProfileAvatar 
-              name={formData.name}
-              onImageChange={(file) => {
-                // Handle image upload
-                console.log('Image upload:', file);
+              name={formData.name || user?.user_metadata?.full_name}
+              imageUrl={avatarUrl}
+              onImageUpdate={(url) => {
+                setAvatarUrl(url);
+                toast({
+                  title: "Success",
+                  description: "Profile picture updated successfully",
+                });
               }}
             />
           </CardContent>

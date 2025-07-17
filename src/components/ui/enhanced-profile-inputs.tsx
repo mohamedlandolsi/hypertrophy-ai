@@ -6,7 +6,7 @@ import { Card, CardContent } from '@/components/ui/card';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { cn } from '@/lib/utils';
-import { Camera, Plus, Minus } from 'lucide-react';
+import { Camera, Plus, Minus, X } from 'lucide-react';
 import { useState, useEffect } from 'react';
 
 interface StepperInputProps {
@@ -199,15 +199,74 @@ interface ProfileAvatarProps {
   name?: string;
   imageUrl?: string;
   onImageChange?: (file: File) => void;
+  onImageUpdate?: (url: string) => void;
 }
 
-export function ProfileAvatar({ name, imageUrl, onImageChange }: ProfileAvatarProps) {
+export function ProfileAvatar({ name, imageUrl, onImageChange, onImageUpdate }: ProfileAvatarProps) {
   const [isHovered, setIsHovered] = useState(false);
+  const [isUploading, setIsUploading] = useState(false);
 
-  const handleFileChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+  const handleFileChange = async (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0];
-    if (file && onImageChange) {
+    if (!file) return;
+
+    // Call the onImageChange callback if provided (for backward compatibility)
+    if (onImageChange) {
       onImageChange(file);
+    }
+
+    // Handle the upload directly
+    setIsUploading(true);
+    try {
+      const formData = new FormData();
+      formData.append('avatar', file);
+
+      const response = await fetch('/api/profile/avatar', {
+        method: 'POST',
+        body: formData,
+      });
+
+      if (!response.ok) {
+        throw new Error('Failed to upload avatar');
+      }
+
+      const result = await response.json();
+      
+      if (result.success && onImageUpdate) {
+        onImageUpdate(result.avatar_url);
+      }
+    } catch (error) {
+      console.error('Error uploading avatar:', error);
+      // You might want to show a toast notification here
+    } finally {
+      setIsUploading(false);
+      // Clear the input so the same file can be selected again
+      e.target.value = '';
+    }
+  };
+
+  const handleRemoveAvatar = async () => {
+    if (!imageUrl) return;
+
+    setIsUploading(true);
+    try {
+      const response = await fetch('/api/profile/avatar', {
+        method: 'DELETE',
+      });
+
+      if (!response.ok) {
+        throw new Error('Failed to remove avatar');
+      }
+
+      const result = await response.json();
+      
+      if (result.success && onImageUpdate) {
+        onImageUpdate('');
+      }
+    } catch (error) {
+      console.error('Error removing avatar:', error);
+    } finally {
+      setIsUploading(false);
     }
   };
 
@@ -228,14 +287,31 @@ export function ProfileAvatar({ name, imageUrl, onImageChange }: ProfileAvatarPr
           "absolute inset-0 bg-black/50 rounded-full flex items-center justify-center transition-opacity",
           isHovered ? "opacity-100" : "opacity-0"
         )}>
-          <Camera className="w-6 h-6 text-white" />
+          {isUploading ? (
+            <div className="animate-spin rounded-full h-6 w-6 border-b-2 border-white"></div>
+          ) : (
+            <Camera className="w-6 h-6 text-white" />
+          )}
         </div>
         <input
           type="file"
           accept="image/*"
           onChange={handleFileChange}
-          className="absolute inset-0 w-full h-full opacity-0 cursor-pointer"
+          disabled={isUploading}
+          className="absolute inset-0 w-full h-full opacity-0 cursor-pointer disabled:cursor-not-allowed"
         />
+        {/* Remove Avatar Button */}
+        {imageUrl && !isUploading && (
+          <Button
+            type="button"
+            size="sm"
+            variant="destructive"
+            className="absolute -top-2 -right-2 h-6 w-6 rounded-full p-0"
+            onClick={handleRemoveAvatar}
+          >
+            <X className="h-3 w-3" />
+          </Button>
+        )}
       </div>
     </div>
   );
