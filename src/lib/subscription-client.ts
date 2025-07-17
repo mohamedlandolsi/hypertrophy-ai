@@ -40,7 +40,7 @@ export function getPlanDisplayInfo(plan: UserPlan) {
     case 'PRO':
       return {
         name: 'Pro',
-        price: '$9.99',
+        price: '$9',
         period: '/month',
         color: 'text-blue-600',
         bgColor: 'bg-blue-100',

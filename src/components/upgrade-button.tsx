@@ -105,12 +105,12 @@ export function UpgradeButton({
           // Silently use fallback pricing
           setPricingData({
             currency: selectedCurrency,
-            monthly: 29,
-            yearly: 278,
-            savings: 6,
-            savingsPercentage: 20,
-            formattedMonthly: '29 TND',
-            formattedYearly: '278 TND'
+            monthly: 28,
+            yearly: 281,
+            savings: 4.58,
+            savingsPercentage: 17,
+            formattedMonthly: '28 TND',
+            formattedYearly: '281 TND'
           });
         }
       };
@@ -169,7 +169,7 @@ export function UpgradeButton({
       console.log(`[${environment}] Checkout URL:`, checkoutUrl);
       
       // Track checkout initiation
-      trackEvent('begin_checkout', 'subscription', `pro_plan_${interval}`, interval === 'year' ? 99.99 : 9.99);
+      trackEvent('begin_checkout', 'subscription', `pro_plan_${interval}`, interval === 'year' ? 90 : 9);
       
       // In development mode, show warning about checkout
       if (!isProduction) {

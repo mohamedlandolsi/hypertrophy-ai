@@ -3,7 +3,7 @@
  * Handles checkout URL generation and subscription management
  */
 
-import { BASE_PRICES_TND } from './currency';
+import { BASE_PRICES_USD } from './currency';
 
 interface LemonSqueezyProduct {
   id: string;
@@ -37,12 +37,12 @@ interface LemonSqueezySubscription {
   updated_at: string;
 }
 
-// Product configuration - Updated with TND-based pricing
+// Product configuration - Updated with USD-based pricing
 export const LEMONSQUEEZY_PRODUCTS: Record<string, LemonSqueezyProduct> = {
   PRO_MONTHLY: {
     id: process.env.LEMONSQUEEZY_PRO_MONTHLY_PRODUCT_ID || '',
     name: 'HypertroQ Pro - Monthly',
-    price: BASE_PRICES_TND.MONTHLY, // 29 TND
+    price: BASE_PRICES_USD.MONTHLY, // $9 USD
     variantId: process.env.LEMONSQUEEZY_PRO_MONTHLY_VARIANT_ID || '',
     interval: 'month',
     checkoutUrl: 'https://hypertroq.lemonsqueezy.com/buy/3670ca61-2fe7-4fbf-a0ba-01f9f0313099'
@@ -50,7 +50,7 @@ export const LEMONSQUEEZY_PRODUCTS: Record<string, LemonSqueezyProduct> = {
   PRO_YEARLY: {
     id: process.env.LEMONSQUEEZY_PRO_YEARLY_PRODUCT_ID || '',
     name: 'HypertroQ Pro - Yearly',
-    price: BASE_PRICES_TND.YEARLY, // 278 TND (20% discount)
+    price: BASE_PRICES_USD.YEARLY, // $90 USD (10 months pricing)
     variantId: process.env.LEMONSQUEEZY_PRO_YEARLY_VARIANT_ID || '',
     interval: 'year',
     checkoutUrl: 'https://hypertroq.lemonsqueezy.com/buy/9c872ed8-6ef8-47b2-a2dd-00a832697ebb'

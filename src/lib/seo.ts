@@ -144,7 +144,7 @@ export function generateSchema(type: 'WebSite' | 'Organization' | 'Product' | 'A
         },
         offers: {
           '@type': 'Offer',
-          price: '9.99',
+          price: '9',
           priceCurrency: 'USD',
           availability: 'https://schema.org/InStock',
         },

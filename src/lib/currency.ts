@@ -1,19 +1,19 @@
 /**
  * Currency conversion service for HypertroQ pricing
- * Converts from TND (Tunisian Dinar) to various currencies
+ * Converts from USD (US Dollar) to various currencies
  */
 
-// Base prices in TND (Tunisian Dinar)
-export const BASE_PRICES_TND = {
-  MONTHLY: 29,
-  YEARLY: 278, // 20% discount from 29 * 12 = 348
+// Base prices in USD (US Dollar)
+export const BASE_PRICES_USD = {
+  MONTHLY: 9, // $9 USD
+  YEARLY: 90, // $90 USD (10 months pricing)
 } as const;
 
 // Supported currencies with their symbols and country info
 export const SUPPORTED_CURRENCIES = {
-  TND: { symbol: 'TND', name: 'Tunisian Dinar', country: 'Tunisia', flag: '🇹🇳' },
   USD: { symbol: '$', name: 'US Dollar', country: 'United States', flag: '🇺🇸' },
   EUR: { symbol: '€', name: 'Euro', country: 'European Union', flag: '🇪🇺' },
+  TND: { symbol: 'TND', name: 'Tunisian Dinar', country: 'Tunisia', flag: '🇹🇳' },
   EGP: { symbol: 'ج.م', name: 'Egyptian Pound', country: 'Egypt', flag: '🇪🇬' },
   DZD: { symbol: 'د.ج', name: 'Algerian Dinar', country: 'Algeria', flag: '🇩🇿' },
   MAD: { symbol: 'د.م.', name: 'Moroccan Dirham', country: 'Morocco', flag: '🇲🇦' },
@@ -113,24 +113,30 @@ async function fetchExchangeRates(): Promise<ExchangeRates> {
 }
 
 /**
- * Convert TND amount to target currency
+ * Convert USD amount to target currency
  */
-export async function convertFromTND(
-  amountTND: number,
+export async function convertFromUSD(
+  amountUSD: number,
   targetCurrency: CurrencyCode
 ): Promise<number> {
-  if (targetCurrency === 'TND') {
-    return amountTND;
+  if (targetCurrency === 'USD') {
+    return amountUSD;
   }
 
   const rates = await fetchExchangeRates();
-  const rate = rates[targetCurrency];
+  
+  // Exchange rates are from TND base (1 TND = X target currency)
+  // To convert USD to target: USD -> TND -> Target
+  const usdRate = rates['USD']; // TND to USD rate
+  const targetRate = rates[targetCurrency]; // TND to target rate
 
-  if (!rate) {
+  if (!usdRate || !targetRate) {
     throw new Error(`Exchange rate not found for currency: ${targetCurrency}`);
   }
 
-  return amountTND * rate;
+  // Convert USD to TND first (invert the rate), then TND to target
+  const amountTND = amountUSD / usdRate; // USD to TND
+  return amountTND * targetRate; // TND to target
 }
 
 /**
@@ -172,11 +178,11 @@ export function formatCurrency(
  * Get pricing data for a specific currency
  */
 export async function getPricingForCurrency(currency: CurrencyCode): Promise<PricingData> {
-  const monthlyTND = BASE_PRICES_TND.MONTHLY;
-  const yearlyTND = BASE_PRICES_TND.YEARLY;
+  const monthlyUSD = BASE_PRICES_USD.MONTHLY;
+  const yearlyUSD = BASE_PRICES_USD.YEARLY;
 
-  const monthlyConverted = await convertFromTND(monthlyTND, currency);
-  const yearlyConverted = await convertFromTND(yearlyTND, currency);
+  const monthlyConverted = await convertFromUSD(monthlyUSD, currency);
+  const yearlyConverted = await convertFromUSD(yearlyUSD, currency);
 
   const yearlyMonthlyEquivalent = yearlyConverted / 12;
   const savings = monthlyConverted - yearlyMonthlyEquivalent;
@@ -361,11 +367,11 @@ const currencyService = {
   getPricingForCurrency,
   getAllPricingData,
   formatCurrency,
-  convertFromTND,
+  convertFromUSD,
   getDefaultCurrency,
   clearRatesCache,
   SUPPORTED_CURRENCIES,
-  BASE_PRICES_TND,
+  BASE_PRICES_USD,
 };
 
 export default currencyService;

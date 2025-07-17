@@ -139,14 +139,14 @@ export default function PricingPage() {
                   {
                     '@type': 'Offer',
                     name: 'Pro Plan - Monthly',
-                    price: '9.99',
+                    price: '9',
                     priceCurrency: 'USD',
                     description: 'Unlimited messages, conversation memory, personalized training',
                   },
                   {
                     '@type': 'Offer',
                     name: 'Pro Plan - Yearly',
-                    price: '99.99',
+                    price: '90',
                     priceCurrency: 'USD',
                     description: 'Unlimited messages, conversation memory, personalized training - billed annually',
                   }
