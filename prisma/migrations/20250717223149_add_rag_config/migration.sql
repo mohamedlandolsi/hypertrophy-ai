@@ -1,0 +1,4 @@
+-- AlterTable
+ALTER TABLE "AIConfiguration" ADD COLUMN     "ragHighRelevanceThreshold" DOUBLE PRECISION NOT NULL DEFAULT 0.8,
+ADD COLUMN     "ragMaxChunks" INTEGER NOT NULL DEFAULT 5,
+ADD COLUMN     "ragSimilarityThreshold" DOUBLE PRECISION NOT NULL DEFAULT 0.6;

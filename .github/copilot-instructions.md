@@ -2,16 +2,17 @@
 
 ## 🏗️ Architecture Overview
 
-**HypertroQ** is a RAG-powered AI fitness coaching platform built with Next.js 15, featuring personalized client memory, multilingual support (Arabic/English), and scientific knowledge base integration.
+**HypertroQ** is a RAG-powered AI fitness coaching platform built with Next.js 15, featuring personalized client memory, multilingual support (Arabic/English), scientific knowledge base integration, and subscription-based access control.
 
 ### Core Components
 - **RAG System**: Vector embeddings via Gemini + Prisma ORM with chunked knowledge storage
-- **Client Memory**: Comprehensive user profiling with automatic information extraction  
+- **Client Memory**: Comprehensive user profiling with automatic information extraction from chat
 - **AI Configuration**: Admin-controlled system prompts and model parameters (singleton pattern)
 - **Authentication**: Supabase Auth with role-based access (user/admin) + onboarding flow
 - **File Processing**: Multi-format support (PDF, DOC, TXT, MD) with semantic chunking
+- **Subscription System**: FREE (15 msgs/day) vs PRO (unlimited) with Lemon Squeezy integration
+- **Arabic Language Support**: Automatic detection with RTL/LTR handling and fitness terminology
 - **Error Handling**: Centralized `ApiErrorHandler` with correlation IDs and structured logging
-- **Subscription System**: Two-tier model (FREE/PRO) with daily usage tracking and Lemon Squeezy integration
 
 ### Critical Architecture Decisions
 - **Guest Mode Support**: Chat API handles both authenticated and guest users (no DB persistence for guests)
@@ -19,6 +20,7 @@
 - **Hybrid Search**: Vector similarity + keyword matching for better fitness content retrieval
 - **Chunking Strategy**: 512 chars with 100 char overlap optimized for fitness/scientific content
 - **Embedding Storage**: JSON strings (temporary) until pgvector migration - not efficient for large scale
+- **Subscription Enforcement**: Server-side limits for messages, uploads, and knowledge items
 
 ## 🚀 Development Workflows
 
@@ -40,18 +42,24 @@ npm run postinstall     # Generate Prisma client (auto-run after install)
 - File paths use backslashes in Windows but forward slashes work in most contexts
 
 ### Debug Scripts (Run from root, not src/)
+**Essential Testing & Debugging:**
 - `debug-rag-system.js` - Test vector search and context retrieval
-- `debug-users.js` - Inspect user data and permissions  
 - `check-ai-config.js` - Validate AI configuration setup
-- `examine-knowledge.js` - Analyze knowledge base content
-- `find-users.js` - Get actual user IDs for testing
-- `knowledge-test.js` - Test knowledge base functionality
-- `create-admin.js` - Create admin user accounts
 - `manage-user-plans.js` - Admin tool for managing user subscriptions and billing
 - `check-user-plan.js` - Verify individual user subscription status
 - `test-subscription-tiers.js` - Test subscription functionality end-to-end
+- `find-users.js` - Get actual user IDs for testing
+
+**Specialized Debugging:**
+- `debug-users.js` - Inspect user data and permissions  
+- `examine-knowledge.js` - Analyze knowledge base content
+- `knowledge-test.js` - Test knowledge base functionality
+- `create-admin.js` - Create admin user accounts
 - `check-pdf-items.js` - Debug PDF processing and chunking
 - `final-google-oauth-onboarding-verification.js` - Verify OAuth onboarding flow
+- `test-arabic-support.js` - Test Arabic language detection and responses
+- `debug-lemonsqueezy-checkout.js` - Test LemonSqueezy payment integration
+- `test-rag-fixes.js` - Test RAG configuration and context retrieval without titles
 
 ### Critical Environment Variables
 ```bash
@@ -61,6 +69,13 @@ SUPABASE_SERVICE_ROLE_KEY=       # Server-side admin operations
 GEMINI_API_KEY=                  # Google Gemini API for AI/embeddings
 DATABASE_URL=                    # PostgreSQL connection string
 DIRECT_URL=                      # Direct DB connection (for migrations)
+
+# Subscription System (Lemon Squeezy)
+LEMONSQUEEZY_API_KEY=            # API key for Lemon Squeezy
+LEMONSQUEEZY_STORE_ID=           # Store ID for product management
+LEMONSQUEEZY_PRO_MONTHLY_PRODUCT_ID=  # Monthly subscription product
+LEMONSQUEEZY_PRO_YEARLY_PRODUCT_ID=   # Yearly subscription product
+LEMONSQUEEZY_WEBHOOK_SECRET=     # Webhook signature verification
 ```
 
 ## 📋 Project-Specific Patterns
@@ -80,6 +95,8 @@ await getRelevantContext(query, { userId, limit: 10, threshold: 0.7 })
 - Uses Gemini text-embedding-004 model (768 dimensions)
 - Chunking strategy: 512 chars with 100 char overlap for fitness content
 - Search combines cosine similarity + exact keyword matching
+- **IMPORTANT**: AI context is clean (no titles/sources) - use `getContextSources()` for UI article links
+- **Configurable RAG parameters**: Similarity threshold, max chunks, high relevance threshold via admin settings
 
 ### 3. Client Memory Auto-Extraction (`/src/lib/client-memory.ts`)
 - AI automatically extracts user information from chat messages  
@@ -103,19 +120,21 @@ await processFileWithEmbeddings(buffer, mimeType, fileName, knowledgeItemId)
 - Supports PDF, DOC/DOCX, TXT, MD via `mammoth`, `pdf-parse` libraries
 - Fitness-specific chunking with overlap for context preservation
 
-### 6. Subscription Tiers (`/src/lib/subscription.ts`)
+### 6. Subscription System (`/src/lib/subscription.ts`)
 ```typescript
 // Two-tier system: FREE (15 msgs/day) vs PRO (unlimited)
 const planInfo = await getUserPlan()
 await canUserSendMessage() // Check daily limits
 await incrementUserMessageCount() // Track usage
+await canUserUploadFile(fileSizeInMB) // File size and monthly limits
+await canUserCreateKnowledgeItem() // Knowledge base limits
 ```
-- Free tier: 15 messages/day, no conversation memory, stateless sessions
-- Pro tier: Unlimited messages, persistent memory, progress tracking
-- Daily usage tracking with automatic reset at midnight
-- Lemon Squeezy integration for payment processing
-- Webhook handling: `/src/app/api/webhooks/lemon-squeezy/route.ts`
-- Plan management: Use `manage-user-plans.js` script for admin operations
+- **FREE tier**: 15 messages/day, 5 uploads/month, 10 knowledge items max, 10MB files
+- **PRO tier**: Unlimited messages, uploads, knowledge items, 100MB files  
+- **Daily usage tracking** with automatic reset at midnight
+- **Lemon Squeezy integration** for payment processing and webhooks
+- **Webhook handling**: `/src/app/api/webhooks/lemon-squeezy/route.ts`
+- **Admin tools**: Use `manage-user-plans.js` script for subscription operations
 
 ## 🔧 Key Integration Points
 
@@ -187,6 +206,7 @@ export async function POST(request: NextRequest) {
 - `KnowledgeChunk` - Chunked content with embeddings (chunkIndex for ordering)
 - `ClientMemory` - Comprehensive user profiling (50+ fields covering fitness data)
 - `AIConfiguration` - Single-row config table (`id: 'singleton'`) for system behavior
+  - **NEW**: RAG configuration fields (`ragSimilarityThreshold`, `ragMaxChunks`, `ragHighRelevanceThreshold`)
 - `User.hasCompletedOnboarding` - Tracks onboarding completion for user flow
 - `User.plan` - Subscription tier (FREE/PRO) with message tracking
 - `Subscription` - Lemon Squeezy integration with billing periods
@@ -241,6 +261,7 @@ const { functionName } = require('./src/lib/module-name');
 - **Arabic text rendering issues** → Verify `isArabicText()` detection and direction handling
 - **Subscription plan issues** → Use `check-user-plan.js` to verify billing status
 - **PDF processing failures** → Check `check-pdf-items.js` for chunking issues
+- **Lemon Squeezy webhook errors** → Verify environment variables and webhook URL configuration
 
 ## 📝 File Naming Conventions
 
@@ -251,14 +272,4 @@ const { functionName } = require('./src/lib/module-name');
 - `*-test.js` - Manual testing scripts
 - `check-*.js` - Validation and verification scripts
 
-## 🔍 Navigation Tips
-
-- Admin features: `/src/app/admin/`
-- Core AI logic: `/src/lib/gemini.ts`
-- Vector operations: `/src/lib/vector-search.ts`
-- UI patterns: `/src/components/` (Arabic-aware variants available)
-- Auth flows: `/src/app/auth/`, `/src/app/onboarding/`
-- Client memory system: `/src/lib/client-memory.ts` (auto-extracts user data from chats)
-- Subscription system: `/src/lib/subscription.ts` (plan management and limits)
-- Subscription UI: `/src/components/plan-badge.tsx`, `/src/components/upgrade-button.tsx`
-- API endpoints: `/src/app/api/user/plan/`, `/src/app/api/webhooks/lemon-squeezy/`
+- **Navigation Tips**: Admin features (`/src/app/admin/`), Core AI logic (`/src/lib/gemini.ts`), Vector operations (`/src/lib/vector-search.ts`), Subscription system (`/src/lib/subscription.ts`, `/src/components/plan-badge.tsx`, `/src/components/upgrade-button.tsx`), Arabic support (`/src/components/arabic-aware-*.tsx`, `/src/lib/text-formatting.ts`)

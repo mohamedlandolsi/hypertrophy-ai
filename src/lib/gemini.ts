@@ -844,12 +844,12 @@ export async function getEnhancedContext(
   conversationHistory: Array<{ role: string; content: string }> = []
 ): Promise<string> {
   try {
-    // Use the enhanced retrieval system
+    // Use the enhanced retrieval system with configurable parameters
     const enhancedContext = await getRelevantContext(
       userId,
       query,
-      7, // Max chunks
-      0.5, // Lower threshold for broader retrieval
+      undefined, // Use configured max chunks
+      undefined, // Use configured similarity threshold
       conversationHistory
     );
 
@@ -857,9 +857,14 @@ export async function getEnhancedContext(
       return enhancedContext;
     }
 
-    // Fallback to simpler retrieval if enhanced system fails
-    console.log('⚠️ Enhanced context retrieval failed, using fallback');
-    return await getRelevantContext(userId, query, 5, 0.7);
+    // Fallback to broader retrieval if no results
+    console.log('⚠️ Enhanced context retrieval found no results, trying fallback with lower threshold');
+    return await getRelevantContext(
+      userId, 
+      query, 
+      undefined, // Use configured max chunks
+      0.4 // Lower threshold for fallback
+    );
     
   } catch (error) {
     console.error('Error getting enhanced context:', error);

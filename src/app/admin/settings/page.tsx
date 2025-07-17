@@ -20,6 +20,9 @@ interface AIConfiguration {
   maxTokens: number;
   topK: number;
   topP: number;
+  ragSimilarityThreshold: number;
+  ragMaxChunks: number;
+  ragHighRelevanceThreshold: number;
   useKnowledgeBase: boolean;
   useClientMemory: boolean;
   enableWebSearch: boolean;
@@ -397,6 +400,55 @@ export default function AdminSettingsPage() {
                     onChange={(e) => updateConfig('topP', parseFloat(e.target.value))}
                   />
                   <p className="text-xs text-gray-500">Nucleus sampling threshold</p>
+                </div>
+              </div>
+
+              {/* RAG Configuration */}
+              <div className="space-y-4">
+                <h3 className="text-lg font-medium">RAG (Knowledge Retrieval) Settings</h3>
+                <p className="text-sm text-gray-600">Configure how the AI retrieves and uses knowledge content</p>
+                
+                <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+                  <div className="space-y-2">
+                    <Label htmlFor="ragSimilarityThreshold">Similarity Threshold</Label>
+                    <Input
+                      id="ragSimilarityThreshold"
+                      type="number"
+                      min={0.1}
+                      max={1.0}
+                      step={0.1}
+                      value={config.ragSimilarityThreshold}
+                      onChange={(e) => updateConfig('ragSimilarityThreshold', parseFloat(e.target.value))}
+                    />
+                    <p className="text-xs text-gray-500">Minimum relevance score (0.1-1.0)</p>
+                  </div>
+                  
+                  <div className="space-y-2">
+                    <Label htmlFor="ragMaxChunks">Max Knowledge Chunks</Label>
+                    <Input
+                      id="ragMaxChunks"
+                      type="number"
+                      min={1}
+                      max={20}
+                      value={config.ragMaxChunks}
+                      onChange={(e) => updateConfig('ragMaxChunks', parseInt(e.target.value))}
+                    />
+                    <p className="text-xs text-gray-500">Maximum pieces of knowledge to retrieve</p>
+                  </div>
+                  
+                  <div className="space-y-2">
+                    <Label htmlFor="ragHighRelevanceThreshold">High Relevance Threshold</Label>
+                    <Input
+                      id="ragHighRelevanceThreshold"
+                      type="number"
+                      min={0.1}
+                      max={1.0}
+                      step={0.1}
+                      value={config.ragHighRelevanceThreshold}
+                      onChange={(e) => updateConfig('ragHighRelevanceThreshold', parseFloat(e.target.value))}
+                    />
+                    <p className="text-xs text-gray-500">Threshold for marking content as highly relevant</p>
+                  </div>
                 </div>
               </div>
 

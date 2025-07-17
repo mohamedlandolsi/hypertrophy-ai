@@ -29,6 +29,48 @@ export interface SearchOptions {
   knowledgeItemIds?: string[];
 }
 
+export interface RAGConfig {
+  similarityThreshold: number;
+  maxChunks: number;
+  highRelevanceThreshold: number;
+}
+
+/**
+ * Get RAG configuration from AI configuration
+ * Falls back to defaults if configuration is not available
+ * 
+ * @returns Promise<RAGConfig>
+ */
+export async function getRAGConfig(): Promise<RAGConfig> {
+  try {
+    const config = await prisma.aIConfiguration.findUnique({
+      where: { id: 'singleton' },
+      select: {
+        ragSimilarityThreshold: true,
+        ragMaxChunks: true,
+        ragHighRelevanceThreshold: true,
+      }
+    });
+
+    if (config) {
+      return {
+        similarityThreshold: config.ragSimilarityThreshold,
+        maxChunks: config.ragMaxChunks,
+        highRelevanceThreshold: config.ragHighRelevanceThreshold,
+      };
+    }
+  } catch (error) {
+    console.warn('Failed to load RAG configuration, using defaults:', error);
+  }
+
+  // Fallback to defaults
+  return {
+    similarityThreshold: 0.6,
+    maxChunks: 5,
+    highRelevanceThreshold: 0.8,
+  };
+}
+
 /**
  * Store a vector embedding for a knowledge chunk
  * 
@@ -219,45 +261,52 @@ Enhanced query:`;
  * 
  * @param userId User ID
  * @param query Search query
- * @param maxChunks Maximum number of chunks to return
- * @param similarityThreshold Minimum similarity score
+ * @param maxChunks Maximum number of chunks to return (optional override)
+ * @param similarityThreshold Minimum similarity score (optional override)
  * @param conversationHistory Recent conversation for query enhancement
- * @returns Promise<string> Concatenated relevant content
+ * @returns Promise<string> Concatenated relevant content WITHOUT titles
  */
 export async function getRelevantContext(
   userId: string,
   query: string,
-  maxChunks: number = 5,
-  similarityThreshold: number = 0.6,
+  maxChunks?: number,
+  similarityThreshold?: number,
   conversationHistory: Array<{ role: string; content: string }> = []
 ): Promise<string> {
   try {
+    // Get RAG configuration from database
+    const ragConfig = await getRAGConfig();
+    
+    // Use provided parameters or fall back to configuration
+    const effectiveMaxChunks = maxChunks ?? ragConfig.maxChunks;
+    const effectiveThreshold = similarityThreshold ?? ragConfig.similarityThreshold;
+    
     // Transform query for better retrieval
     const enhancedQuery = await transformQuery(query, conversationHistory);
     
     // Use hybrid search for better retrieval
     let searchResults = await performHybridSearch(enhancedQuery, userId, {
-      limit: maxChunks,
-      threshold: similarityThreshold,
+      limit: effectiveMaxChunks,
+      threshold: effectiveThreshold,
       rerank: true
     });
 
     // If results are insufficient, try with relaxed parameters
-    if (searchResults.length < Math.min(maxChunks, 3)) {
+    if (searchResults.length < Math.min(effectiveMaxChunks, 3)) {
       console.log('📚 Insufficient results from enhanced search, trying fallback approach');
       
       // Try with lower threshold
       const fallbackResults = await performHybridSearch(enhancedQuery, userId, {
-        limit: maxChunks,
-        threshold: similarityThreshold * 0.7,
+        limit: effectiveMaxChunks,
+        threshold: effectiveThreshold * 0.7,
         rerank: true
       });
 
       // If still insufficient, try with original query
-      if (fallbackResults.length < Math.min(maxChunks, 2)) {
+      if (fallbackResults.length < Math.min(effectiveMaxChunks, 2)) {
         const originalResults = await performVectorSearch(query, {
-          limit: maxChunks,
-          threshold: similarityThreshold * 0.6,
+          limit: effectiveMaxChunks,
+          threshold: effectiveThreshold * 0.6,
           userId
         });
         searchResults = originalResults.length > searchResults.length ? originalResults : searchResults;
@@ -273,25 +322,85 @@ export async function getRelevantContext(
     // Group chunks by knowledge item to maintain context
     const groupedChunks = groupChunksByKnowledgeItem(searchResults);
     
-    // Format the context with source attribution and relevance scores
-    const contextParts = Object.entries(groupedChunks).map(([title, chunks]) => {
-      const knowledgeItemId = chunks[0].knowledgeItemId; // Get the ID from the first chunk
+    // Format the context WITHOUT titles - only pure content for AI
+    const contextParts = Object.entries(groupedChunks).map(([, chunks]) => {
       const sortedChunks = chunks.sort((a, b) => a.chunkIndex - b.chunkIndex);
-      const avgSimilarity = chunks.reduce((sum, chunk) => sum + chunk.similarity, 0) / chunks.length;
       
-      const chunkTexts = sortedChunks.map(chunk => 
-        `${chunk.content}${chunk.similarity > 0.8 ? ' [HIGH RELEVANCE]' : ''}`
-      ).join('\n\n');
+      const chunkTexts = sortedChunks.map(chunk => {
+        // Mark highly relevant content but don't include title
+        const relevanceMarker = chunk.similarity > ragConfig.highRelevanceThreshold ? ' [HIGH RELEVANCE]' : '';
+        return `${chunk.content}${relevanceMarker}`;
+      }).join('\n\n');
       
-      // Add the id to the context header
-      return `=== ${title} id:${knowledgeItemId} (Relevance: ${(avgSimilarity * 100).toFixed(1)}%) ===\n${chunkTexts}`;
+      // Return only content without source attribution for AI
+      return chunkTexts;
     });
 
-    return contextParts.join('\n\n');
+    return contextParts.join('\n---\n');
 
   } catch (error) {
     console.error('Error getting relevant context:', error);
     return ''; // Return empty string to allow conversation to continue
+  }
+}
+
+/**
+ * Get source information from retrieved context for UI display (e.g., article links)
+ * This function provides the titles and IDs that were removed from the AI context
+ * 
+ * @param userId User ID
+ * @param query Search query
+ * @param maxChunks Maximum number of chunks to return (optional override)
+ * @param similarityThreshold Minimum similarity score (optional override)
+ * @param conversationHistory Recent conversation for query enhancement
+ * @returns Promise<Array<{title: string, id: string, relevance: number}>>
+ */
+export async function getContextSources(
+  userId: string,
+  query: string,
+  maxChunks?: number,
+  similarityThreshold?: number,
+  conversationHistory: Array<{ role: string; content: string }> = []
+): Promise<Array<{title: string, id: string, relevance: number}>> {
+  try {
+    // Get RAG configuration from database
+    const ragConfig = await getRAGConfig();
+    
+    // Use provided parameters or fall back to configuration
+    const effectiveMaxChunks = maxChunks ?? ragConfig.maxChunks;
+    const effectiveThreshold = similarityThreshold ?? ragConfig.similarityThreshold;
+    
+    // Transform query for better retrieval
+    const enhancedQuery = await transformQuery(query, conversationHistory);
+    
+    // Use hybrid search for better retrieval
+    const searchResults = await performHybridSearch(enhancedQuery, userId, {
+      limit: effectiveMaxChunks,
+      threshold: effectiveThreshold,
+      rerank: true
+    });
+
+    if (searchResults.length === 0) {
+      return [];
+    }
+
+    // Group chunks by knowledge item and calculate relevance
+    const groupedChunks = groupChunksByKnowledgeItem(searchResults);
+    
+    return Object.entries(groupedChunks).map(([title, chunks]) => {
+      const knowledgeItemId = chunks[0].knowledgeItemId;
+      const avgSimilarity = chunks.reduce((sum, chunk) => sum + chunk.similarity, 0) / chunks.length;
+      
+      return {
+        title,
+        id: knowledgeItemId,
+        relevance: avgSimilarity
+      };
+    }).sort((a, b) => b.relevance - a.relevance); // Sort by relevance
+
+  } catch (error) {
+    console.error('Error getting context sources:', error);
+    return [];
   }
 }
 

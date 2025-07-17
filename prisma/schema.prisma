@@ -176,6 +176,11 @@ model AIConfiguration {
   topK        Int      @default(45)
   topP        Float    @default(0.85)
   
+  // RAG (Retrieval-Augmented Generation) settings
+  ragSimilarityThreshold Float @default(0.6) // Minimum similarity score for content retrieval
+  ragMaxChunks          Int   @default(5)    // Maximum number of knowledge chunks to retrieve
+  ragHighRelevanceThreshold Float @default(0.8) // Threshold for marking content as high relevance
+  
   // Feature flags
   useKnowledgeBase  Boolean @default(true)
   useClientMemory   Boolean @default(true)
