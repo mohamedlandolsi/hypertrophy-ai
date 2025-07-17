@@ -26,12 +26,12 @@ import {
 import { useToast } from '@/hooks/use-toast';
 import type { User as SupabaseUser } from '@supabase/supabase-js';
 import { 
-  ProfileAvatar, 
   StepperInput, 
   SegmentedControl, 
   GoalCard, 
   DayPicker 
 } from '@/components/ui/enhanced-profile-inputs';
+import { EnhancedAvatarUpload } from '@/components/ui/enhanced-avatar-upload';
 
 interface ProfileFormData {
   // Personal Information
@@ -314,16 +314,19 @@ export default function EnhancedProfileForm() {
         {/* Profile Picture */}
         <Card>
           <CardContent className="pt-6">
-            <ProfileAvatar 
+            <EnhancedAvatarUpload 
               name={formData.name || user?.user_metadata?.full_name}
               imageUrl={avatarUrl}
-              onImageUpdate={(url) => {
+              onImageUpdate={(url: string) => {
                 setAvatarUrl(url);
                 toast({
                   title: "Success",
                   description: "Profile picture updated successfully",
                 });
               }}
+              size="lg"
+              showRemoveButton={true}
+              allowEdit={true}
             />
           </CardContent>
         </Card>
