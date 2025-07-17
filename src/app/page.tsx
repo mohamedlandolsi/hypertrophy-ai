@@ -102,17 +102,17 @@ export default function Home() {
           {user ? (
             <>
               <motion.h1 
-                className="text-4xl md:text-6xl font-bold mb-6"
+                className="text-3xl md:text-5xl lg:text-6xl font-bold mb-6"
                 initial={{ opacity: 0, y: 30 }}
                 animate={{ opacity: 1, y: 0 }}
                 transition={{ duration: 0.8, delay: 0.2 }}
               >
-                <LineShadowText shadowColor="rgb(59, 130, 246)" className="text-6xl md:text-8xl">
+                <LineShadowText shadowColor="rgb(59, 130, 246)" className="text-4xl md:text-6xl lg:text-8xl">
                   Welcome Back
                 </LineShadowText>
               </motion.h1>
               <motion.p 
-                className="text-xl md:text-2xl text-muted-foreground mb-8 max-w-2xl mx-auto"
+                className="text-lg md:text-xl lg:text-2xl text-muted-foreground mb-8 max-w-2xl mx-auto"
                 initial={{ opacity: 0, y: 20 }}
                 animate={{ opacity: 1, y: 0 }}
                 transition={{ duration: 0.8, delay: 0.4 }}
@@ -123,40 +123,40 @@ export default function Home() {
           ) : (
             <>
               <motion.h1 
-                className="text-4xl md:text-7xl font-bold mb-6"
+                className="text-3xl md:text-5xl lg:text-7xl font-bold mb-6"
                 initial={{ opacity: 0, y: 30 }}
                 animate={{ opacity: 1, y: 0 }}
                 transition={{ duration: 0.8, delay: 0.2 }}
               >
-                <LineShadowText shadowColor="rgb(59, 130, 246)" className="text-6xl md:text-8xl">
+                <LineShadowText shadowColor="rgb(59, 130, 246)" className="text-4xl md:text-6xl lg:text-8xl">
                   Meet HypertroQ
                 </LineShadowText>
               </motion.h1>
               <motion.p 
-                className="text-xl md:text-2xl text-muted-foreground mb-6 max-w-4xl mx-auto leading-relaxed"
+                className="text-lg md:text-xl lg:text-2xl text-muted-foreground mb-6 max-w-4xl mx-auto leading-relaxed"
                 initial={{ opacity: 0, y: 20 }}
                 animate={{ opacity: 1, y: 0 }}
                 transition={{ duration: 0.8, delay: 0.4 }}
               >
                 Your <span className="text-primary font-semibold">Evidence-Based AI Fitness Coach</span> powered by cutting-edge exercise science research.
                 <br />
-                <span className="text-lg">Unlike generic AI assistants, HypertroQ eliminates fitness myths and outdated methods with science-backed training philosophy.</span>
+                <span className="text-base md:text-lg">Unlike generic AI assistants, HypertroQ eliminates fitness myths and outdated methods with science-backed training philosophy.</span>
               </motion.p>
               
               {/* Scientific Differentiator Highlight */}
               <motion.div 
-                className="flex flex-col sm:flex-row items-center justify-center gap-4 mb-8 max-w-2xl mx-auto"
+                className="flex flex-col sm:flex-row items-center justify-center gap-3 md:gap-4 mb-8 max-w-2xl mx-auto"
                 initial={{ opacity: 0, y: 20 }}
                 animate={{ opacity: 1, y: 0 }}
                 transition={{ duration: 0.8, delay: 0.5 }}
               >
-                <div className="flex items-center gap-2 bg-red-50 dark:bg-red-900/20 text-red-700 dark:text-red-400 px-4 py-2 rounded-lg border border-red-200 dark:border-red-800">
-                  <X className="w-4 h-4" />
-                  <span className="text-sm font-medium">Traditional 4×12 programs</span>
+                <div className="flex items-center gap-2 bg-red-50 dark:bg-red-900/20 text-red-700 dark:text-red-400 px-3 md:px-4 py-2 rounded-lg border border-red-200 dark:border-red-800">
+                  <X className="w-3 h-3 md:w-4 md:h-4 flex-shrink-0" />
+                  <span className="text-xs md:text-sm font-medium">Traditional 4×12 programs</span>
                 </div>
-                <div className="flex items-center gap-2 bg-green-50 dark:bg-green-900/20 text-green-700 dark:text-green-400 px-4 py-2 rounded-lg border border-green-200 dark:border-green-800">
-                  <Check className="w-4 h-4" />
-                  <span className="text-sm font-medium">Optimized, science-based protocols</span>
+                <div className="flex items-center gap-2 bg-green-50 dark:bg-green-900/20 text-green-700 dark:text-green-400 px-3 md:px-4 py-2 rounded-lg border border-green-200 dark:border-green-800">
+                  <Check className="w-3 h-3 md:w-4 md:h-4 flex-shrink-0" />
+                  <span className="text-xs md:text-sm font-medium">Optimized, science-based protocols</span>
                 </div>
               </motion.div>
             </>
@@ -175,16 +175,16 @@ export default function Home() {
               </div>
             ) : user ? (
               <div className="animate-fade-in flex justify-center">
-                <PulsatingButton className="bg-gradient-to-r from-blue-600 to-purple-600 hover:from-blue-700 hover:to-purple-700 text-white text-lg px-8 py-4 rounded-xl font-semibold">
+                <PulsatingButton className="bg-gradient-to-r from-blue-600 to-purple-600 hover:from-blue-700 hover:to-purple-700 text-white text-base md:text-lg px-6 md:px-8 py-3 md:py-4 rounded-xl font-semibold">
                   <Link href="/chat">Go to Chat</Link>
                 </PulsatingButton>
               </div>
             ) : (
-              <div className="animate-fade-in flex flex-col sm:flex-row gap-4 justify-center items-center">
-                <PulsatingButton className="bg-gradient-to-r from-blue-600 to-purple-600 hover:from-blue-700 hover:to-purple-700 text-white text-lg px-8 py-4 rounded-xl font-semibold">
+              <div className="animate-fade-in flex flex-col sm:flex-row gap-3 md:gap-4 justify-center items-center">
+                <PulsatingButton className="bg-gradient-to-r from-blue-600 to-purple-600 hover:from-blue-700 hover:to-purple-700 text-white text-base md:text-lg px-6 md:px-8 py-3 md:py-4 rounded-xl font-semibold w-full sm:w-auto">
                   <Link href="/signup">Get Started Free</Link>
                 </PulsatingButton>
-                <Button asChild variant="outline" size="lg" className="text-lg px-8 py-3 rounded-xl border-2 hover:bg-muted/50">
+                <Button asChild variant="outline" size="lg" className="text-base md:text-lg px-6 md:px-8 py-2.5 md:py-3 rounded-xl border-2 hover:bg-muted/50 w-full sm:w-auto">
                   <Link href="/login">See a Demo</Link>
                 </Button>
               </div>
@@ -240,8 +240,8 @@ export default function Home() {
         animate={isTrustBarInView ? { opacity: 1, y: 0 } : {}}
         transition={{ duration: 0.8, delay: 0.5 }}
       >
-        <div className="max-w-4xl mx-auto text-center">
-          <p className="text-lg font-medium text-muted-foreground">
+        <div className="max-w-4xl mx-auto text-center px-4">
+          <p className="text-base md:text-lg font-medium text-muted-foreground">
             <span className="text-primary font-semibold">Built on Modern Exercise Science:</span> Updated with cutting-edge studies in physiology, biomechanics, kinesiology, and nutrition science.
           </p>
         </div>
@@ -257,41 +257,41 @@ export default function Home() {
             viewport={{ once: true }}
             transition={{ duration: 0.8 }}
           >
-            <h2 className="text-3xl md:text-5xl font-bold mb-4">
-              <LineShadowText shadowColor="rgb(239, 68, 68)" className="text-4xl md:text-5xl">
+            <h2 className="text-2xl md:text-4xl lg:text-5xl font-bold mb-4">
+              <LineShadowText shadowColor="rgb(239, 68, 68)" className="text-3xl md:text-4xl lg:text-5xl">
                 Why HypertroQ vs Generic AI?
               </LineShadowText>
             </h2>
-            <p className="text-xl text-muted-foreground">The difference is in the science, not the hype.</p>
+            <p className="text-lg md:text-xl text-muted-foreground">The difference is in the science, not the hype.</p>
           </motion.div>
 
-          <div className="grid lg:grid-cols-2 gap-8 max-w-6xl mx-auto">
+          <div className="grid lg:grid-cols-2 gap-6 lg:gap-8 max-w-6xl mx-auto">
             {/* Generic AI Side */}
             <motion.div 
-              className="bg-red-50 dark:bg-red-950/20 rounded-2xl p-8 border-2 border-red-200 dark:border-red-800"
+              className="bg-red-50 dark:bg-red-950/20 rounded-2xl p-6 md:p-8 border-2 border-red-200 dark:border-red-800"
               initial={{ opacity: 0, x: -50 }}
               whileInView={{ opacity: 1, x: 0 }}
               viewport={{ once: true }}
               transition={{ duration: 0.8, delay: 0.2 }}
             >
               <div className="flex items-center mb-6">
-                <div className="w-12 h-12 bg-red-100 dark:bg-red-900 rounded-full flex items-center justify-center mr-4">
-                  <MessageSquare className="w-6 h-6 text-red-600" />
+                <div className="w-10 h-10 md:w-12 md:h-12 bg-red-100 dark:bg-red-900 rounded-full flex items-center justify-center mr-3 md:mr-4">
+                  <MessageSquare className="w-5 h-5 md:w-6 md:h-6 text-red-600" />
                 </div>
-                <h3 className="text-2xl font-bold text-red-700 dark:text-red-400">Generic AI (ChatGPT, Gemini)</h3>
+                <h3 className="text-lg md:text-2xl font-bold text-red-700 dark:text-red-400">Generic AI (ChatGPT, Gemini)</h3>
               </div>
               
               <div className="mb-6">
-                <div className="bg-white dark:bg-slate-800 rounded-lg p-4 mb-4">
-                  <p className="font-semibold text-slate-600 dark:text-slate-300 mb-2">Question: &quot;How many reps for muscle growth?&quot;</p>
+                <div className="bg-white dark:bg-slate-800 rounded-lg p-3 md:p-4 mb-4">
+                  <p className="font-semibold text-sm md:text-base text-slate-600 dark:text-slate-300 mb-2">Question: &quot;How many reps for muscle growth?&quot;</p>
                 </div>
-                <div className="bg-red-100 dark:bg-red-900/50 rounded-lg p-4 min-h-[140px]">
+                <div className="bg-red-100 dark:bg-red-900/50 rounded-lg p-3 md:p-4 min-h-[120px] md:min-h-[140px]">
                   {showGenericAnswer && (
                     <ClientOnly>
                       <Typewriter
                         text="A good rep range for building muscle is typically 8-12 reps. You need to really 'feel the burn' and switch up your exercises often to 'confuse the muscle'. Also, make sure to do lots of isolation work."
                         delay={30}
-                        className="text-slate-700 dark:text-slate-300"
+                        className="text-sm md:text-base text-slate-700 dark:text-slate-300"
                       />
                     </ClientOnly>
                   )}
@@ -300,50 +300,50 @@ export default function Home() {
 
               <div className="space-y-3">
                 <div className="flex items-center text-red-600">
-                  <X className="w-5 h-5 mr-2" />
-                  <span>Outdated fitness information</span>
+                  <X className="w-4 h-4 md:w-5 md:h-5 mr-2 flex-shrink-0" />
+                  <span className="text-sm md:text-base">Outdated fitness information</span>
                 </div>
                 <div className="flex items-center text-red-600">
-                  <X className="w-5 h-5 mr-2" />
-                  <span>Perpetuates training myths</span>
+                  <X className="w-4 h-4 md:w-5 md:h-5 mr-2 flex-shrink-0" />
+                  <span className="text-sm md:text-base">Perpetuates training myths</span>
                 </div>
                 <div className="flex items-center text-red-600">
-                  <X className="w-5 h-5 mr-2" />
-                  <span>Generic, one-size-fits-all advice</span>
+                  <X className="w-4 h-4 md:w-5 md:h-5 mr-2 flex-shrink-0" />
+                  <span className="text-sm md:text-base">Generic, one-size-fits-all advice</span>
                 </div>
                 <div className="flex items-center text-red-600">
-                  <X className="w-5 h-5 mr-2" />
-                  <span>No personalization or memory</span>
+                  <X className="w-4 h-4 md:w-5 md:h-5 mr-2 flex-shrink-0" />
+                  <span className="text-sm md:text-base">No personalization or memory</span>
                 </div>
               </div>
             </motion.div>
 
             {/* HypertroQ Side */}
             <motion.div 
-              className="bg-green-50 dark:bg-green-950/20 rounded-2xl p-8 border-2 border-green-200 dark:border-green-800"
+              className="bg-green-50 dark:bg-green-950/20 rounded-2xl p-6 md:p-8 border-2 border-green-200 dark:border-green-800"
               initial={{ opacity: 0, x: 50 }}
               whileInView={{ opacity: 1, x: 0 }}
               viewport={{ once: true }}
               transition={{ duration: 0.8, delay: 0.4 }}
             >
               <div className="flex items-center mb-6">
-                <div className="w-12 h-12 bg-green-100 dark:bg-green-900 rounded-full flex items-center justify-center mr-4">
-                  <Image src="/logo.png" alt="HypertroQ" width={24} height={24} className="w-6 h-6" />
+                <div className="w-10 h-10 md:w-12 md:h-12 bg-green-100 dark:bg-green-900 rounded-full flex items-center justify-center mr-3 md:mr-4">
+                  <Image src="/logo.png" alt="HypertroQ" width={24} height={24} className="w-5 h-5 md:w-6 md:h-6" />
                 </div>
-                <h3 className="text-2xl font-bold text-green-700 dark:text-green-400">HypertroQ</h3>
+                <h3 className="text-lg md:text-2xl font-bold text-green-700 dark:text-green-400">HypertroQ</h3>
               </div>
               
               <div className="mb-6">
-                <div className="bg-white dark:bg-slate-800 rounded-lg p-4 mb-4">
-                  <p className="font-semibold text-slate-600 dark:text-slate-300 mb-2">Question: &quot;How many reps for muscle growth?&quot;</p>
+                <div className="bg-white dark:bg-slate-800 rounded-lg p-3 md:p-4 mb-4">
+                  <p className="font-semibold text-sm md:text-base text-slate-600 dark:text-slate-300 mb-2">Question: &quot;How many reps for muscle growth?&quot;</p>
                 </div>
-                <div className="bg-green-100 dark:bg-green-900/50 rounded-lg p-4 min-h-[140px]">
+                <div className="bg-green-100 dark:bg-green-900/50 rounded-lg p-3 md:p-4 min-h-[120px] md:min-h-[140px]">
                   {showHypertroQAnswer && (
                     <ClientOnly>
                       <Typewriter
                         text="For hypertrophy, the optimal range is typically 5-10 reps taken to 0-2 RIR (Reps in Reserve). This maximizes mechanical tension, which is the primary driver of muscle growth. Based on your profile, I'd recommend compound movements with progressive overload."
                         delay={25}
-                        className="text-slate-700 dark:text-slate-300"
+                        className="text-sm md:text-base text-slate-700 dark:text-slate-300"
                         highlightTerms={['5-10 reps', 'RIR', 'mechanical tension', 'progressive overload']}
                       />
                     </ClientOnly>
@@ -353,20 +353,20 @@ export default function Home() {
 
               <div className="space-y-3">
                 <div className="flex items-center text-green-600">
-                  <Check className="w-5 h-5 mr-2" />
-                  <span>Latest exercise science research</span>
+                  <Check className="w-4 h-4 md:w-5 md:h-5 mr-2 flex-shrink-0" />
+                  <span className="text-sm md:text-base">Latest exercise science research</span>
                 </div>
                 <div className="flex items-center text-green-600">
-                  <Check className="w-5 h-5 mr-2" />
-                  <span>Evidence-based, myth-free guidance</span>
+                  <Check className="w-4 h-4 md:w-5 md:h-5 mr-2 flex-shrink-0" />
+                  <span className="text-sm md:text-base">Evidence-based, myth-free guidance</span>
                 </div>
                 <div className="flex items-center text-green-600">
-                  <Check className="w-5 h-5 mr-2" />
-                  <span>Personalized to your profile</span>
+                  <Check className="w-4 h-4 md:w-5 md:h-5 mr-2 flex-shrink-0" />
+                  <span className="text-sm md:text-base">Personalized to your profile</span>
                 </div>
                 <div className="flex items-center text-green-600">
-                  <Check className="w-5 h-5 mr-2" />
-                  <span>Remembers your progress & preferences</span>
+                  <Check className="w-4 h-4 md:w-5 md:h-5 mr-2 flex-shrink-0" />
+                  <span className="text-sm md:text-base">Remembers your progress & preferences</span>
                 </div>
               </div>
             </motion.div>
@@ -384,17 +384,17 @@ export default function Home() {
             viewport={{ once: true }}
             transition={{ duration: 0.8 }}
           >
-            <h2 className="text-3xl md:text-5xl font-bold mb-4">
-              <LineShadowText shadowColor="rgb(99, 102, 241)" className="text-4xl md:text-5xl">
+            <h2 className="text-2xl md:text-4xl lg:text-5xl font-bold mb-4">
+              <LineShadowText shadowColor="rgb(99, 102, 241)" className="text-3xl md:text-4xl lg:text-5xl">
                 Built on Modern Exercise Science
               </LineShadowText>
             </h2>
-            <p className="text-xl text-muted-foreground">Your pocket personal trainer with expertise in all fitness-related fields</p>
+            <p className="text-lg md:text-xl text-muted-foreground">Your pocket personal trainer with expertise in all fitness-related fields</p>
           </motion.div>
 
-          <div className="grid md:grid-cols-3 gap-8">
+          <div className="grid sm:grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6 lg:gap-8">
             <motion.div 
-              className="group relative bg-white dark:bg-slate-800/50 rounded-3xl p-8 border border-border/50 shadow-xl hover:shadow-2xl transition-all duration-300 hover:scale-105 backdrop-blur-sm"
+              className="group relative bg-white dark:bg-slate-800/50 rounded-3xl p-6 md:p-8 border border-border/50 shadow-xl hover:shadow-2xl transition-all duration-300 hover:scale-105 backdrop-blur-sm"
               initial={{ opacity: 0, y: 50 }}
               whileInView={{ opacity: 1, y: 0 }}
               viewport={{ once: true }}
@@ -406,19 +406,19 @@ export default function Home() {
               
               {/* Animated icon container */}
               <motion.div 
-                className="relative w-20 h-20 bg-gradient-to-br from-blue-500 to-blue-600 rounded-2xl flex items-center justify-center mx-auto mb-6 shadow-lg"
+                className="relative w-16 h-16 md:w-20 md:h-20 bg-gradient-to-br from-blue-500 to-blue-600 rounded-2xl flex items-center justify-center mx-auto mb-4 md:mb-6 shadow-lg"
                 whileHover={{ rotate: 360, scale: 1.1 }}
                 transition={{ duration: 0.6, type: "spring", stiffness: 200 }}
               >
                 <div className="absolute inset-0 bg-gradient-to-br from-blue-400 to-blue-700 rounded-2xl opacity-0 group-hover:opacity-20 transition-opacity duration-300" />
-                <span className="text-3xl relative z-10">🧬</span>
+                <span className="text-2xl md:text-3xl relative z-10">🧬</span>
               </motion.div>
               
               <div className="relative z-10">
-                <h3 className="text-2xl font-bold mb-4 text-center group-hover:text-blue-600 dark:group-hover:text-blue-400 transition-colors duration-300">
+                <h3 className="text-xl md:text-2xl font-bold mb-3 md:mb-4 text-center group-hover:text-blue-600 dark:group-hover:text-blue-400 transition-colors duration-300">
                   Latest Research Integration
                 </h3>
-                <p className="text-muted-foreground text-center leading-relaxed group-hover:text-slate-600 dark:group-hover:text-slate-300 transition-colors duration-300">
+                <p className="text-sm md:text-base text-muted-foreground text-center leading-relaxed group-hover:text-slate-600 dark:group-hover:text-slate-300 transition-colors duration-300">
                   Updated with cutting-edge studies in physiology, biomechanics, and kinesiology. No outdated information from generic LLMs.
                 </p>
               </div>
@@ -428,7 +428,7 @@ export default function Home() {
             </motion.div>
 
             <motion.div 
-              className="group relative bg-white dark:bg-slate-800/50 rounded-3xl p-8 border border-border/50 shadow-xl hover:shadow-2xl transition-all duration-300 hover:scale-105 backdrop-blur-sm"
+              className="group relative bg-white dark:bg-slate-800/50 rounded-3xl p-6 md:p-8 border border-border/50 shadow-xl hover:shadow-2xl transition-all duration-300 hover:scale-105 backdrop-blur-sm"
               initial={{ opacity: 0, y: 50 }}
               whileInView={{ opacity: 1, y: 0 }}
               viewport={{ once: true }}
@@ -440,19 +440,19 @@ export default function Home() {
               
               {/* Animated icon container */}
               <motion.div 
-                className="relative w-20 h-20 bg-gradient-to-br from-purple-500 to-purple-600 rounded-2xl flex items-center justify-center mx-auto mb-6 shadow-lg"
+                className="relative w-16 h-16 md:w-20 md:h-20 bg-gradient-to-br from-purple-500 to-purple-600 rounded-2xl flex items-center justify-center mx-auto mb-4 md:mb-6 shadow-lg"
                 whileHover={{ rotate: 360, scale: 1.1 }}
                 transition={{ duration: 0.6, type: "spring", stiffness: 200 }}
               >
                 <div className="absolute inset-0 bg-gradient-to-br from-purple-400 to-purple-700 rounded-2xl opacity-0 group-hover:opacity-20 transition-opacity duration-300" />
-                <span className="text-3xl relative z-10">🔬</span>
+                <span className="text-2xl md:text-3xl relative z-10">🔬</span>
               </motion.div>
               
               <div className="relative z-10">
-                <h3 className="text-2xl font-bold mb-4 text-center group-hover:text-purple-600 dark:group-hover:text-purple-400 transition-colors duration-300">
+                <h3 className="text-xl md:text-2xl font-bold mb-3 md:mb-4 text-center group-hover:text-purple-600 dark:group-hover:text-purple-400 transition-colors duration-300">
                   Myth-Free Training
                 </h3>
-                <p className="text-muted-foreground text-center leading-relaxed group-hover:text-slate-600 dark:group-hover:text-slate-300 transition-colors duration-300">
+                <p className="text-sm md:text-base text-muted-foreground text-center leading-relaxed group-hover:text-slate-600 dark:group-hover:text-slate-300 transition-colors duration-300">
                   Eliminates common misconceptions like muscle damage being primary for hypertrophy. Evidence-based, not tradition-based.
                 </p>
               </div>
@@ -462,7 +462,7 @@ export default function Home() {
             </motion.div>
 
             <motion.div 
-              className="group relative bg-white dark:bg-slate-800/50 rounded-3xl p-8 border border-border/50 shadow-xl hover:shadow-2xl transition-all duration-300 hover:scale-105 backdrop-blur-sm"
+              className="group relative bg-white dark:bg-slate-800/50 rounded-3xl p-6 md:p-8 border border-border/50 shadow-xl hover:shadow-2xl transition-all duration-300 hover:scale-105 backdrop-blur-sm md:col-span-2 lg:col-span-1"
               initial={{ opacity: 0, y: 50 }}
               whileInView={{ opacity: 1, y: 0 }}
               viewport={{ once: true }}
@@ -474,19 +474,19 @@ export default function Home() {
               
               {/* Animated icon container */}
               <motion.div 
-                className="relative w-20 h-20 bg-gradient-to-br from-green-500 to-green-600 rounded-2xl flex items-center justify-center mx-auto mb-6 shadow-lg"
+                className="relative w-16 h-16 md:w-20 md:h-20 bg-gradient-to-br from-green-500 to-green-600 rounded-2xl flex items-center justify-center mx-auto mb-4 md:mb-6 shadow-lg"
                 whileHover={{ rotate: 360, scale: 1.1 }}
                 transition={{ duration: 0.6, type: "spring", stiffness: 200 }}
               >
                 <div className="absolute inset-0 bg-gradient-to-br from-green-400 to-green-700 rounded-2xl opacity-0 group-hover:opacity-20 transition-opacity duration-300" />
-                <span className="text-3xl relative z-10">📊</span>
+                <span className="text-2xl md:text-3xl relative z-10">📊</span>
               </motion.div>
               
               <div className="relative z-10">
-                <h3 className="text-2xl font-bold mb-4 text-center group-hover:text-green-600 dark:group-hover:text-green-400 transition-colors duration-300">
+                <h3 className="text-xl md:text-2xl font-bold mb-3 md:mb-4 text-center group-hover:text-green-600 dark:group-hover:text-green-400 transition-colors duration-300">
                   Optimized Programming
                 </h3>
-                <p className="text-muted-foreground text-center leading-relaxed group-hover:text-slate-600 dark:group-hover:text-slate-300 transition-colors duration-300">
+                <p className="text-sm md:text-base text-muted-foreground text-center leading-relaxed group-hover:text-slate-600 dark:group-hover:text-slate-300 transition-colors duration-300">
                   Science-based exercise selection and programming beyond traditional cookie-cutter 4×12 routines.
                 </p>
               </div>
