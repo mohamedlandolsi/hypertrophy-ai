@@ -15,8 +15,7 @@ export default function FaviconMeta() {
       <link rel="icon" type="image/png" sizes="192x192" href="/favicon/android-chrome-192x192.png" />
       <link rel="icon" type="image/png" sizes="512x512" href="/favicon/android-chrome-512x512.png" />
       
-      {/* Web App Manifest */}
-      <link rel="manifest" href="/favicon/site.webmanifest" />
+      {/* Note: Web App Manifest is referenced in main layout as /manifest.json */}
       
       {/* Theme color for mobile browsers */}
       <meta name="theme-color" content="#ffffff" />

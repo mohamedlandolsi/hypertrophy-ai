@@ -61,16 +61,14 @@ export default async function RootLayout({
         <meta name="theme-color" content="#1e40af" />
         <meta name="apple-mobile-web-app-status-bar-style" content="default" />
         <meta name="apple-mobile-web-app-title" content="HypertroQ" />
-        <link rel="apple-touch-icon" href="/logo.png" />
+        <link rel="apple-touch-icon" href="/favicon/apple-touch-icon.png" />
       </head>
       <body
         className={`${geistSans.variable} ${geistMono.variable} font-sans antialiased flex flex-col h-full`}
       >
-        {/* LemonSqueezy Script */}
-        <Script
-          src="https://app.lemonsqueezy.com/js/lemon.js"
-          strategy="afterInteractive"
-        />
+        {/* LemonSqueezy Script - Only load when needed */}
+        {/* Removed global loading to prevent unauthorized API calls */}
+        {/* Script is now loaded conditionally in components that need it */}
         
         {/* Google Analytics - Using next/script component */}
         <Script

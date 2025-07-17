@@ -24,32 +24,8 @@ import {
 } from '@/lib/currency';
 import { CurrencySelector } from '@/components/currency-selector';
 
-// Declare global LemonSqueezy for TypeScript
-declare global {
-  interface Window {
-    LemonSqueezy?: {
-      /**
-       * Initializes a LemonSqueezy checkout overlay
-       * @param options - Checkout configuration options
-       */
-      Setup: (options: {
-        eventHandler?: (event: { event: string; data?: { total?: number; orderId?: string; [key: string]: unknown } }) => void;
-      }) => void;
-      /**
-       * Opens a checkout URL in the LemonSqueezy overlay
-       * @param url - The checkout URL to open
-       */
-      Url: {
-        Open: (url: string) => void;
-      };
-      /**
-       * Refreshes the checkout session
-       */
-      Refresh: () => void;
-    };
-    createLemonSqueezy?: () => void;
-  }
-}
+// Note: LemonSqueezy overlay types removed as we use direct navigation for better security
+// This prevents any iframe-related issues and ensures top-level page context for payments
 
 interface UpgradeButtonProps {
   variant?: 'default' | 'outline' | 'secondary';
@@ -88,38 +64,8 @@ export function UpgradeButton({
     };
     getUserId();
 
-    // Initialize LemonSqueezy when component mounts
-    const initializeLemonSqueezy = () => {
-      if (window.LemonSqueezy) {
-        window.LemonSqueezy.Setup({
-          eventHandler: (event) => {
-            console.log('LemonSqueezy event:', event);
-            if (event.event === 'Checkout.Success') {
-              // Track successful checkout
-              trackEvent('purchase', 'subscription', 'pro_plan', event.data?.total);
-              // Redirect to success page
-              window.location.href = '/dashboard?upgraded=true';
-            }
-          }
-        });
-      }
-    };
-
-    // Try to initialize immediately or wait for script to load
-    if (window.LemonSqueezy) {
-      initializeLemonSqueezy();
-    } else {
-      // Wait for the script to load
-      const checkLemonSqueezy = setInterval(() => {
-        if (window.LemonSqueezy) {
-          initializeLemonSqueezy();
-          clearInterval(checkLemonSqueezy);
-        }
-      }, 100);
-      
-      // Clear interval after 10 seconds to prevent memory leaks
-      setTimeout(() => clearInterval(checkLemonSqueezy), 10000);
-    }
+    // Note: LemonSqueezy script loading removed to prevent any iframe-related issues
+    // All checkouts now use direct navigation to ensure top-level page context
   }, []);
 
   // Sync internal selectedInterval with defaultInterval prop changes
@@ -238,13 +184,16 @@ export function UpgradeButton({
         }
       }
       
-      // Open Lemon Squeezy checkout overlay if available, otherwise redirect
-      if (window.LemonSqueezy?.Url?.Open) {
-        console.log(`[${environment}] Opening LemonSqueezy overlay with URL:`, checkoutUrl);
-        window.LemonSqueezy.Url.Open(checkoutUrl);
-      } else {
-        console.log(`[${environment}] LemonSqueezy overlay not available, redirecting to:`, checkoutUrl);
-        // Fallback to direct redirect (same tab to avoid popup blockers)
+      // Force top-level navigation to avoid any iframe issues
+      // Always redirect to new tab for better payment security and Stripe compatibility
+      console.log(`[${environment}] Opening checkout in new tab:`, checkoutUrl);
+      
+      // Open in new tab for better security and to avoid any iframe warnings
+      const newTab = window.open(checkoutUrl, '_blank', 'noopener,noreferrer');
+      
+      if (!newTab) {
+        // Fallback to same-tab redirect if popup was blocked
+        console.log(`[${environment}] Popup blocked, redirecting in same tab:`, checkoutUrl);
         window.location.href = checkoutUrl;
       }
     } catch (error) {

@@ -128,9 +128,10 @@ class LemonSqueezyService {
         type: 'checkouts',
         attributes: {
           checkout_options: {
-            embed: false,
+            embed: false, // Explicitly prevent embedding to avoid iframe issues
             media: true,
             logo: true,
+            button_color: '#3b82f6', // Brand color
           },
           checkout_data: {
             email: options.userEmail,

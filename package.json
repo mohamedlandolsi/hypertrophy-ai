@@ -64,6 +64,7 @@
   "devDependencies": {
     "@eslint/eslintrc": "^3",
     "@tailwindcss/postcss": "^4",
+    "@types/google.maps": "^3.58.1",
     "@types/multer": "^1.4.13",
     "@types/node": "^20",
     "@types/react": "^19",
