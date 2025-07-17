@@ -20,7 +20,8 @@ import {
   TrendingUp, 
   Settings, 
   AlertTriangle,
-  CheckCircle
+  CheckCircle,
+  BarChart3
 } from 'lucide-react';
 import Link from 'next/link';
 import type { User as SupabaseUser } from '@supabase/supabase-js';
@@ -142,108 +143,387 @@ export default function ProfilePage() {
           </TabsList>
 
           <TabsContent value="overview" className="space-y-6">
-            <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
-              <Card>
-                <CardHeader>
-                  <CardTitle className="flex items-center">
-                    <Activity className="mr-2 h-5 w-5" />
-                    Coach Summary
-                  </CardTitle>
-                  <CardDescription>
-                    What HypertroQ knows about you
-                  </CardDescription>
-                </CardHeader>
-                <CardContent>
-                  {memorySummary ? (
-                    <div className="space-y-4">
-                      <Textarea
-                        value={memorySummary}
-                        readOnly
-                        className="min-h-[120px] resize-none"
-                        placeholder="HypertroQ will learn about you as you chat..."
-                      />
-                      <p className="text-xs text-muted-foreground">
-                        This summary is automatically generated from your conversations and profile
-                      </p>
+            {/* Personalized Header */}
+            <div className="relative overflow-hidden rounded-xl bg-gradient-to-br from-blue-600 via-purple-600 to-blue-800 p-6 text-white">
+              <div className="absolute inset-0 bg-black/20" />
+              <div className="relative z-10">
+                <div className="flex items-center justify-between">
+                  <div className="space-y-2">
+                    <h1 className="text-2xl font-bold">
+                      Welcome back{user.user_metadata?.full_name ? `, ${user.user_metadata.full_name}` : ''}! 💪
+                    </h1>
+                    <p className="text-blue-100">
+                      {clientMemory?.primaryGoal 
+                        ? `Let&apos;s continue working on ${clientMemory.primaryGoal.replace('_', ' ').toLowerCase()}`
+                        : "Ready to start your fitness journey?"
+                      }
+                    </p>
+                  </div>
+                  <div className="hidden md:block">
+                    <div className="h-16 w-16 rounded-full bg-white/20 flex items-center justify-center">
+                      <MessageSquare className="h-8 w-8" />
                     </div>
-                  ) : (
-                    <div className="text-center py-8">
-                      <Activity className="mx-auto h-12 w-12 text-muted-foreground/50" />
-                      <p className="text-sm text-muted-foreground mt-2">
-                        Start chatting with HypertroQ or edit your profile to build your coaching context
-                      </p>
-                      <Button 
-                        variant="outline" 
-                        className="mt-4"
-                        onClick={() => setActiveTab('edit')}
-                      >
-                        <Edit className="mr-2 h-4 w-4" />
-                        Edit Profile
-                      </Button>
-                    </div>
-                  )}
-                </CardContent>
-              </Card>
+                  </div>
+                </div>
+                
+                {/* Quick Action */}
+                <div className="mt-4">
+                  <Link href="/chat">
+                    <Button size="lg" variant="secondary" className="bg-white/10 hover:bg-white/20 text-white border-white/20">
+                      <MessageSquare className="mr-2 h-4 w-4" />
+                      Continue Coaching Session
+                    </Button>
+                  </Link>
+                </div>
+              </div>
+            </div>
 
-              {clientMemory && (
-                <Card>
-                  <CardHeader>
-                    <CardTitle className="flex items-center">
-                      <Target className="mr-2 h-5 w-5" />
-                      Quick Stats
+            {/* Main Grid Layout */}
+            <div className="grid gap-6 lg:grid-cols-3">
+              {/* Left Column - Coach Summary (Spans 2 columns) */}
+              <div className="lg:col-span-2 space-y-6">
+                {/* Coach Summary */}
+                <Card className="border-0 shadow-lg">
+                  <CardHeader className="pb-4">
+                    <CardTitle className="flex items-center gap-2 text-xl">
+                      <div className="h-8 w-8 rounded-full bg-gradient-to-r from-blue-500 to-purple-500 flex items-center justify-center">
+                        <Activity className="h-4 w-4 text-white" />
+                      </div>
+                      Your AI Coach Summary
                     </CardTitle>
                     <CardDescription>
-                      Key information from your profile
+                      Personalized insights based on your conversations
                     </CardDescription>
                   </CardHeader>
-                  <CardContent>
-                    <div className="grid grid-cols-2 gap-4">
-                      {clientMemory.name && (
-                        <div>
-                          <label className="text-sm font-medium text-foreground">Name</label>
-                          <p className="text-sm text-muted-foreground">{clientMemory.name}</p>
+                  <CardContent className="space-y-6">
+                    {clientMemory || memorySummary ? (
+                      <>
+                        {/* Memory Summary */}
+                        {memorySummary && (
+                          <div className="p-4 bg-gradient-to-br from-blue-50 to-purple-50 dark:from-blue-950 dark:to-purple-950 rounded-lg border border-blue-200 dark:border-blue-800">
+                            <Textarea
+                              value={memorySummary}
+                              readOnly
+                              className="min-h-[100px] resize-none border-0 bg-transparent focus:ring-0 focus:border-0"
+                              placeholder="HypertroQ will learn about you as you chat..."
+                            />
+                            <p className="text-xs text-muted-foreground mt-2">
+                              This summary is automatically generated from your conversations and profile
+                            </p>
+                          </div>
+                        )}
+                        
+                        {/* Key Insights */}
+                        {clientMemory && (
+                          <div className="grid md:grid-cols-2 gap-6">
+                            {clientMemory.primaryGoal && (
+                              <div className="space-y-3">
+                                <div className="flex items-center gap-2">
+                                  <div className="h-2 w-2 rounded-full bg-blue-500" />
+                                  <h4 className="font-semibold text-foreground">Primary Goal</h4>
+                                </div>
+                                <p className="text-muted-foreground pl-4">{clientMemory.primaryGoal.replace('_', ' ')}</p>
+                              </div>
+                            )}
+                            
+                            {clientMemory.trainingExperience && (
+                              <div className="space-y-3">
+                                <div className="flex items-center gap-2">
+                                  <div className="h-2 w-2 rounded-full bg-green-500" />
+                                  <h4 className="font-semibold text-foreground">Experience Level</h4>
+                                </div>
+                                <p className="text-muted-foreground pl-4 capitalize">{clientMemory.trainingExperience}</p>
+                              </div>
+                            )}
+                            
+                            {clientMemory.weeklyTrainingDays && (
+                              <div className="space-y-3">
+                                <div className="flex items-center gap-2">
+                                  <div className="h-2 w-2 rounded-full bg-orange-500" />
+                                  <h4 className="font-semibold text-foreground">Training Frequency</h4>
+                                </div>
+                                <p className="text-muted-foreground pl-4">{clientMemory.weeklyTrainingDays} days/week</p>
+                              </div>
+                            )}
+                            
+                            {clientMemory.name && (
+                              <div className="space-y-3">
+                                <div className="flex items-center gap-2">
+                                  <div className="h-2 w-2 rounded-full bg-purple-500" />
+                                  <h4 className="font-semibold text-foreground">Name</h4>
+                                </div>
+                                <p className="text-muted-foreground pl-4">{clientMemory.name}</p>
+                              </div>
+                            )}
+                          </div>
+                        )}
+
+                        {/* Additional Insights Row */}
+                        {clientMemory && (
+                          <div className="grid md:grid-cols-3 gap-4 pt-4 border-t">
+                            {clientMemory.age && (
+                              <div className="text-center p-3 bg-muted/30 rounded-lg">
+                                <div className="text-xl font-bold text-foreground">{clientMemory.age}</div>
+                                <div className="text-xs text-muted-foreground">Age (years)</div>
+                              </div>
+                            )}
+                            {(clientMemory.currentBench || clientMemory.currentSquat || clientMemory.currentDeadlift) && (
+                              <div className="text-center p-3 bg-muted/30 rounded-lg">
+                                <div className="text-xl font-bold text-foreground">
+                                  {clientMemory.currentBench || clientMemory.currentSquat || clientMemory.currentDeadlift}kg
+                                </div>
+                                <div className="text-xs text-muted-foreground">
+                                  {clientMemory.currentBench ? 'Bench' : clientMemory.currentSquat ? 'Squat' : 'Deadlift'}
+                                </div>
+                              </div>
+                            )}
+                            {clientMemory.weeklyTrainingDays && (
+                              <div className="text-center p-3 bg-muted/30 rounded-lg">
+                                <div className="text-xl font-bold text-foreground">{clientMemory.weeklyTrainingDays}</div>
+                                <div className="text-xs text-muted-foreground">Days/Week</div>
+                              </div>
+                            )}
+                          </div>
+                        )}
+
+                        {/* Current Lifts Section */}
+                        {clientMemory && (clientMemory.currentBench || clientMemory.currentSquat || clientMemory.currentDeadlift || clientMemory.currentOHP) && (
+                          <div className="mt-6 pt-4 border-t">
+                            <h4 className="text-sm font-medium text-foreground mb-3 flex items-center gap-2">
+                              <Target className="h-4 w-4" />
+                              Current Lifts
+                            </h4>
+                            <div className="grid grid-cols-2 md:grid-cols-4 gap-2 text-sm">
+                              {clientMemory.currentBench && (
+                                <div className="text-center p-2 bg-blue-50 dark:bg-blue-950 rounded">
+                                  <div className="font-bold text-blue-700 dark:text-blue-300">{clientMemory.currentBench}kg</div>
+                                  <div className="text-blue-600 dark:text-blue-400">Bench</div>
+                                </div>
+                              )}
+                              {clientMemory.currentSquat && (
+                                <div className="text-center p-2 bg-green-50 dark:bg-green-950 rounded">
+                                  <div className="font-bold text-green-700 dark:text-green-300">{clientMemory.currentSquat}kg</div>
+                                  <div className="text-green-600 dark:text-green-400">Squat</div>
+                                </div>
+                              )}
+                              {clientMemory.currentDeadlift && (
+                                <div className="text-center p-2 bg-red-50 dark:bg-red-950 rounded">
+                                  <div className="font-bold text-red-700 dark:text-red-300">{clientMemory.currentDeadlift}kg</div>
+                                  <div className="text-red-600 dark:text-red-400">Deadlift</div>
+                                </div>
+                              )}
+                              {clientMemory.currentOHP && (
+                                <div className="text-center p-2 bg-yellow-50 dark:bg-yellow-950 rounded">
+                                  <div className="font-bold text-yellow-700 dark:text-yellow-300">{clientMemory.currentOHP}kg</div>
+                                  <div className="text-yellow-600 dark:text-yellow-400">OHP</div>
+                                </div>
+                              )}
+                            </div>
+                          </div>
+                        )}
+                      </>
+                    ) : (
+                      <div className="text-center p-8 bg-gradient-to-br from-muted/30 to-muted/10 rounded-lg border-2 border-dashed border-muted-foreground/20">
+                        <div className="h-16 w-16 rounded-full bg-gradient-to-r from-blue-500 to-purple-500 flex items-center justify-center mx-auto mb-4">
+                          <MessageSquare className="h-8 w-8 text-white" />
                         </div>
-                      )}
-                      {clientMemory.age && (
-                        <div>
-                          <label className="text-sm font-medium text-foreground">Age</label>
-                          <p className="text-sm text-muted-foreground">{clientMemory.age} years</p>
-                        </div>
-                      )}
-                      {clientMemory.trainingExperience && (
-                        <div>
-                          <label className="text-sm font-medium text-foreground">Experience</label>
-                          <p className="text-sm text-muted-foreground capitalize">{clientMemory.trainingExperience}</p>
-                        </div>
-                      )}
-                      {clientMemory.weeklyTrainingDays && (
-                        <div>
-                          <label className="text-sm font-medium text-foreground">Training Days</label>
-                          <p className="text-sm text-muted-foreground">{clientMemory.weeklyTrainingDays}/week</p>
-                        </div>
-                      )}
-                      {clientMemory.primaryGoal && (
-                        <div className="col-span-2">
-                          <label className="text-sm font-medium text-foreground">Primary Goal</label>
-                          <p className="text-sm text-muted-foreground">{clientMemory.primaryGoal.replace('_', ' ')}</p>
-                        </div>
-                      )}
-                    </div>
-                    
-                    {(clientMemory.currentBench || clientMemory.currentSquat || clientMemory.currentDeadlift || clientMemory.currentOHP) && (
-                      <div className="mt-6 pt-4 border-t">
-                        <h4 className="text-sm font-medium text-foreground mb-2">Current Lifts</h4>
-                        <div className="grid grid-cols-2 gap-2 text-sm">
-                          {clientMemory.currentBench && <div>Bench: {clientMemory.currentBench}kg</div>}
-                          {clientMemory.currentSquat && <div>Squat: {clientMemory.currentSquat}kg</div>}
-                          {clientMemory.currentDeadlift && <div>Deadlift: {clientMemory.currentDeadlift}kg</div>}
-                          {clientMemory.currentOHP && <div>OHP: {clientMemory.currentOHP}kg</div>}
+                        <h3 className="text-xl font-semibold text-foreground mb-2">
+                          Let&apos;s Get Started! 🚀
+                        </h3>
+                        <p className="text-muted-foreground mb-6 max-w-md mx-auto">
+                          Start chatting with your AI coach to build your personalized fitness profile and unlock tailored recommendations
+                        </p>
+                        <div className="flex flex-col sm:flex-row gap-3 justify-center">
+                          <Link href="/chat">
+                            <Button size="lg" className="bg-gradient-to-r from-blue-600 to-purple-600 hover:from-blue-700 hover:to-purple-700">
+                              <MessageSquare className="mr-2 h-4 w-4" />
+                              Start Your First Session
+                            </Button>
+                          </Link>
+                          <Button 
+                            size="lg" 
+                            variant="outline" 
+                            onClick={() => setActiveTab('edit')}
+                          >
+                            <Edit className="mr-2 h-4 w-4" />
+                            Edit Profile
+                          </Button>
                         </div>
                       </div>
                     )}
                   </CardContent>
                 </Card>
-              )}
+
+                {/* Quick Stats Dashboard */}
+                <Card className="border-0 shadow-lg">
+                  <CardHeader className="pb-4">
+                    <CardTitle className="flex items-center gap-2 text-xl">
+                      <div className="h-8 w-8 rounded-full bg-gradient-to-r from-green-500 to-blue-500 flex items-center justify-center">
+                        <BarChart3 className="h-4 w-4 text-white" />
+                      </div>
+                      Today&apos;s Progress
+                    </CardTitle>
+                  </CardHeader>
+                  <CardContent>
+                    <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
+                      <div className="text-center p-4 bg-gradient-to-br from-blue-50 to-blue-100 dark:from-blue-950 dark:to-blue-900 rounded-xl border border-blue-200 dark:border-blue-800">
+                        <div className="text-2xl font-bold text-blue-700 dark:text-blue-300">
+                          {userPlan?.messagesUsedToday || 0}
+                        </div>
+                        <div className="text-sm text-blue-600 dark:text-blue-400 font-medium">
+                          Messages Used
+                        </div>
+                      </div>
+                      <div className="text-center p-4 bg-gradient-to-br from-green-50 to-green-100 dark:from-green-950 dark:to-green-900 rounded-xl border border-green-200 dark:border-green-800">
+                        <div className="text-2xl font-bold text-green-700 dark:text-green-300">
+                          {userPlan?.plan === 'PRO' ? '∞' : Math.max(0, (userPlan?.dailyLimit || 15) - (userPlan?.messagesUsedToday || 0))}
+                        </div>
+                        <div className="text-sm text-green-600 dark:text-green-400 font-medium">
+                          Remaining
+                        </div>
+                      </div>
+                      <div className="text-center p-4 bg-gradient-to-br from-purple-50 to-purple-100 dark:from-purple-950 dark:to-purple-900 rounded-xl border border-purple-200 dark:border-purple-800">
+                        <div className="text-2xl font-bold text-purple-700 dark:text-purple-300">
+                          <PlanBadge plan={userPlan?.plan || 'FREE'} />
+                        </div>
+                        <div className="text-sm text-purple-600 dark:text-purple-400 font-medium">
+                          Plan Status
+                        </div>
+                      </div>
+                      <div className="text-center p-4 bg-gradient-to-br from-orange-50 to-orange-100 dark:from-orange-950 dark:to-orange-900 rounded-xl border border-orange-200 dark:border-orange-800">
+                        <div className="text-2xl font-bold text-orange-700 dark:text-orange-300">
+                          {userPlan?.plan === 'PRO' ? '100' : Math.round(((userPlan?.messagesUsedToday || 0) / (userPlan?.dailyLimit || 1)) * 100)}%
+                        </div>
+                        <div className="text-sm text-orange-600 dark:text-orange-400 font-medium">
+                          Daily Usage
+                        </div>
+                      </div>
+                    </div>
+                  </CardContent>
+                </Card>
+              </div>
+
+              {/* Right Column - Subscription & Quick Actions */}
+              <div className="space-y-6">
+                {/* Enhanced Subscription Card */}
+                <Card className="border-0 shadow-lg">
+                  <CardHeader className="pb-4">
+                    <CardTitle className="flex items-center gap-2 text-lg">
+                      <div className={`h-8 w-8 rounded-full flex items-center justify-center ${
+                        userPlan?.plan === 'PRO' 
+                          ? 'bg-gradient-to-r from-yellow-500 to-orange-500' 
+                          : 'bg-gradient-to-r from-gray-500 to-gray-600'
+                      }`}>
+                        <Crown className="h-4 w-4 text-white" />
+                      </div>
+                      Subscription
+                    </CardTitle>
+                  </CardHeader>
+                  <CardContent className="space-y-4">
+                    {userPlan?.plan === 'PRO' ? (
+                      <div className="space-y-4">
+                        <div className="flex items-center justify-between">
+                          <div>
+                            <h3 className="font-semibold text-foreground">Pro Plan</h3>
+                            <p className="text-sm text-muted-foreground">Premium features active</p>
+                          </div>
+                          <Badge className="bg-gradient-to-r from-yellow-500 to-orange-500 text-white">
+                            <Crown className="mr-1 h-3 w-3" />
+                            Pro
+                          </Badge>
+                        </div>
+
+                        <div className="space-y-3">
+                          <h4 className="font-medium text-foreground text-sm">Pro Features Active:</h4>
+                          <div className="space-y-2">
+                            <div className="flex items-center gap-2 text-sm text-muted-foreground">
+                              <CheckCircle className="h-4 w-4 text-green-500" />
+                              Unlimited messages
+                            </div>
+                            <div className="flex items-center gap-2 text-sm text-muted-foreground">
+                              <CheckCircle className="h-4 w-4 text-green-500" />
+                              Conversation memory
+                            </div>
+                            <div className="flex items-center gap-2 text-sm text-muted-foreground">
+                              <CheckCircle className="h-4 w-4 text-green-500" />
+                              Progress tracking
+                            </div>
+                          </div>
+                        </div>
+
+                        <div className="pt-4 border-t">
+                          <Button variant="outline" className="w-full" size="sm">
+                            <CreditCard className="mr-2 h-4 w-4" />
+                            Manage Billing
+                          </Button>
+                        </div>
+                      </div>
+                    ) : (
+                      <div className="space-y-4">
+                        <div className="text-center p-6 bg-gradient-to-br from-blue-50 to-purple-50 dark:from-blue-950 dark:to-purple-950 rounded-lg border-2 border-dashed border-blue-200 dark:border-blue-800">
+                          <Crown className="h-10 w-10 text-blue-500 mx-auto mb-3" />
+                          <h3 className="font-semibold text-foreground mb-2">
+                            Upgrade to Pro
+                          </h3>
+                          <p className="text-sm text-muted-foreground mb-4">
+                            Unlock unlimited messages and advanced features
+                          </p>
+                          <UpgradeButton 
+                            variant="default" 
+                            size="sm" 
+                            className="bg-gradient-to-r from-blue-600 to-purple-600 hover:from-blue-700 hover:to-purple-700 w-full"
+                            showDialog={true}
+                          />
+                        </div>
+
+                        <div className="space-y-2">
+                          <h4 className="font-medium text-foreground text-sm">Free Plan Includes:</h4>
+                          <div className="space-y-1 text-sm text-muted-foreground">
+                            <div>• 15 messages per day</div>
+                            <div>• Basic AI guidance</div>
+                            <div>• Access to knowledge base</div>
+                          </div>
+                        </div>
+                      </div>
+                    )}
+                  </CardContent>
+                </Card>
+
+                {/* Quick Actions */}
+                <Card className="border-0 shadow-lg">
+                  <CardHeader className="pb-4">
+                    <CardTitle className="flex items-center gap-2 text-lg">
+                      <div className="h-8 w-8 rounded-full bg-gradient-to-r from-pink-500 to-rose-500 flex items-center justify-center">
+                        <TrendingUp className="h-4 w-4 text-white" />
+                      </div>
+                      Quick Actions
+                    </CardTitle>
+                  </CardHeader>
+                  <CardContent className="space-y-3">
+                    <Link href="/chat" className="block">
+                      <Button className="w-full justify-start" variant="outline" size="lg">
+                        <MessageSquare className="mr-2 h-4 w-4" />
+                        Start Coaching Session
+                      </Button>
+                    </Link>
+                    <Button 
+                      className="w-full justify-start" 
+                      variant="outline" 
+                      size="lg"
+                      onClick={() => setActiveTab('edit')}
+                    >
+                      <Edit className="mr-2 h-4 w-4" />
+                      Edit Profile
+                    </Button>
+                    <Link href="/pricing" className="block">
+                      <Button className="w-full justify-start" variant="outline" size="lg">
+                        <Crown className="mr-2 h-4 w-4" />
+                        View Plans & Pricing
+                      </Button>
+                    </Link>
+                  </CardContent>
+                </Card>
+              </div>
             </div>
           </TabsContent>
 
