@@ -23,7 +23,9 @@ import {
   AvatarFallback,
   AvatarImage,
 } from "@/components/ui/avatar";
-import { useRouter } from 'next/navigation';
+import { useRouter, usePathname } from 'next/navigation';
+import LanguageSwitcher from '@/components/language-switcher';
+import { useTranslations } from 'next-intl';
 
 const Navbar = () => {
   const [isMobileMenuOpen, setIsMobileMenuOpen] = useState(false);
@@ -33,6 +35,11 @@ const Navbar = () => {
   const { theme } = useTheme();
   const [mounted, setMounted] = useState(false);
   const router = useRouter();
+  const pathname = usePathname();
+  const t = useTranslations('Navigation');
+  
+  // Extract locale from pathname
+  const locale = pathname.match(/^\/([a-z]{2})(?=\/|$)/)?.[1] || 'en';
 
   // Prevent hydration mismatch by only using theme after mounting
   useEffect(() => {
@@ -115,20 +122,20 @@ const Navbar = () => {
   };
 
   const navLinks = [
-    { href: "/pricing", label: "Pricing", icon: Crown },
-    ...(user ? [{ href: "/profile", label: "Profile", icon: UserCircle }] : []),
-    { href: "/chat", label: "Chat", icon: MessageSquare },
-    ...(userRole === 'admin' ? [{ href: "/admin", label: "Dashboard", icon: LayoutDashboard }] : []),
+    { href: `/${locale}/pricing`, label: t('pricing'), icon: Crown },
+    ...(user ? [{ href: `/${locale}/profile`, label: t('profile'), icon: UserCircle }] : []),
+    { href: `/${locale}/chat`, label: t('chat'), icon: MessageSquare },
+    ...(userRole === 'admin' ? [{ href: `/${locale}/admin`, label: t('dashboard'), icon: LayoutDashboard }] : []),
   ];
 
-  const UserAvatarFallback = user ? (user.user_metadata?.full_name?.[0] || user.email?.[0])?.toUpperCase() : 'U';
+  const UserAvatarFallback = user ? (user.user_metadata?.full_name?.[0] || user.email?.[0])?.toUpperCase() : t('user')[0].toUpperCase();
 
   return (
     <header className="sticky top-0 z-50 w-full border-b bg-background/95 backdrop-blur supports-[backdrop-filter]:bg-background/60 shadow-sm">
       <div className="relative container flex h-16 items-center justify-center px-4 lg:px-20 mx-auto">
-        {/* Logo/Brand - absolutely positioned left */}
-        <div className="absolute left-0 top-0 h-full flex items-center pl-2 lg:pl-6" style={{ minWidth: 170 }}>
-          <Link href="/" className="flex items-center space-x-2 lg:space-x-3 transition-colors hover:text-primary">
+        {/* Logo/Brand - absolutely positioned left in LTR, right in RTL */}
+        <div className="absolute start-0 top-0 h-full flex items-center ps-2 lg:ps-6" style={{ minWidth: 170 }}>
+          <Link href={`/${locale}`} className="flex items-center space-x-2 lg:space-x-3 transition-colors hover:text-primary">
             <Image 
               src={getLogoSrc()}
               alt="HypertroQ Logo" 
@@ -149,8 +156,8 @@ const Navbar = () => {
               <Link href={link.href}>{link.label}</Link>
             </Button>
           ))}
-        </nav>        {/* Right section - absolutely positioned right */}
-        <div className="absolute right-0 top-0 h-full flex items-center space-x-2 lg:space-x-3 pr-2 lg:pr-6">
+        </nav>        {/* Right section - absolutely positioned right in LTR, left in RTL */}
+        <div className="absolute end-0 top-0 h-full flex items-center space-x-2 lg:space-x-3 pe-2 lg:pe-6 rtl:space-x-reverse">
           {isLoadingUser ? (
             <div className="h-9 w-9 rounded-full bg-muted animate-pulse" /> // Placeholder for loading state
           ) : user ? (
@@ -168,39 +175,43 @@ const Navbar = () => {
                   <DropdownMenuContent className="w-56" align="end" forceMount>
                     <DropdownMenuLabel className="font-normal">
                       <div className="flex flex-col space-y-1">
-                        <p className="text-sm font-medium leading-none">{user.user_metadata?.full_name || user.email?.split('@')[0] || 'User'}</p>
+                        <p className="text-sm font-medium leading-none">{user.user_metadata?.full_name || user.email?.split('@')[0] || t('user')}</p>
                         <p className="text-xs leading-none text-muted-foreground">
-                          {user.email || 'No email'}
+                          {user.email || t('noEmail')}
                         </p>
                       </div>
                     </DropdownMenuLabel>
                     <DropdownMenuSeparator />
                     <DropdownMenuItem asChild>
-                      <Link href="/profile" className="flex items-center w-full">
-                        <User className="mr-2 h-4 w-4" />
-                        <span>Profile</span>
+                      <Link href={`/${locale}/profile`} className="flex items-center w-full">
+                        <User className="me-2 h-4 w-4" />
+                        <span>{t('profile')}</span>
                       </Link>
                     </DropdownMenuItem>
                     {userRole === 'admin' && (
                       <DropdownMenuItem asChild>
-                        <Link href="/admin/settings" className="flex items-center w-full">
-                          <Settings className="mr-2 h-4 w-4" />
-                          <span>AI Configuration</span>
+                        <Link href={`/${locale}/admin/settings`} className="flex items-center w-full">
+                          <Settings className="me-2 h-4 w-4" />
+                          <span>{t('aiConfiguration')}</span>
                         </Link>
                       </DropdownMenuItem>
                     )}
                     <DropdownMenuSeparator />
-                    {/* ThemeToggle within Dropdown */}
-                    <div className="px-1 py-1">
-                       <div className="flex items-center justify-between rounded-sm px-2 py-1.5 text-sm hover:bg-muted cursor-default">
-                          <span>Theme</span>
-                          <ThemeToggle />
+                    {/* Language and Theme Settings */}
+                    <div className="px-1 py-1 space-y-1">
+                      <div className="flex items-center justify-between rounded-sm px-2 py-1.5 text-sm hover:bg-muted cursor-default">
+                        <span>{t('language')}</span>
+                        <LanguageSwitcher />
+                      </div>
+                      <div className="flex items-center justify-between rounded-sm px-2 py-1.5 text-sm hover:bg-muted cursor-default">
+                        <span>{t('theme')}</span>
+                        <ThemeToggle />
                       </div>
                     </div>
                     <DropdownMenuSeparator />
                     <DropdownMenuItem onClick={handleLogout} className="flex items-center w-full cursor-pointer">
-                      <LogOut className="mr-2 h-4 w-4" />
-                      <span>Logout</span>
+                      <LogOut className="me-2 h-4 w-4" />
+                      <span>{t('logout')}</span>
                     </DropdownMenuItem>
                   </DropdownMenuContent>
                 </DropdownMenu>
@@ -208,17 +219,18 @@ const Navbar = () => {
             ) : (
               // Logged-out state: "Get started" button and ThemeToggle
               <>
+                <LanguageSwitcher />
                 <ThemeToggle />
                 <Button
                   className="hidden md:inline-flex"
                   variant="default"
                   onClick={() => {
                     if (typeof window !== 'undefined') {
-                      window.location.href = '/login';
+                      window.location.href = `/${locale}/login`;
                     }
                   }}
                 >
-                  Get started
+                  {t('getStarted')}
                 </Button>
               </>
             )}
@@ -226,16 +238,16 @@ const Navbar = () => {
           <div className="md:hidden">
             <Sheet open={isMobileMenuOpen} onOpenChange={setIsMobileMenuOpen}>
               <SheetTrigger asChild>
-                <Button variant="ghost" size="icon" aria-label="Toggle mobile menu">
+                <Button variant="ghost" size="icon" aria-label={t('toggleMobileMenu')}>
                   <Menu className="h-6 w-6" />
                 </Button>
               </SheetTrigger>
               <SheetContent side="right" className="w-[300px] sm:w-[400px]">
-                <SheetTitle className="sr-only">Navigation Menu</SheetTitle>
+                <SheetTitle className="sr-only">{t('navigationMenu')}</SheetTitle>
                 <nav className="flex flex-col space-y-3 mt-8 px-2 h-full">
                   <Link
-                    href="/"
-                    className="mb-6 flex items-center space-x-3 px-2"
+                    href={`/${locale}`}
+                    className="mb-6 flex items-center space-x-3 px-2 rtl:space-x-reverse"
                     onClick={() => setIsMobileMenuOpen(false)}
                   >
                     <Image 
@@ -251,7 +263,7 @@ const Navbar = () => {
                     <SheetClose asChild key={link.href}>
                       <Button variant="outline" className="w-full justify-start h-12 px-4" asChild>
                         <Link href={link.href}>
-                          <link.icon className="mr-2 h-4 w-4" />
+                          <link.icon className="me-2 h-4 w-4" />
                           {link.label}
                         </Link>
                       </Button>
@@ -263,17 +275,17 @@ const Navbar = () => {
                     ) : user ? (
                       <>
                         {/* User Profile Section */}
-                        <div className="flex items-center space-x-3 p-3 border rounded-lg bg-muted/30">
+                        <div className="flex items-center space-x-3 p-3 border rounded-lg bg-muted/30 rtl:space-x-reverse">
                           <Avatar className="h-10 w-10">
                             <AvatarImage src={user.user_metadata?.avatar_url || "/placeholder-avatar.png"} alt="User Avatar" />
                             <AvatarFallback>{UserAvatarFallback}</AvatarFallback>
                           </Avatar>
                           <div className="flex flex-col space-y-1 flex-1 min-w-0">
                             <p className="text-sm font-medium leading-none truncate">
-                              {user.user_metadata?.full_name || user.email?.split('@')[0] || 'User'}
+                              {user.user_metadata?.full_name || user.email?.split('@')[0] || t('user')}
                             </p>
                             <p className="text-xs leading-none text-muted-foreground truncate">
-                              {user.email || 'No email'}
+                              {user.email || t('noEmail')}
                             </p>
                           </div>
                         </div>
@@ -283,39 +295,46 @@ const Navbar = () => {
                         {/* User Menu Items */}
                         <SheetClose asChild>
                           <Button variant="outline" className="w-full justify-start h-12 px-4" asChild>
-                            <Link href="/profile">
-                              <User className="mr-2 h-4 w-4" />
-                              Profile
+                            <Link href={`/${locale}/profile`}>
+                              <User className="me-2 h-4 w-4" />
+                              {t('profile')}
                             </Link>
                           </Button>
                         </SheetClose>
                         {userRole === 'admin' && (
                           <SheetClose asChild>
                             <Button variant="outline" className="w-full justify-start h-12 px-4" asChild>
-                              <Link href="/admin/settings">
-                                <Settings className="mr-2 h-4 w-4" />
-                                AI Configuration
+                              <Link href={`/${locale}/admin/settings`}>
+                                <Settings className="me-2 h-4 w-4" />
+                                {t('aiConfiguration')}
                               </Link>
                             </Button>
                           </SheetClose>
                         )}
                         <SheetClose asChild>
                           <Button variant="outline" className="w-full justify-start h-12 px-4" onClick={async () => { await handleLogout(); setIsMobileMenuOpen(false);}}>
-                              <LogOut className="mr-2 h-4 w-4" />
-                              Logout
+                              <LogOut className="me-2 h-4 w-4" />
+                              {t('logout')}
                           </Button>
                         </SheetClose>
                       </>
                     ) : (
                        <SheetClose asChild>
                           <Button variant="default" className="w-full justify-center h-12 px-4" asChild>
-                            <Link href="/login">
-                              Get started
+                            <Link href={`/${locale}/login`}>
+                              {t('getStarted')}
                             </Link>
                           </Button>
                         </SheetClose>
-                    )}                    <div className="pt-4 border-t border-border mb-4">
-                      <ThemeToggle />
+                    )}                    <div className="pt-4 border-t border-border mb-4 space-y-3">
+                      <div className="flex items-center justify-between">
+                        <span className="text-sm font-medium">{t('language')}</span>
+                        <LanguageSwitcher />
+                      </div>
+                      <div className="flex items-center justify-between">
+                        <span className="text-sm font-medium">{t('theme')}</span>
+                        <ThemeToggle />
+                      </div>
                     </div>
                   </div>
                 </nav>

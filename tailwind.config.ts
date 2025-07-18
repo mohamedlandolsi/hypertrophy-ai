@@ -26,5 +26,6 @@ export default {
   },
   plugins: [
     require("tailwind-scrollbar"),
+    require("tailwindcss-rtl"),
   ],
 } satisfies Config;

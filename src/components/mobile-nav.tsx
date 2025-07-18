@@ -4,6 +4,8 @@ import { Button } from '@/components/ui/button';
 import { Menu, X, MessageSquare, User, Settings, LogOut } from 'lucide-react';
 import { motion, AnimatePresence } from 'framer-motion';
 import Link from 'next/link';
+import { usePathname } from 'next/navigation';
+import { useTranslations } from 'next-intl';
 
 interface MobileNavProps {
   isOpen: boolean;
@@ -16,6 +18,11 @@ interface MobileNavProps {
 }
 
 export function MobileNav({ isOpen, onToggle, user, onLogout }: MobileNavProps) {
+  const pathname = usePathname();
+  const t = useTranslations('Navigation');
+  
+  // Extract locale from pathname
+  const locale = pathname.match(/^\/([a-z]{2})(?=\/|$)/)?.[1] || 'en';
   return (
     <>
       {/* Mobile Menu Button */}
@@ -24,7 +31,7 @@ export function MobileNav({ isOpen, onToggle, user, onLogout }: MobileNavProps) 
         size="sm"
         className="md:hidden"
         onClick={onToggle}
-        aria-label="Toggle mobile menu"
+        aria-label={t('toggleMobileMenu')}
       >
         {isOpen ? <X className="h-5 w-5" /> : <Menu className="h-5 w-5" />}
       </Button>
@@ -53,7 +60,7 @@ export function MobileNav({ isOpen, onToggle, user, onLogout }: MobileNavProps) 
               <div className="flex flex-col h-full">
                 {/* Header */}
                 <div className="flex items-center justify-between p-4 border-b border-border">
-                  <h2 className="font-semibold">Menu</h2>
+                  <h2 className="font-semibold">{t('menu')}</h2>
                   <Button variant="ghost" size="sm" onClick={onToggle}>
                     <X className="h-4 w-4" />
                   </Button>
@@ -61,26 +68,26 @@ export function MobileNav({ isOpen, onToggle, user, onLogout }: MobileNavProps) 
 
                 {/* Navigation Links */}
                 <nav className="flex-1 p-4 space-y-2">
-                  <Link href="/chat" onClick={onToggle}>
+                  <Link href={`/${locale}/chat`} onClick={onToggle}>
                     <Button variant="ghost" className="w-full justify-start">
                       <MessageSquare className="mr-2 h-4 w-4" />
-                      Chat
+                      {t('chat')}
                     </Button>
                   </Link>
                   
                   {user && (
-                    <Link href="/profile" onClick={onToggle}>
+                    <Link href={`/${locale}/profile`} onClick={onToggle}>
                       <Button variant="ghost" className="w-full justify-start">
                         <User className="mr-2 h-4 w-4" />
-                        Profile
+                        {t('profile')}
                       </Button>
                     </Link>
                   )}
                   
-                  <Link href="/pricing" onClick={onToggle}>
+                  <Link href={`/${locale}/pricing`} onClick={onToggle}>
                     <Button variant="ghost" className="w-full justify-start">
                       <Settings className="mr-2 h-4 w-4" />
-                      Pricing
+                      {t('pricing')}
                     </Button>
                   </Link>
                 </nav>
@@ -97,7 +104,7 @@ export function MobileNav({ isOpen, onToggle, user, onLogout }: MobileNavProps) 
                       }}
                     >
                       <LogOut className="mr-2 h-4 w-4" />
-                      Sign Out
+                      {t('signOut')}
                     </Button>
                   </div>
                 )}

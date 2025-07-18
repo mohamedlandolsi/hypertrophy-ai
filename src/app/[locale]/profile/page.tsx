@@ -28,6 +28,7 @@ import Image from 'next/image';
 import type { User as SupabaseUser } from '@supabase/supabase-js';
 import { FitnessLoading } from '@/components/ui/loading';
 import EnhancedProfileForm from '@/components/enhanced-profile-form';
+import { useLocale } from 'next-intl';
 import { UpgradeButton } from '@/components/upgrade-button';
 import { PlanBadge } from '@/components/plan-badge';
 
@@ -67,6 +68,7 @@ interface UserPlanData {
 }
 
 export default function ProfilePage() {
+  const locale = useLocale();
   const [user, setUser] = useState<SupabaseUser | null>(null);
   const [loading, setLoading] = useState(true);
   const [clientMemory, setClientMemory] = useState<ClientMemory | null>(null);
@@ -179,7 +181,7 @@ export default function ProfilePage() {
                 
                 {/* Quick Action */}
                 <div className="mt-4">
-                  <Link href="/chat">
+                  <Link href={`/${locale}/chat`}>
                     <Button size="lg" variant="secondary" className="bg-white/10 hover:bg-white/20 text-white border-white/20">
                       <MessageSquare className="mr-2 h-4 w-4" />
                       Continue Coaching Session
@@ -345,7 +347,7 @@ export default function ProfilePage() {
                           Start chatting with your AI coach to build your personalized fitness profile and unlock tailored recommendations
                         </p>
                         <div className="flex flex-col sm:flex-row gap-3 justify-center">
-                          <Link href="/chat">
+                          <Link href={`/${locale}/chat`}>
                             <Button size="lg" className="bg-gradient-to-r from-blue-600 to-purple-600 hover:from-blue-700 hover:to-purple-700">
                               <MessageSquare className="mr-2 h-4 w-4" />
                               Start Your First Session
@@ -511,7 +513,7 @@ export default function ProfilePage() {
                     </CardTitle>
                   </CardHeader>
                   <CardContent className="space-y-3">
-                    <Link href="/chat" className="block">
+                    <Link href={`/${locale}/chat`} className="block">
                       <Button className="w-full justify-start" variant="outline" size="lg">
                         <MessageSquare className="mr-2 h-4 w-4" />
                         Start Coaching Session
@@ -526,7 +528,7 @@ export default function ProfilePage() {
                       <Edit className="mr-2 h-4 w-4" />
                       Edit Profile
                     </Button>
-                    <Link href="/pricing" className="block">
+                    <Link href={`/${locale}/pricing`} className="block">
                       <Button className="w-full justify-start" variant="outline" size="lg">
                         <Crown className="mr-2 h-4 w-4" />
                         View Plans & Pricing
@@ -745,13 +747,13 @@ export default function ProfilePage() {
                 </CardHeader>
                 <CardContent>
                   <div className="grid md:grid-cols-2 gap-4">
-                    <Link href="/chat">
+                    <Link href={`/${locale}/chat`}>
                       <Button className="w-full" variant="outline">
                         <MessageSquare className="mr-2 h-4 w-4" />
                         Start Coaching Session
                       </Button>
                     </Link>
-                    <Link href="/pricing">
+                    <Link href={`/${locale}/pricing`}>
                       <Button className="w-full" variant="outline">
                         <Crown className="mr-2 h-4 w-4" />
                         View Plans & Pricing

@@ -1,0 +1,433 @@
+{
+  "Navigation": {
+    "home": "Home",
+    "chat": "Chat",
+    "pricing": "Pricing",
+    "profile": "Profile",
+    "admin": "Admin",
+    "logout": "Logout",
+    "login": "Login",
+    "signup": "Sign Up",
+    "language": "Language",
+    "theme": "Theme",
+    "getStarted": "Get started",
+    "dashboard": "Dashboard",
+    "aiConfiguration": "AI Configuration",
+    "navigationMenu": "Navigation Menu",
+    "toggleMobileMenu": "Toggle mobile menu",
+    "menu": "Menu",
+    "noEmail": "No email",
+    "user": "User",
+    "signOut": "Sign Out",
+    "toggleTheme": "Toggle theme"
+  },
+  "HomePage": {
+    "title": "Your AI-Powered Fitness Coach",
+    "subtitle": "Get personalized workout plans, nutrition advice, and motivation with HypertroQ",
+    "cta": "Start Your Fitness Journey",
+    "learnMore": "Learn More",
+    "metaTitle": "HypertroQ - AI-Powered Personal Fitness Coach",
+    "metaDescription": "Transform your fitness journey with HypertroQ, your AI-powered personal trainer. Get personalized workout plans, nutrition guidance, and expert coaching available 24/7.",
+    "hero": {
+      "welcomeBack": "Welcome Back",
+      "welcomeSubtitle": "Ready to continue your fitness journey? Come back to the HypertroQ chat to ask questions and get personalized coaching.",
+      "mainTitle": "Meet HypertroQ",
+      "mainSubtitle": "Your Evidence-Based AI Fitness Coach powered by cutting-edge exercise science research.",
+      "mainDescription": "Unlike generic AI assistants, HypertroQ eliminates fitness myths and outdated methods with science-backed training philosophy.",
+      "traditionalPrograms": "Traditional 4×12 programs",
+      "optimizedProtocols": "Optimized, science-based protocols",
+      "goToChat": "Go to Chat",
+      "getStartedFree": "Get Started Free",
+      "seeDemo": "See a Demo"
+    },
+    "chatDemo": {
+      "title": "HypertroQ Chat",
+      "userQuestion": "What's the optimal rep range for muscle growth?",
+      "aiName": "HypertroQ AI",
+      "aiResponse": "For hypertrophy, the optimal range is typically 5-10 reps taken to 0-2 RIR (Reps in Reserve). This maximizes mechanical tension, which is the primary driver of muscle growth."
+    },
+    "trustBar": {
+      "scienceBased": "Built on Modern Exercise Science:",
+      "description": "Updated with cutting-edge studies in physiology, biomechanics, kinesiology, and nutrition science."
+    },
+    "comparison": {
+      "title": "Why HypertroQ vs Generic AI?",
+      "subtitle": "The difference is in the science, not the hype.",
+      "genericAI": "Generic AI (ChatGPT, Gemini)",
+      "question": "How many reps for muscle growth?",
+      "genericResponse": "A good rep range for building muscle is typically 8-12 reps. You need to really 'feel the burn' and switch up your exercises often to 'confuse the muscle'. Also, make sure to do lots of isolation work.",
+      "hypertroqResponse": "For hypertrophy, the optimal range is typically 5-10 reps taken to 0-2 RIR (Reps in Reserve). This maximizes mechanical tension, which is the primary driver of muscle growth. Based on your profile, I'd recommend compound movements with progressive overload.",
+      "genericCons": {
+        "outdated": "Outdated fitness information",
+        "myths": "Perpetuates training myths",
+        "generic": "Generic, one-size-fits-all advice",
+        "noPersonalization": "No personalization or memory"
+      },
+      "hypertroqPros": {
+        "research": "Latest exercise science research",
+        "evidenceBased": "Evidence-based, myth-free guidance",
+        "personalized": "Personalized to your profile",
+        "memory": "Remembers your progress & preferences"
+      }
+    },
+    "science": {
+      "title": "Built on Modern Exercise Science",
+      "subtitle": "Your pocket personal trainer with expertise in all fitness-related fields"
+    },
+    "features": {
+      "optimizedProgramming": {
+        "title": "Optimized Programming",
+        "description": "Science-based exercise selection and programming beyond traditional cookie-cutter 4×12 routines"
+      },
+      "mythFreeTraining": {
+        "title": "Myth-Free Training",
+        "description": "Eliminates common misconceptions like muscle damage being primary for hypertrophy. Evidence-based, not tradition-based"
+      },
+      "latestResearch": {
+        "title": "Latest Research Integration",
+        "description": "Updated with cutting-edge studies in physiology, biomechanics, and kinesiology. No outdated information from generic LLMs"
+      }
+    },
+    "howToUse": {
+      "title": "How to Use HypertroQ",
+      "subtitle": "Simple. Scientific. Personalized",
+      "steps": {
+        "createAccount": {
+          "title": "Create Your Account",
+          "description": "Sign up with email or Google for instant access to your AI fitness coach"
+        },
+        "completeProfile": {
+          "title": "Complete Your Profile",
+          "description": "Add your training history, goals, and preferences for personalized coaching (optional but recommended)"
+        },
+        "startChatting": {
+          "title": "Start Chatting",
+          "description": "Ask questions, get programs, receive evidence-based guidance tailored to you"
+        },
+        "upgradeForMore": {
+          "title": "Upgrade for More",
+          "description": "Subscribe to Pro for unlimited coaching and full conversation memory"
+        }
+      }
+    },
+    "whyChoose": {
+      "title": "Why Choose HypertroQ?",
+      "subtitle": "Your pocket personal trainer with expertise in all fitness-related fields",
+      "specialFeatures": {
+        "title": "What Makes HypertroQ Special",
+        "subtitle": "Unlike generic AI assistants",
+        "fitness": "Specializes in fitness & training",
+        "myths": "Eliminates fitness myths",
+        "personalized": "Personalized to your profile",
+        "programs": "Builds optimal programs"
+      },
+      "benefits": {
+        "personalTrainer": {
+          "title": "Your Pocket Personal Trainer",
+          "description": "Available 24/7 with deep knowledge of physiology, biomechanics, kinesiology, and nutrition science"
+        },
+        "personalizedProgramming": {
+          "title": "Personalized Programming",
+          "description": "Knows everything about you to create customized training programs that fit your specific case"
+        },
+        "evidenceBased": {
+          "title": "Evidence-Based Philosophy",
+          "description": "Eliminates fitness myths with up-to-date research and optimized training methodologies"
+        },
+        "continuousLearning": {
+          "title": "Continuous Learning",
+          "description": "Remembers your progress, preferences, and adapts recommendations over time"
+        }
+      }
+    },
+    "finalCta": {
+      "title": "Ready to Stop Guessing and Start Growing?",
+      "subtitle": "Get access to your science-backed fitness coaching platform today",
+      "freeMessages": "15 free messages to try HypertroQ - no credit card required",
+      "viewPricing": "View Pricing",
+      "getStartedFree": "Get Started Free",
+      "instantAccess": "Start chatting instantly • No credit card required • 15 free messages"
+    }
+  },
+  "Chat": {
+    "placeholder": "Message HypertroQ...",
+    "send": "Send",
+    "typing": "AI is thinking...",
+    "newChat": "New Chat",
+    "deleteChat": "Delete Chat",
+    "confirmDelete": "Are you sure you want to delete this chat?",
+    "cancel": "Cancel",
+    "delete": "Delete",
+    "imageUpload": "Upload Image",
+    "removeImage": "Remove Image"
+  },
+  "Pricing": {
+    "title": "Choose Your Plan",
+    "subtitle": "Start free and upgrade when you're ready",
+    "heroTitle": "Choose Your Fitness Journey",
+    "heroSubtitle": "Transform your fitness goals with AI-powered coaching. Start free or unlock unlimited potential with Pro.",
+    "subscriptionPlansLabel": "Subscription Plans",
+    "whyUpgradeTitle": "Why Upgrade to Pro?",
+    "free": "Free",
+    "pro": "Pro",
+    "monthly": "Monthly",
+    "yearly": "Yearly",
+    "perMonth": "per month",
+    "perYear": "per year",
+    "save": "Save {percentage}%",
+    "currentPlan": "Current Plan",
+    "upgrade": "Upgrade to Pro",
+    "features": {
+      "basicChat": "Basic AI coaching",
+      "dailyLimit": "{count} messages per day",
+      "unlimitedChat": "Unlimited AI coaching",
+      "memory": "Conversation memory",
+      "prioritySupport": "Priority support",
+      "advancedFeatures": "Advanced features"
+    },
+    "freePlan": {
+      "title": "Free Plan",
+      "description": "Perfect for getting started with AI fitness coaching",
+      "price": "$0",
+      "period": "/month",
+      "features": [
+        "15 messages per day",
+        "Basic AI fitness guidance",
+        "Access to knowledge base", 
+        "Standard response time"
+      ],
+      "cta": "Get Started Free",
+      "currentPlanButton": "Current Plan",
+      "youHavePro": "✓ You have Pro"
+    },
+    "proPlan": {
+      "title": "Pro Plan",
+      "description": "Unlock unlimited AI coaching and advanced features",
+      "mostPopular": "Most Popular",
+      "period": "/month",
+      "yearPeriod": "/year",
+      "equivalentTo": "Equivalent to",
+      "cancelAnytime": "Cancel anytime",
+      "features": [
+        "Unlimited messages",
+        "Persistent conversation memory",
+        "Personalized training plans",
+        "Progress tracking & analytics", 
+        "Advanced nutrition guidance",
+        "Priority support",
+        "Early access to new features",
+        "Detailed workout history"
+      ],
+      "cta": "Start Pro Now",
+      "currentPlanButton": "Current Plan"
+    },
+    "benefits": {
+      "unlimited": {
+        "title": "Unlimited Conversations",
+        "description": "Chat as much as you want without daily limits. Get continuous support for your fitness journey."
+      },
+      "personalized": {
+        "title": "Personalized Coaching", 
+        "description": "AI remembers your progress, preferences, and goals to provide truly personalized guidance."
+      },
+      "tracking": {
+        "title": "Progress Tracking",
+        "description": "Advanced analytics and insights to track your fitness progress and optimize your results."
+      }
+    },
+    "faq": {
+      "title": "Frequently Asked Questions",
+      "questions": [
+        {
+          "question": "Can I cancel anytime?",
+          "answer": "Yes! You can cancel your Pro subscription at any time. You'll continue to have Pro access until the end of your billing period."
+        },
+        {
+          "question": "What happens to my data if I downgrade?",
+          "answer": "Your conversation history and progress data are safely stored. You'll just be limited to 15 messages per day on the free plan."
+        },
+        {
+          "question": "Is there a free trial?",
+          "answer": "Every new user starts with our free plan which includes 15 messages per day. You can upgrade to Pro anytime to unlock unlimited access."
+        }
+      ]
+    }
+  },
+  "Profile": {
+    "title": "Profile Settings",
+    "personalInfo": "Personal Information",
+    "fitnessInfo": "Fitness Information",
+    "save": "Save Changes",
+    "saved": "Changes saved successfully",
+    "error": "Error saving changes",
+    "bench": "Bench",
+    "squat": "Squat",
+    "deadlift": "Deadlift",
+    "ohp": "OHP"
+  },
+  "Auth": {
+    "signIn": "Sign In",
+    "signUp": "Sign Up",
+    "email": "Email",
+    "password": "Password",
+    "confirmPassword": "Confirm Password",
+    "forgotPassword": "Forgot Password?",
+    "resetPassword": "Reset Password",
+    "backToLogin": "Back to Login",
+    "createAccount": "Create Account",
+    "alreadyHaveAccount": "Already have an account?",
+    "dontHaveAccount": "Don't have an account?"
+  },
+  "Subscription": {
+    "freePlan": "Free Plan",
+    "proPlan": "Pro Plan",
+    "messagesUsed": "{used} of {limit} messages used today",
+    "messagesRemaining": "{remaining} messages remaining today",
+    "unlimitedMessages": "Unlimited messages",
+    "upgradePrompt": "Upgrade to Pro for unlimited access",
+    "limitReached": "Daily message limit reached"
+  },
+  "Admin": {
+    "title": "Admin Dashboard",
+    "settings": "AI Configuration",
+    "users": "Users",
+    "knowledge": "Knowledge Base"
+  },
+  "Common": {
+    "loading": "Loading...",
+    "error": "Error",
+    "success": "Success",
+    "warning": "Warning",
+    "info": "Information",
+    "close": "Close",
+    "confirm": "Confirm",
+    "cancel": "Cancel",
+    "save": "Save",
+    "edit": "Edit",
+    "delete": "Delete",
+    "view": "View",
+    "back": "Back",
+    "next": "Next",
+    "previous": "Previous",
+    "search": "Search",
+    "filter": "Filter",
+    "sort": "Sort",
+    "refresh": "Refresh",
+    "copy": "Copy",
+    "remove": "Remove"
+  },
+  "ChatPage": {
+    "title": "Chat",
+    "pageDescription": "Chat with HypertroQ, your personal AI fitness coach.",
+    "loading": {
+      "pageTitle": "Preparing your AI fitness coach...",
+      "pageDescription": "Loading your personalized workout and nutrition assistant",
+      "history": "Loading chat history..."
+    },
+    "sidebar": {
+      "header": "HypertroQ",
+      "subheader": "AI Fitness Coach",
+      "newChat": "New Chat",
+      "adminTools": "ADMIN TOOLS",
+      "knowledgeBase": "Knowledge Base",
+      "aiConfig": "AI Configuration",
+      "plan": "Plan",
+      "history": "Chat History",
+      "historyCount": "{count}",
+      "noHistory": "No conversations yet",
+      "noHistorySubtext": "Start a new chat to begin",
+      "guestMode": "Guest Mode",
+      "guestPromptTitle": "Save Your Conversations",
+      "guestPromptBody": "Create an account to save your chat history, access all features, and get personalized fitness coaching.",
+      "signIn": "Sign In",
+      "createAccount": "Create Account",
+      "messagesRemaining": "Messages remaining: {count}",
+      "viewProfile": "Tap to view profile"
+    },
+    "main": {
+      "welcomeTitle": "Chat with HypertroQ",
+      "welcomeSubtitle": "Your AI Fitness Coach",
+      "welcomeMessage": "Start a new conversation or select one from the sidebar.",
+      "startNewConversation": "Start a new conversation",
+      "askAnything": "Ask anything about fitness, nutrition, or training",
+      "inputPlaceholder": "Type your message here... (e.g., 'How can I improve my bench press?')",
+      "send": "Send",
+      "sendShortcut": "Enter to send",
+      "shortcuts": "Shortcuts",
+      "tapSend": "Tap to send",
+      "selectedImage": "Selected image",
+      "offlineWarning": "You're offline. You won't be able to send new messages until connection is restored.",
+      "guestMessageWarning": "Only 1 message left! Sign up to continue.",
+      "aiThinking": "AI is thinking...",
+      "imagePreviewAlt": "Selected image preview"
+    },
+    "toasts": {
+      "deleteConfirmTitle": "Are you sure?",
+      "deleteConfirmText": "Are you sure you want to delete \"{chatTitle}\"? This action cannot be undone.",
+      "deleteSuccessTitle": "Chat deleted",
+      "deleteSuccessText": "The conversation has been removed.",
+      "deleteErrorTitle": "Failed to delete chat",
+      "deleteErrorText": "Please try again.",
+      "copySuccessTitle": "Copied to clipboard",
+      "copySuccessText": "Message content has been copied.",
+      "copyErrorTitle": "Failed to copy",
+      "copyErrorText": "Unable to copy message to clipboard.",
+      "fileTooLargeTitle": "File too large",
+      "fileTooLargeText": "Please select an image smaller than 5MB.",
+      "invalidFileTypeTitle": "Invalid file type",
+      "invalidFileTypeText": "Please select an image file.",
+      "imagePastedTitle": "Image pasted",
+      "imagePastedText": "Image has been added to your message.",
+      "confirmImageReplace": "Replace current image with pasted image?",
+      "limitReachedTitle": "Daily limit reached",
+      "limitReachedText": "You've reached your daily message limit. Upgrade to Pro for unlimited messages.",
+      "errorFetchingRole": "Error fetching user role",
+      "errorFetchingPlan": "Error fetching user plan",
+      "errorLoadingSession": "Could not load chat session: {chatId}",
+      "errorSendingMessage": "Failed to send message"
+    },
+    "keyboardShortcuts": {
+      "title": "Keyboard Shortcuts",
+      "send": "Send message",
+      "newChat": "New chat",
+      "focusInput": "Focus input",
+      "pasteImage": "Paste image",
+      "closeSidebar": "Close sidebar"
+    },
+    "userMenu": {
+      "myProfile": "My Profile",
+      "admin": "Admin",
+      "language": "Language",
+      "signOut": "Sign Out",
+      "signOutConfirm": "Are you sure you want to sign out?"
+    },
+    "connectionStatus": {
+      "offline": "You are offline. Please check your connection.",
+      "online": "You are back online!",
+      "restored": "Connection restored.",
+      "lost": "Connection lost. Some features may not be available."
+    },
+    "loginPrompt": {
+      "title": "You're almost out of messages!",
+      "subtitle": "Sign up to continue chatting",
+      "body": "As a guest, you can send a few messages to try out HypertroQ. Create a free account to get more daily messages, save your chat history, and unlock more features.",
+      "createAccount": "Create Free Account",
+      "later": "Maybe later"
+    },
+    "messageLimitIndicator": {
+      "title": "Messages Today",
+      "limitReached": "Daily Limit Reached",
+      "upgradePrompt": "Upgrade to Pro for unlimited messages."
+    },
+    "upgradeButton": {
+      "title": "Upgrade to PRO",
+      "subtitle": "Unlock Unlimited Power",
+      "cta": "Upgrade Now"
+    },
+    "promptRecommendations": {
+      "bestRepRange": "Best rep range for muscle growth?",
+      "weeklyTraining": "Weekly training structure?",
+      "supplementRecommendations": "Supplement recommendations?"
+    }
+  }
+}

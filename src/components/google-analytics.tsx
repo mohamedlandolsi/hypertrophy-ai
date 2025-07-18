@@ -8,30 +8,41 @@ declare global {
   }
 }
 
-const GA_MEASUREMENT_ID = process.env.NEXT_PUBLIC_GA_MEASUREMENT_ID;
+const GA_MEASUREMENT_ID = process.env.NEXT_PUBLIC_GA_MEASUREMENT_ID || 'G-1SDWNDGJHG';
 
 export const GoogleAnalytics = () => {
   useEffect(() => {
-    console.log('Google Analytics: All env vars:', {
-      GA_MEASUREMENT_ID,
-      NODE_ENV: process.env.NODE_ENV,
-      ALL_NEXT_PUBLIC: Object.keys(process.env).filter(key => key.startsWith('NEXT_PUBLIC_'))
-    });
+    console.log('Google Analytics: Initializing with ID:', GA_MEASUREMENT_ID);
 
     if (!GA_MEASUREMENT_ID) {
-      console.warn('Google Analytics: GA_MEASUREMENT_ID is not set');
+      console.warn('Google Analytics: GA_MEASUREMENT_ID is not set, using default');
       return;
     }
 
-    console.log('Google Analytics: Loading with ID:', GA_MEASUREMENT_ID);
+    // Check if already loaded to prevent duplicate loading
+    if (typeof window.gtag === 'function') {
+      console.log('Google Analytics: Already loaded, skipping');
+      return;
+    }
 
-    // Load Google Analytics
+    console.log('Google Analytics: Loading scripts...');
+
+    // Load Google Analytics with error handling
     const script1 = document.createElement('script');
     script1.async = true;
     script1.src = `https://www.googletagmanager.com/gtag/js?id=${GA_MEASUREMENT_ID}`;
     script1.onload = () => console.log('Google Analytics: gtag.js loaded successfully');
-    script1.onerror = () => console.error('Google Analytics: Failed to load gtag.js');
-    document.head.appendChild(script1);
+    script1.onerror = (error) => {
+      console.error('Google Analytics: Failed to load gtag.js', error);
+      // Don't break the app if analytics fails
+    };
+    
+    try {
+      document.head.appendChild(script1);
+    } catch (error) {
+      console.error('Google Analytics: Failed to append gtag script', error);
+      return;
+    }
 
     const script2 = document.createElement('script');
     script2.innerHTML = `
@@ -42,9 +53,14 @@ export const GoogleAnalytics = () => {
         page_title: document.title,
         page_location: window.location.href,
       });
-      console.log('Google Analytics: Configuration loaded');
+      console.log('Google Analytics: Configuration loaded successfully');
     `;
-    document.head.appendChild(script2);
+    
+    try {
+      document.head.appendChild(script2);
+    } catch (error) {
+      console.error('Google Analytics: Failed to append config script', error);
+    }
 
     return () => {
       document.head.removeChild(script1);

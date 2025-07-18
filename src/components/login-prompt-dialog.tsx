@@ -10,6 +10,7 @@ import {
 import { Button } from "@/components/ui/button";
 import Link from "next/link";
 import { MessageSquare, User, UserPlus } from "lucide-react";
+import { useLocale } from 'next-intl';
 
 interface LoginPromptDialogProps {
   open: boolean;
@@ -19,6 +20,7 @@ interface LoginPromptDialogProps {
 
 export function LoginPromptDialog({ open, onOpenChange, variant = 'initial' }: LoginPromptDialogProps) {
   const isMessageLimit = variant === 'messageLimit';
+  const locale = useLocale();
   
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
@@ -41,13 +43,13 @@ export function LoginPromptDialog({ open, onOpenChange, variant = 'initial' }: L
         </DialogHeader>
         <div className="flex flex-col gap-3 mt-6">
           <Button asChild size="lg">
-            <Link href="/signup" className="flex items-center justify-center">
+            <Link href={`/${locale}/signup`} className="flex items-center justify-center">
               <UserPlus className="mr-2 h-4 w-4" />
               Create Account
             </Link>
           </Button>
           <Button asChild variant="outline" size="lg">
-            <Link href="/login" className="flex items-center justify-center">
+            <Link href={`/${locale}/login`} className="flex items-center justify-center">
               <User className="mr-2 h-4 w-4" />
               Sign In
             </Link>

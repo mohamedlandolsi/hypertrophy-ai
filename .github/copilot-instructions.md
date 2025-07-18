@@ -36,6 +36,16 @@ npx prisma studio       # Visual database browser
 npm run postinstall     # Generate Prisma client (auto-run after install)
 ```
 
+### Package.json Key Dependencies
+- **Framework**: Next.js 15.3.3 with App Router and React 19
+- **Database**: PostgreSQL with Prisma 6.9.0 ORM
+- **AI/ML**: Google Generative AI 0.24.1 (`@google/generative-ai`)
+- **Authentication**: Supabase SSR 0.6.1 + Supabase JS 2.50.0
+- **UI Framework**: Radix UI components + Tailwind CSS 4.0
+- **Rich Text**: TipTap 2.25.0 editor with extensions
+- **File Processing**: Mammoth 1.9.1 (DOC), PDF-parse 1.1.1 (PDF)
+- **Development**: TypeScript 5, ESLint 9, Prisma Studio
+
 ### Windows Environment Notes
 - Use PowerShell as the default shell when running terminal commands
 - Debug scripts are Node.js files, run with `node script-name.js`
@@ -77,6 +87,18 @@ LEMONSQUEEZY_PRO_MONTHLY_PRODUCT_ID=  # Monthly subscription product
 LEMONSQUEEZY_PRO_YEARLY_PRODUCT_ID=   # Yearly subscription product
 LEMONSQUEEZY_WEBHOOK_SECRET=     # Webhook signature verification
 ```
+
+### Current Tech Stack (Latest Versions)
+- **Framework**: Next.js 15.3.3 with App Router and Server Components  
+- **Runtime**: React 19.0.0 with React DOM 19.0.0
+- **Database**: PostgreSQL with Prisma ORM 6.9.0 (vector embeddings as JSON, pgvector migration pending)
+- **AI/ML**: Google Gemini API 0.24.1 (`text-embedding-004` model, 768 dimensions)
+- **Authentication**: Supabase SSR 0.6.1 with role-based access control  
+- **UI**: Tailwind CSS 4.0 + Radix UI components + shadcn/ui with `next-themes` dark mode
+- **Rich Text**: TipTap React 2.25.0 editor with color, list, and text-align extensions
+- **File Processing**: `mammoth` 1.9.1 (DOC), `pdf-parse` 1.1.1 (PDF), `@tiptap/react` (rich text)
+- **Payments**: Lemon Squeezy webhook integration with React Hot Toast 2.5.2
+- **Development**: TypeScript 5, ESLint 9, Prisma Studio for DB management
 
 ## 📋 Project-Specific Patterns
 
@@ -209,15 +231,17 @@ export async function POST(request: NextRequest) {
   - **NEW**: RAG configuration fields (`ragSimilarityThreshold`, `ragMaxChunks`, `ragHighRelevanceThreshold`)
 - `User.hasCompletedOnboarding` - Tracks onboarding completion for user flow
 - `User.plan` - Subscription tier (FREE/PRO) with message tracking
+- `User.uploadsThisMonth` / `lastUploadReset` - Monthly upload tracking for free tier limits
 - `Subscription` - Lemon Squeezy integration with billing periods
 - `Message.imageData` - Base64 encoded image storage with `imageMimeType`
 - `ProcessingStatus` - Tracks file processing states (`PROCESSING`, `READY`, `FAILED`)
 
 ### Database Operation Patterns
-- Use `@/lib/prisma` for database client (single instance)
+- Use `@/lib/prisma` for database client (single instance with query logging)
 - Cascade deletes: `KnowledgeChunk` → `KnowledgeItem`, `Message` → `Chat`
 - Include patterns: Always include related data needed for UI in single queries
 - Transaction usage: Wrap multi-table operations in `prisma.$transaction()`
+- **Schema cleanup**: Removed unused `Profile` and `Document` tables (replaced by `ClientMemory` and `KnowledgeChunk`)
 
 ### Tech Stack Essentials
 - **Framework**: Next.js 15 with App Router and Server Components
@@ -272,4 +296,4 @@ const { functionName } = require('./src/lib/module-name');
 - `*-test.js` - Manual testing scripts
 - `check-*.js` - Validation and verification scripts
 
-- **Navigation Tips**: Admin features (`/src/app/admin/`), Core AI logic (`/src/lib/gemini.ts`), Vector operations (`/src/lib/vector-search.ts`), Subscription system (`/src/lib/subscription.ts`, `/src/components/plan-badge.tsx`, `/src/components/upgrade-button.tsx`), Arabic support (`/src/components/arabic-aware-*.tsx`, `/src/lib/text-formatting.ts`)
+- **Navigation Tips**: Admin features (`/src/app/admin/`), Core AI logic (`/src/lib/gemini.ts`), Vector operations (`/src/lib/vector-search.ts`), Subscription system (`/src/lib/subscription.ts`, `/src/components/plan-badge.tsx`, `/src/components/upgrade-button.tsx`), Arabic support (`/src/components/arabic-aware-*.tsx`, `/src/lib/text-formatting.ts`), Error handling (`/src/lib/error-handler.ts` with `ApiErrorHandler` class), Client memory (`/src/lib/client-memory.ts` for automatic user profile extraction)

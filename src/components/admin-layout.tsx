@@ -24,6 +24,7 @@ import {
   AvatarImage,
 } from "@/components/ui/avatar";
 import { signOut } from '../app/actions';
+import LanguageSwitcher from '@/components/language-switcher';
 
 interface AdminLayoutProps {
   children: React.ReactNode;
@@ -144,6 +145,12 @@ export default function AdminLayout({ children }: AdminLayoutProps) {
                     </Link>
                   </DropdownMenuItem>
                   <DropdownMenuSeparator />
+                  <div className="px-1 py-1">
+                    <div className="flex items-center justify-between rounded-sm px-2 py-1.5 text-sm hover:bg-muted cursor-default">
+                      <span>Language</span>
+                      <LanguageSwitcher />
+                    </div>
+                  </div>
                   <div className="px-1 py-1">
                     <div className="flex items-center justify-between rounded-sm px-2 py-1.5 text-sm hover:bg-muted cursor-default">
                       <span>Theme</span>

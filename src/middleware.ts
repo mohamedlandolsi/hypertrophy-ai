@@ -1,8 +1,20 @@
 import { createServerClient, type CookieOptions } from '@supabase/ssr'
 import { NextResponse, type NextRequest } from 'next/server'
+import createIntlMiddleware from 'next-intl/middleware';
+
+// Create the intl middleware
+const intlMiddleware = createIntlMiddleware({
+  locales: ['en', 'ar', 'fr'],
+  defaultLocale: 'en',
+  localeDetection: false, // Disable automatic locale detection
+  localePrefix: 'always'
+});
 
 export async function middleware(request: NextRequest) {
-  let response = NextResponse.next({
+  // Handle internationalization first
+  const intlResponse = intlMiddleware(request);
+  
+  let response = intlResponse || NextResponse.next({
     request: {
       headers: request.headers,
     },
@@ -71,8 +83,11 @@ export async function middleware(request: NextRequest) {
   }
 
   // Redirect authenticated users away from auth pages
-  if (user && (request.nextUrl.pathname.startsWith('/login') || request.nextUrl.pathname.startsWith('/signup'))) {
-    return NextResponse.redirect(new URL('/chat', request.url));
+  if (user && (request.nextUrl.pathname.includes('/login') || request.nextUrl.pathname.includes('/signup'))) {
+    // Extract locale from current URL or use default
+    const pathname = request.nextUrl.pathname;
+    const locale = pathname.match(/^\/(en|ar|fr)/)?.[1] || 'en';
+    return NextResponse.redirect(new URL(`/${locale}/chat`, request.url));
   }
 
   return response
@@ -82,11 +97,18 @@ export const config = {
   matcher: [
     /*
      * Match all request paths except for the ones starting with:
+     * - api (API routes)
      * - _next/static (static files)
      * - _next/image (image optimization files)
      * - favicon.ico (favicon file)
-     * Feel free to modify this pattern to include more paths.
+     * - manifest.json (PWA manifest)
+     * - robots.txt (robots file)
+     * - sw.js (service worker)
+     * - *.svg, *.png, *.jpg, *.jpeg, *.gif, *.webp (static assets)
+     * Include internationalized pathnames
      */
-    '/((?!_next/static|_next/image|favicon.ico|.*\\.(?:svg|png|jpg|jpeg|gif|webp)$).*)',
+    '/((?!api|_next/static|_next/image|favicon.ico|manifest.json|robots.txt|sw.js|.*\\.(?:svg|png|jpg|jpeg|gif|webp)$).*)',
+    '/',
+    '/(ar|fr|en)/:path*'
   ],
 }

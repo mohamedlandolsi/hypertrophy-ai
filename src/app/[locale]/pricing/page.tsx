@@ -11,6 +11,7 @@ import { UpgradeButton } from '@/components/upgrade-button';
 import { CurrencySelector } from '@/components/currency-selector';
 import Head from 'next/head';
 import { generateSchema } from '@/lib/seo';
+import { useLocale, useTranslations } from 'next-intl';
 import { 
   type CurrencyCode, 
   type PricingData,
@@ -21,6 +22,8 @@ import {
 } from '@/lib/currency';
 
 export default function PricingPage() {
+  const locale = useLocale();
+  const t = useTranslations('Pricing');
   const [isAuthenticated, setIsAuthenticated] = useState(false);
   const [userPlan, setUserPlan] = useState<'FREE' | 'PRO' | null>(null);
   const [billingInterval, setBillingInterval] = useState<'month' | 'year'>('month');
@@ -97,20 +100,20 @@ export default function PricingPage() {
 
   const features = {
     free: [
-      '15 messages per day',
-      'Basic AI fitness guidance',
-      'Access to knowledge base',
-      'Standard response time'
+      t('freePlan.features.0'),
+      t('freePlan.features.1'),
+      t('freePlan.features.2'),
+      t('freePlan.features.3')
     ],
     pro: [
-      'Unlimited messages',
-      'Persistent conversation memory',
-      'Personalized training plans',
-      'Progress tracking & analytics',
-      'Advanced nutrition guidance',
-      'Priority support',
-      'Early access to new features',
-      'Detailed workout history'
+      t('proPlan.features.0'),
+      t('proPlan.features.1'),
+      t('proPlan.features.2'),
+      t('proPlan.features.3'),
+      t('proPlan.features.4'),
+      t('proPlan.features.5'),
+      t('proPlan.features.6'),
+      t('proPlan.features.7')
     ]
   };
 
@@ -163,14 +166,14 @@ export default function PricingPage() {
           <div className="text-center mb-16">
             <Badge className="mb-4 bg-blue-100 text-blue-800 hover:bg-blue-100 dark:bg-blue-900 dark:text-blue-300 dark:hover:bg-blue-900">
               <Star className="mr-1 h-3 w-3" />
-              Subscription Plans
+              {t('subscriptionPlansLabel')}
             </Badge>
             <h1 className="text-4xl md:text-6xl font-bold bg-gradient-to-r from-blue-600 to-purple-600 bg-clip-text text-transparent mb-6">
-            Choose Your Fitness Journey
-          </h1>
-          <p className="text-xl text-gray-600 dark:text-gray-300 max-w-3xl mx-auto mb-8">
-            Transform your fitness goals with AI-powered coaching. Start free or unlock unlimited potential with Pro.
-          </p>
+              {t('heroTitle')}
+            </h1>
+            <p className="text-xl text-gray-600 dark:text-gray-300 max-w-3xl mx-auto mb-8">
+              {t('heroSubtitle')}
+            </p>
           
           {/* Currency Selector */}
           <div className="flex justify-center mb-8">
@@ -183,7 +186,7 @@ export default function PricingPage() {
           {/* Billing Toggle */}
           <div className="flex items-center justify-center gap-4 mb-12">
             <span className={`text-sm font-medium ${billingInterval === 'month' ? 'text-gray-900 dark:text-gray-100' : 'text-gray-500 dark:text-gray-400'}`}>
-              Monthly
+              {t('monthly')}
             </span>
             <button
               onClick={() => {
@@ -201,11 +204,11 @@ export default function PricingPage() {
               }`} />
             </button>
             <span className={`text-sm font-medium ${billingInterval === 'year' ? 'text-gray-900 dark:text-gray-100' : 'text-gray-500 dark:text-gray-400'}`}>
-              Yearly
+              {t('yearly')}
             </span>
             {billingInterval === 'year' && pricingData && (
               <Badge className="bg-green-100 text-green-800 dark:bg-green-900 dark:text-green-300">
-                Save {pricingData.savingsPercentage}%
+                {t('save', { percentage: pricingData.savingsPercentage })}
               </Badge>
             )}
           </div>
@@ -217,13 +220,13 @@ export default function PricingPage() {
           {/* Free Plan */}
           <Card className="relative border-2 border-gray-200 hover:border-gray-300 dark:border-gray-700 dark:hover:border-gray-600 transition-all duration-300">
             <CardHeader className="text-center pb-4">
-              <CardTitle className="text-2xl font-bold text-gray-900 dark:text-gray-100">Free Plan</CardTitle>
+              <CardTitle className="text-2xl font-bold text-gray-900 dark:text-gray-100">{t('freePlan.title')}</CardTitle>
               <CardDescription className="text-gray-600 dark:text-gray-400">
-                Perfect for getting started with AI fitness coaching
+                {t('freePlan.description')}
               </CardDescription>
               <div className="mt-4">
-                <span className="text-4xl font-bold text-gray-900 dark:text-gray-100">$0</span>
-                <span className="text-gray-600 dark:text-gray-400">/month</span>
+                <span className="text-4xl font-bold text-gray-900 dark:text-gray-100">{t('freePlan.price')}</span>
+                <span className="text-gray-600 dark:text-gray-400">{t('freePlan.period')}</span>
               </div>
             </CardHeader>
             <CardContent className="space-y-6">
@@ -238,18 +241,18 @@ export default function PricingPage() {
               
               <div className="pt-4">
                 {!isAuthenticated ? (
-                  <Link href="/signup">
+                  <Link href={`/${locale}/signup`}>
                     <Button className="w-full" variant="outline" size="lg">
-                      Get Started Free
+                      {t('freePlan.cta')}
                     </Button>
                   </Link>
                 ) : userPlan === 'FREE' ? (
                   <Button className="w-full" variant="outline" size="lg" disabled>
-                    Current Plan
+                    {t('freePlan.currentPlanButton')}
                   </Button>
                 ) : (
                   <Button className="w-full" variant="outline" size="lg" disabled>
-                    ✓ You have Pro
+                    {t('freePlan.youHavePro')}
                   </Button>
                 )}
               </div>
@@ -261,14 +264,14 @@ export default function PricingPage() {
             <div className="absolute -top-4 left-1/2 transform -translate-x-1/2">
               <Badge className="bg-blue-600 text-white px-4 py-1 dark:bg-blue-500 dark:text-white">
                 <Crown className="mr-1 h-3 w-3" />
-                Most Popular
+                {t('proPlan.mostPopular')}
               </Badge>
             </div>
             
             <CardHeader className="text-center pb-4 bg-gradient-to-r from-blue-50 to-purple-50 dark:from-blue-900/20 dark:to-purple-900/20 rounded-t-lg">
-              <CardTitle className="text-2xl font-bold text-blue-900 dark:text-blue-100">Pro Plan</CardTitle>
+              <CardTitle className="text-2xl font-bold text-blue-900 dark:text-blue-100">{t('proPlan.title')}</CardTitle>
               <CardDescription className="text-blue-700 dark:text-blue-300">
-                Unlock unlimited AI coaching and advanced features
+                {t('proPlan.description')}
               </CardDescription>
               <div className="mt-4">
                 {isLoadingPricing || !pricingData ? (
@@ -285,19 +288,19 @@ export default function PricingPage() {
                       }
                     </span>
                     {billingInterval === 'year' ? (
-                      <span className="text-blue-700 dark:text-blue-300">/year</span>
+                      <span className="text-blue-700 dark:text-blue-300">{t('proPlan.yearPeriod')}</span>
                     ) : (
-                      <span className="text-blue-700 dark:text-blue-300">/month</span>
+                      <span className="text-blue-700 dark:text-blue-300">{t('proPlan.period')}</span>
                     )}
                     {billingInterval === 'year' && (
                       <div className="text-sm text-blue-600 dark:text-blue-400 mt-1">
-                        Equivalent to {SUPPORTED_CURRENCIES[selectedCurrency].symbol}{(pricingData.yearly / 12).toFixed(2)}/month
+                        {t('proPlan.equivalentTo')} {SUPPORTED_CURRENCIES[selectedCurrency].symbol}{(pricingData.yearly / 12).toFixed(2)}{t('proPlan.period')}
                       </div>
                     )}
                   </>
                 )}
               </div>
-              <p className="text-sm text-blue-600 dark:text-blue-400 mt-2">Cancel anytime</p>
+              <p className="text-sm text-blue-600 dark:text-blue-400 mt-2">{t('proPlan.cancelAnytime')}</p>
             </CardHeader>
             
             <CardContent className="space-y-6">
@@ -312,15 +315,15 @@ export default function PricingPage() {
               
               <div className="pt-4">
                 {!isAuthenticated ? (
-                  <Link href="/signup">
+                  <Link href={`/${locale}/signup`}>
                     <Button className="w-full bg-blue-600 hover:bg-blue-700" size="lg">
                       <Crown className="mr-2 h-4 w-4" />
-                      Start Pro Trial
+                      {t('proPlan.cta')}
                     </Button>
                   </Link>
                 ) : userPlan === 'PRO' ? (
                   <Button className="w-full bg-green-600 hover:bg-green-700" size="lg" disabled>
-                    ✓ Active Plan
+                    {t('proPlan.currentPlanButton')}
                   </Button>
                 ) : (
                   <UpgradeButton 
@@ -340,16 +343,16 @@ export default function PricingPage() {
 
         {/* Features Comparison */}
         <section className="mt-20">
-          <h2 className="text-3xl font-bold text-center mb-12 text-gray-900 dark:text-gray-100">Why Upgrade to Pro?</h2>
+          <h2 className="text-3xl font-bold text-center mb-12 text-gray-900 dark:text-gray-100">{t('whyUpgradeTitle')}</h2>
           
           <div className="grid md:grid-cols-3 gap-8 max-w-6xl mx-auto">
             <article className="text-center space-y-4">
               <div className="mx-auto w-16 h-16 bg-blue-100 dark:bg-blue-900/30 rounded-full flex items-center justify-center">
                 <Zap className="h-8 w-8 text-blue-600 dark:text-blue-400" />
               </div>
-              <h3 className="text-xl font-semibold text-gray-900 dark:text-gray-100">Unlimited Conversations</h3>
+              <h3 className="text-xl font-semibold text-gray-900 dark:text-gray-100">{t('benefits.unlimited.title')}</h3>
               <p className="text-gray-600 dark:text-gray-400">
-                Chat as much as you want without daily limits. Get continuous support for your fitness journey.
+                {t('benefits.unlimited.description')}
               </p>
             </article>
             
@@ -357,9 +360,9 @@ export default function PricingPage() {
               <div className="mx-auto w-16 h-16 bg-purple-100 dark:bg-purple-900/30 rounded-full flex items-center justify-center">
                 <Target className="h-8 w-8 text-purple-600 dark:text-purple-400" />
               </div>
-              <h3 className="text-xl font-semibold text-gray-900 dark:text-gray-100">Personalized Coaching</h3>
+              <h3 className="text-xl font-semibold text-gray-900 dark:text-gray-100">{t('benefits.personalized.title')}</h3>
               <p className="text-gray-600 dark:text-gray-400">
-                AI remembers your progress, preferences, and goals to provide truly personalized guidance.
+                {t('benefits.personalized.description')}
               </p>
             </article>
             
@@ -367,9 +370,9 @@ export default function PricingPage() {
               <div className="mx-auto w-16 h-16 bg-green-100 dark:bg-green-900/30 rounded-full flex items-center justify-center">
                 <TrendingUp className="h-8 w-8 text-green-600 dark:text-green-400" />
               </div>
-              <h3 className="text-xl font-semibold text-gray-900 dark:text-gray-100">Progress Tracking</h3>
+              <h3 className="text-xl font-semibold text-gray-900 dark:text-gray-100">{t('benefits.tracking.title')}</h3>
               <p className="text-gray-600 dark:text-gray-400">
-                Advanced analytics and insights to track your fitness progress and optimize your results.
+                {t('benefits.tracking.description')}
               </p>
             </article>
           </div>
@@ -377,27 +380,27 @@ export default function PricingPage() {
 
         {/* FAQ Section */}
         <section className="mt-20 max-w-3xl mx-auto">
-          <h2 className="text-3xl font-bold text-center mb-12 text-gray-900 dark:text-gray-100">Frequently Asked Questions</h2>
+          <h2 className="text-3xl font-bold text-center mb-12 text-gray-900 dark:text-gray-100">{t('faq.title')}</h2>
           
           <div className="space-y-6">
             <div className="bg-white dark:bg-gray-800 rounded-lg p-6 shadow-sm border border-gray-200 dark:border-gray-700">
-              <h3 className="font-semibold text-lg mb-2 text-gray-900 dark:text-gray-100">Can I cancel anytime?</h3>
+              <h3 className="font-semibold text-lg mb-2 text-gray-900 dark:text-gray-100">{t('faq.questions.0.question')}</h3>
               <p className="text-gray-600 dark:text-gray-400">
-                Yes! You can cancel your Pro subscription at any time. You&apos;ll continue to have Pro access until the end of your billing period.
+                {t('faq.questions.0.answer')}
               </p>
             </div>
             
             <div className="bg-white dark:bg-gray-800 rounded-lg p-6 shadow-sm border border-gray-200 dark:border-gray-700">
-              <h3 className="font-semibold text-lg mb-2 text-gray-900 dark:text-gray-100">What happens to my data if I downgrade?</h3>
+              <h3 className="font-semibold text-lg mb-2 text-gray-900 dark:text-gray-100">{t('faq.questions.1.question')}</h3>
               <p className="text-gray-600 dark:text-gray-400">
-                Your conversation history and progress data are safely stored. You&apos;ll just be limited to 15 messages per day on the free plan.
+                {t('faq.questions.1.answer')}
               </p>
             </div>
             
             <div className="bg-white dark:bg-gray-800 rounded-lg p-6 shadow-sm border border-gray-200 dark:border-gray-700">
-              <h3 className="font-semibold text-lg mb-2 text-gray-900 dark:text-gray-100">Is there a free trial?</h3>
+              <h3 className="font-semibold text-lg mb-2 text-gray-900 dark:text-gray-100">{t('faq.questions.2.question')}</h3>
               <p className="text-gray-600 dark:text-gray-400">
-                Every new user starts with our free plan which includes 15 messages per day. You can upgrade to Pro anytime to unlock unlimited access.
+                {t('faq.questions.2.answer')}
               </p>
             </div>
           </div>

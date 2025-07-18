@@ -4,6 +4,7 @@ import React from "react";
 import { useState } from "react";
 import { useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
+import Link from "next/link";
 import { Button } from "@/components/ui/button";
 import {
   Card,
@@ -204,9 +205,9 @@ export default function SignupForm() {
             
             <div className="text-center text-sm">
               Already have an account?{" "}
-              <a href="/login" className="underline hover:text-primary">
+              <Link href="/login" className="underline hover:text-primary">
                 Sign In
-              </a>
+              </Link>
             </div>
           </CardFooter>
         </form>

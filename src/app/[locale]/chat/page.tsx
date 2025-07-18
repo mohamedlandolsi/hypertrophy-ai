@@ -16,6 +16,8 @@ import { MessageContent } from '@/components/message-content';
 import { ArticleLinks } from '@/components/article-links';
 import { processMessageContent } from '@/lib/article-links';
 import { ArabicAwareTextarea } from '@/components/arabic-aware-textarea';
+import LanguageSwitcher from '@/components/language-switcher';
+import { useTranslations, useLocale } from 'next-intl';
 
 // Imports for DropdownMenu and Avatar
 import {
@@ -56,6 +58,8 @@ interface Conversation {
 }
 
 const ChatPage = () => {
+  const t = useTranslations('ChatPage');
+  const locale = useLocale();
   const [isSidebarOpen, setIsSidebarOpen] = reactUseState(false); // Default closed on mobile
   const [isMobile, setIsMobile] = reactUseState(false);
   const [user, setUser] = reactUseState<SupabaseUser | null>(null); // Using reactUseState
@@ -122,11 +126,11 @@ const ChatPage = () => {
               const data = await response.json();
               setUserRole(data.role || 'user');
             } else {
-              console.error('Error fetching user role');
+              console.error(t('toasts.errorFetchingRole'));
               setUserRole('user'); // Default to user role on error
             }
           } catch (error) {
-            console.error('Error fetching user role:', error);
+            console.error(t('toasts.errorFetchingRole'), error);
             setUserRole('user'); // Default to user role on error
           }
 
@@ -142,7 +146,7 @@ const ChatPage = () => {
               });
             }
           } catch (error) {
-            console.error('Error fetching user plan:', error);
+            console.error(t('toasts.errorFetchingPlan'), error);
             // Default to free plan for authenticated users
             setUserPlan({
               plan: 'FREE',
@@ -286,7 +290,7 @@ const ChatPage = () => {
         // Update URL without full page reload
         router.push(`/chat?id=${chatId}`, { scroll: false });
       } else {
-        console.error("Could not load chat session:", chatId);
+        console.error(t('toasts.errorLoadingSession', { chatId }));
         setActiveChatId(null);
         router.push('/chat', { scroll: false }); // Clear URL param
       }
@@ -314,7 +318,7 @@ const ChatPage = () => {
     const chatToDelete = chatHistory.find(chat => chat.id === chatId);
     const chatTitle = chatToDelete?.title || `Chat from ${chatToDelete ? new Date(chatToDelete.createdAt).toLocaleDateString() : 'Unknown date'}`;
     
-    if (!confirm(`Are you sure you want to delete "${chatTitle}"? This action cannot be undone.`)) {
+    if (!confirm(t('toasts.deleteConfirmText', { chatTitle }))) {
       return;
     }
 
@@ -334,25 +338,25 @@ const ChatPage = () => {
           router.push('/chat', { scroll: false });
         }
         
-        showToast.success('Chat deleted', 'The conversation has been removed');
+        showToast.success(t('toasts.deleteSuccessTitle'), t('toasts.deleteSuccessText'));
       } else {
         console.error('Failed to delete chat');
-        showToast.error('Failed to delete chat', 'Please try again');
+        showToast.error(t('toasts.deleteErrorTitle'), t('toasts.deleteErrorText'));
       }
     } catch (error) {
       handleApiError(error, 'delete chat');
     }
-  }, [chatHistory, activeChatId, router, handleApiError, setChatHistory, setActiveChatId, setMessages]);
+  }, [chatHistory, activeChatId, router, handleApiError, setChatHistory, setActiveChatId, setMessages, t]);
 
   const copyMessage = useCallback(async (content: string) => {
     try {
       await navigator.clipboard.writeText(content);
-      showToast.success('Copied to clipboard', 'Message content has been copied');
+      showToast.success(t('toasts.copySuccessTitle'), t('toasts.copySuccessText'));
     } catch (error) {
       console.error('Failed to copy message:', error);
-      showToast.error('Failed to copy', 'Unable to copy message to clipboard');
+      showToast.error(t('toasts.copyErrorTitle'), t('toasts.copyErrorText'));
     }
-  }, []);
+  }, [t]);
 
   const toggleSidebar = useCallback(() => setIsSidebarOpen(!isSidebarOpen), [isSidebarOpen, setIsSidebarOpen]);
 
@@ -369,13 +373,13 @@ const ChatPage = () => {
     if (file) {
       // Check file size (limit to 5MB)
       if (file.size > 5 * 1024 * 1024) {
-        showToast.error('File too large', 'Please select an image smaller than 5MB');
+        showToast.error(t('toasts.fileTooLargeTitle'), t('toasts.fileTooLargeText'));
         return;
       }
 
       // Check file type
       if (!file.type.startsWith('image/')) {
-        showToast.error('Invalid file type', 'Please select an image file');
+        showToast.error(t('toasts.invalidFileTypeTitle'), t('toasts.invalidFileTypeText'));
         return;
       }
 
@@ -388,7 +392,7 @@ const ChatPage = () => {
       };
       reader.readAsDataURL(file);
     }
-  }, [setSelectedImage, setImagePreview]);
+  }, [setSelectedImage, setImagePreview, t]);
 
   const removeImage = useCallback(() => {
     setSelectedImage(null);
@@ -408,13 +412,13 @@ const ChatPage = () => {
         
         // Check file size (limit to 5MB)
         if (file.size > 5 * 1024 * 1024) {
-          showToast.error('File too large', 'Please select an image smaller than 5MB');
+          showToast.error(t('toasts.fileTooLargeTitle'), t('toasts.fileTooLargeText'));
           return;
         }
         
         // If there's already an image, ask for confirmation
         if (selectedImage) {
-          const confirm = window.confirm('Replace current image with pasted image?');
+          const confirm = window.confirm(t('toasts.confirmImageReplace'));
           if (!confirm) return;
         }
         
@@ -427,10 +431,10 @@ const ChatPage = () => {
         };
         reader.readAsDataURL(file);
         
-        showToast.success('Image pasted', 'Image has been added to your message');
+        showToast.success(t('toasts.imagePastedTitle'), t('toasts.imagePastedText'));
       }
     }
-  }, [selectedImage, setSelectedImage, setImagePreview]);
+  }, [selectedImage, setSelectedImage, setImagePreview, t]);
 
   const handleSubmit = useCallback(async (e: React.FormEvent | KeyboardEvent) => {
     e.preventDefault();
@@ -514,7 +518,7 @@ const ChatPage = () => {
         try {
           errorData = await response.json();
         } catch {
-          errorData = { message: 'Failed to send message' };
+          errorData = { message: t('toasts.errorSendingMessage') };
         }
         
         // Handle subscription limit errors specifically
@@ -523,7 +527,7 @@ const ChatPage = () => {
           if (userPlan) {
             setUserPlan(prev => prev ? { ...prev, messagesUsedToday: prev.dailyLimit } : null);
           }
-          showToast.error('Daily limit reached', errorData.message || 'You\'ve reached your daily message limit. Upgrade to Pro for unlimited messages.');
+          showToast.error(t('toasts.limitReachedTitle'), errorData.message || t('toasts.limitReachedText'));
           return; // Don't throw, just return early
         }
         
@@ -605,7 +609,8 @@ const ChatPage = () => {
     setIsAiThinking,
     setActiveChatId,
     userPlan,
-    setUserPlan
+    setUserPlan,
+    t
   ]);
 
   // Add keyboard shortcuts support
@@ -658,13 +663,13 @@ const ChatPage = () => {
           
           // Check file size (limit to 5MB)
           if (file.size > 5 * 1024 * 1024) {
-            showToast.error('File too large', 'Please select an image smaller than 5MB');
+            showToast.error(t('toasts.fileTooLargeTitle'), t('toasts.fileTooLargeText'));
             return;
           }
           
           // If there's already an image, ask for confirmation
           if (selectedImage) {
-            const confirm = window.confirm('Replace current image with pasted image?');
+            const confirm = window.confirm(t('toasts.confirmImageReplace'));
             if (!confirm) return;
           }
           
@@ -677,7 +682,7 @@ const ChatPage = () => {
           };
           reader.readAsDataURL(file);
           
-          showToast.success('Image pasted', 'Image has been added to your message');
+          showToast.success(t('toasts.imagePastedTitle'), t('toasts.imagePastedText'));
           
           // Focus the textarea
           const textarea = document.querySelector('textarea[placeholder*="message"]') as HTMLTextAreaElement;
@@ -688,7 +693,7 @@ const ChatPage = () => {
 
     document.addEventListener('paste', handleGlobalPaste);
     return () => document.removeEventListener('paste', handleGlobalPaste);
-  }, [selectedImage, setSelectedImage, setImagePreview]);
+  }, [selectedImage, setSelectedImage, setImagePreview, t]);
 
   // Enhanced keyboard shortcuts tooltip
   const [showShortcuts, setShowShortcuts] = reactUseState(false);
@@ -697,27 +702,27 @@ const ChatPage = () => {
     <div className="absolute bottom-full left-0 mb-3 glass-input rounded-xl p-4 shadow-xl z-50 min-w-72 animate-scale-in border border-border/50">
       <h4 className="text-sm font-semibold mb-3 text-foreground flex items-center">
         <span className="w-2 h-2 bg-gradient-to-r from-blue-500 to-purple-600 rounded-full mr-2"></span>
-        Keyboard Shortcuts
+        {t('keyboardShortcuts.title')}
       </h4>
       <div className="space-y-2 text-xs">
         <div className="flex justify-between items-center py-1">
-          <span className="text-muted-foreground">Send message</span>
+          <span className="text-muted-foreground">{t('keyboardShortcuts.send')}</span>
           <kbd className="px-2 py-1 bg-muted/60 rounded-md text-xs font-mono border border-border/40">⌘ + Enter</kbd>
         </div>
         <div className="flex justify-between items-center py-1">
-          <span className="text-muted-foreground">New chat</span>
+          <span className="text-muted-foreground">{t('keyboardShortcuts.newChat')}</span>
           <kbd className="px-2 py-1 bg-muted/60 rounded-md text-xs font-mono border border-border/40">⌘ + N</kbd>
         </div>
         <div className="flex justify-between items-center py-1">
-          <span className="text-muted-foreground">Focus input</span>
+          <span className="text-muted-foreground">{t('keyboardShortcuts.focusInput')}</span>
           <kbd className="px-2 py-1 bg-muted/60 rounded-md text-xs font-mono border border-border/40">⌘ + K</kbd>
         </div>
         <div className="flex justify-between items-center py-1">
-          <span className="text-muted-foreground">Paste image</span>
+          <span className="text-muted-foreground">{t('keyboardShortcuts.pasteImage')}</span>
           <kbd className="px-2 py-1 bg-muted/60 rounded-md text-xs font-mono border border-border/40">⌘ + V</kbd>
         </div>
         <div className="flex justify-between items-center py-1">
-          <span className="text-muted-foreground">Close sidebar</span>
+          <span className="text-muted-foreground">{t('keyboardShortcuts.closeSidebar')}</span>
           <kbd className="px-2 py-1 bg-muted/60 rounded-md text-xs font-mono border border-border/40">Esc</kbd>
         </div>
       </div>
@@ -729,8 +734,8 @@ const ChatPage = () => {
     return (
       <FullPageLoading 
         variant="fitness" 
-        message="Preparing your AI fitness coach..." 
-        description="Loading your personalized workout and nutrition assistant"
+        message={t('loading.pageTitle')} 
+        description={t('loading.pageDescription')}
       />
     );
   }
@@ -757,7 +762,7 @@ const ChatPage = () => {
           <div className="p-4 md:p-5 h-full flex flex-col">
             {/* Enhanced Header with Logo */}
             <div className="mb-6">
-              <Link href="/" className="block hover:opacity-80 transition-all duration-200 hover-lift">
+              <Link href={`/${locale}`} className="block hover:opacity-80 transition-all duration-200 hover-lift">
                 <div className="flex items-center space-x-3">
                   <div className="w-10 h-10 bg-gradient-to-br from-blue-500 to-purple-600 rounded-xl flex items-center justify-center shadow-lg overflow-hidden">
                     <Image 
@@ -769,8 +774,8 @@ const ChatPage = () => {
                     />
                   </div>
                   <div>
-                    <h2 className="text-lg font-bold text-foreground">HypertroQ</h2>
-                    <p className="text-xs text-muted-foreground">AI Fitness Coach</p>
+                    <h2 className="text-lg font-bold text-foreground">{t('sidebar.header')}</h2>
+                    <p className="text-xs text-muted-foreground">{t('sidebar.subheader')}</p>
                   </div>
                 </div>
               </Link>
@@ -785,26 +790,26 @@ const ChatPage = () => {
                 onClick={handleNewChat}
               >
                 <MessageSquare className="mr-3 h-5 w-5" />
-                New Chat
+                {t('sidebar.newChat')}
               </Button>
 
               {/* Admin Navigation - Only for Admins */}
               {user && userRole === 'admin' && (
                 <>
                   <div className="pt-3 border-t border-border/30">
-                    <p className="text-xs font-semibold text-muted-foreground mb-3 px-1">ADMIN TOOLS</p>
+                    <p className="text-xs font-semibold text-muted-foreground mb-3 px-1">{t('sidebar.adminTools')}</p>
                     <div className="space-y-2">
-                      <Link href="/admin/knowledge" passHref>
+                      <Link href={`/${locale}/admin/knowledge`} passHref>
                         <Button variant="ghost" className="w-full justify-start h-10 hover:bg-muted/50 hover-lift text-left">
                           <Database className="mr-3 h-4 w-4" />
-                          Knowledge Base
+                          {t('sidebar.knowledgeBase')}
                         </Button>
                       </Link>
 
-                      <Link href="/admin/settings" passHref>
+                      <Link href={`/${locale}/admin/settings`} passHref>
                         <Button variant="ghost" className="w-full justify-start h-10 hover:bg-muted/50 hover-lift text-left">
                           <Settings className="mr-3 h-4 w-4" />
-                          AI Configuration
+                          {t('sidebar.aiConfig')}
                         </Button>
                       </Link>
                     </div>
@@ -819,7 +824,7 @@ const ChatPage = () => {
                 <div className="space-y-3">
                   {/* Plan Badge */}
                   <div className="flex items-center justify-between px-1">
-                    <span className="text-xs font-semibold text-muted-foreground uppercase tracking-wide">Plan</span>
+                    <span className="text-xs font-semibold text-muted-foreground uppercase tracking-wide">{t('sidebar.plan')}</span>
                     <PlanBadge plan={userPlan.plan} className="px-3 py-1 text-xs" />
                   </div>
                   
@@ -853,9 +858,9 @@ const ChatPage = () => {
               {user ? (
                 <>
                   <h3 className="text-sm font-semibold mb-3 text-foreground px-1 flex items-center">
-                    Chat History
+                    {t('sidebar.history')}
                     <span className="ml-auto text-xs text-muted-foreground">
-                      {chatHistory.length}
+                      {t('sidebar.historyCount', { count: chatHistory.length })}
                     </span>
                   </h3>
                   
@@ -865,7 +870,7 @@ const ChatPage = () => {
                       <div className="flex items-center justify-center py-8">
                         <InlineLoading 
                           variant="dots"
-                          message="Loading chat history..."
+                          message={t('loading.history')}
                         />
                       </div>
                     ) : chatHistory.length > 0 ? (
@@ -914,8 +919,8 @@ const ChatPage = () => {
                     ) : (
                       <div className="flex flex-col items-center justify-center py-8 text-center">
                         <MessageSquare className="h-8 w-8 text-muted-foreground/50 mb-2" />
-                        <p className="text-sm text-muted-foreground">No conversations yet</p>
-                        <p className="text-xs text-muted-foreground/70 mt-1">Start a new chat to begin</p>
+                        <p className="text-sm text-muted-foreground">{t('sidebar.noHistory')}</p>
+                        <p className="text-xs text-muted-foreground/70 mt-1">{t('sidebar.noHistorySubtext')}</p>
                       </div>
                     )}
                   </div>
@@ -923,7 +928,7 @@ const ChatPage = () => {
               ) : (
                 <>
                   <h3 className="text-sm font-semibold mb-3 text-foreground px-1">
-                    Guest Mode
+                    {t('sidebar.guestMode')}
                   </h3>
                   
                   {/* Enhanced Login prompt for guest users */}
@@ -932,31 +937,31 @@ const ChatPage = () => {
                       <div className="w-14 h-14 bg-gradient-to-br from-blue-500 to-purple-600 rounded-full flex items-center justify-center mx-auto mb-4 shadow-lg">
                         <User className="h-7 w-7 text-white" />
                       </div>
-                      <h4 className="text-sm font-semibold text-foreground">Save Your Conversations</h4>
+                      <h4 className="text-sm font-semibold text-foreground">{t('sidebar.guestPromptTitle')}</h4>
                       <p className="text-xs text-muted-foreground leading-relaxed">
-                        Create an account to save your chat history, access all features, and get personalized fitness coaching
+                        {t('sidebar.guestPromptBody')}
                       </p>
                     </div>
                     
                     <div className="space-y-3">
                       <Button asChild variant="default" size="sm" className="w-full gradient-primary hover-lift text-white font-medium">
-                        <Link href="/login">
+                        <Link href={`/${locale}/login`}>
                           <User className="mr-2 h-4 w-4" />
-                          Sign In
+                          {t('sidebar.signIn')}
                         </Link>
                       </Button>
                       
                       <Button asChild variant="outline" size="sm" className="w-full hover-lift border-border/60">
-                        <Link href="/signup">
+                        <Link href={`/${locale}/signup`}>
                           <MessageSquare className="mr-2 h-4 w-4" />
-                          Create Account
+                          {t('sidebar.createAccount')}
                         </Link>
                       </Button>
                     </div>
                     
                     <div className="text-center pt-3 border-t border-border/50">
                       <p className="text-xs text-muted-foreground">
-                        Messages remaining: 
+                        {t('sidebar.messagesRemaining', { count: 4 - guestMessageCount })}
                         <span className={`ml-1 font-semibold ${guestMessageCount >= 3 ? 'text-orange-500' : 'text-primary'}`}>
                           {4 - guestMessageCount}
                         </span>
@@ -971,7 +976,7 @@ const ChatPage = () => {
             <div className="mt-6 pt-5 border-t border-border/50 space-y-4">
               {/* User Profile Section for Mobile */}
               {user && isMobile && (
-                <Link href="/profile" className="block hover:opacity-80 transition-all duration-200">
+                <Link href={`/${locale}/profile`} className="block hover:opacity-80 transition-all duration-200">
                   <div className="flex items-center space-x-3 p-3 rounded-xl glass-input border border-border/50 hover-lift">
                     <Avatar className="h-10 w-10 shadow-md">
                       <AvatarImage 
@@ -987,7 +992,7 @@ const ChatPage = () => {
                         {user.user_metadata?.full_name || user.email?.split('@')[0] || 'User'}
                       </p>
                       <p className="text-xs text-muted-foreground truncate">
-                        Tap to view profile
+                        {t('sidebar.viewProfile')}
                       </p>
                     </div>
                     <User className="h-4 w-4 text-muted-foreground" />
@@ -1079,27 +1084,28 @@ const ChatPage = () => {
                 </DropdownMenuLabel>
                 <DropdownMenuSeparator />
                 <DropdownMenuItem asChild>
-                  <Link href="/profile">
+                  <Link href={`/${locale}/profile`}>
                     <User className="mr-2 h-4 w-4" />
-                    <span>Profile</span>
+                    <span>{t('userMenu.myProfile')}</span>
                   </Link>
                 </DropdownMenuItem>
                 {userRole === 'admin' && (
                   <>
                     <DropdownMenuItem asChild>
-                      <Link href="/admin/knowledge">
-                        <Database className="mr-2 h-4 w-4" />
-                        <span>Knowledge Base</span>
-                      </Link>
-                    </DropdownMenuItem>
-                    <DropdownMenuItem asChild>
-                      <Link href="/admin/settings">
+                      <Link href={`/${locale}/admin`}>
                         <Settings className="mr-2 h-4 w-4" />
-                        <span>AI Configuration</span>
+                        <span>{t('userMenu.admin')}</span>
                       </Link>
                     </DropdownMenuItem>
                   </>
                 )}
+                <DropdownMenuSeparator />
+                <div className="px-1 py-1">
+                  <div className="flex items-center justify-between rounded-sm px-2 py-1.5 text-sm hover:bg-muted cursor-default">
+                    <span>{t('userMenu.language')}</span>
+                    <LanguageSwitcher />
+                  </div>
+                </div>
                 <DropdownMenuSeparator />
                 <DropdownMenuItem onClick={async () => { 
                   try {
@@ -1131,15 +1137,15 @@ const ChatPage = () => {
                   }
                 }}>
                   <LogOut className="mr-2 h-4 w-4" />
-                  <span>Logout</span>
+                  <span>{t('userMenu.signOut')}</span>
                 </DropdownMenuItem>
               </DropdownMenuContent>
             </DropdownMenu>
           ) : (
             <Button asChild variant="default" size="sm" className="flex-shrink-0 gradient-primary text-white">
-              <Link href="/login">
+              <Link href={`/${locale}/login`}>
                 <User className="mr-2 h-4 w-4" />
-                Login
+                {t('userMenu.login')}
               </Link>
             </Button>
           )}
@@ -1157,7 +1163,7 @@ const ChatPage = () => {
               <div className="flex items-center">
                 <div className="flex items-center space-x-2">
                   <span className="text-orange-600 dark:text-orange-400 font-medium text-sm">
-                    You&apos;re currently offline. Messages will be sent when connection is restored.
+                    {t('main.offlineWarning')}
                   </span>
                 </div>
               </div>
@@ -1171,7 +1177,7 @@ const ChatPage = () => {
                 <div className="flex items-center space-x-2">
                   <div className="w-2 h-2 bg-orange-400 rounded-full animate-pulse"></div>
                   <p className="text-sm font-medium text-orange-800 dark:text-orange-200">
-                    This is your last free message! Create a free account to continue chatting.
+                    {t('main.guestMessageWarning')}
                   </p>
                 </div>
               </div>
@@ -1183,7 +1189,7 @@ const ChatPage = () => {
               <div className="flex justify-center items-center h-32">
                 <InlineLoading 
                   variant="pulse"
-                  message="Loading messages..."
+                  message={t('loading.messages')}
                 />
               </div>
             )}
@@ -1205,18 +1211,18 @@ const ChatPage = () => {
                   </div>
                 </div>
                 <div className="space-y-3 w-full">
-                  <h3 className="text-lg md:text-2xl font-semibold text-foreground">Start a new conversation</h3>
+                  <h3 className="text-lg md:text-2xl font-semibold text-foreground">{t('main.startNewConversation')}</h3>
                   <p className="text-muted-foreground max-w-sm md:max-w-md leading-relaxed mx-auto">
-                    Ask me anything about hypertrophy, muscle building, training programs, or nutrition. I&apos;m here to help you achieve your fitness goals!
+                    {t('main.askAnything')}
                   </p>
                 </div>
                 
                 {/* Enhanced Example prompt buttons for mobile */}
                 <div className="flex flex-wrap gap-2 justify-center w-full max-w-xs md:max-w-2xl mt-6">
                   {[
-                    "Best rep range for muscle growth?",
-                    "Weekly training structure?", 
-                    "Supplement recommendations?"
+                    t('promptRecommendations.bestRepRange'),
+                    t('promptRecommendations.weeklyTraining'), 
+                    t('promptRecommendations.supplementRecommendations')
                   ].map((prompt, index) => (
                     <Button
                       key={index}
@@ -1231,7 +1237,7 @@ const ChatPage = () => {
                 </div>
               </div>
             )}
-
+            
             {messages.map((msg, index) => (
               <div
                 key={msg.id || `${msg.role}-${index}`}
@@ -1292,30 +1298,14 @@ const ChatPage = () => {
                               messageRole={msg.role}
                             />
                           )}
-                          
-                          {msg.createdAt && (
-                            <p className={`text-xs mt-2 md:mt-3 opacity-70 ${msg.role === 'user' ? 'text-right text-white/80' : 'text-left text-muted-foreground'}`}>
-                              {new Date(msg.createdAt).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}
-                            </p>
-                          )}
                         </div>
                       );
                     })()}
-                    
-                    {/* Enhanced Mobile-Optimized Copy Button */}
-                    <div className={`absolute ${msg.role === 'user' ? 'left-0 -translate-x-8 md:-translate-x-10' : 'right-0 translate-x-8 md:translate-x-10'} top-2 md:top-3 opacity-0 group-hover:opacity-100 transition-all duration-300`}>
-                      <Button
-                        variant="ghost"
-                        size="sm"
-                        onClick={() => copyMessage(msg.content)}
-                        className={`h-7 w-7 md:h-8 md:w-8 p-0 rounded-full hover:bg-background/80 backdrop-blur-sm shadow-md hover-lift ${
-                          msg.role === 'user' 
-                            ? 'text-muted-foreground hover:text-foreground border border-border/30' 
-                            : 'text-muted-foreground hover:text-foreground border border-border/30'
-                        }`}
-                        aria-label="Copy message"
-                      >
-                        <Copy className="h-3 w-3 md:h-3.5 md:w-3.5" />
+
+                    {/* Copy button */}
+                    <div className={`absolute top-1/2 -translate-y-1/2 flex items-center space-x-1 opacity-0 group-hover:opacity-100 transition-opacity duration-300 ${msg.role === 'user' ? '-left-10 md:-left-12' : '-right-10 md:-right-12'}`}>
+                      <Button variant="ghost" size="icon" className="h-8 w-8 rounded-full" onClick={() => copyMessage(msg.content)}>
+                        <Copy className="h-4 w-4" />
                       </Button>
                     </div>
                   </div>
@@ -1323,209 +1313,101 @@ const ChatPage = () => {
               </div>
             ))}
             
-            {/* Enhanced Mobile-Optimized AI Thinking Indicator */}
             {isAiThinking && (
-              <div className="flex items-start space-x-3 md:space-x-4 animate-fade-in">
+              <div className="group flex items-start space-x-3 md:space-x-4 animate-fade-in">
                 <div className="flex-shrink-0">
-                  <div className="h-8 w-8 md:h-10 md:w-10 rounded-full bg-gradient-to-br from-blue-500/20 to-purple-600/20 flex items-center justify-center shadow-md animate-glow border border-primary/20">
+                  <div className="h-8 w-8 md:h-10 md:w-10 rounded-full bg-gradient-to-br from-slate-100 to-slate-200 dark:from-slate-800 dark:to-slate-700 border-2 border-border/50 flex items-center justify-center overflow-hidden shadow-md hover-lift">
                     <Image 
-                      src="/logo.png" 
-                      alt="HypertroQ AI" 
-                      width={24}
-                      height={24}
-                      className="h-5 w-5 md:h-6 md:w-6 object-contain"
+                      src={getLogoSrc()} 
+                      alt="HyperTroQ AI" 
+                      width={28}
+                      height={28}
+                      className="h-5 w-5 md:h-7 md:w-7 object-contain"
                     />
                   </div>
                 </div>
-                <div className="flex-1">
-                  <div className="px-3 md:px-5 py-3 md:py-4 chat-bubble-ai">
-                    <div className="flex items-center space-x-2 md:space-x-3">
-                      <div className="flex space-x-1">
-                        <div className="w-2 h-2 md:w-2.5 md:h-2.5 bg-primary/80 rounded-full animate-bounce [animation-delay:-0.3s]"></div>
-                        <div className="w-2 h-2 md:w-2.5 md:h-2.5 bg-primary/80 rounded-full animate-bounce [animation-delay:-0.15s]"></div>
-                        <div className="w-2 h-2 md:w-2.5 md:h-2.5 bg-primary/80 rounded-full animate-bounce"></div>
-                      </div>
-                      <span className="text-xs md:text-sm text-muted-foreground font-medium">AI is analyzing your question...</span>
-                    </div>
+                <div className="flex-1 max-w-[85%] md:max-w-[75%]">
+                  <div className="px-3 md:px-5 py-2.5 md:py-4 chat-bubble-ai">
+                    <InlineLoading 
+                      variant="dots"
+                      message={t('main.aiThinking')}
+                    />
                   </div>
                 </div>
               </div>
             )}
-              {/* Scroll anchor */}
             <div ref={messagesEndRef} />
           </div>
         </div>
 
-        {/* Enhanced Mobile-Optimized Floating Message Input Area */}
-        <div className="absolute bottom-0 left-0 right-0 p-2 md:p-6">
-          <form onSubmit={handleSubmit} className="w-full max-w-5xl mx-auto">
-            <div className="floating-input p-3 md:p-5 animate-scale-in mx-2 md:mx-0">
+        {/* Enhanced Chat Input Area */}
+        <div className="absolute bottom-0 left-0 right-0 p-2 md:p-4 bg-background/80 backdrop-blur-sm border-t border-border/30">
+          <div className="w-full max-w-5xl mx-auto">
+            <form onSubmit={handleSubmit} className="relative">
               {/* Image Preview */}
               {imagePreview && (
-                <div className="mb-3 md:mb-4 p-2 md:p-3 bg-muted/50 rounded-xl border border-border/50" data-testid="image-preview">
-                  <div className="flex items-center justify-between mb-2">
-                    <span className="text-xs md:text-sm font-medium text-foreground">Selected Image</span>
-                    <Button
-                      type="button"
-                      variant="ghost"
-                      size="sm"
-                      onClick={removeImage}
-                      className="h-6 w-6 md:h-7 md:w-7 p-0 hover:bg-destructive/10 hover:text-destructive rounded-full hover-lift"
-                    >
-                      <X className="h-3 w-3 md:h-3.5 md:w-3.5" />
-                    </Button>
-                  </div>
-                  <div className="relative">
-                    <Image
-                      src={imagePreview || ''}
-                      alt="Selected image"
-                      width={200}
-                      height={128}
-                      className="max-w-full max-h-24 md:max-h-32 object-contain rounded-lg border shadow-sm"
-                      unoptimized={imagePreview?.startsWith('data:') || false}
-                    />
-                  </div>
+                <div className="absolute bottom-full left-0 mb-2 p-1.5 bg-muted rounded-xl shadow-lg border border-border/50 animate-scale-in">
+                  <Image src={imagePreview} alt={t('main.imagePreviewAlt')} width={72} height={72} className="rounded-lg" />
+                  <Button
+                    variant="ghost"
+                    size="icon"
+                    className="absolute -top-2 -right-2 h-6 w-6 rounded-full bg-destructive text-destructive-foreground hover:bg-destructive/80 shadow-md"
+                    onClick={removeImage}
+                  >
+                    <X className="h-4 w-4" />
+                  </Button>
                 </div>
               )}
               
-              <div className="flex items-end space-x-2 md:space-x-4">
-                <div className="flex-1 relative">
-                  <ArabicAwareTextarea
-                    placeholder="Message HypertroQ..."
-                    className="w-full rounded-2xl px-3 md:px-5 pr-10 md:pr-14 py-2.5 md:py-4 text-sm md:text-base border-0 bg-muted/30 focus-visible:ring-2 focus-visible:ring-primary/50 focus-visible:ring-offset-0 resize-none leading-relaxed chat-textarea"
-                    value={input}
-                    onChange={handleInputChange}
-                    disabled={isSendingMessage || isAiThinking}
-                    maxLength={2000}
-                    rows={1}
-                    data-testid="chat-input"
-                    onKeyDown={(e) => {
-                      if (e.key === 'Enter' && !e.shiftKey) {
-                        e.preventDefault();
-                        handleSubmit(e);
-                      }
-                    }}
-                    onPaste={handlePaste}
-                  />
-                  {!autoScroll && (
-                    <Button
-                      type="button"
-                      variant="ghost"
-                      size="sm"
-                      className="absolute right-12 md:right-16 top-1/2 -translate-y-1/2 h-7 w-7 md:h-8 md:w-8 p-0 hover:bg-muted/50 rounded-full hover-lift"
-                      onClick={() => {
-                        setAutoScroll(true);
-                        messagesEndRef.current?.scrollIntoView({ behavior: 'smooth' });
-                      }}
-                      aria-label="Scroll to bottom"
-                    >
-                      <ChevronLeft className="h-3 w-3 md:h-4 md:w-4 rotate-90" />
-                    </Button>
-                  )}
+              {/* Keyboard Shortcuts Tooltip */}
+              {showShortcuts && <KeyboardShortcuts />}
+              
+              <div className="relative flex items-center">
+                <ArabicAwareTextarea
+                  value={input}
+                  onChange={handleInputChange}
+                  onPaste={handlePaste}
+                  placeholder={t('main.inputPlaceholder')}
+                  className="w-full pr-24 pl-12 py-3 text-base rounded-2xl glass-input resize-none"
+                  rows={1}
+                  maxLength={2000}
+                />
+                <div className="absolute left-3 top-1/2 -translate-y-1/2 flex items-center">
+                  <Button type="button" variant="ghost" size="icon" className="h-9 w-9 rounded-xl hover:bg-muted/50" onClick={() => document.getElementById('image-upload')?.click()}>
+                    <ImageIcon className="h-5 w-5" />
+                  </Button>
+                  <input type="file" id="image-upload" accept="image/*" className="hidden" onChange={handleImageSelect} />
                 </div>
-                
-                {/* Enhanced Mobile-Optimized Image Upload Button */}
-                <div className="relative">
-                  <input
-                    type="file"
-                    accept="image/*"
-                    onChange={handleImageSelect}
-                    className="hidden"
-                    id="image-upload"
-                    disabled={isSendingMessage || isAiThinking}
-                  />
-                  <Button
-                    type="button"
-                    variant="ghost"
-                    size="icon"
-                    className="rounded-full h-10 w-10 md:h-14 md:w-14 hover:bg-muted/60 flex-shrink-0 hover-lift transition-all duration-200 disabled:cursor-not-allowed border border-border/30"
-                    onClick={() => document.getElementById('image-upload')?.click()}
-                    disabled={isSendingMessage || isAiThinking}
-                    aria-label="Upload image"
-                    data-testid="image-upload-button"
-                  >
-                    <ImageIcon className="h-4 w-4 md:h-6 md:w-6 text-muted-foreground" />
+                <div className="absolute right-3 top-1/2 -translate-y-1/2 flex items-center">
+                  <Button type="submit" size="icon" className="h-9 w-9 rounded-xl gradient-primary text-white shadow-lg hover-lift" disabled={isSendingMessage || (!input.trim() && !selectedImage)}>
+                    {isSendingMessage ? <Loader2 className="h-5 w-5 animate-spin" /> : <Send className="h-5 w-5" />}
                   </Button>
                 </div>
-                
-                {/* Enhanced Mobile-Optimized Send Button */}
-                <Button
-                  type="submit"
-                  size="icon"
-                  className="rounded-full h-10 w-10 md:h-14 md:w-14 gradient-primary disabled:opacity-40 flex-shrink-0 shadow-lg transition-all duration-300 hover-lift disabled:cursor-not-allowed"
-                  aria-label="Send message"
-                  data-testid="send-button"
-                  disabled={isSendingMessage || isAiThinking || (!input.trim() && !selectedImage)}
+              </div>
+              <div className="text-xs text-muted-foreground mt-2 flex justify-between items-center px-2">
+                <button 
+                  type="button" 
+                  className="hover:text-primary transition-colors flex items-center space-x-1"
+                  onMouseEnter={() => setShowShortcuts(true)}
+                  onMouseLeave={() => setShowShortcuts(false)}
                 >
-                  {isSendingMessage || isAiThinking ? (
-                    <Loader2 className="h-4 w-4 md:h-6 md:w-6 text-white animate-spin" />
-                  ) : (
-                    <Send className="h-4 w-4 md:h-6 md:w-6 text-white" />
-                  )}
-                </Button>
+                  <span>⌘+Enter</span>
+                </button>
+                <span className={`${input.length > 1800 ? 'text-orange-500' : ''}`}>{input.length}/2000</span>
               </div>
-              
-              {/* Enhanced Mobile-Optimized Input helper text */}
-              <div className="flex items-center justify-between mt-2 md:mt-3 px-1">
-                <div className="flex items-center gap-2 md:gap-3">
-                  <p className="text-xs text-muted-foreground hidden md:block">
-                    Press ⌘ + Enter to send, Shift + Enter for new line
-                  </p>
-                  <button
-                    onMouseEnter={() => setShowShortcuts(true)}
-                    onMouseLeave={() => setShowShortcuts(false)}
-                    className="text-xs text-muted-foreground hover:text-foreground transition-colors relative hidden md:block hover-lift"
-                  >
-                    Shortcuts
-                    {showShortcuts && <KeyboardShortcuts />}
-                  </button>
-                  <p className="text-xs text-muted-foreground md:hidden">
-                    Tap send or press Enter
-                  </p>
-                  {!user && (
-                    <p className={`text-xs font-medium transition-colors ${
-                      guestMessageCount >= 3 
-                        ? 'text-orange-500 animate-pulse' 
-                        : 'text-primary/80'
-                    }`}>
-                      {4 - guestMessageCount} free messages remaining
-                    </p>
-                  )}
-                </div>
-                <p className={`text-xs transition-colors ${
-                  input.length > 1800 
-                    ? 'text-orange-500 font-medium' 
-                    : input.length > 1600 
-                    ? 'text-amber-500' 
-                    : 'text-muted-foreground'
-                }`}>
-                  {input.length}/2000
-                </p>
-              </div>
-            </div>
-          </form>
+            </form>
+          </div>
         </div>
       </div>
-
-      {/* Login Prompt Dialog */}
-      <LoginPromptDialog 
-        open={showLoginDialog} 
-        onOpenChange={setShowLoginDialog} 
-        variant={!user && guestMessageCount >= 4 ? 'messageLimit' : 'initial'}
-      />
-      
-      {/* Keyboard Shortcuts Tooltip - Always show on desktop, toggle on mobile */}
-      {(!isMobile || showShortcuts) && (
-        <KeyboardShortcuts />
-      )}
+      <Suspense fallback={null}>
+        <LoginPromptDialog 
+          open={showLoginDialog} 
+          onOpenChange={setShowLoginDialog} 
+          variant={!user && guestMessageCount >= 4 ? 'messageLimit' : 'initial'}
+        />
+      </Suspense>
     </div>
   );
 };
 
-export default function ChatPageWrapper() {
-  return (
-    <Suspense fallback={<FullPageLoading variant="brain" message="Loading AI Chat" description="Preparing your intelligent fitness companion" />}>
-      <ChatPage />
-    </Suspense>
-  );
-}
+export default ChatPage;

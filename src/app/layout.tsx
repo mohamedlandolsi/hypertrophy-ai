@@ -1,9 +1,7 @@
 import type { Metadata } from "next";
 import { Geist, Geist_Mono } from "next/font/google";
-import Script from "next/script";
 import "./globals.css";
-import ConditionalNavbar from '@/components/conditional-navbar'; // Import ConditionalNavbar
-import { ThemeProvider } from "@/components/theme-provider"; // Import ThemeProvider
+import { ThemeProvider } from "@/components/theme-provider";
 import { Toaster as SonnerToaster } from "@/components/ui/sonner";
 import { Toaster } from "@/components/ui/toaster";
 import FaviconMeta from "@/components/favicon-meta";
@@ -12,7 +10,7 @@ import { Analytics } from '@vercel/analytics/react';
 import { generateMetadata as generateSEOMetadata } from "@/lib/seo";
 import { OfflineBanner } from "@/components/offline-banner";
 import { ServiceWorkerRegister } from "@/components/service-worker-register";
-// import { GoogleAnalytics } from '@/components/google-analytics'; // Now using direct implementation
+import { GoogleAnalytics } from '@/components/google-analytics';
 
 const geistSans = Geist({
   variable: "--font-geist-sans",
@@ -70,21 +68,6 @@ export default async function RootLayout({
         {/* Removed global loading to prevent unauthorized API calls */}
         {/* Script is now loaded conditionally in components that need it */}
         
-        {/* Google Analytics - Using next/script component */}
-        <Script
-          src="https://www.googletagmanager.com/gtag/js?id=G-1SDWNDGJHG"
-          strategy="afterInteractive"
-        />
-        <Script id="google-analytics" strategy="afterInteractive">
-          {`
-            window.dataLayer = window.dataLayer || [];
-            function gtag(){dataLayer.push(arguments);}
-            gtag('js', new Date());
-            gtag('config', 'G-1SDWNDGJHG');
-            console.log('Google Analytics: Next.js Script component loaded');
-          `}
-        </Script>
-        
         <ThemeProvider
           attribute="class"
           defaultTheme="system"
@@ -94,12 +77,11 @@ export default async function RootLayout({
           <ErrorBoundary>
             <ServiceWorkerRegister />
             <OfflineBanner />
-            <ConditionalNavbar /> {/* Use ConditionalNavbar */}
             <main className="flex-1 flex flex-col">{children}</main>
             <SonnerToaster richColors position="top-right" />
             <Toaster />
             <Analytics />
-            {/* GoogleAnalytics now loaded directly in head */}
+            <GoogleAnalytics />
           </ErrorBoundary>
         </ThemeProvider>
       </body>

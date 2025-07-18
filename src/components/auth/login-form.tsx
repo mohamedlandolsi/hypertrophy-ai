@@ -4,6 +4,7 @@ import React from "react";
 import { useState } from "react";
 import { useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
+import Link from "next/link";
 import { Button } from "@/components/ui/button";
 import {
   Card,
@@ -160,12 +161,12 @@ export default function LoginForm() {
             <div className="grid gap-2">
               <div className="flex items-center justify-between">
                 <Label htmlFor="password">Password</Label>
-                <a 
+                <Link 
                   href="/reset-password" 
                   className="text-sm text-muted-foreground hover:text-primary underline"
                 >
                   Forgot password?
-                </a>
+                </Link>
               </div>
               <PasswordInput
                 id="password"
@@ -207,9 +208,9 @@ export default function LoginForm() {
             
             <div className="text-center text-sm">
               Don&apos;t have an account?{" "}
-              <a href="/signup" className="underline hover:text-primary">
+              <Link href="/signup" className="underline hover:text-primary">
                 Sign Up
-              </a>
+              </Link>
             </div>
           </CardFooter>
         </form>
