@@ -2,6 +2,7 @@
 
 import { useEffect, useState, useCallback } from 'react';
 import Image from 'next/image';
+import { useTranslations } from 'next-intl';
 import AdminLayout from '@/components/admin-layout';
 import { FullPageLoading } from '@/components/ui/loading';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
@@ -72,6 +73,7 @@ interface UserStats {
 }
 
 export default function UserManagementPage() {
+  const tToasts = useTranslations('toasts');
   const [users, setUsers] = useState<UserProfile[]>([]);
   const [filteredUsers, setFilteredUsers] = useState<UserProfile[]>([]);
   const [stats, setStats] = useState<UserStats | null>(null);
@@ -117,7 +119,7 @@ export default function UserManagementPage() {
       setUsers(userData);
     } catch (error) {
       console.error('Error fetching users:', error);
-      showToast.error('Failed to load users');
+      showToast.error(tToasts('usersLoadErrorTitle'));
     }
   };
 
@@ -155,13 +157,13 @@ export default function UserManagementPage() {
         user.id === userId ? { ...user, role: newRole } : user
       ));
 
-      showToast.success(`User role updated to ${newRole}`);
+      showToast.success(tToasts('userRoleUpdatedTitle', { role: newRole }));
       
       // Refresh stats
       fetchStats();
     } catch (error) {
       console.error('Error updating user role:', error);
-      showToast.error('Failed to update user role');
+      showToast.error(tToasts('userRoleUpdateErrorTitle'));
     }
   };
 
@@ -178,13 +180,13 @@ export default function UserManagementPage() {
       // Remove from local state
       setUsers(prev => prev.filter(user => user.id !== userId));
 
-      showToast.success('User deleted successfully');
+      showToast.success(tToasts('userDeletedTitle'));
       
       // Refresh stats
       fetchStats();
     } catch (error) {
       console.error('Error deleting user:', error);
-      showToast.error('Failed to delete user');
+      showToast.error(tToasts('userDeleteErrorTitle'));
     }
   };
 

@@ -28,7 +28,7 @@ import Image from 'next/image';
 import type { User as SupabaseUser } from '@supabase/supabase-js';
 import { FitnessLoading } from '@/components/ui/loading';
 import EnhancedProfileForm from '@/components/enhanced-profile-form';
-import { useLocale } from 'next-intl';
+import { useTranslations, useLocale } from 'next-intl';
 import { UpgradeButton } from '@/components/upgrade-button';
 import { PlanBadge } from '@/components/plan-badge';
 
@@ -68,6 +68,7 @@ interface UserPlanData {
 }
 
 export default function ProfilePage() {
+  const t = useTranslations('Profile.page');
   const locale = useLocale();
   const [user, setUser] = useState<SupabaseUser | null>(null);
   const [loading, setLoading] = useState(true);
@@ -123,7 +124,7 @@ export default function ProfilePage() {
   if (!user) {
     return (
       <div className="flex flex-1 items-center justify-center bg-background text-foreground">
-        Please log in to view your profile.
+        {t('pleaseLogin')}
       </div>
     );
   }
@@ -132,17 +133,17 @@ export default function ProfilePage() {
     <div className="flex-1 bg-background text-foreground">
       <div className="container max-w-6xl mx-auto p-6">
         <div className="mb-8">
-          <h1 className="text-3xl font-bold text-foreground mb-2">Profile</h1>
+          <h1 className="text-3xl font-bold text-foreground mb-2">{t('title')}</h1>
           <p className="text-muted-foreground">
-            Manage your account settings and training profile
+            {t('subtitle')}
           </p>
         </div>
 
         <Tabs value={activeTab} onValueChange={setActiveTab} className="w-full">
           <TabsList className="grid w-full grid-cols-3">
-            <TabsTrigger value="overview">Overview</TabsTrigger>
-            <TabsTrigger value="edit">Edit Profile</TabsTrigger>
-            <TabsTrigger value="account">Account</TabsTrigger>
+            <TabsTrigger value="overview">{t('tabs.overview')}</TabsTrigger>
+            <TabsTrigger value="edit">{t('tabs.edit')}</TabsTrigger>
+            <TabsTrigger value="account">{t('tabs.account')}</TabsTrigger>
           </TabsList>
 
           <TabsContent value="overview" className="space-y-6">
@@ -153,12 +154,15 @@ export default function ProfilePage() {
                 <div className="flex items-center justify-between">
                   <div className="space-y-2">
                     <h1 className="text-2xl font-bold">
-                      Welcome back{user.user_metadata?.full_name ? `, ${user.user_metadata.full_name}` : ''}! 💪
+                      {user.user_metadata?.full_name 
+                        ? t('welcomeHeader.welcomeBackWithName', { name: user.user_metadata.full_name })
+                        : t('welcomeHeader.welcomeBack')
+                      }
                     </h1>
                     <p className="text-blue-100">
                       {clientMemory?.primaryGoal 
-                        ? `Let&apos;s continue working on ${clientMemory.primaryGoal.replace('_', ' ').toLowerCase()}`
-                        : "Ready to start your fitness journey?"
+                        ? t('welcomeHeader.workingOnGoal', { goal: clientMemory.primaryGoal.replace('_', ' ').toLowerCase() })
+                        : t('welcomeHeader.readyToStart')
                       }
                     </p>
                   </div>
@@ -184,7 +188,7 @@ export default function ProfilePage() {
                   <Link href={`/${locale}/chat`}>
                     <Button size="lg" variant="secondary" className="bg-white/10 hover:bg-white/20 text-white border-white/20">
                       <MessageSquare className="mr-2 h-4 w-4" />
-                      Continue Coaching Session
+                      {t('welcomeHeader.continueCoaching')}
                     </Button>
                   </Link>
                 </div>
@@ -202,10 +206,10 @@ export default function ProfilePage() {
                       <div className="h-8 w-8 rounded-full bg-gradient-to-r from-blue-500 to-purple-500 flex items-center justify-center">
                         <Activity className="h-4 w-4 text-white" />
                       </div>
-                      Your AI Coach Summary
+                      {t('coachSummary.title')}
                     </CardTitle>
                     <CardDescription>
-                      Personalized insights based on your conversations
+                      {t('coachSummary.subtitle')}
                     </CardDescription>
                   </CardHeader>
                   <CardContent className="space-y-6">
@@ -221,7 +225,7 @@ export default function ProfilePage() {
                               placeholder="HypertroQ will learn about you as you chat..."
                             />
                             <p className="text-xs text-muted-foreground mt-2">
-                              This summary is automatically generated from your conversations and profile
+                              {t('coachSummary.memorySummary')}
                             </p>
                           </div>
                         )}
@@ -233,7 +237,7 @@ export default function ProfilePage() {
                               <div className="space-y-3">
                                 <div className="flex items-center gap-2">
                                   <div className="h-2 w-2 rounded-full bg-blue-500" />
-                                  <h4 className="font-semibold text-foreground">Primary Goal</h4>
+                                  <h4 className="font-semibold text-foreground">{t('coachSummary.primaryGoal')}</h4>
                                 </div>
                                 <p className="text-muted-foreground pl-4">{clientMemory.primaryGoal.replace('_', ' ')}</p>
                               </div>
@@ -243,7 +247,7 @@ export default function ProfilePage() {
                               <div className="space-y-3">
                                 <div className="flex items-center gap-2">
                                   <div className="h-2 w-2 rounded-full bg-green-500" />
-                                  <h4 className="font-semibold text-foreground">Experience Level</h4>
+                                  <h4 className="font-semibold text-foreground">{t('coachSummary.experienceLevel')}</h4>
                                 </div>
                                 <p className="text-muted-foreground pl-4 capitalize">{clientMemory.trainingExperience}</p>
                               </div>
@@ -253,9 +257,9 @@ export default function ProfilePage() {
                               <div className="space-y-3">
                                 <div className="flex items-center gap-2">
                                   <div className="h-2 w-2 rounded-full bg-orange-500" />
-                                  <h4 className="font-semibold text-foreground">Training Frequency</h4>
+                                  <h4 className="font-semibold text-foreground">{t('coachSummary.trainingFrequency')}</h4>
                                 </div>
-                                <p className="text-muted-foreground pl-4">{clientMemory.weeklyTrainingDays} days/week</p>
+                                <p className="text-muted-foreground pl-4">{t('coachSummary.daysPerWeek', { days: clientMemory.weeklyTrainingDays })}</p>
                               </div>
                             )}
                             
@@ -263,7 +267,7 @@ export default function ProfilePage() {
                               <div className="space-y-3">
                                 <div className="flex items-center gap-2">
                                   <div className="h-2 w-2 rounded-full bg-purple-500" />
-                                  <h4 className="font-semibold text-foreground">Name</h4>
+                                  <h4 className="font-semibold text-foreground">{t('coachSummary.name')}</h4>
                                 </div>
                                 <p className="text-muted-foreground pl-4">{clientMemory.name}</p>
                               </div>
@@ -277,7 +281,7 @@ export default function ProfilePage() {
                             {clientMemory.age && (
                               <div className="text-center p-3 bg-muted/30 rounded-lg">
                                 <div className="text-xl font-bold text-foreground">{clientMemory.age}</div>
-                                <div className="text-xs text-muted-foreground">Age (years)</div>
+                                <div className="text-xs text-muted-foreground">{t('coachSummary.ageYears')}</div>
                               </div>
                             )}
                             {(clientMemory.currentBench || clientMemory.currentSquat || clientMemory.currentDeadlift) && (
@@ -304,7 +308,7 @@ export default function ProfilePage() {
                           <div className="mt-6 pt-4 border-t">
                             <h4 className="text-sm font-medium text-foreground mb-3 flex items-center gap-2">
                               <Target className="h-4 w-4" />
-                              Current Lifts
+                              {t('coachSummary.currentLifts')}
                             </h4>
                             <div className="grid grid-cols-2 md:grid-cols-4 gap-2 text-sm">
                               {clientMemory.currentBench && (
@@ -341,16 +345,16 @@ export default function ProfilePage() {
                           <MessageSquare className="h-8 w-8 text-white" />
                         </div>
                         <h3 className="text-xl font-semibold text-foreground mb-2">
-                          Let&apos;s Get Started! 🚀
+                          {t('coachSummary.getStarted.title')}
                         </h3>
                         <p className="text-muted-foreground mb-6 max-w-md mx-auto">
-                          Start chatting with your AI coach to build your personalized fitness profile and unlock tailored recommendations
+                          {t('coachSummary.getStarted.description')}
                         </p>
                         <div className="flex flex-col sm:flex-row gap-3 justify-center">
                           <Link href={`/${locale}/chat`}>
                             <Button size="lg" className="bg-gradient-to-r from-blue-600 to-purple-600 hover:from-blue-700 hover:to-purple-700">
                               <MessageSquare className="mr-2 h-4 w-4" />
-                              Start Your First Session
+                              {t('coachSummary.getStarted.firstSession')}
                             </Button>
                           </Link>
                           <Button 
@@ -359,7 +363,7 @@ export default function ProfilePage() {
                             onClick={() => setActiveTab('edit')}
                           >
                             <Edit className="mr-2 h-4 w-4" />
-                            Edit Profile
+                            {t('coachSummary.getStarted.editProfile')}
                           </Button>
                         </div>
                       </div>
@@ -374,7 +378,7 @@ export default function ProfilePage() {
                       <div className="h-8 w-8 rounded-full bg-gradient-to-r from-green-500 to-blue-500 flex items-center justify-center">
                         <BarChart3 className="h-4 w-4 text-white" />
                       </div>
-                      Today&apos;s Progress
+                      {t('todaysProgress.title')}
                     </CardTitle>
                   </CardHeader>
                   <CardContent>
@@ -384,7 +388,7 @@ export default function ProfilePage() {
                           {userPlan?.messagesUsedToday || 0}
                         </div>
                         <div className="text-sm text-blue-600 dark:text-blue-400 font-medium">
-                          Messages Used
+                          {t('todaysProgress.messagesUsed')}
                         </div>
                       </div>
                       <div className="text-center p-4 bg-gradient-to-br from-green-50 to-green-100 dark:from-green-950 dark:to-green-900 rounded-xl border border-green-200 dark:border-green-800">
@@ -392,7 +396,7 @@ export default function ProfilePage() {
                           {userPlan?.plan === 'PRO' ? '∞' : Math.max(0, (userPlan?.dailyLimit || 15) - (userPlan?.messagesUsedToday || 0))}
                         </div>
                         <div className="text-sm text-green-600 dark:text-green-400 font-medium">
-                          Remaining
+                          {t('todaysProgress.remaining')}
                         </div>
                       </div>
                       <div className="text-center p-4 bg-gradient-to-br from-purple-50 to-purple-100 dark:from-purple-950 dark:to-purple-900 rounded-xl border border-purple-200 dark:border-purple-800">
@@ -400,7 +404,7 @@ export default function ProfilePage() {
                           <PlanBadge plan={userPlan?.plan || 'FREE'} />
                         </div>
                         <div className="text-sm text-purple-600 dark:text-purple-400 font-medium">
-                          Plan Status
+                          {t('todaysProgress.planStatus')}
                         </div>
                       </div>
                       <div className="text-center p-4 bg-gradient-to-br from-orange-50 to-orange-100 dark:from-orange-950 dark:to-orange-900 rounded-xl border border-orange-200 dark:border-orange-800">
@@ -408,7 +412,7 @@ export default function ProfilePage() {
                           {userPlan?.plan === 'PRO' ? '100' : Math.round(((userPlan?.messagesUsedToday || 0) / (userPlan?.dailyLimit || 1)) * 100)}%
                         </div>
                         <div className="text-sm text-orange-600 dark:text-orange-400 font-medium">
-                          Daily Usage
+                          {t('todaysProgress.dailyUsage')}
                         </div>
                       </div>
                     </div>
@@ -429,7 +433,7 @@ export default function ProfilePage() {
                       }`}>
                         <Crown className="h-4 w-4 text-white" />
                       </div>
-                      Subscription
+                      {t('subscription.title')}
                     </CardTitle>
                   </CardHeader>
                   <CardContent className="space-y-4">
@@ -437,8 +441,8 @@ export default function ProfilePage() {
                       <div className="space-y-4">
                         <div className="flex items-center justify-between">
                           <div>
-                            <h3 className="font-semibold text-foreground">Pro Plan</h3>
-                            <p className="text-sm text-muted-foreground">Premium features active</p>
+                            <h3 className="font-semibold text-foreground">{t('subscription.proPlan')}</h3>
+                            <p className="text-sm text-muted-foreground">{t('subscription.premiumActive')}</p>
                           </div>
                           <Badge className="bg-gradient-to-r from-yellow-500 to-orange-500 text-white">
                             <Crown className="mr-1 h-3 w-3" />
@@ -447,19 +451,19 @@ export default function ProfilePage() {
                         </div>
 
                         <div className="space-y-3">
-                          <h4 className="font-medium text-foreground text-sm">Pro Features Active:</h4>
+                          <h4 className="font-medium text-foreground text-sm">{t('subscription.proFeaturesActive')}</h4>
                           <div className="space-y-2">
                             <div className="flex items-center gap-2 text-sm text-muted-foreground">
                               <CheckCircle className="h-4 w-4 text-green-500" />
-                              Unlimited messages
+                              {t('subscription.unlimitedMessages')}
                             </div>
                             <div className="flex items-center gap-2 text-sm text-muted-foreground">
                               <CheckCircle className="h-4 w-4 text-green-500" />
-                              Conversation memory
+                              {t('subscription.conversationMemory')}
                             </div>
                             <div className="flex items-center gap-2 text-sm text-muted-foreground">
                               <CheckCircle className="h-4 w-4 text-green-500" />
-                              Progress tracking
+                              {t('subscription.progressTracking')}
                             </div>
                           </div>
                         </div>
@@ -467,7 +471,7 @@ export default function ProfilePage() {
                         <div className="pt-4 border-t">
                           <Button variant="outline" className="w-full" size="sm">
                             <CreditCard className="mr-2 h-4 w-4" />
-                            Manage Billing
+                            {t('subscription.manageBilling')}
                           </Button>
                         </div>
                       </div>
@@ -476,10 +480,10 @@ export default function ProfilePage() {
                         <div className="text-center p-6 bg-gradient-to-br from-blue-50 to-purple-50 dark:from-blue-950 dark:to-purple-950 rounded-lg border-2 border-dashed border-blue-200 dark:border-blue-800">
                           <Crown className="h-10 w-10 text-blue-500 mx-auto mb-3" />
                           <h3 className="font-semibold text-foreground mb-2">
-                            Upgrade to Pro
+                            {t('subscription.upgradeToPro')}
                           </h3>
                           <p className="text-sm text-muted-foreground mb-4">
-                            Unlock unlimited messages and advanced features
+                            {t('subscription.unlockUnlimited')}
                           </p>
                           <UpgradeButton 
                             variant="default" 
@@ -490,11 +494,11 @@ export default function ProfilePage() {
                         </div>
 
                         <div className="space-y-2">
-                          <h4 className="font-medium text-foreground text-sm">Free Plan Includes:</h4>
+                          <h4 className="font-medium text-foreground text-sm">{t('subscription.freePlanIncludes')}</h4>
                           <div className="space-y-1 text-sm text-muted-foreground">
-                            <div>• 15 messages per day</div>
-                            <div>• Basic AI guidance</div>
-                            <div>• Access to knowledge base</div>
+                            <div>• {t('subscription.freeFeatures.dailyMessages')}</div>
+                            <div>• {t('subscription.freeFeatures.basicGuidance')}</div>
+                            <div>• {t('subscription.freeFeatures.knowledgeAccess')}</div>
                           </div>
                         </div>
                       </div>
@@ -509,14 +513,14 @@ export default function ProfilePage() {
                       <div className="h-8 w-8 rounded-full bg-gradient-to-r from-pink-500 to-rose-500 flex items-center justify-center">
                         <TrendingUp className="h-4 w-4 text-white" />
                       </div>
-                      Quick Actions
+                      {t('quickActions.title')}
                     </CardTitle>
                   </CardHeader>
                   <CardContent className="space-y-3">
                     <Link href={`/${locale}/chat`} className="block">
                       <Button className="w-full justify-start" variant="outline" size="lg">
                         <MessageSquare className="mr-2 h-4 w-4" />
-                        Start Coaching Session
+                        {t('quickActions.startCoaching')}
                       </Button>
                     </Link>
                     <Button 
@@ -526,12 +530,12 @@ export default function ProfilePage() {
                       onClick={() => setActiveTab('edit')}
                     >
                       <Edit className="mr-2 h-4 w-4" />
-                      Edit Profile
+                      {t('quickActions.editProfile')}
                     </Button>
                     <Link href={`/${locale}/pricing`} className="block">
                       <Button className="w-full justify-start" variant="outline" size="lg">
                         <Crown className="mr-2 h-4 w-4" />
-                        View Plans & Pricing
+                        {t('quickActions.viewPlans')}
                       </Button>
                     </Link>
                   </CardContent>
@@ -551,33 +555,33 @@ export default function ProfilePage() {
                 <CardHeader>
                   <CardTitle className="flex items-center gap-2">
                     <Settings className="h-5 w-5" />
-                    Account Overview
+                    {t('account.overview.title')}
                   </CardTitle>
                 </CardHeader>
                 <CardContent className="space-y-4">
                   <div className="grid md:grid-cols-2 gap-4">
                     <div>
-                      <label className="text-sm font-medium text-muted-foreground">Email</label>
+                      <label className="text-sm font-medium text-muted-foreground">{t('account.overview.email')}</label>
                       <p className="text-foreground">{user.email}</p>
                     </div>
                     <div>
-                      <label className="text-sm font-medium text-muted-foreground">Current Plan</label>
+                      <label className="text-sm font-medium text-muted-foreground">{t('account.overview.currentPlan')}</label>
                       <div className="mt-1">
                         <PlanBadge plan={userPlan?.plan || 'FREE'} />
                       </div>
                     </div>
                     <div>
-                      <label className="text-sm font-medium text-muted-foreground">User ID</label>
+                      <label className="text-sm font-medium text-muted-foreground">{t('account.overview.userId')}</label>
                       <p className="text-sm text-muted-foreground font-mono">{user.id}</p>
                     </div>
                     <div>
-                      <label className="text-sm font-medium text-muted-foreground">Member Since</label>
+                      <label className="text-sm font-medium text-muted-foreground">{t('account.overview.memberSince')}</label>
                       <p className="text-sm text-muted-foreground">
                         {new Date(user.created_at).toLocaleDateString()}
                       </p>
                     </div>
                     <div>
-                      <label className="text-sm font-medium text-muted-foreground">Last Sign In</label>
+                      <label className="text-sm font-medium text-muted-foreground">{t('account.overview.lastSignIn')}</label>
                       <p className="text-sm text-muted-foreground">
                         {user.last_sign_in_at ? new Date(user.last_sign_in_at).toLocaleDateString() : 'N/A'}
                       </p>
@@ -592,16 +596,16 @@ export default function ProfilePage() {
                   <CardHeader>
                     <CardTitle className="flex items-center gap-2">
                       <MessageSquare className="h-5 w-5" />
-                      Daily Usage
+                      {t('account.dailyUsage.title')}
                     </CardTitle>
                     <CardDescription>
-                      Track your daily message usage
+                      {t('account.dailyUsage.subtitle')}
                     </CardDescription>
                   </CardHeader>
                   <CardContent className="space-y-4">
                     <div className="space-y-2">
                       <div className="flex justify-between text-sm">
-                        <span>Messages used today</span>
+                        <span>{t('account.dailyUsage.messagesUsedToday')}</span>
                         <span>{userPlan.messagesUsedToday} / {userPlan.dailyLimit}</span>
                       </div>
                       <Progress 
@@ -614,7 +618,7 @@ export default function ProfilePage() {
                       <Alert>
                         <AlertTriangle className="h-4 w-4" />
                         <AlertDescription>
-                          You&apos;re running low on messages. Consider upgrading to Pro for unlimited conversations.
+                          {t('account.dailyUsage.lowOnMessages')}
                         </AlertDescription>
                       </Alert>
                     )}
@@ -627,7 +631,7 @@ export default function ProfilePage() {
                 <CardHeader>
                   <CardTitle className="flex items-center gap-2">
                     <CreditCard className="h-5 w-5" />
-                    Subscription Details
+                    {t('account.subscriptionDetails.title')}
                   </CardTitle>
                 </CardHeader>
                 <CardContent className="space-y-6">
@@ -637,8 +641,8 @@ export default function ProfilePage() {
                         <div className="flex items-center gap-3">
                           <CheckCircle className="h-6 w-6 text-green-600" />
                           <div>
-                            <p className="font-semibold text-green-900 dark:text-green-100">HypertroQ Pro</p>
-                            <p className="text-sm text-green-700 dark:text-green-300">Active subscription</p>
+                            <p className="font-semibold text-green-900 dark:text-green-100">{t('account.subscriptionDetails.proActive')}</p>
+                            <p className="text-sm text-green-700 dark:text-green-300">{t('account.subscriptionDetails.activeSubscription')}</p>
                           </div>
                         </div>
                         <Badge className="bg-green-600">
@@ -649,11 +653,11 @@ export default function ProfilePage() {
 
                       <div className="grid md:grid-cols-2 gap-4">
                         <div>
-                          <label className="text-sm font-medium text-muted-foreground">Status</label>
+                          <label className="text-sm font-medium text-muted-foreground">{t('account.subscriptionDetails.status')}</label>
                           <p className="text-foreground capitalize">{userPlan.subscription.status}</p>
                         </div>
                         <div>
-                          <label className="text-sm font-medium text-muted-foreground">Next Billing</label>
+                          <label className="text-sm font-medium text-muted-foreground">{t('account.subscriptionDetails.nextBilling')}</label>
                           <p className="text-foreground">
                             {userPlan.subscription.currentPeriodEnd 
                               ? new Date(userPlan.subscription.currentPeriodEnd).toLocaleDateString()
@@ -664,34 +668,34 @@ export default function ProfilePage() {
                       </div>
 
                       <div className="space-y-3">
-                        <h4 className="font-medium text-foreground">Pro Features Active:</h4>
+                        <h4 className="font-medium text-foreground">{t('subscription.proFeaturesActive')}</h4>
                         <div className="grid md:grid-cols-2 gap-2">
                           <div className="flex items-center gap-2 text-sm text-muted-foreground">
                             <CheckCircle className="h-4 w-4 text-green-500" />
-                            Unlimited messages
+                            {t('subscription.unlimitedMessages')}
                           </div>
                           <div className="flex items-center gap-2 text-sm text-muted-foreground">
                             <CheckCircle className="h-4 w-4 text-green-500" />
-                            Conversation memory
+                            {t('subscription.conversationMemory')}
                           </div>
                           <div className="flex items-center gap-2 text-sm text-muted-foreground">
                             <CheckCircle className="h-4 w-4 text-green-500" />
-                            Progress tracking
+                            {t('subscription.progressTracking')}
                           </div>
                           <div className="flex items-center gap-2 text-sm text-muted-foreground">
                             <CheckCircle className="h-4 w-4 text-green-500" />
-                            Priority support
+                            {t('subscription.prioritySupport')}
                           </div>
                         </div>
                       </div>
 
                       <div className="pt-4 border-t">
                         <p className="text-sm text-muted-foreground mb-3">
-                          Manage your subscription through the customer portal:
+                          {t('account.subscriptionDetails.managePortal')}
                         </p>
                         <Button variant="outline" className="w-full md:w-auto">
                           <Calendar className="mr-2 h-4 w-4" />
-                          Manage Billing
+                          {t('subscription.manageBilling')}
                         </Button>
                       </div>
                     </div>
@@ -700,10 +704,10 @@ export default function ProfilePage() {
                       <div className="text-center p-8 bg-muted/50 rounded-lg border-2 border-dashed border-muted-foreground/20">
                         <Crown className="h-12 w-12 text-muted-foreground mx-auto mb-4" />
                         <h3 className="text-lg font-semibold text-foreground mb-2">
-                          Upgrade to Pro
+                          {t('account.subscriptionDetails.upgradeToPro')}
                         </h3>
                         <p className="text-muted-foreground mb-6">
-                          Unlock unlimited messages, conversation memory, and advanced features
+                          {t('account.subscriptionDetails.unlockFeatures')}
                         </p>
                         <UpgradeButton 
                           variant="default" 
@@ -715,20 +719,20 @@ export default function ProfilePage() {
 
                       <div className="grid md:grid-cols-2 gap-4 text-sm text-muted-foreground">
                         <div className="space-y-2">
-                          <h4 className="font-medium text-foreground">Free Plan Includes:</h4>
+                          <h4 className="font-medium text-foreground">{t('subscription.freePlanIncludes')}</h4>
                           <ul className="space-y-1">
-                            <li>• 15 messages per day</li>
-                            <li>• Basic AI guidance</li>
-                            <li>• Access to knowledge base</li>
+                            <li>• {t('subscription.freeFeatures.dailyMessages')}</li>
+                            <li>• {t('subscription.freeFeatures.basicGuidance')}</li>
+                            <li>• {t('subscription.freeFeatures.knowledgeAccess')}</li>
                           </ul>
                         </div>
                         <div className="space-y-2">
-                          <h4 className="font-medium text-foreground">Pro Plan Adds:</h4>
+                          <h4 className="font-medium text-foreground">{t('account.subscriptionDetails.proPlanAdds')}</h4>
                           <ul className="space-y-1">
-                            <li>• Unlimited messages</li>
-                            <li>• Conversation memory</li>
-                            <li>• Progress tracking</li>
-                            <li>• Priority support</li>
+                            <li>• {t('subscription.unlimitedMessages')}</li>
+                            <li>• {t('subscription.conversationMemory')}</li>
+                            <li>• {t('subscription.progressTracking')}</li>
+                            <li>• {t('subscription.prioritySupport')}</li>
                           </ul>
                         </div>
                       </div>
@@ -742,7 +746,7 @@ export default function ProfilePage() {
                 <CardHeader>
                   <CardTitle className="flex items-center gap-2">
                     <TrendingUp className="h-5 w-5" />
-                    Quick Actions
+                    {t('quickActions.title')}
                   </CardTitle>
                 </CardHeader>
                 <CardContent>
@@ -750,13 +754,13 @@ export default function ProfilePage() {
                     <Link href={`/${locale}/chat`}>
                       <Button className="w-full" variant="outline">
                         <MessageSquare className="mr-2 h-4 w-4" />
-                        Start Coaching Session
+                        {t('quickActions.startCoaching')}
                       </Button>
                     </Link>
                     <Link href={`/${locale}/pricing`}>
                       <Button className="w-full" variant="outline">
                         <Crown className="mr-2 h-4 w-4" />
-                        View Plans & Pricing
+                        {t('quickActions.viewPlans')}
                       </Button>
                     </Link>
                   </div>

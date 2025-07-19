@@ -1,6 +1,7 @@
 'use client'
 
 import React, { useState, useRef } from 'react';
+import { useTranslations } from 'next-intl';
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { Button } from "@/components/ui/button";
 import { 
@@ -59,6 +60,9 @@ export function EnhancedAvatarUpload({
   showRemoveButton = true,
   allowEdit = true
 }: EnhancedAvatarUploadProps) {
+  const t = useTranslations('EnhancedProfileForm.profilePicture');
+  const tCommon = useTranslations('Common');
+  const tToasts = useTranslations('toasts');
   const [isHovered, setIsHovered] = useState(false);
   const [isUploading, setIsUploading] = useState(false);
   const [uploadProgress, setUploadProgress] = useState(0);
@@ -82,7 +86,7 @@ export function EnhancedAvatarUpload({
   const handleFileSelect = (file: File) => {
     const error = validateFile(file);
     if (error) {
-      showToast.error('Invalid file', error);
+      showToast.error(tToasts('invalidFileTitle'), error);
       return;
     }
     
@@ -154,12 +158,12 @@ export function EnhancedAvatarUpload({
       
       if (result.success && onImageUpdate) {
         onImageUpdate(result.avatar_url);
-        showToast.success('Profile picture updated', 'Your profile picture has been successfully updated');
+        showToast.success(tToasts('profilePictureUpdatedTitle'), tToasts('profilePictureUpdatedText'));
       }
     } catch (error) {
       console.error('Error uploading avatar:', error);
       showToast.error(
-        'Upload failed', 
+        tToasts('uploadFailedTitle'), 
         error instanceof Error ? error.message : 'Failed to upload profile picture'
       );
     } finally {
@@ -186,12 +190,12 @@ export function EnhancedAvatarUpload({
       
       if (result.success && onImageUpdate) {
         onImageUpdate('');
-        showToast.success('Profile picture removed', 'Your profile picture has been successfully removed');
+        showToast.success(tToasts('profilePictureRemovedTitle'), tToasts('profilePictureRemovedText'));
       }
     } catch (error) {
       console.error('Error removing avatar:', error);
       showToast.error(
-        'Remove failed', 
+        tToasts('removeFailedTitle'), 
         error instanceof Error ? error.message : 'Failed to remove profile picture'
       );
     } finally {
@@ -239,7 +243,7 @@ export function EnhancedAvatarUpload({
           )}>
             <AvatarImage 
               src={imageUrl} 
-              alt={name || 'Profile picture'} 
+              alt={t('profilePictureAlt')} 
               className="object-cover"
             />
             <AvatarFallback className={cn(
@@ -261,12 +265,12 @@ export function EnhancedAvatarUpload({
               {dragActive ? (
                 <>
                   <Upload className="w-6 h-6 text-white mb-1" />
-                  <span className="text-white text-xs font-medium">Drop here</span>
+                  <span className="text-white text-xs font-medium">{t('dropHere')}</span>
                 </>
               ) : (
                 <>
                   <Camera className="w-6 h-6 text-white mb-1" />
-                  <span className="text-white text-xs font-medium">Upload</span>
+                  <span className="text-white text-xs font-medium">{t('upload')}</span>
                 </>
               )}
             </div>
@@ -303,7 +307,7 @@ export function EnhancedAvatarUpload({
                 </Button>
               </TooltipTrigger>
               <TooltipContent>
-                <p>Remove profile picture</p>
+                <p>{t('removeTooltip')}</p>
               </TooltipContent>
             </Tooltip>
           )}
@@ -339,7 +343,7 @@ export function EnhancedAvatarUpload({
                 className="flex items-center gap-2"
               >
                 <ImageIcon className="w-4 h-4" />
-                {imageUrl ? 'Change' : 'Upload'} Picture
+                {imageUrl ? t('changePicture') : t('uploadPicture')}
               </Button>
               
               {imageUrl && (
@@ -352,7 +356,7 @@ export function EnhancedAvatarUpload({
                   className="flex items-center gap-2 text-destructive hover:text-destructive"
                 >
                   <Trash2 className="w-4 h-4" />
-                  Remove
+                  {t('removePicture')}
                 </Button>
               )}
             </div>
@@ -360,11 +364,11 @@ export function EnhancedAvatarUpload({
             {/* File Requirements */}
             <div className="text-center">
               <p className="text-xs text-muted-foreground">
-                JPEG, PNG, WebP, or GIF up to 5MB
+                {t('fileRequirements')}
               </p>
               {allowEdit && (
                 <p className="text-xs text-muted-foreground mt-1">
-                  Click or drag & drop to upload
+                  {t('dragDropText')}
                 </p>
               )}
             </div>
@@ -377,14 +381,14 @@ export function EnhancedAvatarUpload({
             <AlertDialogHeader>
               <AlertDialogTitle className="flex items-center gap-2">
                 <AlertCircle className="w-5 h-5 text-destructive" />
-                Remove Profile Picture
+                {t('removeDialogTitle')}
               </AlertDialogTitle>
               <AlertDialogDescription>
-                Are you sure you want to remove your profile picture? This action cannot be undone.
+                {t('removeDialogDescription')}
               </AlertDialogDescription>
             </AlertDialogHeader>
             <AlertDialogFooter>
-              <AlertDialogCancel disabled={isDeleting}>Cancel</AlertDialogCancel>
+              <AlertDialogCancel disabled={isDeleting}>{tCommon('cancel')}</AlertDialogCancel>
               <AlertDialogAction
                 onClick={handleRemoveAvatar}
                 disabled={isDeleting}
@@ -393,10 +397,10 @@ export function EnhancedAvatarUpload({
                 {isDeleting ? (
                   <>
                     <Loader2 className="w-4 h-4 mr-2 animate-spin" />
-                    Removing...
+                    {t('removing')}
                   </>
                 ) : (
-                  'Remove Picture'
+                  t('removePicture')
                 )}
               </AlertDialogAction>
             </AlertDialogFooter>

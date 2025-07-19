@@ -8,6 +8,7 @@
 'use client';
 
 import { useState, useEffect } from 'react';
+import { useTranslations } from 'next-intl';
 import { showToast } from '@/lib/toast';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
@@ -53,6 +54,7 @@ interface ReprocessingResult {
 }
 
 export default function KnowledgeProcessingMonitor() {
+  const tToasts = useTranslations('toasts');
   const [status, setStatus] = useState<ReprocessingStatus | null>(null);
   const [loading, setLoading] = useState(false);
   const [reprocessing, setReprocessing] = useState(false);
@@ -80,16 +82,17 @@ export default function KnowledgeProcessingMonitor() {
       console.error('Failed to load processing status:', err);
       const errorMessage = err instanceof Error ? err.message : 'Failed to load status';
       setError(errorMessage);
-      showToast.error('Failed to load processing status', errorMessage);
+      showToast.error(tToasts('processingStatusErrorTitle'), errorMessage);
     } finally {
       setLoading(false);
     }
   };
 
   const runReprocessing = async (options: { limit?: number; forceReprocess?: boolean } = {}) => {
+    const operation = options.forceReprocess ? 'Reprocessing' : 'Processing';
     const loadingToast = showToast.processing(
-      'Processing knowledge items', 
-      `${options.forceReprocess ? 'Reprocessing' : 'Processing'} up to ${options.limit || 10} items...`
+      tToasts('processingKnowledgeItemsTitle'), 
+      tToasts('processingKnowledgeItemsText', { operation, limit: options.limit || 10 })
     );
 
     try {
@@ -130,7 +133,7 @@ export default function KnowledgeProcessingMonitor() {
       const errorMessage = err instanceof Error ? err.message : 'Failed to reprocess';
       setError(errorMessage);
       showToast.dismiss(loadingToast);
-      showToast.error('Reprocessing failed', errorMessage);
+      showToast.error(tToasts('reprocessingFailedTitle'), errorMessage);
     } finally {
       setReprocessing(false);
     }

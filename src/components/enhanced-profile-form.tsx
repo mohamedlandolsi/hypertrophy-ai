@@ -1,6 +1,7 @@
 'use client';
 
 import { useState, useEffect } from 'react';
+import { useTranslations } from 'next-intl';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
@@ -178,6 +179,7 @@ const ArrayInput = ({
 };
 
 export default function EnhancedProfileForm() {
+  const t = useTranslations('EnhancedProfileForm');
   const { toast } = useToast();
   const [formData, setFormData] = useState<ProfileFormData>({});
   const [isLoading, setIsLoading] = useState(false);
@@ -256,41 +258,39 @@ export default function EnhancedProfileForm() {
   const goalOptions = [
     {
       value: 'muscle_gain',
-      label: 'Build Muscle',
-      description: 'Gain lean muscle mass',
+      label: t('options.goals.buildMuscle'),
+      description: t('options.goalDescriptions.buildMuscle'),
       icon: <Dumbbell size={20} />
     },
     {
       value: 'fat_loss',
-      label: 'Lose Fat',
-      description: 'Reduce body fat percentage',
+      label: t('options.goals.loseFat'),
+      description: t('options.goalDescriptions.loseFat'),
       icon: <Scale size={20} />
     },
     {
       value: 'strength',
-      label: 'Get Stronger',
-      description: 'Increase overall strength',
+      label: t('options.goals.getStronger'),
+      description: t('options.goalDescriptions.getStronger'),
       icon: <Trophy size={20} />
     },
     {
       value: 'endurance',
-      label: 'Improve Endurance',
-      description: 'Enhance cardiovascular fitness',
+      label: t('options.goals.improveEndurance'),
+      description: t('options.goalDescriptions.improveEndurance'),
       icon: <Zap size={20} />
     }
   ];
 
   const experienceOptions = [
-    { value: 'beginner', label: 'Beginner', icon: <User size={16} /> },
-    { value: 'intermediate', label: 'Intermediate', icon: <Activity size={16} /> },
-    { value: 'advanced', label: 'Advanced', icon: <Trophy size={16} /> }
+    { value: 'beginner', label: t('options.experience.beginner'), icon: <User size={16} /> },
+    { value: 'intermediate', label: t('options.experience.intermediate'), icon: <Activity size={16} /> },
+    { value: 'advanced', label: t('options.experience.advanced'), icon: <Trophy size={16} /> }
   ];
 
   const genderOptions = [
-    { value: 'MALE', label: 'Male' },
-    { value: 'FEMALE', label: 'Female' },
-    { value: 'OTHER', label: 'Other' },
-    { value: 'PREFER_NOT_TO_SAY', label: 'Prefer not to say' }
+    { value: 'MALE', label: t('options.gender.male') },
+    { value: 'FEMALE', label: t('options.gender.female') }
   ];
 
   if (isLoading) {
@@ -304,9 +304,9 @@ export default function EnhancedProfileForm() {
   return (
     <div className="max-w-4xl mx-auto space-y-6">
       <div className="text-center space-y-2">
-        <h1 className="text-2xl font-bold">Edit Profile</h1>
+        <h1 className="text-2xl font-bold">{t('title')}</h1>
         <p className="text-muted-foreground">
-          Customize your profile to get personalized training recommendations
+          {t('subtitle')}
         </p>
       </div>
 
@@ -337,35 +337,35 @@ export default function EnhancedProfileForm() {
             <CardHeader>
               <CardTitle className="flex items-center gap-2">
                 <User className="h-5 w-5" />
-                Personal Details
+                {t('sections.personalInfo.title')}
               </CardTitle>
               <CardDescription>
-                Basic information about you
+                {t('sections.personalInfo.description')}
               </CardDescription>
             </CardHeader>
             <CardContent className="space-y-4">
               <div>
-                <Label htmlFor="name">Full Name</Label>
+                <Label htmlFor="name">{t('sections.personalInfo.name')}</Label>
                 <Input
                   id="name"
                   value={formData.name || ''}
                   onChange={(e) => updateField('name', e.target.value)}
-                  placeholder="Enter your full name"
+                  placeholder={t('placeholders.enterName')}
                 />
               </div>
               
               <StepperInput
-                label="Age"
+                label={t('sections.personalInfo.age')}
                 value={formData.age}
                 onChange={(value) => updateField('age', value)}
                 min={13}
                 max={120}
-                placeholder="Enter your age"
-                unit="years"
+                placeholder={t('placeholders.enterAge')}
+                unit={t('units.years')}
               />
 
               <SegmentedControl
-                label="Gender"
+                label={t('sections.personalInfo.gender')}
                 value={formData.gender}
                 onChange={(value) => updateField('gender', value)}
                 options={genderOptions}
@@ -377,43 +377,43 @@ export default function EnhancedProfileForm() {
             <CardHeader>
               <CardTitle className="flex items-center gap-2">
                 <Activity className="h-5 w-5" />
-                Physical Metrics
+                {t('sections.physicalMetrics.title')}
               </CardTitle>
               <CardDescription>
-                Your current physical measurements
+                {t('sections.physicalMetrics.description')}
               </CardDescription>
             </CardHeader>
             <CardContent className="space-y-4">
               <StepperInput
-                label="Height"
+                label={t('sections.personalInfo.height')}
                 value={formData.height}
                 onChange={(value) => updateField('height', value)}
                 min={120}
                 max={250}
-                placeholder="Enter your height"
-                unit="cm"
+                placeholder={t('placeholders.enterHeight')}
+                unit={t('units.cm')}
               />
 
               <StepperInput
-                label="Weight"
+                label={t('sections.personalInfo.weight')}
                 value={formData.weight}
                 onChange={(value) => updateField('weight', value)}
                 min={30}
                 max={300}
                 step={0.5}
-                placeholder="Enter your weight"
-                unit="kg"
+                placeholder={t('placeholders.enterWeight')}
+                unit={t('units.kg')}
               />
 
               <StepperInput
-                label="Body Fat %"
+                label={t('sections.personalInfo.bodyFat')}
                 value={formData.bodyFatPercentage}
                 onChange={(value) => updateField('bodyFatPercentage', value)}
                 min={3}
                 max={50}
                 step={0.5}
-                placeholder="Optional"
-                unit="%"
+                placeholder={t('placeholders.enterBodyFat')}
+                unit={t('units.percent')}
               />
             </CardContent>
           </Card>
@@ -424,15 +424,15 @@ export default function EnhancedProfileForm() {
           <CardHeader>
             <CardTitle className="flex items-center gap-2">
               <Target className="h-5 w-5" />
-              Fitness Goals
+              {t('sections.fitnessGoals.title')}
             </CardTitle>
             <CardDescription>
-              What do you want to achieve?
+              {t('sections.fitnessGoals.description')}
             </CardDescription>
           </CardHeader>
           <CardContent className="space-y-4">
             <div className="space-y-3">
-              <Label>Primary Goal</Label>
+              <Label>{t('sections.fitnessGoals.primaryGoal')}</Label>
               <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
                 {goalOptions.map((goal) => (
                   <GoalCard
@@ -449,24 +449,24 @@ export default function EnhancedProfileForm() {
 
             <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
               <StepperInput
-                label="Target Weight"
+                label={t('sections.goals.targetWeight')}
                 value={formData.targetWeight}
                 onChange={(value) => updateField('targetWeight', value)}
                 min={30}
                 max={300}
                 step={0.5}
-                placeholder="Optional"
-                unit="kg"
+                placeholder={t('placeholders.optional')}
+                unit={t('units.kg')}
               />
 
               <StepperInput
-                label="Target Body Fat %"
+                label={t('sections.goals.targetBodyFat')}
                 value={formData.targetBodyFat}
                 onChange={(value) => updateField('targetBodyFat', value)}
                 min={3}
                 max={50}
                 step={0.5}
-                placeholder="Optional"
+                placeholder={t('placeholders.optional')}
                 unit="%"
               />
             </div>
@@ -478,36 +478,36 @@ export default function EnhancedProfileForm() {
           <CardHeader>
             <CardTitle className="flex items-center gap-2">
               <Dumbbell className="h-5 w-5" />
-              Training Profile
+              {t('sections.trainingProfile.title')}
             </CardTitle>
             <CardDescription>
-              Tell us about your training experience and preferences
+              {t('sections.trainingProfile.description')}
             </CardDescription>
           </CardHeader>
           <CardContent className="space-y-6">
             <SegmentedControl
-              label="Training Experience"
+              label={t('sections.goals.trainingExperience')}
               value={formData.trainingExperience}
               onChange={(value) => updateField('trainingExperience', value)}
               options={experienceOptions}
             />
 
             <div>
-              <Label htmlFor="trainingStructure">Training Structure</Label>
+              <Label htmlFor="trainingStructure">{t('sections.goals.trainingStructure')}</Label>
               <Select value={formData.trainingStructureType || ''} onValueChange={(value) => updateField('trainingStructureType', value)}>
                 <SelectTrigger>
-                  <SelectValue placeholder="How do you structure your training?" />
+                  <SelectValue placeholder={t('placeholders.selectTrainingStructure')} />
                 </SelectTrigger>
                 <SelectContent>
-                  <SelectItem value="weekly">Weekly (fixed days per week)</SelectItem>
-                  <SelectItem value="cycle">Cycle-based (days on/off pattern)</SelectItem>
+                  <SelectItem value="weekly">{t('options.trainingStructure.weekly')}</SelectItem>
+                  <SelectItem value="cycle">{t('options.trainingStructure.cycle')}</SelectItem>
                 </SelectContent>
               </Select>
             </div>
 
             {formData.trainingStructureType === 'weekly' && (
               <DayPicker
-                label="Training Days per Week"
+                label={t('labels.trainingDaysPerWeek')}
                 value={formData.weeklyTrainingDays}
                 onChange={(value) => updateField('weeklyTrainingDays', value)}
               />
@@ -516,29 +516,29 @@ export default function EnhancedProfileForm() {
             {formData.trainingStructureType === 'cycle' && (
               <div className="space-y-4">
                 <div>
-                  <Label htmlFor="trainingCycle">Training Cycle Pattern</Label>
+                  <Label htmlFor="trainingCycle">{t('sections.goals.trainingCyclePattern')}</Label>
                   <Select value={formData.trainingCycle || ''} onValueChange={(value) => updateField('trainingCycle', value)}>
                     <SelectTrigger>
-                      <SelectValue placeholder="Select your training cycle" />
+                      <SelectValue placeholder={t('placeholders.selectTrainingCycle')} />
                     </SelectTrigger>
                     <SelectContent>
-                      <SelectItem value="1_on_1_off">1 day on, 1 day off</SelectItem>
-                      <SelectItem value="2_on_1_off">2 days on, 1 day off</SelectItem>
-                      <SelectItem value="3_on_1_off">3 days on, 1 day off</SelectItem>
-                      <SelectItem value="2_on_2_off">2 days on, 2 days off</SelectItem>
-                      <SelectItem value="3_on_2_off">3 days on, 2 days off</SelectItem>
-                      <SelectItem value="custom">Custom pattern</SelectItem>
+                      <SelectItem value="1_on_1_off">{t('options.trainingCycle.1_on_1_off')}</SelectItem>
+                      <SelectItem value="2_on_1_off">{t('options.trainingCycle.2_on_1_off')}</SelectItem>
+                      <SelectItem value="3_on_1_off">{t('options.trainingCycle.3_on_1_off')}</SelectItem>
+                      <SelectItem value="2_on_2_off">{t('options.trainingCycle.2_on_2_off')}</SelectItem>
+                      <SelectItem value="3_on_2_off">{t('options.trainingCycle.3_on_2_off')}</SelectItem>
+                      <SelectItem value="custom">{t('options.trainingCycle.custom')}</SelectItem>
                     </SelectContent>
                   </Select>
                 </div>
                 {formData.trainingCycle === 'custom' && (
                   <div>
-                    <Label htmlFor="customCycle">Custom Cycle Description</Label>
+                    <Label htmlFor="customCycle">{t('sections.goals.customCycleDescription')}</Label>
                     <Input
                       id="customCycle"
                       value={formData.customCyclePattern || ''}
                       onChange={(e) => updateField('customCyclePattern', e.target.value)}
-                      placeholder="Describe your custom training cycle (e.g., '4 days on, 3 days off')"
+                      placeholder={t('placeholders.describeCustomCycle')}
                     />
                   </div>
                 )}
@@ -547,14 +547,14 @@ export default function EnhancedProfileForm() {
 
             <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
               <StepperInput
-                label="Session Duration"
+                label={t('sections.goals.sessionDuration')}
                 value={formData.availableTime}
                 onChange={(value) => updateField('availableTime', value)}
                 min={15}
                 max={240}
                 step={15}
-                placeholder="Typical session length"
-                unit="min"
+                placeholder={t('placeholders.typicalSessionLength')}
+                unit={t('units.min')}
               />
             </div>
           </CardContent>
@@ -565,54 +565,62 @@ export default function EnhancedProfileForm() {
           <CardHeader>
             <CardTitle className="flex items-center gap-2">
               <Heart className="h-5 w-5" />
-              Health & Limitations
+              {t('sections.health.title')}
             </CardTitle>
             <CardDescription>
-              Help us keep you safe and healthy
+              {t('sections.health.description')}
             </CardDescription>
           </CardHeader>
           <CardContent className="space-y-4">
             <ArrayInput
-              label="Injuries"
+              label={t('labels.injuries')}
               value={formData.injuries || []}
               onChange={(value) => updateField('injuries', value)}
-              placeholder="Add any current or past injuries..."
-              suggestions={['Knee', 'Lower back', 'Shoulder', 'Wrist', 'Ankle']}
+              placeholder={t('placeholders.addInjuries')}
+              suggestions={[
+                t('bodyParts.knee'),
+                t('bodyParts.lowerBack'),
+                t('bodyParts.shoulder'),
+                t('bodyParts.wrist'),
+                t('bodyParts.ankle')
+              ]}
             />
 
             <ArrayInput
-              label="Physical Limitations"
+              label={t('labels.physicalLimitations')}
               value={formData.limitations || []}
               onChange={(value) => updateField('limitations', value)}
-              placeholder="Add any physical limitations..."
-              suggestions={['Mobility issues', 'Joint problems', 'Chronic pain']}
+              placeholder={t('placeholders.addLimitations')}
+              suggestions={[
+                t('limitationTypes.mobilityIssues'),
+                t('limitationTypes.jointProblems'),
+                t('limitationTypes.chronicPain')
+              ]}
             />
 
             <ArrayInput
-              label="Medications"
+              label={t('labels.medications')}
               value={formData.medications || []}
               onChange={(value) => updateField('medications', value)}
-              placeholder="Add any medications that might affect training..."
+              placeholder={t('placeholders.addMedications')}
             />
 
             <ArrayInput
-              label="Allergies"
+              label={t('labels.allergies')}
               value={formData.allergies || []}
               onChange={(value) => updateField('allergies', value)}
-              placeholder="Add an allergy"
+              placeholder={t('placeholders.addAllergy')}
               suggestions={[
-                'Nuts',
-                'Dairy',
-                'Gluten',
-                'Shellfish',
-                'Eggs',
-                'Soy',
-                'Fish',
-                'Sesame',
-                'Peanuts',
-                'Tree nuts',
-                'Wheat',
-                'Lactose'
+                t('allergyTypes.nuts'),
+                t('allergyTypes.dairy'),
+                t('allergyTypes.gluten'),
+                t('allergyTypes.shellfish'),
+                t('allergyTypes.eggs'),
+                t('allergyTypes.soy'),
+                t('allergyTypes.fish'),
+                t('allergyTypes.sesame'),
+                t('allergyTypes.peanuts'),
+                t('allergyTypes.treeNuts')
               ]}
             />
           </CardContent>
@@ -623,15 +631,15 @@ export default function EnhancedProfileForm() {
           <CardHeader>
             <CardTitle className="flex items-center gap-2">
               <Home className="h-5 w-5" />
-              Training Environment
+              {t('sections.environment.title')}
             </CardTitle>
             <CardDescription>
-              Where and how you train
+              {t('sections.environment.description')}
             </CardDescription>
           </CardHeader>
           <CardContent className="space-y-6">
             <div className="space-y-4">
-              <Label>Training Location</Label>
+              <Label>{t('labels.trainingLocation')}</Label>
               <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                 <div className="flex items-center space-x-2">
                   <Checkbox 
@@ -639,7 +647,7 @@ export default function EnhancedProfileForm() {
                     checked={formData.gymAccess || false}
                     onCheckedChange={(checked) => updateField('gymAccess', checked)}
                   />
-                  <Label htmlFor="gymAccess">I have gym access</Label>
+                  <Label htmlFor="gymAccess">{t('labels.iHaveGymAccess')}</Label>
                 </div>
                 <div className="flex items-center space-x-2">
                   <Checkbox 
@@ -647,43 +655,43 @@ export default function EnhancedProfileForm() {
                     checked={formData.homeGym || false}
                     onCheckedChange={(checked) => updateField('homeGym', checked)}
                   />
-                  <Label htmlFor="homeGym">I have a home gym setup</Label>
+                  <Label htmlFor="homeGym">{t('labels.iHaveHomeGymSetup')}</Label>
                 </div>
               </div>
             </div>
 
             <ArrayInput
-              label="Available Equipment"
+              label={t('labels.availableEquipment')}
               value={formData.equipmentAvailable || []}
               onChange={(value) => updateField('equipmentAvailable', value)}
-              placeholder="Add equipment you have access to..."
+              placeholder={t('placeholders.addEquipment')}
               suggestions={[
-                'Dumbbells',
-                'Barbell',
-                'Resistance bands',
-                'Pull-up bar',
-                'Bench',
-                'Squat rack',
-                'Kettlebells',
-                'Cable machine',
-                'Treadmill',
-                'Elliptical',
-                'Rowing machine',
-                'Leg press',
-                'Lat pulldown',
-                'Smith machine'
+                t('equipmentTypes.dumbbells'),
+                t('equipmentTypes.barbell'),
+                t('equipmentTypes.resistanceBands'),
+                t('equipmentTypes.pullUpBar'),
+                t('equipmentTypes.bench'),
+                t('equipmentTypes.squatRack'),
+                t('equipmentTypes.kettlebells'),
+                t('equipmentTypes.cableMachine'),
+                t('equipmentTypes.treadmill'),
+                t('equipmentTypes.elliptical'),
+                t('equipmentTypes.rowingMachine'),
+                t('equipmentTypes.legPress'),
+                t('equipmentTypes.latPulldown'),
+                t('equipmentTypes.smithMachine')
               ]}
             />
 
             <StepperInput
-              label="Monthly Gym Budget"
+              label={t('sections.environment.budget')}
               value={formData.gymBudget}
               onChange={(value) => updateField('gymBudget', value)}
               min={0}
               max={500}
               step={10}
-              placeholder="Optional budget"
-              unit="$"
+              placeholder={t('placeholders.optionalBudget')}
+              unit={t('units.dollar')}
             />
           </CardContent>
         </Card>
@@ -693,33 +701,33 @@ export default function EnhancedProfileForm() {
           <CardHeader>
             <CardTitle className="flex items-center gap-2">
               <Heart className="h-5 w-5" />
-              Lifestyle
+              {t('sections.lifestyle.title')}
             </CardTitle>
             <CardDescription>
-              Your daily habits and preferences
+              {t('sections.lifestyle.description')}
             </CardDescription>
           </CardHeader>
           <CardContent className="p-6 space-y-6">
             <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
               <StepperInput
-                label="Average Sleep Hours"
+                label={t('labels.averageSleepHours')}
                 value={formData.sleepHours}
                 onChange={(value) => updateField('sleepHours', value)}
                 min={1}
                 max={15}
                 step={0.5}
-                placeholder="e.g., 7.5"
-                unit="hours"
+                placeholder={t('placeholders.sleepHoursExample')}
+                unit={t('units.hours')}
               />
 
               <div className="space-y-2">
-                <Label htmlFor="stressLevel">Stress Level</Label>
+                <Label htmlFor="stressLevel">{t('sections.lifestyle.stressLevel')}</Label>
                 <Select 
                   value={formData.stressLevel || ''} 
                   onValueChange={(value) => updateField('stressLevel', value)}
                 >
                   <SelectTrigger>
-                    <SelectValue placeholder="Select stress level" />
+                    <SelectValue placeholder={t('placeholders.selectStressLevel')} />
                   </SelectTrigger>
                   <SelectContent>
                     <SelectItem value="LOW">Low</SelectItem>
@@ -732,46 +740,46 @@ export default function EnhancedProfileForm() {
             </div>
 
             <ArrayInput
-              label="Dietary Preferences"
+              label={t('labels.dietaryPreferences')}
               value={formData.dietaryPreferences || []}
               onChange={(value) => updateField('dietaryPreferences', value)}
-              placeholder="Add a dietary preference"
+              placeholder={t('placeholders.addDietaryPreference')}
               suggestions={[
-                'Vegetarian',
-                'Vegan',
-                'Keto',
-                'Paleo',
-                'Mediterranean',
-                'Intermittent fasting',
-                'Low carb',
-                'High protein',
-                'Gluten-free',
-                'Dairy-free',
-                'Pescatarian',
-                'Carnivore'
+                t('dietaryOptions.vegetarian'),
+                t('dietaryOptions.vegan'),
+                t('dietaryOptions.keto'),
+                t('dietaryOptions.paleo'),
+                t('dietaryOptions.mediterranean'),
+                t('dietaryOptions.intermittentFasting'),
+                t('dietaryOptions.lowCarb'),
+                t('dietaryOptions.highProtein'),
+                t('dietaryOptions.glutenFree'),
+                t('dietaryOptions.dairyFree'),
+                t('dietaryOptions.pescatarian'),
+                t('dietaryOptions.carnivore')
               ]}
             />
 
             <ArrayInput
-              label="Supplements Used"
+              label={t('labels.supplementsUsed')}
               value={formData.supplementsUsed || []}
               onChange={(value) => updateField('supplementsUsed', value)}
-              placeholder="Add a supplement"
+              placeholder={t('placeholders.addSupplement')}
               suggestions={[
-                'Protein powder',
-                'Creatine',
-                'Multivitamin',
-                'Fish oil',
-                'Vitamin D',
-                'BCAAs',
-                'Pre-workout',
-                'Post-workout',
-                'Omega-3',
-                'Magnesium',
-                'Zinc',
-                'Vitamin B12',
-                'Caffeine',
-                'Beta-alanine'
+                t('supplementOptions.proteinPowder'),
+                t('supplementOptions.creatine'),
+                t('supplementOptions.multivitamin'),
+                t('supplementOptions.fishOil'),
+                t('supplementOptions.vitaminD'),
+                t('supplementOptions.bcaas'),
+                t('supplementOptions.preWorkout'),
+                t('supplementOptions.postWorkout'),
+                t('supplementOptions.omega3'),
+                t('supplementOptions.magnesium'),
+                t('supplementOptions.zinc'),
+                t('supplementOptions.vitaminB12'),
+                t('supplementOptions.caffeine'),
+                t('supplementOptions.betaAlanine')
               ]}
             />
           </CardContent>
@@ -787,12 +795,12 @@ export default function EnhancedProfileForm() {
             {isSaving ? (
               <>
                 <Loader2 className="mr-2 h-4 w-4 animate-spin" />
-                Saving...
+                {t('messages.saving')}
               </>
             ) : (
               <>
                 <Save className="mr-2 h-4 w-4" />
-                Save Profile
+                {t('buttons.saveChanges')}
               </>
             )}
           </Button>

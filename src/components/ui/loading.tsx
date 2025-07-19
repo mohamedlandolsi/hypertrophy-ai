@@ -1,5 +1,6 @@
 import React from 'react';
 import { Loader2, Zap, Dumbbell, Brain } from 'lucide-react';
+import { useTranslations } from 'next-intl';
 
 interface LoadingProps {
   variant?: 'default' | 'pulse' | 'dots' | 'bars' | 'fitness' | 'brain';
@@ -215,11 +216,12 @@ export function ChatLoading() {
 }
 
 export function FitnessLoading() {
+  const t = useTranslations('FitnessLoading');
   return (
     <PageLoading 
       variant="fitness"
-      message="Analyzing Your Fitness Data"
-      description="Processing your workout history and generating personalized recommendations"
+      message={t('title')}
+      description={t('description')}
     />
   );
 }

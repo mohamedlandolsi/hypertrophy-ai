@@ -6,6 +6,7 @@ import { Crown, Check, X, Loader2 } from 'lucide-react';
 import { useState, useEffect } from 'react';
 import { createClient } from '@/lib/supabase/client';
 import { trackEvent } from '@/components/google-analytics';
+import { useTranslations } from 'next-intl';
 import {
   Dialog,
   DialogContent,
@@ -47,6 +48,8 @@ export function UpgradeButton({
   pricingData: externalPricingData = null
 }: UpgradeButtonProps) {
   console.log('UpgradeButton rendered with:', { defaultInterval, showDialog });
+  
+  const t = useTranslations('UpgradeButton');
   
   const [isLoading, setIsLoading] = useState(false);
   const [userId, setUserId] = useState<string | null>(null);
@@ -242,7 +245,7 @@ export function UpgradeButton({
           ) : (
             <Crown className="mr-2 h-4 w-4" />
           )}
-          {isLoading ? 'Loading...' : 'Upgrade to Pro'}
+          {isLoading ? t('loading') : t('upgradeButton')}
         </Button>
     );
   }
@@ -256,17 +259,17 @@ export function UpgradeButton({
           ) : (
             <Crown className="mr-2 h-4 w-4" />
           )}
-          {isLoading ? 'Loading...' : 'Upgrade to Pro'}
+          {isLoading ? t('loading') : t('upgradeButton')}
         </Button>
       </DialogTrigger>
       <DialogContent className="sm:max-w-md">
         <DialogHeader>
           <DialogTitle className="flex items-center gap-2">
             <Crown className="h-5 w-5 text-yellow-500" />
-            Upgrade to HypertroQ Pro
+            {t('dialog.title')}
           </DialogTitle>
           <DialogDescription>
-            Unlock unlimited AI coaching and advanced features
+            {t('dialog.description')}
           </DialogDescription>
         </DialogHeader>
         
@@ -274,7 +277,7 @@ export function UpgradeButton({
           {/* Currency Selector */}
           <div className="flex justify-between items-center">
             <label className="text-sm font-medium text-gray-700 dark:text-gray-300">
-              Currency
+              {t('dialog.currency')}
             </label>
             <CurrencySelector
               selectedCurrency={selectedCurrency}
@@ -286,25 +289,25 @@ export function UpgradeButton({
             {/* Free Plan */}
             <div className="p-4 border rounded-lg">
               <div className="flex items-center justify-between mb-3">
-                <h3 className="font-medium">Free</h3>
-                <Badge variant="secondary">Current</Badge>
+                <h3 className="font-medium">{t('dialog.planComparison.freePlan.title')}</h3>
+                <Badge variant="secondary">{t('dialog.planComparison.freePlan.current')}</Badge>
               </div>
               <div className="space-y-2 text-sm text-muted-foreground">
                 <div className="flex items-center gap-2">
                   <Check className="h-4 w-4 text-green-500" />
-                  15 messages/day
+                  {t('dialog.planComparison.freePlan.messages')}
                 </div>
                 <div className="flex items-center gap-2">
                   <X className="h-4 w-4 text-red-500" />
-                  No conversation memory
+                  {t('dialog.planComparison.freePlan.noMemory')}
                 </div>
                 <div className="flex items-center gap-2">
                   <X className="h-4 w-4 text-red-500" />
-                  No progress tracking
+                  {t('dialog.planComparison.freePlan.noTracking')}
                 </div>
                 <div className="flex items-center gap-2">
                   <X className="h-4 w-4 text-red-500" />
-                  No advanced features
+                  {t('dialog.planComparison.freePlan.noAdvanced')}
                 </div>
               </div>
             </div>
@@ -312,28 +315,28 @@ export function UpgradeButton({
             {/* Pro Plan */}
             <div className="p-4 border-2 border-blue-500 rounded-lg bg-blue-50/50">
               <div className="flex items-center justify-between mb-3">
-                <h3 className="font-medium">Pro</h3>
+                <h3 className="font-medium">{t('dialog.planComparison.proPlan.title')}</h3>
                 <Badge className="bg-blue-600">
                   <Crown className="mr-1 h-3 w-3" />
-                  Upgrade
+                  {t('dialog.planComparison.proPlan.upgrade')}
                 </Badge>
               </div>
               <div className="space-y-2 text-sm">
                 <div className="flex items-center gap-2">
                   <Check className="h-4 w-4 text-green-500" />
-                  Unlimited messages
+                  {t('dialog.features.unlimitedMessages')}
                 </div>
                 <div className="flex items-center gap-2">
                   <Check className="h-4 w-4 text-green-500" />
-                  Full conversation memory
+                  {t('dialog.features.conversationMemory')}
                 </div>
                 <div className="flex items-center gap-2">
                   <Check className="h-4 w-4 text-green-500" />
-                  Progress tracking & analysis
+                  {t('dialog.features.progressTracking')}
                 </div>
                 <div className="flex items-center gap-2">
                   <Check className="h-4 w-4 text-green-500" />
-                  Priority support
+                  {t('dialog.features.prioritySupport')}
                 </div>
               </div>
             </div>
@@ -349,7 +352,7 @@ export function UpgradeButton({
                   : 'text-gray-500 dark:text-gray-400 hover:text-gray-700 dark:hover:text-gray-200'
               }`}
             >
-              Monthly
+              {t('dialog.monthly')}
             </button>
             <button
               onClick={() => setSelectedInterval('year')}
@@ -359,10 +362,10 @@ export function UpgradeButton({
                   : 'text-gray-500 dark:text-gray-400 hover:text-gray-700 dark:hover:text-gray-200'
               }`}
             >
-              Yearly
+              {t('dialog.yearly')}
               {pricingData && (
                 <Badge className="absolute -top-2 -right-1 bg-green-500 text-white text-xs px-1 py-0.5">
-                  Save {pricingData.savingsPercentage}%
+                  {t('dialog.save', { percentage: pricingData.savingsPercentage })}
                 </Badge>
               )}
             </button>
@@ -405,11 +408,13 @@ export function UpgradeButton({
             ) : (
               <Crown className="mr-2 h-4 w-4" />
             )}
-            {isLoading ? 'Processing...' : `Start Pro Subscription ${selectedInterval === 'year' ? '(Yearly)' : '(Monthly)'}`}
+            {isLoading ? t('processing') : t('dialog.startSubscription', { 
+              interval: selectedInterval === 'year' ? t('dialog.yearly') : t('dialog.monthly')
+            })}
           </Button>
 
           <div className="text-xs text-center text-muted-foreground">
-            Secure payment powered by Lemon Squeezy
+            {t('dialog.securePayment')}
           </div>
         </div>
       </DialogContent>

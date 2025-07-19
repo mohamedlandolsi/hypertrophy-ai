@@ -234,16 +234,16 @@ const ChatPage = () => {
       // Show user-friendly message based on error type
       switch (apiError.type) {
         case 'VALIDATION':
-          showToast.error('Invalid Input', apiError.message);
+          showToast.error(t('toasts.invalidInputTitle'), apiError.message);
           break;
         case 'AUTHENTICATION':
           showToast.authError(apiError.message);
           break;
         case 'AUTHORIZATION':
-          showToast.error('Access Denied', apiError.message);
+          showToast.error(t('toasts.accessDeniedTitle'), apiError.message);
           break;
         case 'NOT_FOUND':
-          showToast.error('Not Found', apiError.message);
+          showToast.error(t('toasts.notFoundTitle'), apiError.message);
           break;
         case 'FILE_UPLOAD':
           showToast.fileValidationError('file', apiError.message);
@@ -1128,10 +1128,10 @@ const ChatPage = () => {
                     
                     // Redirect to home or chat page
                     router.push('/');
-                    showToast.success('Logged out', 'You have been successfully logged out');
+                    showToast.success(t('toasts.logoutSuccessTitle'), t('toasts.logoutSuccessText'));
                   } catch (error) {
                     console.error('Logout error:', error);
-                    showToast.error('Logout failed', 'Please try again');
+                    showToast.error(t('toasts.logoutErrorTitle'), t('toasts.logoutErrorText'));
                     // If there's an error, we might want to reload the page to ensure clean state
                     window.location.href = '/';
                   }

@@ -8,6 +8,7 @@ import { Label } from '@/components/ui/label';
 import { cn } from '@/lib/utils';
 import { Camera, Plus, Minus, X } from 'lucide-react';
 import { useState, useEffect } from 'react';
+import { useTranslations } from 'next-intl';
 
 interface StepperInputProps {
   label: string;
@@ -324,14 +325,16 @@ interface DayPickerProps {
 }
 
 export function DayPicker({ label, value, onChange }: DayPickerProps) {
+  const t = useTranslations('EnhancedProfileForm');
+  
   const days = [
-    { label: 'S', value: 1 },
-    { label: 'M', value: 2 },
-    { label: 'T', value: 3 },
-    { label: 'W', value: 4 },
-    { label: 'T', value: 5 },
-    { label: 'F', value: 6 },
-    { label: 'S', value: 7 }
+    { label: t('weekdays.sunday'), value: 1 },
+    { label: t('weekdays.monday'), value: 2 },
+    { label: t('weekdays.tuesday'), value: 3 },
+    { label: t('weekdays.wednesday'), value: 4 },
+    { label: t('weekdays.thursday'), value: 5 },
+    { label: t('weekdays.friday'), value: 6 },
+    { label: t('weekdays.saturday'), value: 7 }
   ];
 
   const selectedDays = value || 0;
@@ -354,7 +357,7 @@ export function DayPicker({ label, value, onChange }: DayPickerProps) {
         ))}
       </div>
       <p className="text-sm text-muted-foreground">
-        {selectedDays} {selectedDays === 1 ? 'day' : 'days'} per week
+        {selectedDays} {selectedDays === 1 ? t('labels.day') : t('labels.days')} {t('labels.daysPerWeek')}
       </p>
     </div>
   );

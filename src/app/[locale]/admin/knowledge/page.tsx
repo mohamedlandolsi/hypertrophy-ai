@@ -3,6 +3,7 @@
 import { createClient } from '@/lib/supabase/client';
 import { useEffect, useState, useCallback } from 'react';
 import { useRouter } from 'next/navigation';
+import { useTranslations } from 'next-intl';
 import Link from 'next/link';
 import AdminLayout from '@/components/admin-layout';
 import { Button } from '@/components/ui/button';
@@ -67,6 +68,7 @@ interface KnowledgeItem {
 }
 
 export default function KnowledgePage() {
+  const tToasts = useTranslations('toasts');
   const [user, setUser] = useState<SupabaseUser | null>(null);
   const [knowledgeItems, setKnowledgeItems] = useState<KnowledgeItem[]>([]);
   const [isUploading, setIsUploading] = useState(false);
@@ -257,7 +259,7 @@ export default function KnowledgePage() {
                 data.knowledgeItem.processingResult.embeddingsGenerated
               );
             } else {
-              showToast.success(`Successfully uploaded ${file.name}`);
+              showToast.success(tToasts('fileUploadSuccessTitle'), tToasts('fileUploadSuccessText', { fileName: file.name }));
             }
             
             results.push(data.knowledgeItem);
@@ -298,7 +300,7 @@ export default function KnowledgePage() {
     if (isHtmlContentEmpty(textInput) || !textTitle.trim()) return;
     
     setIsUploading(true);
-    const loadingToast = showToast.processing('Adding text content', 'Processing and generating embeddings...');
+    const loadingToast = showToast.processing(tToasts('addingTextContentTitle'), tToasts('addingTextContentText'));
     
     try {
       const response = await fetch('/api/knowledge', {
@@ -319,7 +321,7 @@ export default function KnowledgePage() {
         const data = await response.json();
         console.log('Text content added successfully:', data);
         
-        showToast.success('Text content added successfully', `"${textTitle}" has been added to your knowledge base`);
+        showToast.success(tToasts('textContentAddedTitle'), tToasts('textContentAddedText', { title: textTitle }));
         
         // Refresh knowledge items
         await fetchKnowledgeItems();
@@ -330,7 +332,7 @@ export default function KnowledgePage() {
       } else {
         const errorData = await response.json();
         console.error('Text submission failed:', errorData.error);
-        showToast.error('Failed to add text content', errorData.error);
+        showToast.error(tToasts('textContentAddErrorTitle'), errorData.error);
       }
     } catch (error) {
       console.error('Text submission error:', error);
@@ -352,7 +354,7 @@ export default function KnowledgePage() {
     if (!itemToDelete) return;
 
     setIsDeleting(true);
-    const loadingToast = showToast.processing('Deleting knowledge item', 'Removing item and associated data...');
+    const loadingToast = showToast.processing(tToasts('deletingKnowledgeItemTitle'), tToasts('deletingKnowledgeItemText'));
 
     try {
       const response = await fetch(`/api/knowledge/${itemToDelete.id}`, {
@@ -362,7 +364,7 @@ export default function KnowledgePage() {
       showToast.dismiss(loadingToast);
 
       if (response.ok) {
-        showToast.success('Knowledge item deleted', 'The item has been removed from your knowledge base');
+        showToast.success(tToasts('knowledgeItemDeletedTitle'), tToasts('knowledgeItemDeletedText'));
         // Refresh knowledge items
         await fetchKnowledgeItems();
         // Close modal and reset state
@@ -371,7 +373,7 @@ export default function KnowledgePage() {
       } else {
         const errorData = await response.json();
         console.error('Delete failed:', errorData.error);
-        showToast.error('Failed to delete knowledge item', errorData.error);
+        showToast.error(tToasts('knowledgeItemDeleteErrorTitle'), errorData.error);
       }
     } catch (error) {
       console.error('Delete error:', error);
@@ -394,11 +396,11 @@ export default function KnowledgePage() {
 
   const handleDownloadKnowledgeItem = async (item: KnowledgeItem) => {
     if (item.type !== 'FILE' || !item.fileName) {
-      showToast.warning('Download not available', 'This item is not available for download');
+      showToast.warning(tToasts('downloadNotAvailableTitle'), tToasts('downloadNotAvailableText'));
       return;
     }
 
-    const loadingToast = showToast.processing('Downloading file', `Preparing ${item.fileName}...`);
+    const loadingToast = showToast.processing(tToasts('downloadingFileTitle'), tToasts('downloadingFileText', { fileName: item.fileName }));
 
     try {
       const response = await fetch(`/api/knowledge/${item.id}/download`);
@@ -423,11 +425,11 @@ export default function KnowledgePage() {
         window.URL.revokeObjectURL(url);
         document.body.removeChild(a);
         
-        showToast.success('Download completed', `${item.fileName} has been downloaded`);
+        showToast.success(tToasts('downloadCompletedTitle'), tToasts('downloadCompletedText', { fileName: item.fileName }));
       } else {
         const errorData = await response.json();
         console.error('Download failed:', errorData.error);
-        showToast.error('Failed to download file', errorData.error);
+        showToast.error(tToasts('downloadFailedTitle'), errorData.error);
       }
     } catch (error) {
       console.error('Download error:', error);
@@ -438,7 +440,7 @@ export default function KnowledgePage() {
 
   const handleEditKnowledgeItem = (item: KnowledgeItem) => {
     if (item.type !== 'TEXT') {
-      showToast.warning('Edit not available', 'Only text content can be edited');
+      showToast.warning(tToasts('editNotAvailableTitle'), tToasts('editNotAvailableText'));
       return;
     }
     
@@ -450,12 +452,12 @@ export default function KnowledgePage() {
 
   const handleUpdateKnowledgeItem = async () => {
     if (!selectedItem || isHtmlContentEmpty(editContent) || !editTitle.trim()) {
-      showToast.warning('Validation error', 'Please provide both title and content');
+      showToast.warning(tToasts('validationErrorTitle'), tToasts('validationErrorText'));
       return;
     }
 
     setIsUpdating(true);
-    const loadingToast = showToast.processing('Updating content', 'Saving changes and regenerating embeddings...');
+    const loadingToast = showToast.processing(tToasts('updatingContentTitle'), tToasts('updatingContentText'));
 
     try {
       const response = await fetch(`/api/knowledge/${selectedItem.id}`, {
@@ -492,11 +494,11 @@ export default function KnowledgePage() {
         setEditTitle('');
         setEditContent('');
         
-        showToast.success('Content updated', 'Knowledge item has been updated successfully');
+        showToast.success(tToasts('contentUpdatedTitle'), tToasts('contentUpdatedText'));
       } else {
         const errorData = await response.json();
         console.error('Update failed:', errorData.error);
-        showToast.error('Failed to update content', errorData.error);
+        showToast.error(tToasts('contentUpdateErrorTitle'), errorData.error);
       }
     } catch (error) {
       console.error('Update error:', error);

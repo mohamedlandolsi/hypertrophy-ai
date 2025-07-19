@@ -263,7 +263,453 @@
     "bench": "Bench",
     "squat": "Squat",
     "deadlift": "Deadlift",
-    "ohp": "OHP"
+    "ohp": "OHP",
+    "page": {
+      "title": "Profile",
+      "subtitle": "Manage your account settings and training profile",
+      "pleaseLogin": "Please log in to view your profile.",
+      "tabs": {
+        "overview": "Overview",
+        "edit": "Edit Profile",
+        "account": "Account"
+      },
+      "welcomeHeader": {
+        "welcomeBack": "Welcome back",
+        "welcomeBackWithName": "Welcome back, {name}! 💪",
+        "workingOnGoal": "Let's continue working on {goal}",
+        "readyToStart": "Ready to start your fitness journey?",
+        "continueCoaching": "Continue Coaching Session"
+      },
+      "coachSummary": {
+        "title": "Your AI Coach Summary",
+        "subtitle": "Personalized insights based on your conversations",
+        "primaryGoal": "Primary Goal",
+        "experienceLevel": "Experience Level",
+        "trainingFrequency": "Training Frequency",
+        "name": "Name",
+        "daysPerWeek": "{days} days/week",
+        "ageYears": "Age (years)",
+        "currentLifts": "Current Lifts",
+        "getStarted": {
+          "title": "Let's Get Started! 🚀",
+          "description": "Start chatting with your AI coach to build your personalized fitness profile and unlock tailored recommendations",
+          "firstSession": "Start Your First Session",
+          "editProfile": "Edit Profile"
+        },
+        "memorySummary": "This summary is automatically generated from your conversations and profile"
+      },
+      "todaysProgress": {
+        "title": "Today's Progress",
+        "messagesUsed": "Messages Used",
+        "remaining": "Remaining",
+        "planStatus": "Plan Status",
+        "dailyUsage": "Daily Usage"
+      },
+      "subscription": {
+        "title": "Subscription",
+        "proPlan": "Pro Plan",
+        "premiumActive": "Premium features active",
+        "proFeaturesActive": "Pro Features Active:",
+        "unlimitedMessages": "Unlimited messages",
+        "conversationMemory": "Conversation memory",
+        "progressTracking": "Progress tracking",
+        "prioritySupport": "Priority support",
+        "manageBilling": "Manage Billing",
+        "upgradeToPro": "Upgrade to Pro",
+        "unlockUnlimited": "Unlock unlimited messages and advanced features",
+        "freePlanIncludes": "Free Plan Includes:",
+        "freeFeatures": {
+          "dailyMessages": "15 messages per day",
+          "basicGuidance": "Basic AI guidance",
+          "knowledgeAccess": "Access to knowledge base"
+        }
+      },
+      "quickActions": {
+        "title": "Quick Actions",
+        "startCoaching": "Start Coaching Session",
+        "editProfile": "Edit Profile",
+        "viewPlans": "View Plans & Pricing"
+      },
+      "account": {
+        "overview": {
+          "title": "Account Overview",
+          "email": "Email",
+          "currentPlan": "Current Plan",
+          "userId": "User ID",
+          "memberSince": "Member Since",
+          "lastSignIn": "Last Sign In"
+        },
+        "dailyUsage": {
+          "title": "Daily Usage",
+          "subtitle": "Track your daily message usage",
+          "messagesUsedToday": "Messages used today",
+          "lowOnMessages": "You're running low on messages. Consider upgrading to Pro for unlimited conversations."
+        },
+        "subscriptionDetails": {
+          "title": "Subscription Details",
+          "proActive": "HypertroQ Pro",
+          "activeSubscription": "Active subscription",
+          "status": "Status",
+          "nextBilling": "Next Billing",
+          "managePortal": "Manage your subscription through the customer portal:",
+          "upgradeToPro": "Upgrade to Pro",
+          "unlockFeatures": "Unlock unlimited messages, conversation memory, and advanced features",
+          "proPlanAdds": "Pro Plan Adds:"
+        }
+      }
+    }
+  },
+  "UpgradeButton": {
+    "upgradeButton": "Upgrade to Pro",
+    "loading": "Loading...",
+    "processing": "Processing...",
+    "dialog": {
+      "title": "Upgrade to HypertroQ Pro",
+      "description": "Unlock unlimited AI coaching and advanced features",
+      "currency": "Currency",
+      "monthly": "Monthly",
+      "yearly": "Yearly",
+      "save": "Save {percentage}%",
+      "perMonth": "per month",
+      "perYear": "per year",
+      "equivalentTo": "Equivalent to {price}/month",
+      "cancelAnytime": "Cancel anytime",
+      "features": {
+        "unlimitedMessages": "Unlimited messages",
+        "conversationMemory": "Full conversation memory",
+        "progressTracking": "Progress tracking & analysis",
+        "prioritySupport": "Priority support"
+      },
+      "startSubscription": "Start Pro Subscription ({interval})",
+      "securePayment": "Secure payment powered by Lemon Squeezy",
+      "planComparison": {
+        "freePlan": {
+          "title": "Free",
+          "current": "Current",
+          "messages": "15 messages/day",
+          "noMemory": "No conversation memory",
+          "noTracking": "No progress tracking",
+          "noAdvanced": "No advanced features"
+        },
+        "proPlan": {
+          "title": "Pro",
+          "upgrade": "Upgrade"
+        }
+      }
+    }
+  },
+  "EnhancedProfileForm": {
+    "title": "Edit Profile",
+    "subtitle": "Customize your profile to get personalized training recommendations",
+    "profilePicture": {
+      "title": "Profile Picture",
+      "uploadAvatar": "Upload Avatar",
+      "changePicture": "Change Picture",
+      "uploadPicture": "Upload Picture",
+      "removePicture": "Remove Picture",
+      "fileRequirements": "JPEG, PNG, WebP, or GIF up to 5MB",
+      "dragDropText": "Click or drag & drop to upload",
+      "dropHere": "Drop here",
+      "upload": "Upload",
+      "removing": "Removing...",
+      "uploadProgress": "Uploading...",
+      "removeDialogTitle": "Remove Profile Picture",
+      "removeDialogDescription": "Are you sure you want to remove your profile picture? This action cannot be undone.",
+      "removeTooltip": "Remove profile picture",
+      "profilePictureAlt": "Profile picture"
+    },
+    "sections": {
+      "personalInfo": {
+        "title": "Personal Information",
+        "description": "Basic information about yourself",
+        "name": "Name",
+        "age": "Age",
+        "gender": "Gender",
+        "height": "Height (cm)",
+        "weight": "Weight (kg)",
+        "bodyFat": "Body Fat %"
+      },
+      "physicalMetrics": {
+        "title": "Physical Metrics",
+        "description": "Your current physical measurements"
+      },
+      "trainingInfo": {
+        "title": "Training Information", 
+        "description": "Your current training background and preferences",
+        "experience": "Training Experience",
+        "structureType": "Training Structure",
+        "weeklyDays": "Weekly Training Days",
+        "trainingCycle": "Training Cycle",
+        "customCycle": "Custom Cycle Pattern",
+        "preferredStyle": "Preferred Training Style",
+        "schedule": "Training Schedule",
+        "availableTime": "Available Time (minutes)",
+        "activityLevel": "Activity Level"
+      },
+      "fitnessGoals": {
+        "title": "Fitness Goals",
+        "description": "What do you want to achieve?",
+        "primaryGoal": "Primary Goal"
+      },
+      "trainingProfile": {
+        "title": "Training Profile",
+        "description": "Tell us about your training experience and preferences"
+      },
+      "goals": {
+        "title": "Goals & Motivation",
+        "description": "What you want to achieve",
+        "primaryGoal": "Primary Goal",
+        "secondaryGoals": "Secondary Goals",
+        "targetWeight": "Target Weight (kg)",
+        "targetBodyFat": "Target Body Fat %",
+        "deadline": "Goal Deadline",
+        "motivation": "What Motivates You",
+        "trainingExperience": "Training Experience",
+        "sessionDuration": "Session Duration",
+        "trainingStructure": "Training Structure",
+        "trainingCyclePattern": "Training Cycle Pattern",
+        "customCycleDescription": "Custom Cycle Description"
+      },
+      "health": {
+        "title": "Health & Limitations",
+        "description": "Important health information",
+        "injuries": "Current/Past Injuries",
+        "limitations": "Physical Limitations",
+        "medications": "Medications",
+        "allergies": "Allergies"
+      },
+      "lifestyle": {
+        "title": "Lifestyle & Preferences",
+        "description": "Your daily routine and preferences", 
+        "dietaryPreferences": "Dietary Preferences",
+        "foodDislikes": "Foods You Dislike",
+        "supplements": "Supplements Used",
+        "sleepHours": "Sleep Hours",
+        "stressLevel": "Stress Level",
+        "workSchedule": "Work Schedule"
+      },
+      "environment": {
+        "title": "Training Environment",
+        "description": "Where and how you train",
+        "gymAccess": "Gym Access",
+        "homeGym": "Home Gym",
+        "equipment": "Available Equipment",
+        "budget": "Monthly Gym Budget"
+      },
+      "currentLifts": {
+        "title": "Current Lifts",
+        "description": "Your current strength levels",
+        "bench": "Bench Press (kg)",
+        "squat": "Squat (kg)", 
+        "deadlift": "Deadlift (kg)",
+        "ohp": "Overhead Press (kg)"
+      },
+      "communication": {
+        "title": "Communication Preferences",
+        "description": "How you prefer to interact",
+        "language": "Preferred Language",
+        "style": "Communication Style"
+      }
+    },
+    "options": {
+      "gender": {
+        "male": "Male",
+        "female": "Female", 
+        "other": "Other",
+        "preferNotToSay": "Prefer not to say"
+      },
+      "experience": {
+        "beginner": "Beginner (0-1 years)",
+        "novice": "Novice (1-2 years)",
+        "intermediate": "Intermediate (2-5 years)",
+        "advanced": "Advanced (5+ years)",
+        "expert": "Expert (10+ years)"
+      },
+      "activityLevel": {
+        "sedentary": "Sedentary",
+        "light": "Light", 
+        "moderate": "Moderate",
+        "active": "Active",
+        "veryActive": "Very Active"
+      },
+      "goals": {
+        "muscleGain": "Muscle Gain",
+        "weightLoss": "Weight Loss",
+        "strength": "Strength",
+        "endurance": "Endurance",
+        "bodyRecomposition": "Body Recomposition",
+        "general": "General Fitness",
+        "buildMuscle": "Build Muscle",
+        "loseFat": "Lose Fat",
+        "getStronger": "Get Stronger",
+        "improveEndurance": "Improve Endurance"
+      },
+      "goalDescriptions": {
+        "buildMuscle": "Gain lean muscle mass",
+        "loseFat": "Reduce body fat percentage",
+        "getStronger": "Increase overall strength",
+        "improveEndurance": "Enhance cardiovascular fitness"
+      },
+      "trainingStructure": {
+        "weekly": "Weekly (fixed days per week)",
+        "cycle": "Cycle-based (days on/off pattern)"
+      },
+      "trainingCycle": {
+        "1_on_1_off": "1 day on, 1 day off",
+        "2_on_1_off": "2 days on, 1 day off", 
+        "3_on_1_off": "3 days on, 1 day off",
+        "2_on_2_off": "2 days on, 2 days off",
+        "3_on_2_off": "3 days on, 2 days off",
+        "custom": "Custom pattern"
+      }
+    },
+    "units": {
+      "cm": "cm",
+      "kg": "kg", 
+      "years": "years",
+      "hours": "hours",
+      "min": "min",
+      "minutes": "minutes",
+      "percent": "%",
+      "dollar": "$"
+    },
+    "buttons": {
+      "saveChanges": "Save Changes",
+      "add": "Add",
+      "remove": "Remove",
+      "cancel": "Cancel"
+    },
+    "messages": {
+      "saving": "Saving...",
+      "saveSuccess": "Profile saved successfully!",
+      "saveError": "Error saving profile. Please try again."
+    },
+    "placeholders": {
+      "enterValue": "Enter value",
+      "selectOption": "Select an option", 
+      "addItem": "Add item...",
+      "enterName": "Enter your full name",
+      "enterAge": "Enter your age",
+      "enterHeight": "Enter your height",
+      "enterWeight": "Enter your weight",
+      "enterBodyFat": "Enter your body fat %",
+      "optional": "Optional",
+      "selectTrainingStructure": "How do you structure your training?",
+      "selectTrainingCycle": "Select your training cycle",
+      "describeCustomCycle": "Describe your custom training cycle (e.g., '4 days on, 3 days off')",
+      "typicalSessionLength": "Typical session length",
+      "addInjuries": "Add any current or past injuries...",
+      "addLimitations": "Add any physical limitations...",
+      "addMedications": "Add any medications that might affect training...",
+      "addAllergy": "Add an allergy",
+      "addEquipment": "Add equipment you have access to...",
+      "optionalBudget": "Optional budget",
+      "sleepHoursExample": "e.g., 7.5",
+      "selectStressLevel": "Select stress level",
+      "addDietaryPreference": "Add a dietary preference",
+      "addSupplement": "Add a supplement"
+    },
+    "labels": {
+      "trainingDaysPerWeek": "Training Days per Week",
+      "daysPerWeek": "days per week",
+      "injuries": "Injuries",
+      "physicalLimitations": "Physical Limitations", 
+      "medications": "Medications",
+      "allergies": "Allergies",
+      "trainingLocation": "Training Location",
+      "iHaveGymAccess": "I have gym access",
+      "iHaveHomeGymSetup": "I have a home gym setup",
+      "availableEquipment": "Available Equipment",
+      "averageSleepHours": "Average Sleep Hours",
+      "dietaryPreferences": "Dietary Preferences",
+      "supplementsUsed": "Supplements Used",
+      "fullGym": "full gym",
+      "day": "day",
+      "days": "days"
+    },
+    "weekdays": {
+      "sunday": "Sun",
+      "monday": "Mon", 
+      "tuesday": "Tue",
+      "wednesday": "Wed",
+      "thursday": "Thu",
+      "friday": "Fri",
+      "saturday": "Sat"
+    },
+    "dietaryOptions": {
+      "vegetarian": "Vegetarian",
+      "vegan": "Vegan",
+      "keto": "Keto",
+      "paleo": "Paleo",
+      "mediterranean": "Mediterranean",
+      "intermittentFasting": "Intermittent fasting",
+      "lowCarb": "Low carb",
+      "highProtein": "High protein",
+      "glutenFree": "Gluten-free",
+      "dairyFree": "Dairy-free",
+      "pescatarian": "Pescatarian",
+      "carnivore": "Carnivore"
+    },
+    "supplementOptions": {
+      "proteinPowder": "Protein powder",
+      "creatine": "Creatine",
+      "multivitamin": "Multivitamin",
+      "fishOil": "Fish oil",
+      "vitaminD": "Vitamin D",
+      "bcaas": "BCAAs",
+      "preWorkout": "Pre-workout",
+      "postWorkout": "Post-workout",
+      "omega3": "Omega-3",
+      "betaAlanine": "Beta-alanine",
+      "caffeine": "Caffeine",
+      "vitaminB12": "Vitamin B12",
+      "zinc": "Zinc",
+      "magnesium": "Magnesium"
+    },
+    "bodyParts": {
+      "knee": "Knee",
+      "lowerBack": "Lower back",
+      "shoulder": "Shoulder",
+      "wrist": "Wrist",
+      "ankle": "Ankle"
+    },
+    "limitationTypes": {
+      "mobilityIssues": "Mobility issues",
+      "jointProblems": "Joint problems",
+      "chronicPain": "Chronic pain"
+    },
+    "allergyTypes": {
+      "nuts": "Nuts",
+      "dairy": "Dairy",
+      "gluten": "Gluten",
+      "shellfish": "Shellfish",
+      "eggs": "Eggs",
+      "soy": "Soy",
+      "fish": "Fish",
+      "sesame": "Sesame",
+      "treeNuts": "Tree nuts",
+      "peanuts": "Peanuts"
+    },
+    "equipmentTypes": {
+      "dumbbells": "Dumbbells",
+      "barbell": "Barbell",
+      "resistanceBands": "Resistance bands",
+      "pullUpBar": "Pull-up bar",
+      "bench": "Bench",
+      "squatRack": "Squat rack",
+      "kettlebells": "Kettlebells",
+      "cableMachine": "Cable machine",
+      "treadmill": "Treadmill",
+      "elliptical": "Elliptical",
+      "rowingMachine": "Rowing machine",
+      "legPress": "Leg press",
+      "latPulldown": "Lat pulldown",
+      "smithMachine": "Smith machine"
+    }
+  },
+  "FitnessLoading": {
+    "title": "Analyzing Your Fitness Data",
+    "description": "Processing your workout history and generating personalized recommendations"
   },
   "Auth": {
     "signIn": "Sign In",
@@ -316,6 +762,95 @@
     "copy": "Copy",
     "remove": "Remove"
   },
+  "toasts": {
+    "deleteConfirmTitle": "Are you sure?",
+    "deleteConfirmText": "Are you sure you want to delete \"{chatTitle}\"? This action cannot be undone.",
+    "deleteSuccessTitle": "Chat deleted",
+    "deleteSuccessText": "The conversation has been removed.",
+    "deleteErrorTitle": "Failed to delete chat",
+    "deleteErrorText": "Please try again.",
+    "copySuccessTitle": "Copied to clipboard",
+    "copySuccessText": "Message content has been copied.",
+    "copyErrorTitle": "Failed to copy",
+    "copyErrorText": "Unable to copy message to clipboard.",
+    "fileTooLargeTitle": "File too large",
+    "fileTooLargeText": "Please select an image smaller than 5MB.",
+    "invalidFileTypeTitle": "Invalid file type",
+    "invalidFileTypeText": "Please select an image file.",
+    "imagePastedTitle": "Image pasted",
+    "imagePastedText": "Image has been added to your message.",
+    "confirmImageReplace": "Replace current image with pasted image?",
+    "limitReachedTitle": "Daily limit reached",
+    "limitReachedText": "You've reached your daily message limit. Upgrade to Pro for unlimited messages.",
+    "errorFetchingRole": "Error fetching user role",
+    "errorFetchingPlan": "Error fetching user plan",
+    "errorLoadingSession": "Could not load chat session: {chatId}",
+    "errorSendingMessage": "Failed to send message",
+    "logoutSuccessTitle": "Logged out",
+    "logoutSuccessText": "You have been successfully logged out",
+    "logoutErrorTitle": "Logout failed",
+    "logoutErrorText": "Please try again",
+    "invalidInputTitle": "Invalid Input",
+    "invalidInputText": "Please check your input and try again",
+    "accessDeniedTitle": "Access Denied",
+    "accessDeniedText": "You do not have permission to perform this action",
+    "notFoundTitle": "Not Found",
+    "notFoundText": "The requested resource was not found",
+    "fileUploadErrorTitle": "Upload Failed",
+    "fileUploadErrorText": "File upload failed. Please try again",
+    "networkErrorTitle": "Network Error",
+    "networkErrorText": "Please check your connection and try again",
+    "rateLimitTitle": "Too Many Requests",
+    "rateLimitText": "Please wait a moment and try again",
+    "serviceUnavailableTitle": "Service Unavailable",
+    "serviceUnavailableText": "An external service is temporarily unavailable",
+    "authenticationRequiredTitle": "Authentication Required",
+    "authenticationRequiredText": "Please log in to continue",
+    "profilePictureUpdatedTitle": "Profile picture updated",
+    "profilePictureUpdatedText": "Your profile picture has been successfully updated",
+    "profilePictureRemovedTitle": "Profile picture removed",
+    "profilePictureRemovedText": "Your profile picture has been successfully removed",
+    "invalidFileTitle": "Invalid file",
+    "uploadFailedTitle": "Upload failed",
+    "removeFailedTitle": "Remove failed",
+    "processingStatusErrorTitle": "Failed to load processing status",
+    "reprocessingFailedTitle": "Reprocessing failed",
+    "usersLoadErrorTitle": "Failed to load users",
+    "userRoleUpdatedTitle": "User role updated to {role}",
+    "userRoleUpdateErrorTitle": "Failed to update user role",
+    "userDeletedTitle": "User deleted successfully",
+    "userDeleteErrorTitle": "Failed to delete user",
+    "textContentAddedTitle": "Text content added successfully",
+    "textContentAddedText": "\"{title}\" has been added to your knowledge base",
+    "textContentAddErrorTitle": "Failed to add text content",
+    "knowledgeItemDeletedTitle": "Knowledge item deleted",
+    "knowledgeItemDeletedText": "The item has been removed from your knowledge base",
+    "knowledgeItemDeleteErrorTitle": "Failed to delete knowledge item",
+    "downloadNotAvailableTitle": "Download not available",
+    "downloadNotAvailableText": "This item is not available for download",
+    "downloadCompletedTitle": "Download completed",
+    "downloadCompletedText": "{fileName} has been downloaded",
+    "downloadFailedTitle": "Failed to download file",
+    "editNotAvailableTitle": "Edit not available",
+    "editNotAvailableText": "Only text content can be edited",
+    "validationErrorTitle": "Validation error",
+    "validationErrorText": "Please provide both title and content",
+    "contentUpdatedTitle": "Content updated",
+    "contentUpdatedText": "Knowledge item has been updated successfully",
+    "contentUpdateErrorTitle": "Failed to update content",
+    "fileUploadSuccessTitle": "File uploaded successfully",
+    "fileUploadSuccessText": "{fileName} has been uploaded successfully",
+    "addingTextContentTitle": "Adding text content",
+    "addingTextContentText": "Processing and generating embeddings...",
+    "deletingKnowledgeItemTitle": "Deleting knowledge item",
+    "deletingKnowledgeItemText": "Removing item and associated data...",
+    "downloadingFileTitle": "Downloading file",
+    "downloadingFileText": "Preparing {fileName}...",
+    "updatingContentTitle": "Updating content",
+    "updatingContentText": "Saving changes and regenerating embeddings...",
+    "processingKnowledgeItemsTitle": "Processing knowledge items",
+    "processingKnowledgeItemsText": "{operation} up to {limit} items..."
+  },
   "ChatPage": {
     "title": "Chat",
     "pageDescription": "Chat with HypertroQ, your personal AI fitness coach.",
@@ -360,31 +895,6 @@
       "guestMessageWarning": "Only 1 message left! Sign up to continue.",
       "aiThinking": "AI is thinking...",
       "imagePreviewAlt": "Selected image preview"
-    },
-    "toasts": {
-      "deleteConfirmTitle": "Are you sure?",
-      "deleteConfirmText": "Are you sure you want to delete \"{chatTitle}\"? This action cannot be undone.",
-      "deleteSuccessTitle": "Chat deleted",
-      "deleteSuccessText": "The conversation has been removed.",
-      "deleteErrorTitle": "Failed to delete chat",
-      "deleteErrorText": "Please try again.",
-      "copySuccessTitle": "Copied to clipboard",
-      "copySuccessText": "Message content has been copied.",
-      "copyErrorTitle": "Failed to copy",
-      "copyErrorText": "Unable to copy message to clipboard.",
-      "fileTooLargeTitle": "File too large",
-      "fileTooLargeText": "Please select an image smaller than 5MB.",
-      "invalidFileTypeTitle": "Invalid file type",
-      "invalidFileTypeText": "Please select an image file.",
-      "imagePastedTitle": "Image pasted",
-      "imagePastedText": "Image has been added to your message.",
-      "confirmImageReplace": "Replace current image with pasted image?",
-      "limitReachedTitle": "Daily limit reached",
-      "limitReachedText": "You've reached your daily message limit. Upgrade to Pro for unlimited messages.",
-      "errorFetchingRole": "Error fetching user role",
-      "errorFetchingPlan": "Error fetching user plan",
-      "errorLoadingSession": "Could not load chat session: {chatId}",
-      "errorSendingMessage": "Failed to send message"
     },
     "keyboardShortcuts": {
       "title": "Keyboard Shortcuts",

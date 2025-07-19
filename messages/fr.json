@@ -257,7 +257,493 @@
     "fitnessInfo": "Informations Fitness",
     "save": "Sauvegarder les Modifications",
     "saved": "Modifications sauvegardées avec succès",
-    "error": "Erreur lors de la sauvegarde"
+    "error": "Erreur lors de la sauvegarde",
+    "bench": "Développé couché",
+    "squat": "Squat",
+    "deadlift": "Soulevé de terre",
+    "ohp": "Développé militaire",
+    "page": {
+      "title": "Profil",
+      "subtitle": "Gérez les paramètres de votre compte et votre profil d'entraînement",
+      "pleaseLogin": "Veuillez vous connecter pour voir votre profil.",
+      "tabs": {
+        "overview": "Aperçu",
+        "edit": "Modifier le Profil",
+        "account": "Compte"
+      },
+      "welcomeHeader": {
+        "welcomeBack": "Bon retour",
+        "welcomeBackWithName": "Bon retour, {name} ! 💪",
+        "workingOnGoal": "Continuons à travailler sur {goal}",
+        "readyToStart": "Prêt à commencer votre parcours fitness ?",
+        "continueCoaching": "Continuer la Session de Coaching"
+      },
+      "coachSummary": {
+        "title": "Résumé de Votre Coach IA",
+        "subtitle": "Informations personnalisées basées sur vos conversations",
+        "primaryGoal": "Objectif Principal",
+        "experienceLevel": "Niveau d'Expérience",
+        "trainingFrequency": "Fréquence d'Entraînement",
+        "name": "Nom",
+        "daysPerWeek": "{days} jours/semaine",
+        "ageYears": "Âge (ans)",
+        "currentLifts": "Charges Actuelles",
+        "getStarted": {
+          "title": "Commençons ! 🚀",
+          "description": "Commencez à discuter avec votre coach IA pour construire votre profil fitness personnalisé et débloquer des recommandations sur mesure",
+          "firstSession": "Commencer Votre Première Session",
+          "editProfile": "Modifier le Profil"
+        },
+        "memorySummary": "Ce résumé est automatiquement généré à partir de vos conversations et de votre profil"
+      },
+      "todaysProgress": {
+        "title": "Progrès d'Aujourd'hui",
+        "messagesUsed": "Messages Utilisés",
+        "remaining": "Restants",
+        "planStatus": "Statut du Plan",
+        "dailyUsage": "Utilisation Quotidienne"
+      },
+      "subscription": {
+        "title": "Abonnement",
+        "proPlan": "Plan Pro",
+        "premiumActive": "Fonctionnalités premium actives",
+        "proFeaturesActive": "Fonctionnalités Pro Actives :",
+        "unlimitedMessages": "Messages illimités",
+        "conversationMemory": "Mémoire des conversations",
+        "progressTracking": "Suivi des progrès",
+        "prioritySupport": "Support prioritaire",
+        "manageBilling": "Gérer la Facturation",
+        "upgradeToPro": "Passer à Pro",
+        "unlockUnlimited": "Débloquez les messages illimités et les fonctionnalités avancées",
+        "freePlanIncludes": "Le Plan Gratuit Inclut :",
+        "freeFeatures": {
+          "dailyMessages": "15 messages par jour",
+          "basicGuidance": "Guidance IA basique",
+          "knowledgeAccess": "Accès à la base de connaissances"
+        }
+      },
+      "quickActions": {
+        "title": "Actions Rapides",
+        "startCoaching": "Commencer une Session de Coaching",
+        "editProfile": "Modifier le Profil",
+        "viewPlans": "Voir les Plans et Tarifs"
+      },
+      "account": {
+        "overview": {
+          "title": "Aperçu du Compte",
+          "email": "Email",
+          "currentPlan": "Plan Actuel",
+          "userId": "ID Utilisateur",
+          "memberSince": "Membre Depuis",
+          "lastSignIn": "Dernière Connexion"
+        },
+        "dailyUsage": {
+          "title": "Utilisation Quotidienne",
+          "subtitle": "Suivez votre utilisation quotidienne des messages",
+          "messagesUsedToday": "Messages utilisés aujourd'hui",
+          "lowOnMessages": "Vous manquez de messages. Pensez à passer à Pro pour des conversations illimitées."
+        },
+        "subscriptionDetails": {
+          "title": "Détails de l'Abonnement",
+          "proActive": "HypertroQ Pro",
+          "activeSubscription": "Abonnement actif",
+          "status": "Statut",
+          "nextBilling": "Prochaine Facturation",
+          "managePortal": "Gérez votre abonnement via le portail client :",
+          "upgradeToPro": "Passer à Pro",
+          "unlockFeatures": "Débloquez les messages illimités, la mémoire des conversations et les fonctionnalités avancées",
+          "proPlanAdds": "Le Plan Pro Ajoute :"
+        }
+      }
+    }
+  },
+  "UpgradeButton": {
+    "upgradeButton": "Passer à Pro",
+    "loading": "Chargement...",
+    "processing": "Traitement...",
+    "dialog": {
+      "title": "Passer à HypertroQ Pro",
+      "description": "Débloquez un coaching IA illimité et des fonctionnalités avancées",
+      "currency": "Devise",
+      "monthly": "Mensuel",
+      "yearly": "Annuel",
+      "save": "Économisez {percentage}%",
+      "perMonth": "par mois",
+      "perYear": "par an",
+      "equivalentTo": "Équivaut à {price}/mois",
+      "cancelAnytime": "Annulez à tout moment",
+      "features": {
+        "unlimitedMessages": "Messages illimités",
+        "conversationMemory": "Mémoire complète des conversations",
+        "progressTracking": "Suivi et analyse des progrès",
+        "prioritySupport": "Support prioritaire"
+      },
+      "startSubscription": "Commencer l'abonnement Pro ({interval})",
+      "securePayment": "Paiement sécurisé par Lemon Squeezy",
+      "planComparison": {
+        "freePlan": {
+          "title": "Gratuit",
+          "current": "Actuel",
+          "messages": "15 messages/jour",
+          "noMemory": "Pas de mémoire de conversation",
+          "noTracking": "Pas de suivi de progression",
+          "noAdvanced": "Pas de fonctionnalités avancées"
+        },
+        "proPlan": {
+          "title": "Pro",
+          "upgrade": "Améliorer"
+        }
+      }
+    }
+  },
+         
+  "EnhancedProfileForm": {
+    "title": "Modifier le Profil",
+    "subtitle": "Personnalisez votre profil pour obtenir des recommandations d'entraînement personnalisées",
+    "profilePicture": {
+      "title": "Photo de Profil",
+      "uploadAvatar": "Télécharger l'Avatar",
+      "changePicture": "Changer la photo",
+      "uploadPicture": "Télécharger une photo",
+      "removePicture": "Supprimer la photo",
+      "fileRequirements": "JPEG, PNG, WebP, ou GIF jusqu'à 5MB",
+      "dragDropText": "Cliquez ou glissez-déposez pour télécharger",
+      "dropHere": "Déposez ici",
+      "upload": "Télécharger",
+      "removing": "Suppression...",
+      "uploadProgress": "Téléchargement...",
+      "removeDialogTitle": "Supprimer la photo de profil",
+      "removeDialogDescription": "Êtes-vous sûr de vouloir supprimer votre photo de profil ? Cette action ne peut pas être annulée.",
+      "removeTooltip": "Supprimer la photo de profil",
+      "profilePictureAlt": "Photo de profil"
+    },
+    "sections": {
+      "personalInfo": {
+        "title": "Informations Personnelles",
+        "description": "Informations de base vous concernant",
+        "name": "Nom",
+        "age": "Âge",
+        "gender": "Sexe",
+        "height": "Taille (cm)",
+        "weight": "Poids (kg)",
+        "bodyFat": "Taux de graisse %"
+      },
+      "physicalMetrics": {
+        "title": "Métriques Physiques",
+        "description": "Vos mesures corporelles actuelles"
+      },
+      "fitnessGoals": {
+        "title": "Objectifs de Fitness",
+        "description": "Que voulez-vous accomplir ?",
+        "primaryGoal": "Objectif Principal"
+      },
+      "trainingProfile": {
+        "title": "Profil d'Entraînement",
+        "description": "Parlez-nous de votre expérience et de vos préférences en matière d'entraînement.",
+        "experience": "Expérience d'entraînement",
+        "trainingStructure": "Structure d'entraînement",
+        "weeklyTrainingDays": "Jours d'entraînement par semaine",
+        "trainingCycle": "Cycle d'entraînement",
+        "customCyclePattern": "Modèle de cycle personnalisé (ex: 2 jours ON, 1 jour OFF)",
+        "preferredStyle": "Style d'entraînement préféré",
+        "schedule": "Horaire d'entraînement",
+        "availableTime": "Temps disponible par séance (minutes)",
+        "activityLevel": "Niveau d'activité"
+      },
+      "goals": {
+        "title": "Objectifs de Fitness",
+        "description": "Que voulez-vous accomplir ? Choisissez votre objectif principal.",
+        "primaryGoal": "Objectif Principal",
+        "secondaryGoals": "Objectifs Secondaires",
+        "targetWeight": "Poids Cible (kg)",
+        "targetBodyFat": "Taux de Graisse Cible (%)",
+        "goalDeadline": "Date Limite de l'Objectif",
+        "motivation": "Qu'est-ce qui vous motive ?",
+        "trainingExperience": "Expérience d'entraînement",
+        "sessionDuration": "Durée de la séance",
+        "trainingStructure": "Structure d'entraînement",
+        "trainingCyclePattern": "Modèle de cycle d'entraînement",
+        "customCycleDescription": "Description du cycle personnalisé"
+      },
+      "health": {
+        "title": "Santé et Limitations",
+        "description": "Toute information pertinente sur la santé qui pourrait affecter votre entraînement.",
+        "injuries": "Blessures",
+        "limitations": "Limitations",
+        "medications": "Médicaments",
+        "allergies": "Allergies"
+      },
+      "lifestyle": {
+        "title": "Préférences et Style de Vie",
+        "description": "Comment votre style de vie influence votre parcours de fitness.",
+        "dietaryPreferences": "Préférences Alimentaires",
+        "foodDislikes": "Aversions Alimentaires",
+        "supplementsUsed": "Suppléments Utilisés",
+        "sleepHours": "Heures de Sommeil par Nuit",
+        "stressLevel": "Niveau de Stress",
+        "workSchedule": "Horaire de Travail"
+      },
+      "environment": {
+        "title": "Environnement d'Entraînement",
+        "description": "Où vous entraînerez-vous et quel équipement est disponible.",
+        "gymAccess": "Accès à une Salle de Sport",
+        "homeGym": "Salle de Sport à Domicile",
+        "equipmentAvailable": "Équipement Disponible",
+        "gymBudget": "Budget pour la Salle de Sport ($/mois)",
+        "budget": "Budget Mensuel ($)"
+      },
+      "progress": {
+        "title": "Suivi des Progrès",
+        "description": "Vos records personnels actuels (1 Répétition Max). Laissez vide si inconnu.",
+        "bench": "Développé Couché (kg)",
+        "squat": "Squat (kg)",
+        "deadlift": "Soulevé de Terre (kg)",
+        "ohp": "Développé Militaire (kg)"
+      }
+    },
+    "options": {
+      "gender": {
+        "male": "Homme",
+        "female": "Femme",
+        "other": "Autre",
+        "preferNotToSay": "Préfère ne pas répondre"
+      },
+      "experience": {
+        "beginner": "Débutant",
+        "intermediate": "Intermédiaire",
+        "advanced": "Avancé"
+      },
+      "goal": {
+        "muscle_gain": {
+          "label": "Prise de Muscle",
+          "description": "Gagner de la masse musculaire maigre"
+        },
+        "fat_loss": {
+          "label": "Perte de Graisse",
+          "description": "Réduire le pourcentage de graisse corporelle"
+        },
+        "strength": {
+          "label": "Devenir plus Fort",
+          "description": "Augmenter la force globale"
+        },
+        "endurance": {
+          "label": "Améliorer l'Endurance",
+          "description": "Améliorer la condition cardiovasculaire"
+        }
+      },
+      "goals": {
+        "muscleGain": "Prise de Muscle",
+        "weightLoss": "Perte de Poids",
+        "strength": "Force",
+        "endurance": "Endurance",
+        "bodyRecomposition": "Recomposition Corporelle",
+        "general": "Forme Générale",
+        "buildMuscle": "Développer les Muscles",
+        "loseFat": "Perdre de la Graisse",
+        "getStronger": "Devenir plus Fort",
+        "improveEndurance": "Améliorer l'Endurance"
+      },
+      "goalDescriptions": {
+        "buildMuscle": "Gagner de la masse musculaire maigre",
+        "loseFat": "Réduire le pourcentage de graisse corporelle",
+        "getStronger": "Augmenter la force globale",
+        "improveEndurance": "Améliorer la condition cardiovasculaire"
+      },
+      "trainingStructure": {
+        "weekly": "Hebdomadaire (jours fixes)",
+        "cycle": "Cycle (ex: 2 jours ON / 1 jour OFF)"
+      },
+      "trainingCycle": {
+        "1_on_1_off": "1 jour actif, 1 jour repos",
+        "2_on_1_off": "2 jours actifs, 1 jour repos",
+        "3_on_1_off": "3 jours actifs, 1 jour repos",
+        "2_on_2_off": "2 jours actifs, 2 jours repos", 
+        "3_on_2_off": "3 jours actifs, 2 jours repos",
+        "custom": "Modèle personnalisé"
+      },
+      "activityLevel": {
+        "sedentary": "Sédentaire",
+        "light": "Léger",
+        "moderate": "Modéré",
+        "active": "Actif",
+        "very_active": "Très Actif"
+      },
+      "daysPerWeek": "jours par semaine"
+    },
+    "units": {
+      "cm": "cm",
+      "kg": "kg",
+      "years": "ans",
+      "hours": "heures",
+      "min": "min",
+      "minutes": "minutes",
+      "percent": "%",
+      "dollar": "$"
+    },
+    "buttons": {
+      "save": "Sauvegarder les Modifications",
+      "saving": "Sauvegarde...",
+      "cancel": "Annuler",
+      "add": "Ajouter",
+      "saveChanges": "Sauvegarder les Modifications"
+    },
+    "messages": {
+      "saveSuccess": "Profil sauvegardé avec succès !",
+      "saveError": "Erreur lors de la sauvegarde du profil. Veuillez réessayer."
+    },
+    "placeholders": {
+      "enterValue": "Entrer une valeur",
+      "selectOption": "Sélectionner une option",
+      "addItem": "Ajouter un élément...",
+      "enterName": "Entrez votre nom complet",
+      "enterAge": "Entrez votre âge",
+      "enterHeight": "Entrez votre taille",
+      "enterWeight": "Entrez votre poids",
+      "enterBodyFat": "Entrez votre taux de graisse %",
+      "optional": "Optionnel",
+      "selectTrainingStructure": "Comment structurez-vous vos entraînements ?",
+      "selectTrainingCycle": "Sélectionnez votre cycle d'entraînement",
+      "describeCustomCycle": "Décrivez votre cycle d'entraînement personnalisé (ex: '4 jours actifs, 3 jours de repos')",
+      "typicalSessionLength": "Durée typique des séances",
+      "addInjuries": "Ajoutez toute blessure actuelle ou passée...",
+      "addLimitations": "Ajoutez toute limitation physique...",
+      "addMedications": "Ajoutez tout médicament pouvant affecter l'entraînement...",
+      "addAllergy": "Ajouter une allergie",
+      "addEquipment": "Ajoutez l'équipement auquel vous avez accès...",
+      "optionalBudget": "Budget optionnel",
+      "sleepHoursExample": "ex: 7,5",
+      "selectStressLevel": "Sélectionnez le niveau de stress",
+      "addDietaryPreference": "Ajouter une préférence alimentaire",
+      "addSupplement": "Ajouter un supplément",
+      "name": "ex: Jean Dupont",
+      "age": "ex: 30",
+      "height": "ex: 180",
+      "weight": "ex: 85",
+      "bodyFat": "ex: 15",
+      "customCycle": "ex: 2 ON, 1 OFF",
+      "preferredStyle": "ex: Powerlifting, Bodybuilding",
+      "schedule": "ex: Lundi, Mercredi, Vendredi soir",
+      "availableTime": "ex: 60",
+      "secondaryGoals": "Ajouter un objectif secondaire",
+      "motivation": "ex: Se sentir en meilleure santé, se préparer pour un événement",
+      "injuries": "Ajouter une blessure",
+      "limitations": "Ajouter une limitation",
+      "medications": "Ajouter un médicament",
+      "allergies": "Ajouter une allergie",
+      "dietaryPreferences": "Ajouter une préférence",
+      "foodDislikes": "Ajouter une aversion",
+      "supplementsUsed": "Ajouter un supplément",
+      "sleepHours": "ex: 8",
+      "stressLevel": "ex: Faible, Modéré, Élevé",
+      "workSchedule": "ex: 9h-17h, travail posté",
+      "equipmentAvailable": "Ajouter un équipement",
+      "gymBudget": "ex: 50",
+      "bench": "ex: 100",
+      "squat": "ex: 140",
+      "deadlift": "ex: 180",
+      "ohp": "ex: 60"
+    },
+    "labels": {
+      "trainingDaysPerWeek": "Jours d'Entraînement par Semaine",
+      "daysPerWeek": "jours par semaine",
+      "injuries": "Blessures",
+      "physicalLimitations": "Limitations Physiques", 
+      "medications": "Médicaments",
+      "allergies": "Allergies",
+      "trainingLocation": "Lieu d'Entraînement",
+      "iHaveGymAccess": "J'ai accès à une salle de sport",
+      "iHaveHomeGymSetup": "J'ai une salle de sport à domicile",
+      "availableEquipment": "Équipement Disponible",
+      "averageSleepHours": "Heures de Sommeil Moyennes",
+      "dietaryPreferences": "Préférences Alimentaires",
+      "supplementsUsed": "Suppléments Utilisés",
+      "fullGym": "salle de sport complète",
+      "day": "jour",
+      "days": "jours"
+    },
+    "weekdays": {
+      "sunday": "Dim",
+      "monday": "Lun", 
+      "tuesday": "Mar",
+      "wednesday": "Mer",
+      "thursday": "Jeu",
+      "friday": "Ven",
+      "saturday": "Sam"
+    },
+    "dietaryOptions": {
+      "vegetarian": "Végétarien",
+      "vegan": "Végan",
+      "keto": "Kéto",
+      "paleo": "Paléo",
+      "mediterranean": "Méditerranéen",
+      "intermittentFasting": "Jeûne intermittent",
+      "lowCarb": "Faible en glucides",
+      "highProtein": "Riche en protéines",
+      "glutenFree": "Sans gluten",
+      "dairyFree": "Sans lactose",
+      "pescatarian": "Pescatarien",
+      "carnivore": "Carnivore"
+    },
+    "supplementOptions": {
+      "proteinPowder": "Protéine en poudre",
+      "creatine": "Créatine",
+      "multivitamin": "Multivitamines",
+      "fishOil": "Huile de poisson",
+      "vitaminD": "Vitamine D",
+      "bcaas": "BCAA",
+      "preWorkout": "Pré-entraînement",
+      "postWorkout": "Post-entraînement",
+      "omega3": "Oméga-3",
+      "betaAlanine": "Bêta-alanine",
+      "caffeine": "Caféine",
+      "vitaminB12": "Vitamine B12",
+      "zinc": "Zinc",
+      "magnesium": "Magnésium"
+    },
+    "bodyParts": {
+      "knee": "Genou",
+      "lowerBack": "Bas du dos",
+      "shoulder": "Épaule",
+      "wrist": "Poignet",
+      "ankle": "Cheville"
+    },
+    "limitationTypes": {
+      "mobilityIssues": "Problèmes de mobilité",
+      "jointProblems": "Problèmes articulaires",
+      "chronicPain": "Douleur chronique"
+    },
+    "allergyTypes": {
+      "nuts": "Noix",
+      "dairy": "Produits laitiers",
+      "gluten": "Gluten",
+      "shellfish": "Fruits de mer",
+      "eggs": "Œufs",
+      "soy": "Soja",
+      "fish": "Poisson",
+      "sesame": "Sésame",
+      "treeNuts": "Noix d'arbres",
+      "peanuts": "Cacahuètes"
+    },
+    "equipmentTypes": {
+      "dumbbells": "Haltères",
+      "barbell": "Barre",
+      "resistanceBands": "Bandes de résistance",
+      "pullUpBar": "Barre de traction",
+      "bench": "Banc",
+      "squatRack": "Rack à squats",
+      "kettlebells": "Kettlebells",
+      "cableMachine": "Machine à câbles",
+      "treadmill": "Tapis de course",
+      "elliptical": "Vélo elliptique",
+      "rowingMachine": "Rameur",
+      "legPress": "Presse à cuisses",
+      "latPulldown": "Tirage vertical",
+      "smithMachine": "Machine Smith"
+    }
+  },
+  "FitnessLoading": {
+    "title": "Analyse de Vos Données Fitness",
+    "description": "Traitement de votre historique d'entraînement et génération de recommandations personnalisées"
   },
   "Auth": {
     "signIn": "Se Connecter",
@@ -301,6 +787,95 @@
     "filter": "Filtrer",
     "sort": "Trier",
     "refresh": "Actualiser"
+  },
+  "toasts": {
+    "deleteConfirmTitle": "Êtes-vous sûr ?",
+    "deleteConfirmText": "Êtes-vous sûr de vouloir supprimer \"{chatTitle}\" ? Cette action ne peut pas être annulée.",
+    "deleteSuccessTitle": "Chat supprimé",
+    "deleteSuccessText": "La conversation a été supprimée.",
+    "deleteErrorTitle": "Échec de suppression du chat",
+    "deleteErrorText": "Veuillez réessayer.",
+    "copySuccessTitle": "Copié dans le presse-papiers",
+    "copySuccessText": "Le contenu du message a été copié.",
+    "copyErrorTitle": "Échec de copie",
+    "copyErrorText": "Impossible de copier le message dans le presse-papiers.",
+    "fileTooLargeTitle": "Fichier trop volumineux",
+    "fileTooLargeText": "Veuillez sélectionner une image de moins de 5 MB.",
+    "invalidFileTypeTitle": "Type de fichier invalide",
+    "invalidFileTypeText": "Veuillez sélectionner un fichier image.",
+    "imagePastedTitle": "Image collée",
+    "imagePastedText": "L'image a été ajoutée à votre message.",
+    "confirmImageReplace": "Voulez-vous remplacer l'image actuelle par l'image collée ?",
+    "limitReachedTitle": "Limite quotidienne atteinte",
+    "limitReachedText": "Vous avez atteint votre limite quotidienne de messages. Passez à Pro pour des messages illimités.",
+    "errorFetchingRole": "Erreur lors de la récupération du rôle utilisateur",
+    "errorFetchingPlan": "Erreur lors de la récupération du plan utilisateur",
+    "errorLoadingSession": "Impossible de charger la session de chat : {chatId}",
+    "errorSendingMessage": "Échec d'envoi du message",
+    "logoutSuccessTitle": "Déconnexion réussie",
+    "logoutSuccessText": "Vous avez été déconnecté avec succès",
+    "logoutErrorTitle": "Échec de déconnexion",
+    "logoutErrorText": "Veuillez réessayer",
+    "invalidInputTitle": "Saisie invalide",
+    "invalidInputText": "Veuillez vérifier votre saisie et réessayer",
+    "accessDeniedTitle": "Accès refusé",
+    "accessDeniedText": "Vous n'avez pas la permission d'effectuer cette action",
+    "notFoundTitle": "Introuvable",
+    "notFoundText": "La ressource demandée n'a pas été trouvée",
+    "fileUploadErrorTitle": "Échec de téléchargement",
+    "fileUploadErrorText": "Échec du téléchargement du fichier. Veuillez réessayer",
+    "networkErrorTitle": "Erreur réseau",
+    "networkErrorText": "Veuillez vérifier votre connexion et réessayer",
+    "rateLimitTitle": "Trop de demandes",
+    "rateLimitText": "Veuillez attendre un moment et réessayer",
+    "serviceUnavailableTitle": "Service indisponible",
+    "serviceUnavailableText": "Service externe temporairement indisponible",
+    "authenticationRequiredTitle": "Authentification requise",
+    "authenticationRequiredText": "Veuillez vous connecter pour continuer",
+    "profilePictureUpdatedTitle": "Photo de profil mise à jour",
+    "profilePictureUpdatedText": "Votre photo de profil a été mise à jour avec succès",
+    "profilePictureRemovedTitle": "Photo de profil supprimée",
+    "profilePictureRemovedText": "Votre photo de profil a été supprimée avec succès",
+    "invalidFileTitle": "Fichier invalide",
+    "uploadFailedTitle": "Échec de téléchargement",
+    "removeFailedTitle": "Échec de suppression",
+    "processingStatusErrorTitle": "Échec du chargement de l'état de traitement",
+    "reprocessingFailedTitle": "Échec du retraitement",
+    "usersLoadErrorTitle": "Échec du chargement des utilisateurs",
+    "userRoleUpdatedTitle": "Rôle utilisateur mis à jour vers {role}",
+    "userRoleUpdateErrorTitle": "Échec de la mise à jour du rôle utilisateur",
+    "userDeletedTitle": "Utilisateur supprimé avec succès",
+    "userDeleteErrorTitle": "Échec de suppression de l'utilisateur",
+    "textContentAddedTitle": "Contenu texte ajouté avec succès",
+    "textContentAddedText": "\"{title}\" a été ajouté à votre base de connaissances",
+    "textContentAddErrorTitle": "Échec d'ajout du contenu texte",
+    "knowledgeItemDeletedTitle": "Élément de connaissance supprimé",
+    "knowledgeItemDeletedText": "L'élément a été retiré de votre base de connaissances",
+    "knowledgeItemDeleteErrorTitle": "Échec de suppression de l'élément de connaissance",
+    "downloadNotAvailableTitle": "Téléchargement non disponible",
+    "downloadNotAvailableText": "Cet élément n'est pas disponible au téléchargement",
+    "downloadCompletedTitle": "Téléchargement terminé",
+    "downloadCompletedText": "{fileName} téléchargé",
+    "downloadFailedTitle": "Échec de téléchargement du fichier",
+    "editNotAvailableTitle": "Modification non disponible",
+    "editNotAvailableText": "Seul le contenu texte peut être modifié",
+    "validationErrorTitle": "Erreur de validation",
+    "validationErrorText": "Veuillez fournir le titre et le contenu",
+    "contentUpdatedTitle": "Contenu mis à jour",
+    "contentUpdatedText": "Élément de connaissance mis à jour avec succès",
+    "contentUpdateErrorTitle": "Échec de mise à jour du contenu",
+    "fileUploadSuccessTitle": "Fichier téléchargé avec succès",
+    "fileUploadSuccessText": "{fileName} téléchargé avec succès",
+    "addingTextContentTitle": "Ajout de contenu texte",
+    "addingTextContentText": "Traitement et génération des intégrations...",
+    "deletingKnowledgeItemTitle": "Suppression de l'élément de connaissance",
+    "deletingKnowledgeItemText": "Suppression de l'élément et des données associées...",
+    "downloadingFileTitle": "Téléchargement du fichier",
+    "downloadingFileText": "Préparation de {fileName}...",
+    "updatingContentTitle": "Mise à jour du contenu",
+    "updatingContentText": "Sauvegarde des modifications et régénération des intégrations...",
+    "processingKnowledgeItemsTitle": "Traitement des éléments de connaissance",
+    "processingKnowledgeItemsText": "{operation} jusqu'à {limit} éléments..."
   },
   "ChatPage": {
     "title": "Chat",
@@ -346,31 +921,6 @@
       "guestMessageWarning": "Plus qu'un message restant ! Inscrivez-vous pour continuer.",
       "aiThinking": "L'IA réfléchit...",
       "imagePreviewAlt": "Aperçu de l'image sélectionnée"
-    },
-    "toasts": {
-      "deleteConfirmTitle": "Êtes-vous sûr ?",
-      "deleteConfirmText": "Êtes-vous sûr de vouloir supprimer \"{chatTitle}\" ? Cette action est irréversible.",
-      "deleteSuccessTitle": "Discussion supprimée",
-      "deleteSuccessText": "La conversation a été supprimée.",
-      "deleteErrorTitle": "Échec de la suppression de la discussion",
-      "deleteErrorText": "Veuillez réessayer.",
-      "copySuccessTitle": "Copié dans le presse-papiers",
-      "copySuccessText": "Le contenu du message a été copié.",
-      "copyErrorTitle": "Échec de la copie",
-      "copyErrorText": "Impossible de copier le message dans le presse-papiers.",
-      "fileTooLargeTitle": "Fichier trop volumineux",
-      "fileTooLargeText": "Veuillez sélectionner une image de moins de 5 Mo.",
-      "invalidFileTypeTitle": "Type de fichier invalide",
-      "invalidFileTypeText": "Veuillez sélectionner un fichier image.",
-      "imagePastedTitle": "Image collée",
-      "imagePastedText": "L'image a été ajoutée à votre message.",
-      "confirmImageReplace": "Remplacer l'image actuelle par l'image collée ?",
-      "limitReachedTitle": "Limite quotidienne atteinte",
-      "limitReachedText": "Vous avez atteint votre limite quotidienne de messages. Passez à Pro pour des messages illimités.",
-      "errorFetchingRole": "Erreur lors de la récupération du rôle de l'utilisateur",
-      "errorFetchingPlan": "Erreur lors de la récupération du forfait de l'utilisateur",
-      "errorLoadingSession": "Impossible de charger la session de discussion : {chatId}",
-      "errorSendingMessage": "Échec de l'envoi du message"
     },
     "keyboardShortcuts": {
       "title": "Raccourcis Clavier",
