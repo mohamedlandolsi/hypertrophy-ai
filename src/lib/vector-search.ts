@@ -199,6 +199,12 @@ export async function transformQuery(
   conversationHistory: Array<{ role: string; content: string }> = []
 ): Promise<string> {
   try {
+    // TEMPORARILY DISABLED: Return original query to preserve specific terms like "chest", "shoulders", etc.
+    // Query transformation was converting specific muscle group terms to more general fitness terminology
+    // which hurt specificity in knowledge retrieval
+    console.log(`🔍 Query transformation DISABLED - using original: "${originalQuery}"`);
+    return originalQuery;
+    
     // Skip transformation for very short queries or if API key is not available
     if (originalQuery.length < 10 || !process.env.GEMINI_API_KEY) {
       return originalQuery;
@@ -725,8 +731,8 @@ export async function performHybridSearch(
   } = {}
 ): Promise<VectorSearchResult[]> {
   const {
-    vectorWeight = 0.6,
-    keywordWeight = 0.4,
+    vectorWeight = 0.2,
+    keywordWeight = 0.8,
     limit = 5,
     threshold = 0.3,
     rerank = true

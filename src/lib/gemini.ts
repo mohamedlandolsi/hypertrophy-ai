@@ -863,7 +863,7 @@ export async function getEnhancedContext(
       userId, 
       query, 
       undefined, // Use configured max chunks
-      0.4 // Lower threshold for fallback
+      0.05 // Lower threshold for fallback (5% to match realistic similarity scores)
     );
     
   } catch (error) {
