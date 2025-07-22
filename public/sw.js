@@ -1,14 +1,11 @@
 // Service Worker for offline functionality
-const CACHE_NAME = 'hypertroq-v1';
-const STATIC_CACHE = 'hypertroq-static-v1';
-const DYNAMIC_CACHE = 'hypertroq-dynamic-v1';
+const CACHE_VERSION = Date.now(); // Dynamic versioning
+const CACHE_NAME = `hypertroq-v${CACHE_VERSION}`;
+const STATIC_CACHE = `hypertroq-static-v${CACHE_VERSION}`;
+const DYNAMIC_CACHE = `hypertroq-dynamic-v${CACHE_VERSION}`;
 
 // Cache static assets
 const STATIC_ASSETS = [
-  '/',
-  '/chat',
-  '/pricing',
-  '/profile',
   '/logo.png',
   '/logo-dark.png',
   '/favicon.ico',
@@ -43,7 +40,8 @@ self.addEventListener('activate', (event) => {
       .then((cacheNames) => {
         return Promise.all(
           cacheNames.map((cacheName) => {
-            if (cacheName !== STATIC_CACHE && cacheName !== DYNAMIC_CACHE) {
+            // Delete all old caches that don't match current version
+            if (!cacheName.includes(`v${CACHE_VERSION}`)) {
               console.log('Service Worker: Deleting old cache:', cacheName);
               return caches.delete(cacheName).catch((error) => {
                 console.warn('Service Worker: Failed to delete cache:', cacheName, error);
@@ -60,7 +58,7 @@ self.addEventListener('activate', (event) => {
   );
 });
 
-// Fetch event - serve from cache with network fallback
+// Fetch event - network first with cache fallback
 self.addEventListener('fetch', (event) => {
   const { request } = event;
   const url = new URL(request.url);
@@ -70,38 +68,65 @@ self.addEventListener('fetch', (event) => {
     return;
   }
 
-  // Handle API requests
+  // Handle API requests - always try network first
   if (url.pathname.startsWith('/api/')) {
     event.respondWith(
-      caches.open(DYNAMIC_CACHE)
-        .then((cache) => {
-          return fetch(request)
-            .then((response) => {
-              // Cache successful API responses
-              if (response.status === 200) {
+      fetch(request)
+        .then((response) => {
+          // Only cache successful non-auth API responses
+          if (response.status === 200 && !url.pathname.includes('/auth/')) {
+            caches.open(DYNAMIC_CACHE)
+              .then((cache) => {
                 cache.put(request, response.clone()).catch((error) => {
                   console.warn('Service Worker: Failed to cache API response:', error);
                 });
-              }
-              return response;
-            })
-            .catch(() => {
-              // Return cached response if network fails
-              return cache.match(request);
-            });
+              });
+          }
+          return response;
         })
-        .catch((error) => {
-          console.warn('Service Worker: API fetch failed:', error);
-          return new Response('{"error": "Service unavailable"}', {
-            status: 503,
-            headers: { 'Content-Type': 'application/json' }
+        .catch(() => {
+          // Return cached response only if network fails
+          return caches.match(request).then((cachedResponse) => {
+            return cachedResponse || new Response('{"error": "Service unavailable"}', {
+              status: 503,
+              headers: { 'Content-Type': 'application/json' }
+            });
           });
         })
     );
     return;
   }
 
-  // Handle static assets and pages
+  // Handle navigation requests - always try network first
+  if (request.mode === 'navigate') {
+    event.respondWith(
+      fetch(request)
+        .then((response) => {
+          // Cache successful navigation responses
+          if (response.status === 200) {
+            caches.open(DYNAMIC_CACHE)
+              .then((cache) => {
+                cache.put(request, response.clone());
+              })
+              .catch((error) => {
+                console.warn('Service Worker: Failed to cache navigation:', error);
+              });
+          }
+          return response;
+        })
+        .catch(() => {
+          // Fallback to cached version only if network fails
+          return caches.match(request).then((cachedResponse) => {
+            return cachedResponse || caches.match('/').then((homeResponse) => {
+              return homeResponse || new Response('Offline', { status: 503 });
+            });
+          });
+        })
+    );
+    return;
+  }
+
+  // Handle static assets - check cache first, then network
   event.respondWith(
     caches.match(request)
       .then((cachedResponse) => {
@@ -111,27 +136,25 @@ self.addEventListener('fetch', (event) => {
 
         return fetch(request)
           .then((response) => {
-            // Cache dynamic content
-            if (response.status === 200) {
-              const responseClone = response.clone();
-              caches.open(DYNAMIC_CACHE)
+            // Cache static resources
+            if (response.status === 200 && (
+              url.pathname.includes('/favicon/') || 
+              url.pathname.endsWith('.png') || 
+              url.pathname.endsWith('.ico') ||
+              url.pathname.endsWith('.json')
+            )) {
+              caches.open(STATIC_CACHE)
                 .then((cache) => {
-                  cache.put(request, responseClone);
+                  cache.put(request, response.clone());
                 })
                 .catch((error) => {
-                  console.warn('Service Worker: Failed to cache dynamic content:', error);
+                  console.warn('Service Worker: Failed to cache static asset:', error);
                 });
             }
             return response;
           })
           .catch(() => {
-            // Return offline page for navigation requests
-            if (request.mode === 'navigate') {
-              return caches.match('/').then((response) => {
-                return response || new Response('Offline', { status: 503 });
-              });
-            }
-            return new Response('Resource not available offline', { status: 503 });
+            return new Response('Resource not available', { status: 503 });
           });
       })
       .catch((error) => {
