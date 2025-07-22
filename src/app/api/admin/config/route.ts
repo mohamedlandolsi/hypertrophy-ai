@@ -87,6 +87,9 @@ export async function POST(request: NextRequest) {
       maxTokens,
       topK,
       topP,
+      ragSimilarityThreshold,
+      ragMaxChunks,
+      ragHighRelevanceThreshold,
       useKnowledgeBase,
       useClientMemory,
       enableWebSearch
@@ -135,6 +138,27 @@ export async function POST(request: NextRequest) {
       );
     }
 
+    if (typeof ragSimilarityThreshold !== 'number' || ragSimilarityThreshold < 0.1 || ragSimilarityThreshold > 1.0) {
+      return NextResponse.json(
+        { error: 'Similarity Threshold must be between 0.1 and 1.0' },
+        { status: 400 }
+      );
+    }
+
+    if (typeof ragMaxChunks !== 'number' || ragMaxChunks < 1 || ragMaxChunks > 20) {
+      return NextResponse.json(
+        { error: 'Max Knowledge Chunks must be between 1 and 20' },
+        { status: 400 }
+      );
+    }
+
+    if (typeof ragHighRelevanceThreshold !== 'number' || ragHighRelevanceThreshold < 0.1 || ragHighRelevanceThreshold > 1.0) {
+      return NextResponse.json(
+        { error: 'High Relevance Threshold must be between 0.1 and 1.0' },
+        { status: 400 }
+      );
+    }
+
     // Update or create configuration
     const config = await prisma.aIConfiguration.upsert({
       where: { id: 'singleton' },
@@ -145,6 +169,9 @@ export async function POST(request: NextRequest) {
         maxTokens,
         topK,
         topP,
+        ragSimilarityThreshold,
+        ragMaxChunks,
+        ragHighRelevanceThreshold,
         useKnowledgeBase: Boolean(useKnowledgeBase),
         useClientMemory: Boolean(useClientMemory),
         enableWebSearch: Boolean(enableWebSearch)
@@ -157,6 +184,9 @@ export async function POST(request: NextRequest) {
         maxTokens,
         topK,
         topP,
+        ragSimilarityThreshold,
+        ragMaxChunks,
+        ragHighRelevanceThreshold,
         useKnowledgeBase: Boolean(useKnowledgeBase),
         useClientMemory: Boolean(useClientMemory),
         enableWebSearch: Boolean(enableWebSearch)

@@ -44,6 +44,7 @@ npm run postinstall     # Generate Prisma client (auto-run after install)
 - **UI Framework**: Radix UI components + Tailwind CSS 4.0
 - **Rich Text**: TipTap 2.25.0 editor with extensions
 - **File Processing**: Mammoth 1.9.1 (DOC), PDF-parse 1.1.1 (PDF)
+- **Payments**: Lemon Squeezy integration with multi-currency support
 - **Development**: TypeScript 5, ESLint 9, Prisma Studio
 
 ### Windows Environment Notes
@@ -59,6 +60,8 @@ npm run postinstall     # Generate Prisma client (auto-run after install)
 - `check-user-plan.js` - Verify individual user subscription status
 - `test-subscription-tiers.js` - Test subscription functionality end-to-end
 - `find-users.js` - Get actual user IDs for testing
+- `debug-lemonsqueezy-checkout.js` - Test LemonSqueezy checkout URL generation
+- `check-lemonsqueezy-config.js` - Validate LemonSqueezy configuration
 
 **Specialized Debugging:**
 - `debug-users.js` - Inspect user data and permissions  
@@ -68,7 +71,6 @@ npm run postinstall     # Generate Prisma client (auto-run after install)
 - `check-pdf-items.js` - Debug PDF processing and chunking
 - `final-google-oauth-onboarding-verification.js` - Verify OAuth onboarding flow
 - `test-arabic-support.js` - Test Arabic language detection and responses
-- `debug-lemonsqueezy-checkout.js` - Test LemonSqueezy payment integration
 - `test-rag-fixes.js` - Test RAG configuration and context retrieval without titles
 
 ### Critical Environment Variables
@@ -84,7 +86,9 @@ DIRECT_URL=                      # Direct DB connection (for migrations)
 LEMONSQUEEZY_API_KEY=            # API key for Lemon Squeezy
 LEMONSQUEEZY_STORE_ID=           # Store ID for product management
 LEMONSQUEEZY_PRO_MONTHLY_PRODUCT_ID=  # Monthly subscription product
+LEMONSQUEEZY_PRO_MONTHLY_VARIANT_ID=  # Monthly subscription variant
 LEMONSQUEEZY_PRO_YEARLY_PRODUCT_ID=   # Yearly subscription product
+LEMONSQUEEZY_PRO_YEARLY_VARIANT_ID=   # Yearly subscription variant
 LEMONSQUEEZY_WEBHOOK_SECRET=     # Webhook signature verification
 ```
 
@@ -107,6 +111,8 @@ LEMONSQUEEZY_WEBHOOK_SECRET=     # Webhook signature verification
 - System will throw errors if `AIConfiguration` table is empty or incomplete
 - Admin must configure prompts, model parameters, and feature flags via `/admin` page
 - Uses singleton pattern: single row with `id: 'singleton'` in database
+- **Available models**: Latest Gemini 2.5 Pro, 2.5 Flash, 2.0 Flash, 1.5 models with configurable parameters
+- **Model selection**: Admin can choose from dropdown with descriptions (speed vs accuracy trade-offs)
 
 ### 2. RAG System Architecture (`/src/lib/vector-search.ts`)
 ```typescript
@@ -153,10 +159,15 @@ await canUserCreateKnowledgeItem() // Knowledge base limits
 ```
 - **FREE tier**: 15 messages/day, 5 uploads/month, 10 knowledge items max, 10MB files
 - **PRO tier**: Unlimited messages, uploads, knowledge items, 100MB files  
+- **Billing intervals**: Monthly ($9.99/month) and Yearly ($99.99/year, 58% savings)
 - **Daily usage tracking** with automatic reset at midnight
 - **Lemon Squeezy integration** for payment processing and webhooks
+- **Multi-currency support** with real-time exchange rates
+- **Checkout URL generation**: Pre-configured checkout links with variant selection
 - **Webhook handling**: `/src/app/api/webhooks/lemon-squeezy/route.ts`
+- **Subscription lifecycle**: Handles activation, deactivation, payment success/failure
 - **Admin tools**: Use `manage-user-plans.js` script for subscription operations
+- **Debug scripts**: `check-lemonsqueezy-config.js`, `debug-lemonsqueezy-checkout.js`
 
 ## 🔧 Key Integration Points
 
@@ -232,7 +243,7 @@ export async function POST(request: NextRequest) {
 - `User.hasCompletedOnboarding` - Tracks onboarding completion for user flow
 - `User.plan` - Subscription tier (FREE/PRO) with message tracking
 - `User.uploadsThisMonth` / `lastUploadReset` - Monthly upload tracking for free tier limits
-- `Subscription` - Lemon Squeezy integration with billing periods
+- `Subscription` - Lemon Squeezy integration with billing periods and variants
 - `Message.imageData` - Base64 encoded image storage with `imageMimeType`
 - `ProcessingStatus` - Tracks file processing states (`PROCESSING`, `READY`, `FAILED`)
 
@@ -286,6 +297,9 @@ const { functionName } = require('./src/lib/module-name');
 - **Subscription plan issues** → Use `check-user-plan.js` to verify billing status
 - **PDF processing failures** → Check `check-pdf-items.js` for chunking issues
 - **Lemon Squeezy webhook errors** → Verify environment variables and webhook URL configuration
+- **Checkout URL generation fails** → Check product/variant IDs in `check-lemonsqueezy-config.js`
+- **Currency conversion errors** → Multi-currency support handles rate limiting gracefully
+- **Message limit not enforcing** → Check daily reset logic and database `messagesUsedToday`
 
 ## 📝 File Naming Conventions
 
@@ -296,4 +310,6 @@ const { functionName } = require('./src/lib/module-name');
 - `*-test.js` - Manual testing scripts
 - `check-*.js` - Validation and verification scripts
 
-- **Navigation Tips**: Admin features (`/src/app/admin/`), Core AI logic (`/src/lib/gemini.ts`), Vector operations (`/src/lib/vector-search.ts`), Subscription system (`/src/lib/subscription.ts`, `/src/components/plan-badge.tsx`, `/src/components/upgrade-button.tsx`), Arabic support (`/src/components/arabic-aware-*.tsx`, `/src/lib/text-formatting.ts`), Error handling (`/src/lib/error-handler.ts` with `ApiErrorHandler` class), Client memory (`/src/lib/client-memory.ts` for automatic user profile extraction)
+- **Navigation Tips**: Admin features (`/src/app/admin/`), Core AI logic (`/src/lib/gemini.ts`), Vector operations (`/src/lib/vector-search.ts`), Subscription system (`/src/lib/subscription.ts`, `/src/lib/lemonsqueezy.ts`, `/src/components/plan-badge.tsx`, `/src/components/upgrade-button.tsx`), Arabic support (`/src/components/arabic-aware-*.tsx`, `/src/lib/text-formatting.ts`), Error handling (`/src/lib/error-handler.ts` with `ApiErrorHandler` class), Client memory (`/src/lib/client-memory.ts` for automatic user profile extraction), Multi-currency support (`/src/lib/currency.ts`), Webhook processing (`/src/app/api/webhooks/lemon-squeezy/route.ts`)
+
+````

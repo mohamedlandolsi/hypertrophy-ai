@@ -416,7 +416,7 @@ export default function AdminSettingsPage() {
                       type="number"
                       min={0.1}
                       max={1.0}
-                      step={0.1}
+                      step={0.01}
                       value={config.ragSimilarityThreshold}
                       onChange={(e) => updateConfig('ragSimilarityThreshold', parseFloat(e.target.value))}
                     />
@@ -443,7 +443,7 @@ export default function AdminSettingsPage() {
                       type="number"
                       min={0.1}
                       max={1.0}
-                      step={0.1}
+                      step={0.01}
                       value={config.ragHighRelevanceThreshold}
                       onChange={(e) => updateConfig('ragHighRelevanceThreshold', parseFloat(e.target.value))}
                     />
