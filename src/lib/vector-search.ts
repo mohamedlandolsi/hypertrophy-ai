@@ -12,6 +12,32 @@ import { GoogleGenerativeAI } from '@google/generative-ai';
 // Initialize Gemini for query transformation
 const genAI = new GoogleGenerativeAI(process.env.GEMINI_API_KEY!);
 
+/**
+ * Get Gemini model for embeddings
+ * @returns Gemini embedding model
+ */
+export async function getGeminiModel() {
+  return genAI.getGenerativeModel({ 
+    model: 'text-embedding-004'
+  });
+}
+
+// Muscle group detection for backwards compatibility
+// eslint-disable-next-line @typescript-eslint/no-unused-vars
+const MUSCLE_GROUPS = [
+  'chest', 'pectoral', 'shoulders', 'delts', 'deltoid',
+  'back', 'lats', 'rhomboids', 'traps', 'biceps', 'triceps',
+  'legs', 'quads', 'quadriceps', 'hamstrings', 'glutes',
+  'calves', 'abs', 'core', 'forearms'
+];
+
+// Training-related terms that should also use muscle-specific search
+// eslint-disable-next-line @typescript-eslint/no-unused-vars
+const TRAINING_TERMS = [
+  'exercise', 'exercises', 'workout', 'training', 'build muscle',
+  'muscle building', 'muscle growth', 'hypertrophy', 'strength'
+];
+
 export interface VectorSearchResult {
   id: string;
   content: string;
@@ -264,6 +290,7 @@ Enhanced query:`;
 
 /**
  * Get relevant context for a user query from their knowledge base
+ * ✅ IMPROVED with strict muscle prioritization
  * 
  * @param userId User ID
  * @param query Search query
@@ -280,6 +307,9 @@ export async function getRelevantContext(
   conversationHistory: Array<{ role: string; content: string }> = []
 ): Promise<string> {
   try {
+    // Note: conversationHistory currently unused but kept for future enhancement
+    void conversationHistory; // Suppress unused variable warning
+    
     // Get RAG configuration from database
     const ragConfig = await getRAGConfig();
     
@@ -287,66 +317,110 @@ export async function getRelevantContext(
     const effectiveMaxChunks = maxChunks ?? ragConfig.maxChunks;
     const effectiveThreshold = similarityThreshold ?? ragConfig.similarityThreshold;
     
-    // Transform query for better retrieval
-    const enhancedQuery = await transformQuery(query, conversationHistory);
+    // Enhanced muscle group detection with more variations
+    const ENHANCED_MUSCLE_GROUPS = [
+      'chest', 'pectoral', 'shoulder', 'shoulders', 'delts', 'deltoid',
+      'back', 'lats', 'rhomboids', 'traps', 'biceps', 'triceps',
+      'legs', 'quads', 'quadriceps', 'hamstrings', 'glutes',
+      'calves', 'abs', 'core', 'forearms'
+    ];
     
-    // Use hybrid search for better retrieval
-    let searchResults = await performHybridSearch(enhancedQuery, userId, {
-      limit: effectiveMaxChunks,
-      threshold: effectiveThreshold,
-      rerank: true
-    });
-
-    // If results are insufficient, try with relaxed parameters
-    if (searchResults.length < Math.min(effectiveMaxChunks, 3)) {
-      console.log('📚 Insufficient results from enhanced search, trying fallback approach');
+    const queryLower = query.toLowerCase();
+    const mentionedMuscles = ENHANCED_MUSCLE_GROUPS.filter(muscle => 
+      queryLower.includes(muscle)
+    );
+    
+    // ✅ STRICT MUSCLE MATCH - prioritize direct muscle queries
+    const strictMuscleMatch = mentionedMuscles.length > 0;
+    
+    if (strictMuscleMatch) {
+      console.log(`🎯 STRICT muscle query detected: [${mentionedMuscles.join(', ')}]`);
+      console.log('   Using direct title search for maximum precision...');
       
-      // Try with lower threshold
-      const fallbackResults = await performHybridSearch(enhancedQuery, userId, {
-        limit: effectiveMaxChunks,
-        threshold: effectiveThreshold * 0.7,
-        rerank: true
+      // Direct title search for the first mentioned muscle
+      const chunks = await prisma.knowledgeChunk.findMany({
+        where: {
+          knowledgeItem: {
+            userId: userId,
+            status: 'READY',
+            title: {
+              contains: mentionedMuscles[0],
+              mode: 'insensitive'
+            }
+          }
+        },
+        take: effectiveMaxChunks,
+        orderBy: { chunkIndex: 'asc' },
+        include: { 
+          knowledgeItem: { 
+            select: { title: true, id: true } 
+          } 
+        }
       });
 
-      // If still insufficient, try with original query
-      if (fallbackResults.length < Math.min(effectiveMaxChunks, 2)) {
-        const originalResults = await performVectorSearch(query, {
-          limit: effectiveMaxChunks,
-          threshold: effectiveThreshold * 0.6,
-          userId
-        });
-        searchResults = originalResults.length > searchResults.length ? originalResults : searchResults;
-      } else {
-        searchResults = fallbackResults;
+      if (chunks.length > 0) {
+        console.log(`✅ Found ${chunks.length} chunks for muscle "${mentionedMuscles[0]}"`);
+        
+        // Apply diversity filtering to prevent single item domination
+        const itemCounts = new Map<string, number>();
+        const diverseChunks = [];
+        
+        for (const chunk of chunks) {
+          const currentCount = itemCounts.get(chunk.knowledgeItemId) || 0;
+          if (currentCount < 2) { // Max 2 chunks per knowledge item
+            diverseChunks.push(chunk);
+            itemCounts.set(chunk.knowledgeItemId, currentCount + 1);
+          }
+        }
+        
+        console.log(`🎯 Muscle-specific results: ${chunks.length} found → ${diverseChunks.length} after diversity filtering`);
+        
+        // ✅ PERFORMANCE: Trim content to reduce token count
+        const trimmedContent = diverseChunks
+          .map(c => trimChunkContent(c.content, 500)) // Limit to 500 chars per chunk
+          .join('\n---\n');
+          
+        return trimmedContent;
       }
     }
 
-    if (searchResults.length === 0) {
-      return '';
-    }
-
-    // Group chunks by knowledge item to maintain context
-    const groupedChunks = groupChunksByKnowledgeItem(searchResults);
+    // ✅ FALLBACK - optimized hybrid search with diversity control
+    console.log('📚 Using fallback hybrid search with performance optimizations...');
     
-    // Format the context WITHOUT titles - only pure content for AI
-    const contextParts = Object.entries(groupedChunks).map(([, chunks]) => {
-      const sortedChunks = chunks.sort((a, b) => a.chunkIndex - b.chunkIndex);
-      
-      const chunkTexts = sortedChunks.map(chunk => {
-        // Mark highly relevant content but don't include title
-        const relevanceMarker = chunk.similarity > ragConfig.highRelevanceThreshold ? ' [HIGH RELEVANCE]' : '';
-        return `${chunk.content}${relevanceMarker}`;
-      }).join('\n\n');
-      
-      // Return only content without source attribution for AI
-      return chunkTexts;
+    const fallbackResults = await performHybridSearch(query, userId, {
+      limit: Math.min(effectiveMaxChunks, 4), // ✅ REDUCED: Max 4 chunks for speed
+      threshold: effectiveThreshold,
+      vectorWeight: 0.6,
+      keywordWeight: 0.4,
+      rerank: false, // ✅ DISABLED: Skip re-ranking for faster responses
+      maxChunksPerItem: 2 // ✅ DIVERSITY: Max 2 chunks per knowledge item
     });
 
-    return contextParts.join('\n---\n');
+    // Group results by knowledge item to ensure diversity
+    const grouped = fallbackResults.reduce((acc, r) => {
+      if (!acc[r.knowledgeItemId]) acc[r.knowledgeItemId] = [];
+      acc[r.knowledgeItemId].push(r);
+      return acc;
+    }, {} as Record<string, typeof fallbackResults>);
+
+    // Take max 2 knowledge items and max 2-3 chunks per item
+    const diverseResults = Object.values(grouped)
+      .slice(0, 2) // Limit to 2 different knowledge items
+      .flat()
+      .slice(0, effectiveMaxChunks);
+
+    console.log(`🔄 Fallback results: ${fallbackResults.length} found → ${diverseResults.length} after diversity control`);
+    
+    // ✅ PERFORMANCE: Trim all content to reduce token count
+    const trimmedResults = diverseResults
+      .map(r => trimChunkContent(r.content, 500)) // Limit to 500 chars per chunk
+      .join('\n---\n');
+    
+    return trimmedResults;
 
   } catch (error) {
-    console.error('Error getting relevant context:', error);
-    return ''; // Return empty string to allow conversation to continue
+    console.error('Error in getRelevantContext:', error);
+    return 'I apologize, but I encountered an issue accessing the knowledge base. Please try rephrasing your question.';
   }
 }
 
@@ -477,22 +551,37 @@ export async function performAdvancedRetrieval(
 }
 
 /**
- * Apply diversity filtering to avoid redundant content
+ * Apply diversity filtering to avoid redundant content and prevent single items from dominating
  * 
  * @param results Search results
  * @param threshold Similarity threshold for diversity
+ * @param maxPerItem Maximum chunks per knowledge item (prevents domination)
  * @returns Filtered results with diversity
  */
 function applyDiversityFiltering(
   results: VectorSearchResult[],
-  threshold: number = 0.85
+  threshold: number = 0.85,
+  maxPerItem: number = 3
 ): VectorSearchResult[] {
   if (results.length <= 1) return results;
 
-  const diverseResults: VectorSearchResult[] = [results[0]]; // Always include the top result
+  // First, apply per-item limit to prevent domination by large documents (like full-body workout guides)
+  const itemCounts = new Map<string, number>();
+  const balancedResults: VectorSearchResult[] = [];
 
-  for (let i = 1; i < results.length; i++) {
-    const candidate = results[i];
+  for (const result of results) {
+    const currentCount = itemCounts.get(result.knowledgeItemId) || 0;
+    if (currentCount < maxPerItem) {
+      balancedResults.push(result);
+      itemCounts.set(result.knowledgeItemId, currentCount + 1);
+    }
+  }
+
+  // Then apply content similarity filtering
+  const diverseResults: VectorSearchResult[] = [balancedResults[0]]; // Always include the top result
+
+  for (let i = 1; i < balancedResults.length; i++) {
+    const candidate = balancedResults[i];
     let isDiverse = true;
 
     // Check if candidate is too similar to already selected results
@@ -509,6 +598,7 @@ function applyDiversityFiltering(
     }
   }
 
+  console.log(`🎯 Diversity filtering: ${results.length} → ${balancedResults.length} (per-item limit) → ${diverseResults.length} (content diversity)`);
   return diverseResults;
 }
 
@@ -713,6 +803,7 @@ export async function findSimilarContent(
 
 /**
  * Perform hybrid search combining vector similarity and keyword search
+ * ✅ ENHANCED with performance optimizations and chunk limits
  * 
  * @param query Search query
  * @param userId User ID
@@ -728,21 +819,23 @@ export async function performHybridSearch(
     limit?: number;
     threshold?: number;
     rerank?: boolean;
+    maxChunksPerItem?: number;
   } = {}
 ): Promise<VectorSearchResult[]> {
   const {
     vectorWeight = 0.2,
     keywordWeight = 0.8,
-    limit = 5,
+    limit = 5, // ✅ REDUCED from 8 for performance
     threshold = 0.3,
-    rerank = true
+    rerank = false, // ✅ DISABLED by default for speed
+    maxChunksPerItem = 2 // ✅ NEW: Limit chunks per knowledge item
   } = options;
 
   try {
-    console.log(`🔍 HYBRID SEARCH: Starting hybrid search for query: "${query}"`);
+    console.log(`🔍 HYBRID SEARCH: Starting optimized hybrid search for query: "${query}"`);
     
-    // Get more candidates for re-ranking
-    const candidateLimit = rerank ? limit * 3 : limit;
+    // ✅ PERFORMANCE: Reduce candidate limit for faster processing
+    const candidateLimit = rerank ? limit * 2 : limit; // Reduced from limit * 3
     
     // Perform vector search with lower threshold for more recall
     const vectorResults = await performVectorSearch(query, {
@@ -753,28 +846,41 @@ export async function performHybridSearch(
 
     console.log(`🔍 HYBRID SEARCH: Vector search found ${vectorResults.length} results`);
 
-    // Perform enhanced keyword search
-    const keywordResults = await performEnhancedKeywordSearch(query, userId, {
-      limit: candidateLimit,
-      threshold: 0.1
-    });
+    // ✅ CONDITIONAL: Skip keyword search for very short queries
+    let keywordResults: VectorSearchResult[] = [];
+    if (query.length > 3) {
+      keywordResults = await performEnhancedKeywordSearch(query, userId, {
+        limit: candidateLimit,
+        threshold: 0.1
+      });
+      console.log(`🔍 HYBRID SEARCH: Keyword search found ${keywordResults.length} results`);
+    } else {
+      console.log(`🔍 HYBRID SEARCH: Skipping keyword search for short query`);
+    }
 
-    console.log(`🔍 HYBRID SEARCH: Keyword search found ${keywordResults.length} results`);
-
-    // Combine and deduplicate results with improved scoring
+    // ✅ ENHANCED: Combine with per-item limits
     const combinedResults = combineSearchResultsWithRRF(
       vectorResults,
       keywordResults,
       vectorWeight,
-      keywordWeight
+      keywordWeight,
+      maxChunksPerItem // Apply chunk limits
     );
 
     console.log(`🔍 HYBRID SEARCH: Combined results: ${combinedResults.length}`);
 
-    // Apply re-ranking if enabled
+    // ✅ CONDITIONAL: Only rerank if needed and specifically requested
     let finalResults = combinedResults;
     if (rerank && combinedResults.length > limit) {
-      finalResults = await reRankResults(query, combinedResults, limit);
+      const avgSimilarity = combinedResults.reduce((sum, r) => sum + r.similarity, 0) / combinedResults.length;
+      
+      // Only rerank if average similarity is low (uncertain results)
+      if (avgSimilarity < 0.6) {
+        console.log(`🔍 HYBRID SEARCH: Average similarity ${avgSimilarity.toFixed(2)} - applying rerank`);
+        finalResults = await reRankResults(query, combinedResults, limit);
+      } else {
+        console.log(`🔍 HYBRID SEARCH: High similarity ${avgSimilarity.toFixed(2)} - skipping rerank for speed`);
+      }
     }
 
     // Filter by threshold and limit
@@ -783,7 +889,7 @@ export async function performHybridSearch(
       .sort((a, b) => b.similarity - a.similarity)
       .slice(0, limit);
 
-    console.log(`🔍 HYBRID SEARCH: Final results: ${filteredResults.length}`);
+    console.log(`🔍 HYBRID SEARCH: Final results: ${filteredResults.length} (diversity-controlled)`);
     filteredResults.forEach(result => {
       console.log(`  - ${result.knowledgeItemTitle} (${result.knowledgeItemId}): ${(result.similarity * 100).toFixed(1)}%`);
     });
@@ -925,18 +1031,21 @@ export async function performEnhancedKeywordSearch(
 
 /**
  * Combine vector and keyword search results using Reciprocal Rank Fusion (RRF)
+ * ✅ ENHANCED with per-item chunk limits to prevent domination
  * 
  * @param vectorResults Vector search results
  * @param keywordResults Keyword search results
  * @param vectorWeight Weight for vector scores
  * @param keywordWeight Weight for keyword scores
- * @returns Combined and deduplicated results
+ * @param maxChunksPerItem Maximum chunks per knowledge item (default: 2)
+ * @returns Combined and deduplicated results with diversity
  */
 function combineSearchResultsWithRRF(
   vectorResults: VectorSearchResult[],
   keywordResults: VectorSearchResult[],
   vectorWeight: number,
-  keywordWeight: number
+  keywordWeight: number,
+  maxChunksPerItem: number = 2
 ): VectorSearchResult[] {
   // Create a map to combine scores for the same chunks
   const combinedMap = new Map<string, VectorSearchResult>();
@@ -969,7 +1078,28 @@ function combineSearchResultsWithRRF(
     }
   });
 
-  return Array.from(combinedMap.values());
+  // ✅ NEW: Apply per-item chunk limits to prevent domination
+  const allResults = Array.from(combinedMap.values())
+    .sort((a, b) => b.similarity - a.similarity);
+    
+  const grouped: Record<string, VectorSearchResult[]> = {};
+  const limitedResults: VectorSearchResult[] = [];
+  
+  for (const result of allResults) {
+    if (!grouped[result.knowledgeItemId]) {
+      grouped[result.knowledgeItemId] = [];
+    }
+    
+    // Only add if we haven't exceeded the per-item limit
+    if (grouped[result.knowledgeItemId].length < maxChunksPerItem) {
+      grouped[result.knowledgeItemId].push(result);
+      limitedResults.push(result);
+    }
+  }
+  
+  console.log(`🔄 RRF: ${combinedMap.size} combined → ${limitedResults.length} after diversity filtering (max ${maxChunksPerItem} per item)`);
+  
+  return limitedResults.sort((a, b) => b.similarity - a.similarity);
 }
 
 /**
@@ -1178,4 +1308,583 @@ function textSimilarity(query: string, text: string): number {
   );
   
   return queryWords.length > 0 ? commonWords.length / queryWords.length : 0;
+}
+
+/**
+ * ✅ NEW: Trim chunk content for performance optimization
+ * Reduces token count by limiting chunk size and preserving context
+ * 
+ * @param content Original chunk content
+ * @param maxLength Maximum character length (default: 600)
+ * @returns Trimmed content with ellipsis if truncated
+ */
+function trimChunkContent(content: string, maxLength: number = 600): string {
+  if (content.length <= maxLength) {
+    return content;
+  }
+  
+  // Try to find a sentence break near the limit
+  const truncated = content.substring(0, maxLength);
+  const lastSentenceEnd = Math.max(
+    truncated.lastIndexOf('.'),
+    truncated.lastIndexOf('!'),
+    truncated.lastIndexOf('?')
+  );
+  
+  // If we found a sentence break in the last 20% of the limit, use it
+  if (lastSentenceEnd > maxLength * 0.8) {
+    return truncated.substring(0, lastSentenceEnd + 1);
+  }
+  
+  // Otherwise, find the last complete word
+  const lastSpace = truncated.lastIndexOf(' ');
+  if (lastSpace > maxLength * 0.7) {
+    return truncated.substring(0, lastSpace) + '...';
+  }
+  
+  // Fallback: hard truncate with ellipsis
+  return truncated + '...';
+}
+
+// ===============================
+// 🔧 EMBEDDING AUDIT & MANAGEMENT UTILITIES
+// ===============================
+
+/**
+ * Run comprehensive embedding audit to check coverage and quality
+ * 
+ * @param userId Optional user ID to filter results
+ * @returns Promise<object> Audit report with statistics and findings
+ */
+export async function runEmbeddingAudit(userId?: string): Promise<{
+  totalChunks: number;
+  chunksWithEmbeddings: number;
+  chunksWithoutEmbeddings: number;
+  coveragePercentage: number;
+  itemsWithoutEmbeddings: string[];
+  averageEmbeddingDimensions: number;
+  recommendations: string[];
+}> {
+  try {
+    console.log('🔍 Starting comprehensive embedding audit...');
+    
+    // Get all knowledge chunks, optionally filtered by user
+    const whereClause = userId ? {
+      knowledgeItem: { userId, status: 'READY' as const }
+    } : {
+      knowledgeItem: { status: 'READY' as const }
+    };
+    
+    const allChunks = await prisma.knowledgeChunk.findMany({
+      where: whereClause,
+      include: {
+        knowledgeItem: {
+          select: { id: true, title: true, userId: true }
+        }
+      }
+    });
+    
+    const totalChunks = allChunks.length;
+    const chunksWithEmbeddings = allChunks.filter(chunk => 
+      chunk.embeddingData && chunk.embeddingData !== '[]'
+    ).length;
+    const chunksWithoutEmbeddings = totalChunks - chunksWithEmbeddings;
+    const coveragePercentage = totalChunks > 0 ? (chunksWithEmbeddings / totalChunks) * 100 : 0;
+    
+    // Find items with missing embeddings
+    const itemsWithoutEmbeddings = Array.from(new Set(
+      allChunks
+        .filter(chunk => !chunk.embeddingData || chunk.embeddingData === '[]')
+        .map(chunk => `${chunk.knowledgeItem.title} (ID: ${chunk.knowledgeItemId})`)
+    ));
+    
+    // Calculate average embedding dimensions
+    let totalDimensions = 0;
+    let validEmbeddings = 0;
+    
+    for (const chunk of allChunks) {
+      if (chunk.embeddingData && chunk.embeddingData !== '[]') {
+        try {
+          const embedding = JSON.parse(chunk.embeddingData);
+          if (Array.isArray(embedding) && embedding.length > 0) {
+            totalDimensions += embedding.length;
+            validEmbeddings++;
+          }
+        } catch (error) {
+          console.warn(`Invalid embedding format for chunk ${chunk.id}:`, error);
+        }
+      }
+    }
+    
+    const averageEmbeddingDimensions = validEmbeddings > 0 ? totalDimensions / validEmbeddings : 0;
+    
+    // Generate recommendations
+    const recommendations: string[] = [];
+    
+    if (coveragePercentage < 95) {
+      recommendations.push(`🚨 Low embedding coverage (${coveragePercentage.toFixed(1)}%) - run reembedMissingChunks()`);
+    }
+    
+    if (averageEmbeddingDimensions !== 768) {
+      recommendations.push(`⚠️  Unexpected embedding dimensions (${averageEmbeddingDimensions}) - should be 768 for text-embedding-004`);
+    }
+    
+    if (itemsWithoutEmbeddings.length > 0) {
+      recommendations.push(`📋 ${itemsWithoutEmbeddings.length} items need embedding generation`);
+    }
+    
+    if (recommendations.length === 0) {
+      recommendations.push('✅ All embeddings are properly configured and complete');
+    }
+    
+    const auditReport = {
+      totalChunks,
+      chunksWithEmbeddings,
+      chunksWithoutEmbeddings,
+      coveragePercentage,
+      itemsWithoutEmbeddings,
+      averageEmbeddingDimensions,
+      recommendations
+    };
+    
+    console.log('📊 EMBEDDING AUDIT COMPLETE:');
+    console.log(`   Total chunks: ${totalChunks}`);
+    console.log(`   With embeddings: ${chunksWithEmbeddings}`);
+    console.log(`   Missing embeddings: ${chunksWithoutEmbeddings}`);
+    console.log(`   Coverage: ${coveragePercentage.toFixed(1)}%`);
+    console.log(`   Recommendations: ${recommendations.length}`);
+    
+    return auditReport;
+    
+  } catch (error) {
+    console.error('Error running embedding audit:', error);
+    throw error;
+  }
+}
+
+/**
+ * Reembed all chunks that are missing embeddings
+ * 
+ * @param userId Optional user ID to filter chunks
+ * @param batchSize Number of chunks to process at once
+ * @returns Promise<object> Reembedding results
+ */
+export async function reembedMissingChunks(
+  userId?: string, 
+  batchSize: number = 10
+): Promise<{
+  processed: number;
+  successful: number;
+  failed: number;
+  errors: string[];
+}> {
+  try {
+    console.log('🔄 Starting reembedding process for missing embeddings...');
+    
+    // Get chunks without embeddings
+    const whereClause = userId ? {
+      knowledgeItem: { userId, status: 'READY' as const },
+      OR: [
+        { embeddingData: null },
+        { embeddingData: '[]' },
+        { embeddingData: '' }
+      ]
+    } : {
+      knowledgeItem: { status: 'READY' as const },
+      OR: [
+        { embeddingData: null },
+        { embeddingData: '[]' },
+        { embeddingData: '' }
+      ]
+    };
+    
+    const chunksWithoutEmbeddings = await prisma.knowledgeChunk.findMany({
+      where: whereClause,
+      include: {
+        knowledgeItem: {
+          select: { title: true }
+        }
+      }
+    });
+    
+    console.log(`📋 Found ${chunksWithoutEmbeddings.length} chunks without embeddings`);
+    
+    if (chunksWithoutEmbeddings.length === 0) {
+      return {
+        processed: 0,
+        successful: 0,
+        failed: 0,
+        errors: []
+      };
+    }
+    
+    const gemini = await getGeminiModel();
+    let processed = 0;
+    let successful = 0;
+    let failed = 0;
+    const errors: string[] = [];
+    
+    // Process in batches to avoid rate limits
+    for (let i = 0; i < chunksWithoutEmbeddings.length; i += batchSize) {
+      const batch = chunksWithoutEmbeddings.slice(i, i + batchSize);
+      console.log(`🔄 Processing batch ${Math.floor(i/batchSize) + 1}/${Math.ceil(chunksWithoutEmbeddings.length/batchSize)}`);
+      
+      for (const chunk of batch) {
+        try {
+          // Generate embedding
+          const result = await gemini.embedContent(chunk.content);
+          const embedding = result.embedding.values;
+          
+          // Update chunk with embedding
+          await prisma.knowledgeChunk.update({
+            where: { id: chunk.id },
+            data: { embeddingData: JSON.stringify(embedding) }
+          });
+          
+          successful++;
+          console.log(`  ✅ Embedded chunk from "${chunk.knowledgeItem.title}"`);
+          
+        } catch (error) {
+          failed++;
+          const errorMessage = `Failed to embed chunk ${chunk.id}: ${error instanceof Error ? error.message : 'Unknown error'}`;
+          errors.push(errorMessage);
+          console.error(`  ❌ ${errorMessage}`);
+        }
+        
+        processed++;
+      }
+      
+      // Add delay between batches to respect rate limits
+      if (i + batchSize < chunksWithoutEmbeddings.length) {
+        await new Promise(resolve => setTimeout(resolve, 1000));
+      }
+    }
+    
+    console.log(`🎯 Reembedding complete: ${successful}/${processed} successful`);
+    
+    return {
+      processed,
+      successful,
+      failed,
+      errors
+    };
+    
+  } catch (error) {
+    console.error('Error reembedding missing chunks:', error);
+    throw error;
+  }
+}
+
+/**
+ * Set the strict muscle priority configuration
+ * 
+ * @param enabled Whether to enable strict muscle prioritization
+ * @returns Promise<boolean> Success status
+ */
+export async function setStrictMusclePriority(enabled: boolean): Promise<boolean> {
+  try {
+    console.log(`🎯 ${enabled ? 'Enabling' : 'Disabling'} strict muscle prioritization...`);
+    
+    // Update the AIConfiguration table
+    await prisma.aIConfiguration.upsert({
+      where: { id: 'singleton' },
+      update: { 
+        strictMusclePriority: enabled,
+        updatedAt: new Date()
+      },
+      create: {
+        id: 'singleton',
+        strictMusclePriority: enabled
+      }
+    });
+    
+    console.log(`✅ Strict muscle priority ${enabled ? 'enabled' : 'disabled'} successfully`);
+    
+    return true;
+    
+  } catch (error) {
+    console.error('Error setting strict muscle priority:', error);
+    return false;
+  }
+}
+
+/**
+ * Handle new knowledge upload by generating embeddings immediately
+ * 
+ * @param knowledgeItemId Knowledge item ID
+ * @returns Promise<boolean> Success status
+ */
+export async function handleNewKnowledgeUpload(knowledgeItemId: string): Promise<boolean> {
+  try {
+    console.log(`🆕 Processing new knowledge upload: ${knowledgeItemId}`);
+    
+    // Get all chunks for this knowledge item that need embeddings
+    const chunks = await prisma.knowledgeChunk.findMany({
+      where: {
+        knowledgeItemId,
+        OR: [
+          { embeddingData: null },
+          { embeddingData: '[]' },
+          { embeddingData: '' }
+        ]
+      }
+    });
+    
+    if (chunks.length === 0) {
+      console.log('✅ All chunks already have embeddings');
+      return true;
+    }
+    
+    console.log(`📋 Generating embeddings for ${chunks.length} new chunks...`);
+    
+    const gemini = await getGeminiModel();
+    let successful = 0;
+    
+    for (const chunk of chunks) {
+      try {
+        // Generate embedding
+        const result = await gemini.embedContent(chunk.content);
+        const embedding = result.embedding.values;
+        
+        // Update chunk with embedding
+        await prisma.knowledgeChunk.update({
+          where: { id: chunk.id },
+          data: { embeddingData: JSON.stringify(embedding) }
+        });
+        
+        successful++;
+        console.log(`  ✅ Embedded chunk ${chunk.chunkIndex + 1}/${chunks.length}`);
+        
+        // Add small delay to respect rate limits
+        await new Promise(resolve => setTimeout(resolve, 100));
+        
+      } catch (error) {
+        console.error(`❌ Failed to embed chunk ${chunk.id}:`, error);
+      }
+    }
+    
+    console.log(`🎯 Upload processing complete: ${successful}/${chunks.length} chunks embedded`);
+    return successful === chunks.length;
+    
+  } catch (error) {
+    console.error('Error handling new knowledge upload:', error);
+    return false;
+  }
+}
+
+/**
+ * ✅ NEW: Smart chunking strategy for long documents
+ * Breaks text into semantically meaningful chunks while respecting size limits
+ * 
+ * @param text Original text content
+ * @param maxChunkSize Maximum characters per chunk (default: 600)
+ * @param overlapSize Overlap between chunks for context (default: 100)
+ * @returns Array of content chunks
+ */
+export function chunkTextSmart(
+  text: string, 
+  maxChunkSize: number = 600, 
+  overlapSize: number = 100
+): string[] {
+  if (!text || text.trim().length === 0) {
+    return [];
+  }
+  
+  // First, try to split by paragraphs (double newlines)
+  const paragraphs = text.split(/\n\s*\n/).filter(p => p.trim().length > 0);
+  const chunks: string[] = [];
+  let currentChunk = '';
+  
+  for (const paragraph of paragraphs) {
+    const trimmedPara = paragraph.trim();
+    
+    // If this paragraph alone exceeds max size, split it by sentences
+    if (trimmedPara.length > maxChunkSize) {
+      // Finish current chunk if it exists
+      if (currentChunk.trim()) {
+        chunks.push(currentChunk.trim());
+        currentChunk = '';
+      }
+      
+      // Split large paragraph by sentences
+      const sentences = trimmedPara.split(/[.!?]+/).filter(s => s.trim().length > 0);
+      let sentenceChunk = '';
+      
+      for (const sentence of sentences) {
+        const trimmedSentence = sentence.trim() + '.'; // Add back the punctuation
+        
+        if ((sentenceChunk + ' ' + trimmedSentence).length > maxChunkSize) {
+          if (sentenceChunk.trim()) {
+            chunks.push(sentenceChunk.trim());
+          }
+          sentenceChunk = trimmedSentence;
+        } else {
+          sentenceChunk += (sentenceChunk ? ' ' : '') + trimmedSentence;
+        }
+      }
+      
+      if (sentenceChunk.trim()) {
+        currentChunk = sentenceChunk.trim();
+      }
+      
+    } else if ((currentChunk + '\n\n' + trimmedPara).length > maxChunkSize) {
+      // Current paragraph would make chunk too large
+      if (currentChunk.trim()) {
+        chunks.push(currentChunk.trim());
+      }
+      currentChunk = trimmedPara;
+      
+    } else {
+      // Add paragraph to current chunk
+      currentChunk += (currentChunk ? '\n\n' : '') + trimmedPara;
+    }
+  }
+  
+  // Add the last chunk if it exists
+  if (currentChunk.trim()) {
+    chunks.push(currentChunk.trim());
+  }
+  
+  // Apply overlap if we have multiple chunks
+  if (chunks.length > 1 && overlapSize > 0) {
+    const overlappedChunks: string[] = [];
+    
+    for (let i = 0; i < chunks.length; i++) {
+      let chunk = chunks[i];
+      
+      // Add overlap from previous chunk
+      if (i > 0 && overlappedChunks[i - 1]) {
+        const prevChunk = overlappedChunks[i - 1];
+        const overlapText = prevChunk.slice(-overlapSize).trim();
+        if (overlapText && !chunk.startsWith(overlapText)) {
+          chunk = overlapText + '\n...\n' + chunk;
+        }
+      }
+      
+      overlappedChunks.push(chunk);
+    }
+    
+    return overlappedChunks;
+  }
+  
+  return chunks;
+}
+
+/**
+ * ✅ NEW: Analyze and suggest chunking improvements for existing knowledge items
+ * 
+ * @param knowledgeItemId Optional knowledge item ID to analyze specific item
+ * @returns Promise<object> Analysis report with recommendations
+ */
+export async function analyzeChunkingQuality(knowledgeItemId?: string): Promise<{
+  items: Array<{
+    id: string;
+    title: string;
+    chunkCount: number;
+    avgChunkSize: number;
+    maxChunkSize: number;
+    minChunkSize: number;
+    recommendations: string[];
+  }>;
+  overallRecommendations: string[];
+}> {
+  try {
+    console.log('📊 Analyzing chunking quality...');
+    
+    // Get knowledge items to analyze
+    const whereClause = knowledgeItemId ? 
+      { id: knowledgeItemId } : 
+      { status: 'READY' as const };
+    
+    const knowledgeItems = await prisma.knowledgeItem.findMany({
+      where: whereClause,
+      include: {
+        chunks: {
+          select: {
+            content: true
+          }
+        }
+      }
+    });
+    
+    const itemAnalysis = [];
+    const overallRecommendations: string[] = [];
+    
+    for (const item of knowledgeItems) {
+      const chunks = item.chunks;
+      const chunkCount = chunks.length;
+      
+      if (chunkCount === 0) continue;
+      
+      const chunkSizes = chunks.map((c: { content: string }) => c.content.length);
+      const avgChunkSize = chunkSizes.reduce((sum: number, size: number) => sum + size, 0) / chunkCount;
+      const maxChunkSize = Math.max(...chunkSizes);
+      const minChunkSize = Math.min(...chunkSizes);
+      
+      const recommendations: string[] = [];
+      
+      // Analyze chunk distribution
+      if (chunkCount > 50) {
+        recommendations.push(`⚠️ Very high chunk count (${chunkCount}) - consider splitting into focused sub-topics`);
+      }
+      
+      if (maxChunkSize > 1000) {
+        recommendations.push(`📏 Large chunks detected (max: ${maxChunkSize} chars) - consider smaller chunks for better retrieval`);
+      }
+      
+      if (minChunkSize < 100) {
+        recommendations.push(`📉 Very small chunks detected (min: ${minChunkSize} chars) - consider merging with adjacent content`);
+      }
+      
+      const sizeVariance = chunkSizes.reduce((acc: number, size: number) => acc + Math.pow(size - avgChunkSize, 2), 0) / chunkCount;
+      const sizeStdDev = Math.sqrt(sizeVariance);
+      
+      if (sizeStdDev > avgChunkSize * 0.5) {
+        recommendations.push(`📊 High chunk size variation (σ=${sizeStdDev.toFixed(0)}) - consider more consistent chunking`);
+      }
+      
+      if (recommendations.length === 0) {
+        recommendations.push('✅ Chunking appears well-balanced');
+      }
+      
+      itemAnalysis.push({
+        id: item.id,
+        title: item.title,
+        chunkCount,
+        avgChunkSize: Math.round(avgChunkSize),
+        maxChunkSize,
+        minChunkSize,
+        recommendations
+      });
+    }
+    
+    // Generate overall recommendations
+    const totalItems = itemAnalysis.length;
+    const totalChunks = itemAnalysis.reduce((sum, item) => sum + item.chunkCount, 0);
+    const avgChunksPerItem = totalChunks / totalItems;
+    
+    if (avgChunksPerItem > 30) {
+      overallRecommendations.push('📈 High average chunks per item - consider splitting large documents');
+    }
+    
+    const dominatingItems = itemAnalysis.filter(item => item.chunkCount > totalChunks * 0.3);
+    if (dominatingItems.length > 0) {
+      overallRecommendations.push(`🎯 Found ${dominatingItems.length} dominating items - these may bias search results`);
+    }
+    
+    if (overallRecommendations.length === 0) {
+      overallRecommendations.push('✅ Overall chunking distribution looks healthy');
+    }
+    
+    console.log(`📊 Analysis complete: ${totalItems} items, ${totalChunks} total chunks`);
+    
+    return {
+      items: itemAnalysis,
+      overallRecommendations
+    };
+    
+  } catch (error) {
+    console.error('Error analyzing chunking quality:', error);
+    throw error;
+  }
 }
