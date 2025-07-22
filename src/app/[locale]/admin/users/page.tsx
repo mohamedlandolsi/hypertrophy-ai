@@ -100,16 +100,7 @@ export default function UserManagementPage() {
     setFilteredUsers(filtered);
   }, [users, searchTerm, selectedRole]);
 
-  useEffect(() => {
-    fetchUsers();
-    fetchStats();
-  }, []);
-
-  useEffect(() => {
-    filterUsers();
-  }, [users, searchTerm, selectedRole, filterUsers]);
-
-  const fetchUsers = async () => {
+  const fetchUsers = useCallback(async () => {
     try {
       const response = await fetch('/api/admin/users');
       if (!response.ok) {
@@ -121,9 +112,9 @@ export default function UserManagementPage() {
       console.error('Error fetching users:', error);
       showToast.error(tToasts('usersLoadErrorTitle'));
     }
-  };
+  }, [tToasts]);
 
-  const fetchStats = async () => {
+  const fetchStats = useCallback(async () => {
     try {
       const response = await fetch('/api/admin/users/stats');
       if (!response.ok) {
@@ -136,7 +127,16 @@ export default function UserManagementPage() {
     } finally {
       setIsLoading(false);
     }
-  };
+  }, []);
+
+  useEffect(() => {
+    fetchUsers();
+    fetchStats();
+  }, [fetchUsers, fetchStats]);
+
+  useEffect(() => {
+    filterUsers();
+  }, [users, searchTerm, selectedRole, filterUsers]);
 
   const updateUserRole = async (userId: string, newRole: 'user' | 'admin') => {
     try {

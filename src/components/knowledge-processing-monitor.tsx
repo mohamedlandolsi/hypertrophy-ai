@@ -7,7 +7,7 @@
 
 'use client';
 
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useCallback } from 'react';
 import { useTranslations } from 'next-intl';
 import { showToast } from '@/lib/toast';
 import { Button } from '@/components/ui/button';
@@ -61,12 +61,7 @@ export default function KnowledgeProcessingMonitor() {
   const [lastResult, setLastResult] = useState<ReprocessingResult | null>(null);
   const [error, setError] = useState<string | null>(null);
 
-  // Load status on component mount
-  useEffect(() => {
-    loadStatus();
-  }, []);
-
-  const loadStatus = async () => {
+  const loadStatus = useCallback(async () => {
     try {
       setLoading(true);
       setError(null);
@@ -86,7 +81,12 @@ export default function KnowledgeProcessingMonitor() {
     } finally {
       setLoading(false);
     }
-  };
+  }, [tToasts]);
+
+  // Load status on component mount
+  useEffect(() => {
+    loadStatus();
+  }, [loadStatus]);
 
   const runReprocessing = async (options: { limit?: number; forceReprocess?: boolean } = {}) => {
     const operation = options.forceReprocess ? 'Reprocessing' : 'Processing';

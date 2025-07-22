@@ -259,7 +259,7 @@ const ChatPage = () => {
     } else {
       showToast.error('Error', `Failed to ${operation}. Please try again.`);
     }
-  }, [isOnline]);
+  }, [isOnline, t]);
 
   const loadChatHistory = useCallback(async () => {
     try {
@@ -300,7 +300,7 @@ const ChatPage = () => {
     } finally {
       setIsLoadingMessages(false);
     }
-  }, [activeChatId, messages.length, router, handleApiError, setIsLoadingMessages, setActiveChatId, setMessages]);
+  }, [activeChatId, messages.length, router, handleApiError, setIsLoadingMessages, setActiveChatId, setMessages, t]);
 
   const handleNewChat = useCallback(async () => {
     setActiveChatId(null);

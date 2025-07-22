@@ -64,7 +64,14 @@ export function ServiceWorkerRegister() {
 
       // Add debug functions to global scope in production
       if (typeof window !== 'undefined') {
-        (window as any).hypertroqDebug = {
+        interface HypertroqDebug {
+          clearCaches(): Promise<void>;
+          unregisterSW(): Promise<void>;
+          forceRefresh(): Promise<void>;
+          checkCaches(): Promise<void>;
+        }
+
+        const hypertroqDebug: HypertroqDebug = {
           async clearCaches() {
             const cacheNames = await caches.keys();
             await Promise.all(cacheNames.map(name => caches.delete(name)));
@@ -92,6 +99,8 @@ export function ServiceWorkerRegister() {
             }
           }
         };
+
+        (window as typeof window & { hypertroqDebug: HypertroqDebug }).hypertroqDebug = hypertroqDebug;
         console.log('Debug functions available: window.hypertroqDebug');
       }
     }
