@@ -8,7 +8,6 @@
 import { extractTextFromFile } from './file-processor';
 import { chunkFitnessContent, validateChunks, cleanText, type TextChunk } from './text-chunking';
 import { generateEmbeddingsBatch } from './vector-embeddings';
-import { storeEmbedding } from './vector-search';
 import { prisma } from './prisma';
 
 export interface ProcessingResult {
@@ -223,9 +222,21 @@ async function createKnowledgeChunks(
   chunks: TextChunk[]
 ): Promise<Array<{ id: string; content: string; chunkIndex: number }>> {
   try {
+    // First, get the knowledge item title for prefixing
+    const knowledgeItem = await prisma.knowledgeItem.findUnique({
+      where: { id: knowledgeItemId },
+      select: { title: true }
+    });
+
+    if (!knowledgeItem) {
+      throw new Error(`Knowledge item with ID ${knowledgeItemId} not found`);
+    }
+
+    const title = knowledgeItem.title;
+
     const chunkData = chunks.map(chunk => ({
       knowledgeItemId,
-      content: chunk.content,
+      content: chunk.content, // Store original content in DB
       chunkIndex: chunk.index,
       embeddingData: null
     }));
@@ -235,14 +246,18 @@ async function createKnowledgeChunks(
       data: chunkData
     });
 
-    // Fetch the created chunks with their IDs
+    // Fetch the created chunks with their IDs and prefix content for embedding
     const createdChunks = await prisma.knowledgeChunk.findMany({
       where: { knowledgeItemId },
       select: { id: true, content: true, chunkIndex: true },
       orderBy: { chunkIndex: 'asc' }
     });
 
-    return createdChunks;
+    // Return chunks with prefixed content for embedding generation
+    return createdChunks.map(chunk => ({
+      ...chunk,
+      content: `${title}\n\n${chunk.content}` // Prefix for embedding
+    }));
 
   } catch (error) {
     console.error('Error creating knowledge chunks:', error);
@@ -287,7 +302,10 @@ async function generateAndStoreEmbeddings(
       }
 
       try {
-        await storeEmbedding(chunk.id, result.embedding);
+        await prisma.knowledgeChunk.update({
+          where: { id: chunk.id },
+          data: { embeddingData: JSON.stringify(result.embedding) }
+        });
         successCount++;
       } catch (storeError) {
         console.error(`❌ Failed to store embedding for chunk ${chunk.id}:`, storeError);

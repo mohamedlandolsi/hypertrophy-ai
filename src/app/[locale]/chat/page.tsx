@@ -225,7 +225,24 @@ const ChatPage = () => {
     setAutoScroll(isAtBottom);
   };  // Enhanced error handling for API calls
   const handleApiError = useCallback((error: unknown, operation: string) => {
-    console.error(`Error during ${operation}:`, error);
+    // Enhanced error logging
+    if (error instanceof Error) {
+      console.error(`Error during ${operation}:`, {
+        name: error.name,
+        message: error.message,
+        stack: error.stack
+      });
+    } else if (error && typeof error === 'object') {
+      console.error(`Error during ${operation}:`, {
+        errorObject: JSON.stringify(error, null, 2),
+        keys: Object.keys(error as object)
+      });
+    } else {
+      console.error(`Error during ${operation}:`, {
+        rawError: String(error),
+        type: typeof error
+      });
+    }
     
     // Check if it's a structured API error response
     if (error && typeof error === 'object' && 'message' in error) {
@@ -257,7 +274,11 @@ const ChatPage = () => {
     } else if (!isOnline) {
       showToast.networkError(operation);
     } else {
-      showToast.error('Error', `Failed to ${operation}. Please try again.`);
+      // Handle cases where error object is malformed or empty
+      const errorMessage = error instanceof Error ? error.message : 
+                          (error && typeof error === 'string') ? error :
+                          `Failed to ${operation}. Please try again.`;
+      showToast.error('Error', errorMessage);
     }
   }, [isOnline, t]);
 
@@ -517,8 +538,14 @@ const ChatPage = () => {
         let errorData;
         try {
           errorData = await response.json();
-        } catch {
-          errorData = { message: t('toasts.errorSendingMessage') };
+        } catch (parseError) {
+          console.warn('Failed to parse error response:', parseError);
+          errorData = { 
+            message: t('toasts.errorSendingMessage'),
+            type: 'NETWORK',
+            status: response.status,
+            statusText: response.statusText
+          };
         }
         
         // Handle subscription limit errors specifically
@@ -535,6 +562,11 @@ const ChatPage = () => {
       }
 
       const data = await response.json();
+      
+      // Validate response data structure
+      if (!data || !data.assistantMessage || !data.userMessage) {
+        throw new Error('Invalid response structure from chat API');
+      }
       
       // Update messages with actual data from server
       setMessages(prev => {
@@ -576,6 +608,36 @@ const ChatPage = () => {
       }
 
     } catch (error) {
+      // Enhanced error logging with better serialization
+      const errorDetails = {
+        errorType: typeof error,
+        activeChatId,
+        isSecondMessage: messages.length > 0,
+        userExists: !!user,
+        messageCount: messages.length,
+        isGuest: !user
+      };
+
+      // Handle different error types
+      if (error instanceof Error) {
+        console.error('Chat message error details:', {
+          ...errorDetails,
+          errorName: error.name,
+          errorMessage: error.message,
+          errorStack: error.stack
+        });
+      } else if (error && typeof error === 'object') {
+        console.error('Chat message error details:', {
+          ...errorDetails,
+          errorObject: JSON.stringify(error, null, 2)
+        });
+      } else {
+        console.error('Chat message error details:', {
+          ...errorDetails,
+          rawError: String(error)
+        });
+      }
+      
       handleApiError(error, 'send message');
       
       // Remove the optimistic message on error
@@ -606,6 +668,7 @@ const ChatPage = () => {
     setShowLoginDialog,
     setGuestMessageCount,
     setMessages,
+    messages.length, // Added missing dependency
     setIsAiThinking,
     setActiveChatId,
     userPlan,

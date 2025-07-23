@@ -1,19 +1,26 @@
 import { GoogleGenerativeAI, SchemaType, Part } from '@google/generative-ai';
 import { prisma } from './prisma';
 import { 
-  extractAndSaveInformationLegacy, 
   generateMemorySummary, 
   addCoachingNote,
   updateClientMemory,
   type MemoryUpdate
 } from './client-memory';
-import { getRelevantContext } from './vector-search';
+import { fetchRelevantKnowledge, type KnowledgeContext } from './vector-search';
+import { generateEmbedding } from './vector-embeddings';
+import { generateSubQueries, shouldUseMultiQuery } from './query-generator';
 
 // Initialize the Gemini client
 const genAI = new GoogleGenerativeAI(process.env.GEMINI_API_KEY!);
 
+// Types
+interface GeminiResponse {
+  content: string;
+  citations?: Array<{ id: string; title: string }>;
+}
+
 // Function to get AI configuration - REQUIRES admin configuration
-async function getAIConfiguration() {
+export async function getAIConfiguration() {
   try {
     const config = await prisma.aIConfiguration.findUnique({
       where: { id: 'singleton' }
@@ -41,7 +48,11 @@ async function getAIConfiguration() {
       topP: config.topP ?? 0.85,
       useKnowledgeBase: config.useKnowledgeBase ?? true,
       useClientMemory: config.useClientMemory ?? true,
-      enableWebSearch: config.enableWebSearch ?? false
+      enableWebSearch: config.enableWebSearch ?? false,
+      // RAG settings
+      ragSimilarityThreshold: config.ragSimilarityThreshold ?? 0.6,
+      ragMaxChunks: config.ragMaxChunks ?? 5,
+      ragHighRelevanceThreshold: config.ragHighRelevanceThreshold ?? 0.8
     };
   } catch (error) {
     console.error('Error fetching AI configuration:', error);
@@ -167,53 +178,9 @@ const updateClientProfileFunction = {
   }
 } as const;
 
-// Handler for the update client profile function call
-async function handleUpdateClientProfile(userId: string, functionArgs: Record<string, unknown>): Promise<string> {
-  try {
-    // Convert the function arguments to MemoryUpdate format
-    const updates: MemoryUpdate = {};
-    
-    // Map function arguments to MemoryUpdate properties
-    Object.keys(functionArgs).forEach(key => {
-      if (functionArgs[key] !== undefined && functionArgs[key] !== null) {
-        (updates as Record<string, unknown>)[key] = functionArgs[key];
-      }
-    });
-
-    // Update the client memory
-    await updateClientMemory(userId, updates);
-    
-    // Add a coaching note about the update
-    const updatedFields = Object.keys(updates).join(', ');
-    await addCoachingNote(
-      userId, 
-      `Profile updated via LLM function call: ${updatedFields}`, 
-      'profile_updates'
-    );
-
-    // Return a summary of what was updated
-    const updateSummary = Object.entries(updates).map(([key, value]) => {
-      if (Array.isArray(value)) {
-        return `${key}: ${value.join(', ')}`;
-      }
-      return `${key}: ${value}`;
-    }).join('; ');
-
-    return `Successfully updated client profile: ${updateSummary}`;
-  } catch (error) {
-    console.error('Error updating client profile:', error);
-    return 'Failed to update client profile';
-  }
-}
-
 // Function to detect if text contains Arabic characters
 function isArabicText(text: string): boolean {
-  // Arabic Unicode ranges:
-  // U+0600-U+06FF: Arabic
-  // U+0750-U+077F: Arabic Supplement
-  // U+08A0-U+08FF: Arabic Extended-A
-  // U+FB50-U+FDFF: Arabic Presentation Forms-A
-  // U+FE70-U+FEFF: Arabic Presentation Forms-B
+  // Arabic Unicode ranges
   const arabicRegex = /[\u0600-\u06FF\u0750-\u077F\u08A0-\u08FF\uFB50-\uFDFF\uFE70-\uFEFF]/g;
   
   // Count Arabic characters
@@ -221,7 +188,6 @@ function isArabicText(text: string): boolean {
   const arabicCharCount = arabicMatches ? arabicMatches.length : 0;
   
   // Consider text as Arabic if it has a significant portion of Arabic characters
-  // This helps handle mixed content with some English technical terms
   const totalChars = text.replace(/\s/g, '').length; // Count non-whitespace characters
   const arabicRatio = totalChars > 0 ? arabicCharCount / totalChars : 0;
   
@@ -234,7 +200,8 @@ function detectConversationLanguage(conversation: ConversationMessage[]): 'arabi
   const recentUserMessages = conversation
     .filter(msg => msg.role === 'user')
     .slice(-3);
-    let arabicScore = 0;
+    
+  let arabicScore = 0;
   const totalMessages = recentUserMessages.length;
   
   for (const message of recentUserMessages) {
@@ -245,58 +212,6 @@ function detectConversationLanguage(conversation: ConversationMessage[]): 'arabi
   
   // If majority of recent messages are in Arabic, respond in Arabic
   return arabicScore > totalMessages * 0.5 ? 'arabic' : 'english';
-}
-
-// Function to expand query for better retrieval
-async function expandQueryForRetrieval(query: string): Promise<string> {
-  try {
-    // Skip expansion for very short queries or if API key is not available
-    if (query.length < 8 || !process.env.GEMINI_API_KEY) {
-      return query;
-    }
-
-    const model = genAI.getGenerativeModel({ 
-      model: "gemini-1.5-flash",
-      generationConfig: {
-        temperature: 0.3,
-        maxOutputTokens: 100,
-      }
-    });
-
-    const prompt = `You are a query expansion expert for fitness and hypertrophy knowledge retrieval.
-
-Original query: "${query}"
-
-Task: Expand this query to improve retrieval from a fitness science knowledge base. Add relevant synonyms, scientific terms, and related concepts that would help find the right information.
-
-Rules:
-- Keep it concise (1-2 sentences max)
-- Add scientific terminology
-- Include alternative phrasings
-- Focus on fitness, training, nutrition, and exercise science
-- Don't change the core meaning
-
-For example:
-- "perception of effort" → "perception of effort RPE rate of perceived exertion RIR repetitions in reserve training intensity subjective effort"
-- "forearm training" → "forearm training wrist flexors extensors grip strength hand muscle development"
-
-Expanded query:`;
-
-    const result = await model.generateContent(prompt);
-    const expandedQuery = result.response.text().trim();
-
-    // Use expanded query if it's reasonable, otherwise fall back to original
-    if (expandedQuery.length > 5 && expandedQuery.length < 300) {
-      console.log(`🔍 Query expansion: "${query}" → "${expandedQuery}"`);
-      return expandedQuery;
-    } else {
-      return query;
-    }
-
-  } catch (error) {
-    console.error('Error expanding query:', error);
-    return query; // Fallback to original query
-  }
 }
 
 // Function to get the appropriate language instruction
@@ -340,6 +255,19 @@ export async function sendToGemini(
   imageBuffer?: Buffer | null,
   imageMimeType?: string | null
 ): Promise<string> {
+  const result = await sendToGeminiWithCitations(conversation, userId, imageBuffer, imageMimeType);
+  return result.content;
+}
+
+export async function sendToGeminiWithCitations(
+  conversation: ConversationMessage[], 
+  userId?: string,
+  imageBuffer?: Buffer | null,
+  imageMimeType?: string | null
+): Promise<GeminiResponse> {
+  const geminiStartTime = Date.now();
+  console.log(`🚀 Starting sendToGeminiWithCitations (User: ${userId || 'GUEST'})`);
+  
   try {
     // Fetch AI configuration - will throw if not properly configured
     const aiConfig = await getAIConfiguration();
@@ -349,121 +277,152 @@ export async function sendToGemini(
       const latestUserMessage = conversation[conversation.length - 1];
       
       if (isArabicText(latestUserMessage.content)) {
-        return "عذراً، لم يتم تكوين مفتاح واجهة برمجة التطبيقات Gemini. يرجى التواصل مع المسؤول لتكوين النظام.";
+        return {
+          content: "عذراً، لم يتم تكوين مفتاح واجهة برمجة التطبيقات Gemini. يرجى التواصل مع المسؤول لتكوين النظام.",
+          citations: []
+        };
       }
       
-      return "Sorry, the Gemini API key is not configured. Please contact the administrator to configure the system.";
-    }    // Get the latest user message to detect language
+      return {
+        content: "Sorry, the Gemini API key is not configured. Please contact the administrator to configure the system.",
+        citations: []
+      };
+    }
+
+    // Get the latest user message to detect language
     const latestUserMessage = conversation[conversation.length - 1];
     const languageInstruction = getLanguageInstruction(conversation);
 
-    // Fetch user's knowledge base content using enhanced vector search (if enabled)
+    // ENHANCED RAG SYSTEM: Multi-Query Retrieval for comprehensive context
     let knowledgeContext = '';
-    if (userId && aiConfig.useKnowledgeBase) {
+    let referencedSources: Array<{ id: string; title: string }> = [];
+    
+    // Allow RAG for both authenticated users AND guest users for better performance
+    if (aiConfig.useKnowledgeBase) {
+      const ragStart = Date.now();
       try {
-        // Use the user's latest message to find relevant content
         const userQuery = latestUserMessage.content;
+        console.log(`🔍 MULTI-QUERY RAG: Starting retrieval for query: "${userQuery}" (User: ${userId || 'GUEST'})`);
         
-        console.log(`🔍 RAG DEBUG: Starting enhanced retrieval for query: "${userQuery}"`);
-        console.log(`🔍 RAG DEBUG: User ID: ${userId}`);
+        // Determine if we should use multi-query retrieval
+        const useMultiQuery = shouldUseMultiQuery(userQuery);
+        console.log(`🎯 Multi-query strategy: ${useMultiQuery ? 'ENABLED' : 'DISABLED'} for this query`);
         
-        // Use the enhanced hybrid search approach
-        const { performHybridSearch } = await import('./vector-search');
+        let allRelevantChunks: KnowledgeContext[] = [];
         
-        const searchResults = await performHybridSearch(userQuery, userId, {
-          limit: 8,
-          threshold: 0.25, // Lower threshold for better recall
-          vectorWeight: 0.6,
-          keywordWeight: 0.4,
-          rerank: true
-        });
-
-        console.log(`🔍 RAG DEBUG: Enhanced hybrid search found ${searchResults.length} results`);
-
-        if (searchResults && searchResults.length > 0) {
-          // Group chunks by knowledge item and format with better context
-          const groupedChunks = searchResults.reduce((groups, result) => {
-            const title = result.knowledgeItemTitle;
-            if (!groups[title]) {
-              groups[title] = [];
+        if (useMultiQuery) {
+          // Step 1: Generate sub-queries for comprehensive retrieval
+          const subQueries = await generateSubQueries(userQuery);
+          console.log(`📝 Generated ${subQueries.length} sub-queries:`, subQueries);
+          
+          // Step 2: Process ALL sub-queries in PARALLEL for maximum speed
+          const retrievalPromises = subQueries.map(async (query) => {
+            console.log(`🔍 Starting parallel processing for sub-query: "${query}"`);
+            
+            try {
+              const queryEmbedding = await generateEmbedding(query);
+              const chunks = await fetchRelevantKnowledge(
+                queryEmbedding.embedding,
+                Math.max(aiConfig.ragMaxChunks / subQueries.length, 3), // Distribute chunks across queries
+                aiConfig.ragHighRelevanceThreshold
+              );
+              
+              console.log(`📚 Sub-query "${query}" returned ${chunks.length} chunks`);
+              return chunks;
+              
+            } catch (queryError) {
+              console.warn(`⚠️ Failed to process sub-query "${query}":`, queryError);
+              return []; // Return empty array on error to not crash the whole process
             }
-            groups[title].push(result);
-            return groups;
-          }, {} as Record<string, typeof searchResults>);
-
-          // Format the context with source attribution and relevance scores
-          const contextParts = Object.entries(groupedChunks).map(([title, chunks]) => {
-            const knowledgeItemId = chunks[0].knowledgeItemId;
-            const sortedChunks = chunks.sort((a, b) => a.chunkIndex - b.chunkIndex);
-            const avgSimilarity = chunks.reduce((sum, chunk) => sum + chunk.similarity, 0) / chunks.length;
-            
-            const chunkTexts = sortedChunks.map(chunk => {
-              const relevanceMarker = chunk.similarity > 0.7 ? ' [HIGH RELEVANCE]' : 
-                                     chunk.similarity > 0.5 ? ' [MEDIUM RELEVANCE]' : '';
-              return `${chunk.content}${relevanceMarker}`;
-            }).join('\n\n');
-            
-            return `=== ${title} id:${knowledgeItemId} (Relevance: ${(avgSimilarity * 100).toFixed(1)}%) ===\n${chunkTexts}`;
-          });
-
-          knowledgeContext = contextParts.join('\n\n');
-          console.log(`📚 Enhanced RAG success: ${knowledgeContext.length} characters from ${searchResults.length} chunks`);
-          console.log(`📚 Knowledge items found: ${Object.keys(groupedChunks).join(', ')}`);
-        } else {
-          console.log('🔍 RAG DEBUG: Enhanced search returned no results, trying fallback approach');
-          
-          // Enhanced fallback: Try with query expansion
-          const expandedQuery = await expandQueryForRetrieval(userQuery);
-          console.log(`🔍 RAG DEBUG: Expanded query: "${expandedQuery}"`);
-          
-          const fallbackResults = await performHybridSearch(expandedQuery, userId, {
-            limit: 6,
-            threshold: 0.2,
-            vectorWeight: 0.5,
-            keywordWeight: 0.5,
-            rerank: false
           });
           
-          if (fallbackResults && fallbackResults.length > 0) {
-            const contextParts = fallbackResults.map(result => 
-              `=== ${result.knowledgeItemTitle} id:${result.knowledgeItemId} (${(result.similarity * 100).toFixed(1)}%) ===\n${result.content}`
-            );
-            knowledgeContext = contextParts.join('\n\n');
-            console.log(`📚 Fallback RAG success: ${knowledgeContext.length} characters`);
-          } else {
-            console.log('🔍 RAG DEBUG: Both enhanced and fallback searches failed, using basic fallback');
-            
-            // Last resort: Get recent documents
-            const knowledgeItems = await prisma.knowledgeItem.findMany({
-              where: {
-                userId: userId,
-                status: 'READY'
-              },
-              select: {
-                id: true,
-                title: true,
-                content: true,
-                type: true
-              },
-              orderBy: { createdAt: 'desc' },
-              take: 3
-            });
-
-            if (knowledgeItems.length > 0) {
-              knowledgeContext = '\n\n' + 
-                knowledgeItems.map((item) => 
-                  `=== ${item.title} id:${item.id} ===\n${item.content || '[Content not available for text analysis]'}`
-                ).join('\n\n');
-              console.log(`🔍 RAG DEBUG: Basic fallback context length: ${knowledgeContext.length} characters`);
+          // Wait for ALL parallel searches to complete simultaneously
+          console.log(`⚡ Running ${subQueries.length} queries in parallel...`);
+          const startTime = Date.now();
+          const allChunksNested = await Promise.all(retrievalPromises);
+          const parallelTime = Date.now() - startTime;
+          console.log(`🚀 Parallel retrieval completed in ${parallelTime}ms`);
+          
+          // Step 3: De-duplicate and combine results efficiently using Map
+          const allChunks = new Map<string, KnowledgeContext>(); // Use Map for O(1) lookups
+          for (const chunkList of allChunksNested) {
+            for (const chunk of chunkList) {
+              const chunkKey = `${chunk.knowledgeId}-${chunk.chunkIndex}`;
+              if (!allChunks.has(chunkKey)) {
+                allChunks.set(chunkKey, chunk);
+              }
             }
           }
+          
+          allRelevantChunks = Array.from(allChunks.values());
+          console.log(`🎯 Multi-query retrieval: Combined ${allRelevantChunks.length} unique chunks from ${subQueries.length} queries in ${parallelTime}ms`);
+          
+        } else {
+          // Step 1: Single-query retrieval (original logic)
+          const queryEmbeddingResult = await generateEmbedding(userQuery);
+          
+          allRelevantChunks = await fetchRelevantKnowledge(
+            queryEmbeddingResult.embedding,
+            aiConfig.ragMaxChunks,
+            aiConfig.ragHighRelevanceThreshold
+          );
+          
+          console.log(`🔍 Single-query retrieval returned ${allRelevantChunks.length} chunks`);
         }
+        
+        // Step 3: Process and format the retrieved knowledge
+        if (allRelevantChunks.length > 0) {
+          // Sort by relevance and limit to max chunks
+          const sortedChunks = allRelevantChunks
+            .sort((a, b) => b.similarity - a.similarity)
+            .slice(0, aiConfig.ragMaxChunks);
+          
+          // Group chunks by knowledge item for better context
+          const groupedChunks = sortedChunks.reduce((groups, chunk) => {
+            if (!groups[chunk.knowledgeId]) {
+              groups[chunk.knowledgeId] = {
+                title: chunk.title,
+                chunks: []
+              };
+            }
+            groups[chunk.knowledgeId].chunks.push(chunk);
+            return groups;
+          }, {} as Record<string, { title: string; chunks: KnowledgeContext[] }>);
+            
+          // Build clean context for AI (no titles/headers) and track sources separately
+          const contextParts: string[] = [];
+          const uniqueCitations: { id: string; title: string }[] = [];
+          
+          Object.entries(groupedChunks).forEach(([knowledgeId, { title, chunks }]) => {
+            // Sort chunks by their original order in the document
+            const sortedChunks = chunks.sort((a, b) => a.chunkIndex - b.chunkIndex);
+            
+            // Create clean context content for AI (no titles, headers, or source references)
+            const chunkContent = sortedChunks.map(chunk => chunk.content).join('\n\n');
+            contextParts.push(chunkContent);
+            
+            // Track unique sources for UI citations only
+            if (!uniqueCitations.find(cite => cite.id === knowledgeId)) {
+              uniqueCitations.push({ id: knowledgeId, title });
+            }
+          });
+          
+          // Store citations for potential return to API consumer
+          referencedSources = uniqueCitations;
+          knowledgeContext = contextParts.join('\n\n---\n\n');
+          console.log(`📚 ${useMultiQuery ? 'MULTI-QUERY' : 'SINGLE-QUERY'} RAG: Generated context from ${Object.keys(groupedChunks).length} knowledge items (${knowledgeContext.length} chars)`);
+        } else {
+          console.log('📚 RAG: No relevant chunks found');
+        }
+        
+        const ragTime = Date.now() - ragStart;
+        console.log(`🔍 RAG processing completed in ${ragTime}ms`);
       } catch (error) {
-        console.error('🔍 RAG DEBUG: Error in enhanced retrieval:', error);
-        // Continue without knowledge context if there's an error
+        const ragTime = Date.now() - ragStart;
+        console.error('❌ MULTI-QUERY RAG ERROR:', error);
+        console.log(`🔍 RAG processing failed after ${ragTime}ms`);
+        // Continue without knowledge context on error
       }
-    } else {
-      console.log('🔍 RAG DEBUG: Knowledge base disabled or no user ID');
     }
 
     // Fetch client memory for personalized coaching (if enabled)
@@ -478,7 +437,9 @@ export async function sendToGemini(
         console.error('Error fetching client memory:', error);
         // Continue without client memory if there's an error
       }
-    }    // Enhanced system instruction with structured context and explicit grounding
+    }
+
+    // Enhanced system instruction with structured context and explicit grounding
     const systemInstruction = `${aiConfig.systemPrompt}
 
 ${languageInstruction}
@@ -486,25 +447,26 @@ ${languageInstruction}
 ${clientMemoryContext}
 
 ${knowledgeContext ? 
-`SCIENTIFIC REFERENCE MATERIAL (Your Primary Source of Truth):
+`--- KNOWLEDGE BASE CONTEXT ---
 ${knowledgeContext}
+--- END OF KNOWLEDGE BASE CONTEXT ---
 
 CRITICAL INSTRUCTIONS FOR CONTEXT USAGE:
-1. ALWAYS prioritize information from the Scientific Reference Material above
-2. When you use information from a knowledge base article, you MUST cite it by including a link in the following format at the end of the sentence: [Article Title](article:article-id). You can get the title and id from the context header (=== Title id:article-id ===)
-3. If the reference material contains information relevant to the user's question, cite it explicitly with clickable links
-4. If the reference material contradicts your general knowledge, follow the reference material
-5. If the reference material is insufficient, clearly state what additional information might be needed
-6. When making recommendations, directly connect them to specific points in the reference material with proper citations
-7. If you cannot find relevant information in the reference material, explicitly state this limitation
+1. ALWAYS prioritize information from the Knowledge Base Context above your general knowledge
+2. Synthesize the provided information seamlessly as if it is your own expert knowledge
+3. NEVER mention article titles, sources, or reference the knowledge base directly
+4. If the context material contradicts your general knowledge, follow the context material
+5. If the context material is insufficient, you may supplement with general knowledge
+6. When making recommendations, base them on the provided context when available
+7. Integrate the knowledge naturally without revealing its source
 
-RESPONSE STRUCTURE:
-- Start with the most relevant information from the reference material
-- Clearly distinguish between reference-based information and general knowledge
-- Provide specific citations when referencing the material using the format: [Article Title](article:article-id)
-- End with actionable recommendations based on the available evidence
+RESPONSE APPROACH:
+- Start with the most relevant information from the context
+- Present information as your expert knowledge, not as citations
+- Provide specific, actionable guidance based on available evidence
+- Focus on direct answers rather than referencing sources
 
-Your Task: Provide personalized coaching advice that integrates the scientific evidence from the reference material with the client's specific circumstances and question.` 
+Your Task: Provide personalized coaching advice that seamlessly integrates the knowledge base context with the client's specific circumstances and question.` 
 
 : 
 
@@ -525,8 +487,8 @@ RESPONSE QUALITY REQUIREMENTS:
 - Provide reasoning for your recommendations
 - Acknowledge any limitations in the available information`;
 
-    // Get the generative model with function calling capabilities
-    const model = genAI.getGenerativeModel({ 
+    // Get the generative model with function calling capabilities (only for authenticated users)
+    const modelConfig = { 
       model: aiConfig.modelName,
       generationConfig: {
         temperature: aiConfig.temperature,
@@ -534,341 +496,260 @@ RESPONSE QUALITY REQUIREMENTS:
         topP: aiConfig.topP,
         maxOutputTokens: aiConfig.maxTokens,
       },
-      systemInstruction: {
-        parts: [{ text: systemInstruction }],
-        role: 'model'
-      },
-      tools: [
-        {
-          functionDeclarations: [updateClientProfileFunction]
-        }
-      ]
-    });
+      systemInstruction: systemInstruction,
+      // Tools will be added conditionally
+      ...(userId ? {
+        tools: [
+          {
+            functionDeclarations: [updateClientProfileFunction]
+          }
+        ]
+      } : {})
+    };
+
+    // Log function tool availability
+    if (userId) {
+      console.log(`🔧 Added function tools for authenticated user: ${userId}`);
+    } else {
+      console.log(`👤 Guest user - no function tools added`);
+    }
+
+    const model = genAI.getGenerativeModel(modelConfig);
 
     // Convert conversation to Gemini format, including images in history
     const history = conversation.slice(0, -1).map(msg => {
       const parts: Part[] = [{ text: msg.content }];
       
-      // Add image if present in this message
+      // Add image to history if present
       if (msg.imageData && msg.imageMimeType) {
-        // Convert base64 data URL to just base64 if needed
-        const base64Data = msg.imageData.startsWith('data:') 
-          ? msg.imageData.split(',')[1] 
-          : msg.imageData;
-          
         parts.push({
           inlineData: {
-            data: base64Data,
-            mimeType: msg.imageMimeType,
-          },
+            data: msg.imageData,
+            mimeType: msg.imageMimeType
+          }
         });
       }
       
       return {
-        role: msg.role === 'assistant' ? 'model' : 'user',
-        parts: parts
+        role: msg.role,
+        parts
       };
     });
 
-    // Start a chat session with history
+    // Build the current message parts
+    const currentMessageParts: Part[] = [{ text: latestUserMessage.content }];
+    
+    // Add current image if present
+    if (imageBuffer && imageMimeType) {
+      const base64Image = imageBuffer.toString('base64');
+      currentMessageParts.push({
+        inlineData: {
+          data: base64Image,
+          mimeType: imageMimeType
+        }
+      });
+    }
+
+    // Start chat session with history
     const chat = model.startChat({
-      history: history
-    });    // Send the latest message and handle function calls
-    const lastMessage = conversation[conversation.length - 1];
-    let result;
-    let aiResponse = '';
+      history: history,
+      generationConfig: {
+        temperature: aiConfig.temperature,
+        topK: aiConfig.topK,
+        topP: aiConfig.topP,
+        maxOutputTokens: aiConfig.maxTokens,
+      }
+    });
+
+    // Send the current message with performance monitoring
+    console.log(`🤖 Sending message to Gemini API (${aiConfig.modelName})...`);
+    const geminiStart = Date.now();
+    
+    // Create a timeout promise
+    const timeoutPromise = new Promise((_, reject) =>
+      setTimeout(() => reject(new Error('Gemini API timeout after 15 seconds')), 15000)
+    );
     
     try {
-      // Prepare the message parts
-      const messageParts: Part[] = [{ text: lastMessage.content }];
+      const result = await Promise.race([
+        chat.sendMessage(currentMessageParts),
+        timeoutPromise
+      ]) as { response: { text: () => string; functionCalls?: () => Array<{ name: string; args: unknown }> } };
       
-      // Add image if provided via parameters (new image upload)
-      if (imageBuffer && imageMimeType) {
-        messageParts.push({
-          inlineData: {
-            data: imageBuffer.toString('base64'),
-            mimeType: imageMimeType,
-          },
-        });
-      }
-      // Or add image if present in the message object (from conversation history)
-      else if (lastMessage.imageData && lastMessage.imageMimeType) {
-        // Convert base64 data URL to just base64 if needed
-        const base64Data = lastMessage.imageData.startsWith('data:') 
-          ? lastMessage.imageData.split(',')[1] 
-          : lastMessage.imageData;
-          
-        messageParts.push({
-          inlineData: {
-            data: base64Data,
-            mimeType: lastMessage.imageMimeType,
-          },
-        });
-      }
-      
-      result = await chat.sendMessage(messageParts);
-      
-      // Check if the response includes function calls
-      const functionCalls = result.response.functionCalls();
-      
-      if (functionCalls && functionCalls.length > 0 && userId) {
-        // Handle function calls
-        const functionResponses = [];
+      const firstCallTime = Date.now() - geminiStart;
+      console.log(`🚀 First Gemini API call completed in ${firstCallTime}ms`);
+    
+      // Handle function calls if present
+      const functionCalls = result.response.functionCalls?.();
+      if (functionCalls && functionCalls.length > 0) {
+        console.log('Function calls detected:', functionCalls);
         
         for (const functionCall of functionCalls) {
-          if (functionCall.name === 'update_client_profile') {
+          if (functionCall.name === 'update_client_profile' && userId) {
             try {
-              const functionResult = await handleUpdateClientProfile(userId, functionCall.args as Record<string, unknown>);
-              functionResponses.push({
-                name: functionCall.name,
-                response: { result: functionResult }
-              });
+              const args = functionCall.args as MemoryUpdate;
+              console.log('Updating client profile with:', args);
+              await updateClientMemory(userId, args);
             } catch (error) {
-              console.error('Error handling function call:', error);
-              // Continue without function call if there's an error
+              console.error('Error updating client profile:', error);
             }
           }
-        }
-        
-        // Send function responses back to the model to get the final response
-        if (functionResponses.length > 0) {
-          try {
-            const followUpResult = await chat.sendMessage([{
-              functionResponse: {
-                name: functionResponses[0].name,
-                response: functionResponses[0].response
-              }
-            }]);
-            aiResponse = followUpResult.response.text();
-          } catch (error) {
-            console.error('Error sending function response:', error);
-            aiResponse = result.response.text();
-          }
-        } else {
-          aiResponse = result.response.text();
-        }
-      } else {
-        aiResponse = result.response.text();
-        
-        // Fallback: use legacy regex extraction if no function calls were made
-        if (userId && lastMessage.role === 'user') {
-          try {
-            await extractAndSaveInformationLegacy(userId, lastMessage.content);
-          } catch (error) {
-            console.error('Error with legacy extraction:', error);
-          }
-        }
-      }
-    } catch (error) {
-      console.error('Error with Gemini function calling:', error);
-      
-      // Fallback to basic response without function calling
-      try {
-        const fallbackModel = genAI.getGenerativeModel({ 
-          model: aiConfig.modelName,
-          generationConfig: {
-            temperature: aiConfig.temperature,
-            topK: aiConfig.topK,
-            topP: aiConfig.topP,
-            maxOutputTokens: aiConfig.maxTokens,
-          },
-          systemInstruction: {
-            parts: [{ text: systemInstruction }],
-            role: 'model'
-          }
-          // No tools for fallback
-        });
-        
-        const fallbackChat = fallbackModel.startChat({
-          history: conversation.slice(0, -1).map(msg => {
-            const parts: Part[] = [{ text: msg.content }];
-            
-            // Add image if present in conversation history
-            if (msg.imageData && msg.imageMimeType) {
-              const base64Data = msg.imageData.startsWith('data:') 
-                ? msg.imageData.split(',')[1] 
-                : msg.imageData;
-                
-              parts.push({
-                inlineData: {
-                  data: base64Data,
-                  mimeType: msg.imageMimeType,
-                },
-              });
-            }
-            
-            return {
-              role: msg.role === 'assistant' ? 'model' : 'user',
-              parts: parts
-            };
-          })
-        });
-        
-        // Prepare the message parts for fallback
-        const fallbackMessageParts: Part[] = [{ text: lastMessage.content }];
-        
-        // Add image if provided via parameters (new image upload)
-        if (imageBuffer && imageMimeType) {
-          fallbackMessageParts.push({
-            inlineData: {
-              data: imageBuffer.toString('base64'),
-              mimeType: imageMimeType,
-            },
-          });
-        }
-        // Or add image if present in the message object (from conversation history)
-        else if (lastMessage.imageData && lastMessage.imageMimeType) {
-          const base64Data = lastMessage.imageData.startsWith('data:') 
-            ? lastMessage.imageData.split(',')[1] 
-            : lastMessage.imageData;
-            
-          fallbackMessageParts.push({
-            inlineData: {
-              data: base64Data,
-              mimeType: lastMessage.imageMimeType,
-            },
-          });
-        }
-        
-        const fallbackResult = await fallbackChat.sendMessage(fallbackMessageParts);
-        aiResponse = fallbackResult.response.text();
-        
-        // Use legacy extraction as fallback
-        if (userId && lastMessage.role === 'user') {
-          try {
-            await extractAndSaveInformationLegacy(userId, lastMessage.content);
-          } catch (extractError) {
-            console.error('Error with legacy extraction fallback:', extractError);
-          }
-        }
-      } catch (fallbackError) {
-        console.error('Fallback also failed:', fallbackError);
-        throw new Error('Failed to get response from AI');
-      }
-    }
-    
-    // Save coaching insights and interaction notes
-    if (userId && lastMessage.role === 'user') {
-      try {
-        // Save a coaching note about this interaction
-        const userQuestion = lastMessage.content.length > 100 
-          ? lastMessage.content.substring(0, 100) + '...' 
-          : lastMessage.content;
-        
-        await addCoachingNote(
-          userId, 
-          `User asked: "${userQuestion}" - Provided personalized coaching response`, 
-          'interactions'
-        );
-        
-        // If the user mentioned progress, save it as a progress note
-        const progressKeywords = ['gained', 'lost', 'increased', 'improved', 'achieved', 'reached', 'lifted', 'weigh', 'stronger'];
-        if (progressKeywords.some(keyword => lastMessage.content.toLowerCase().includes(keyword))) {
-          await addCoachingNote(
-            userId, 
-            `Progress update: ${userQuestion}`, 
-            'progress'
-          );
         }
 
-        // Enhanced RAG system monitoring
-        await logRAGSystemPerformance(userId, userQuestion, knowledgeContext);
-      } catch (error) {
-        console.error('Error in conversation processing:', error);
-        // Continue even if conversation processing fails
+        // Get the final response after function calls
+        console.log(`🤖 Sending follow-up message to Gemini API...`);
+        const followUpStart = Date.now();
+        
+        const followUpTimeoutPromise = new Promise((_, reject) =>
+          setTimeout(() => reject(new Error('Follow-up Gemini API timeout after 15 seconds')), 15000)
+        );
+        
+        const followUpResult = await Promise.race([
+          chat.sendMessage([{ text: "Please provide your coaching response now." }]),
+          followUpTimeoutPromise
+        ]) as { response: { text: () => string } };
+        
+        const followUpTime = Date.now() - followUpStart;
+        console.log(`🚀 Follow-up Gemini API call completed in ${followUpTime}ms`);
+        
+        const textStart = Date.now();
+        const aiResponse = followUpResult.response.text();
+        const textTime = Date.now() - textStart;
+        console.log(`📄 Follow-up text extraction completed in ${textTime}ms`);
+
+        // Log conversation for future context (ONLY for authenticated users)
+        if (userId) {
+          console.log(`💾 Logging follow-up conversation for user: ${userId}`);
+          const loggingStart = Date.now();
+          try {
+            const userQuestion = latestUserMessage.content;
+            
+            // Log general interaction
+            await addCoachingNote(
+              userId, 
+              `Q: ${userQuestion} | A: ${aiResponse.substring(0, 200)}${aiResponse.length > 200 ? '...' : ''}`, 
+              'interactions'
+            );
+            
+            // If the user mentioned progress, save it as a progress note
+            const progressKeywords = ['gained', 'lost', 'increased', 'improved', 'achieved', 'reached', 'lifted', 'weigh', 'stronger'];
+            if (progressKeywords.some(keyword => latestUserMessage.content.toLowerCase().includes(keyword))) {
+              await addCoachingNote(
+                userId, 
+                `Progress update: ${userQuestion}`, 
+                'progress'
+              );
+            }
+            
+            const loggingTime = Date.now() - loggingStart;
+            console.log(`💾 Follow-up conversation logging completed in ${loggingTime}ms`);
+          } catch (error) {
+            console.error('Error in conversation processing:', error);
+          }
+        } else {
+          console.log(`👤 Guest user - skipping follow-up conversation logging`);
+        }
+        
+        const totalGeminiTime = Date.now() - geminiStartTime;
+        console.log(`✅ sendToGeminiWithCitations (function call path) completed in ${totalGeminiTime}ms (User: ${userId || 'GUEST'})`);
+        
+        return {
+          content: aiResponse,
+          citations: referencedSources
+        };
+      } else {
+        console.log(`📄 No function calls needed, extracting direct response...`);
+        const textStart = Date.now();
+        const aiResponse = result.response.text();
+        const textTime = Date.now() - textStart;
+        console.log(`📄 Text extraction completed in ${textTime}ms`);
+
+        // Log conversation for future context (ONLY for authenticated users)
+        if (userId) {
+          console.log(`💾 Logging conversation for user: ${userId}`);
+          const loggingStart = Date.now();
+          try {
+            const userQuestion = latestUserMessage.content;
+            
+            // Log general interaction
+            await addCoachingNote(
+              userId, 
+              `Q: ${userQuestion} | A: ${aiResponse.substring(0, 200)}${aiResponse.length > 200 ? '...' : ''}`, 
+              'interactions'
+            );
+            
+            // If the user mentioned progress, save it as a progress note
+            const progressKeywords = ['gained', 'lost', 'increased', 'improved', 'achieved', 'reached', 'lifted', 'weigh', 'stronger'];
+            if (progressKeywords.some(keyword => latestUserMessage.content.toLowerCase().includes(keyword))) {
+              await addCoachingNote(
+                userId, 
+                `Progress update: ${userQuestion}`, 
+                'progress'
+              );
+            }
+            
+            const loggingTime = Date.now() - loggingStart;
+            console.log(`💾 Conversation logging completed in ${loggingTime}ms`);
+          } catch (error) {
+            console.error('Error in conversation processing:', error);
+          }
+        } else {
+          console.log(`👤 Guest user - skipping conversation logging`);
+        }
+        
+        const totalGeminiTime = Date.now() - geminiStartTime;
+        console.log(`✅ sendToGeminiWithCitations completed in ${totalGeminiTime}ms (User: ${userId || 'GUEST'})`);
+        
+        return {
+          content: aiResponse,
+          citations: referencedSources
+        };
       }
+      
+    } catch (error) {
+      console.error('Error during Gemini API call:', error);
+      if (error instanceof Error && error.message.includes('timeout')) {
+        console.log('🚨 Gemini API timed out, implementing fallback...');
+        
+        // Return a fallback response
+        const fallbackMessage = isArabicText(latestUserMessage.content) 
+          ? "عذراً، حدث تأخير في النظام. يرجى المحاولة مرة أخرى."
+          : "Sorry, there was a system delay. Please try again.";
+          
+        return {
+          content: fallbackMessage,
+          citations: []
+        };
+      }
+      throw error;
     }
     
-    return aiResponse;
   } catch (error) {
     console.error('Error calling Gemini API:', error);
     
     // Handle configuration errors specifically
     if (error instanceof Error && error.message.includes('AI Configuration not found')) {
-      return "🔧 **Configuration Required**: The AI system is not yet configured. Please ask an administrator to set up the AI configuration through the Admin Settings page before using the chat feature.";
+      return {
+        content: "🔧 **Configuration Required**: The AI system is not yet configured. Please ask an administrator to set up the AI configuration through the Admin Settings page before using the chat feature.",
+        citations: []
+      };
     }
     
     if (error instanceof Error && error.message.includes('System prompt is not configured')) {
-      return "🔧 **Configuration Required**: The AI system prompt is not configured. Please ask an administrator to set up the system prompt through the Admin Settings page.";
+      return {
+        content: "🔧 **Configuration Required**: The AI system prompt is not configured. Please ask an administrator to set up the system prompt through the Admin Settings page.",
+        citations: []
+      };
     }
     
     if (error instanceof Error && error.message.includes('AI model is not configured')) {
-      return "🔧 **Configuration Required**: The AI model is not selected. Please ask an administrator to select an AI model through the Admin Settings page.";
+      return {
+        content: "🔧 **Configuration Required**: The AI model is not selected. Please ask an administrator to select an AI model through the Admin Settings page.",
+        citations: []
+      };
     }
     
     throw new Error('Failed to get response from AI');
-  }
-}
-
-/**
- * Log RAG system performance for monitoring and improvement
- * 
- * @param userId User ID
- * @param query User query
- * @param retrievedContext Retrieved context
- */
-async function logRAGSystemPerformance(
-  userId: string,
-  query: string,
-  retrievedContext: string
-) {
-  try {
-    const contextLength = retrievedContext.length;
-    const hasHighRelevance = retrievedContext.includes('[HIGH RELEVANCE]');
-    const sourceCount = (retrievedContext.match(/===/g) || []).length;
-    
-    console.log(`🔍 RAG System Performance:
-    - Query: ${query.substring(0, 50)}${query.length > 50 ? '...' : ''}
-    - Context Length: ${contextLength} chars
-    - High Relevance Items: ${hasHighRelevance ? 'Yes' : 'No'}
-    - Source Count: ${sourceCount}
-    - User ID: ${userId.substring(0, 8)}...`);
-    
-    // Could be extended to store performance metrics in database
-  } catch (error) {
-    console.error('Error logging RAG performance:', error);
-  }
-}
-
-/**
- * Get enhanced context with fallback strategies
- * 
- * @param userId User ID
- * @param query User query
- * @param conversationHistory Recent conversation history
- * @returns Promise<string> Enhanced context
- */
-export async function getEnhancedContext(
-  userId: string,
-  query: string,
-  conversationHistory: Array<{ role: string; content: string }> = []
-): Promise<string> {
-  try {
-    // Use the enhanced retrieval system with configurable parameters
-    const enhancedContext = await getRelevantContext(
-      userId,
-      query,
-      undefined, // Use configured max chunks
-      undefined, // Use configured similarity threshold
-      conversationHistory
-    );
-
-    if (enhancedContext.length > 0) {
-      return enhancedContext;
-    }
-
-    // Fallback to broader retrieval if no results
-    console.log('⚠️ Enhanced context retrieval found no results, trying fallback with lower threshold');
-    return await getRelevantContext(
-      userId, 
-      query, 
-      undefined, // Use configured max chunks
-      0.05 // Lower threshold for fallback (5% to match realistic similarity scores)
-    );
-    
-  } catch (error) {
-    console.error('Error getting enhanced context:', error);
-    return '';
   }
 }
 

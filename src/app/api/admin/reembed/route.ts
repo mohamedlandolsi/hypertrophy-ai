@@ -37,12 +37,12 @@ export async function GET(request: NextRequest) {
     console.log('🔍 Admin requested embedding audit', userId ? `for user ${userId}` : 'for all users');
     
     // Run comprehensive embedding audit
-    const auditReport = await runEmbeddingAudit(userId);
+    const auditReport = await runEmbeddingAudit();
     
     return NextResponse.json({
       success: true,
       data: auditReport,
-      message: `Embedding audit complete: ${auditReport.coveragePercentage.toFixed(1)}% coverage`
+      message: `Embedding audit complete`
     });
     
   } catch (error) {
@@ -85,19 +85,15 @@ export async function POST(request: NextRequest) {
     console.log(`   Batch size: ${batchSize}`);
     
     // Run reembedding process
-    const results = await reembedMissingChunks(userId, batchSize);
+    const results = await reembedMissingChunks();
     
-    const message = results.successful === results.processed 
-      ? `✅ Successfully reembedded ${results.successful} chunks`
-      : `⚠️ Reembedded ${results.successful}/${results.processed} chunks (${results.failed} failed)`;
+    const message = `Processed ${results.processed} chunks, skipped ${results.skipped}. ${results.message}`;
     
     return NextResponse.json({
       success: true,
       data: results,
       message
-    });
-    
-  } catch (error) {
+    });  } catch (error) {
     return ApiErrorHandler.handleError(error, context);
   }
 }

@@ -1,7 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { createClient } from '@/lib/supabase/server';
 import { prisma } from '@/lib/prisma';
-import { sendToGemini, formatConversationForGemini } from '@/lib/gemini';
+import { sendToGeminiWithCitations, formatConversationForGemini } from '@/lib/gemini';
 import { 
   ApiErrorHandler, 
   ValidationError, 
@@ -78,11 +78,12 @@ export async function POST(request: NextRequest) {
       const conversationForGemini = [{ role: 'user' as const, content: message }];
       
       // Get AI response from Gemini (pass undefined for user ID since it's a guest)
-      const assistantReply = await sendToGemini(conversationForGemini, undefined, imageBuffer, imageMimeType);
+      const aiResult = await sendToGeminiWithCitations(conversationForGemini, undefined, imageBuffer, imageMimeType);
 
       return NextResponse.json({
         conversationId: null, // No conversation ID for guests
-        assistantReply,
+        assistantReply: aiResult.content,
+        citations: aiResult.citations || [],
         userMessage: {
           id: Date.now().toString(), // Temporary ID
           content: message,
@@ -91,7 +92,7 @@ export async function POST(request: NextRequest) {
         },
         assistantMessage: {
           id: (Date.now() + 1).toString(), // Temporary ID
-          content: assistantReply,
+          content: aiResult.content,
           role: 'ASSISTANT',
           createdAt: new Date().toISOString(),
         }
@@ -172,13 +173,13 @@ export async function POST(request: NextRequest) {
     const allMessages = [...existingMessages, userMessage];
     const conversationForGemini = formatConversationForGemini(allMessages);
 
-    // Get AI response from Gemini with user context for knowledge base
-    const assistantReply = await sendToGemini(conversationForGemini, user.id, imageBuffer, imageMimeType);
+    // Get AI response from Gemini - NEW RAG SYSTEM WITH CITATIONS
+    const aiResult = await sendToGeminiWithCitations(conversationForGemini, user.id, imageBuffer, imageMimeType);
 
     // Save assistant message to database
     const assistantMessage = await prisma.message.create({
       data: {
-        content: assistantReply,
+        content: aiResult.content,
         role: 'ASSISTANT',
         chatId: chatId as string,
       }
@@ -193,13 +194,15 @@ export async function POST(request: NextRequest) {
       chatId,
       messageLength: message.length,
       hasImage: !!imageBuffer,
-      responseLength: assistantReply.length
+      responseLength: aiResult.content.length,
+      citationsCount: aiResult.citations?.length || 0
     });
 
-    // Return the response
+    // Return the response with citations
     return NextResponse.json({
       conversationId: chatId,
-      assistantReply,
+      assistantReply: aiResult.content,
+      citations: aiResult.citations || [],
       userMessage: {
         id: userMessage.id,
         content: userMessage.content,
