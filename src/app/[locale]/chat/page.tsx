@@ -2,6 +2,7 @@
 
 import { createClient } from '@/lib/supabase/client';
 import { useEffect, useState as reactUseState, useRef, useCallback } from 'react';
+import { useChat } from 'ai/react';
 import { Button } from '@/components/ui/button';
 import { Settings, MessageSquare, Send, ChevronLeft, Menu, User, LogOut, Database, Trash2, Copy, Loader2, Image as ImageIcon, X } from 'lucide-react';
 import Link from 'next/link';
@@ -33,21 +34,12 @@ import {
   AvatarFallback,
   AvatarImage,
 } from "@/components/ui/avatar";
-import { useSearchParams, useRouter } from 'next/navigation';
+import { useSearchParams, useRouter, useParams } from 'next/navigation';
 import { LoginPromptDialog } from '@/components/login-prompt-dialog';
 import { MessageLimitIndicator } from '@/components/message-limit-indicator';
 import { PlanBadge } from '@/components/plan-badge';
 import { UpgradeButton } from '@/components/upgrade-button';
 import { useOnlineStatus } from '@/hooks/use-online-status';
-
-interface Message {
-  id: string;
-  role: 'user' | 'assistant';
-  content: string;
-  createdAt?: string;
-  imageData?: string; // base64 image data
-  imageMimeType?: string; // image MIME type
-}
 
 interface Conversation {
   id: string;
@@ -60,6 +52,13 @@ interface Conversation {
 const ChatPage = () => {
   const t = useTranslations('ChatPage');
   const locale = useLocale();
+  const params = useParams();
+  const router = useRouter();
+  const searchParams = useSearchParams();
+  
+  // Get conversation ID from URL parameters - supports both /chat/[id] and /chat?id=...
+  const initialConversationId = Array.isArray(params.id) ? params.id[0] : params.id || searchParams.get('id') || null;
+  
   const [isSidebarOpen, setIsSidebarOpen] = reactUseState(false); // Default closed on mobile
   const [isMobile, setIsMobile] = reactUseState(false);
   const [user, setUser] = reactUseState<SupabaseUser | null>(null); // Using reactUseState
@@ -70,13 +69,10 @@ const ChatPage = () => {
     dailyLimit: number;
   } | null>(null);
   const [chatHistory, setChatHistory] = reactUseState<Conversation[]>([]);
-  const [activeChatId, setActiveChatId] = reactUseState<string | null>(null);
+  const [activeChatId, setActiveChatId] = reactUseState<string | null>(initialConversationId);
+  const [conversationId, setConversationId] = reactUseState<string | null>(initialConversationId);
   const [isLoadingHistory, setIsLoadingHistory] = reactUseState(true);
   const [isLoadingMessages, setIsLoadingMessages] = reactUseState(false);
-  const [isSendingMessage, setIsSendingMessage] = reactUseState(false);
-  const [isAiThinking, setIsAiThinking] = reactUseState(false);
-  const [messages, setMessages] = reactUseState<Message[]>([]);
-  const [input, setInput] = reactUseState('');
   const [autoScroll, setAutoScroll] = reactUseState(true);
   const [showLoginDialog, setShowLoginDialog] = reactUseState(false);
   const [guestMessageCount, setGuestMessageCount] = reactUseState(0);
@@ -93,6 +89,96 @@ const ChatPage = () => {
   const { theme } = useTheme();
   const [mounted, setMounted] = reactUseState(false);
 
+  // Configure useChat hook for robust conversation handling
+  const {
+    messages,
+    input,
+    handleInputChange,
+    handleSubmit,
+    isLoading,
+    setMessages,
+    setInput,
+  } = useChat({
+    api: '/api/chat',
+    
+    // Pass conversation ID and other context in the request body
+    body: {
+      conversationId,
+      isGuest: !user,
+    },
+    
+    // Transform the request to match API expectations using experimental feature
+    experimental_prepareRequestBody: ({ messages, requestBody }) => {
+      const lastMessage = messages[messages.length - 1];
+      
+      // Prepare form data if we have an image
+      if (selectedImage) {
+        const formData = new FormData();
+        formData.append('message', lastMessage.content);
+        formData.append('conversationId', conversationId || '');
+        formData.append('isGuest', (!user).toString());
+        formData.append('image', selectedImage);
+        
+        return formData;
+      }
+      
+      // For text-only messages, return JSON with 'message' field
+      return {
+        ...(requestBody as object),
+        message: lastMessage.content,
+      };
+    },
+    
+    // Extract metadata from response headers
+    onResponse: async (response: Response) => {
+      if (!response.ok) {
+        throw new Error('Failed to send message');
+      }
+      
+      // Extract conversation ID from headers for first message
+      const responseConversationId = response.headers.get('X-Conversation-Id');
+      if (responseConversationId && !initialConversationId && !conversationId) {
+        setConversationId(responseConversationId);
+        setActiveChatId(responseConversationId);
+        window.history.replaceState(null, '', `/${locale}/chat?id=${responseConversationId}`);
+        loadChatHistory();
+      }
+      
+      // Don't return anything - just process the response
+    },
+    
+    // Handle successful message completion
+    onFinish: () => {
+      // Update user plan state to reflect the new message count
+      if (user && userPlan && userPlan.plan === 'FREE') {
+        setUserPlan(prev => prev ? { 
+          ...prev, 
+          messagesUsedToday: Math.min(prev.messagesUsedToday + 1, prev.dailyLimit)
+        } : null);
+      }
+      
+      // If user is a guest, increment their message count
+      if (!user) {
+        setGuestMessageCount(prev => prev + 1);
+      }
+    },
+    
+    // Handle errors
+    onError: (err) => {
+      console.error('Chat error:', err);
+      
+      // Handle subscription limit errors specifically
+      if (err.message?.includes('MESSAGE_LIMIT_REACHED')) {
+        if (userPlan) {
+          setUserPlan(prev => prev ? { ...prev, messagesUsedToday: prev.dailyLimit } : null);
+        }
+        showToast.error(t('toasts.limitReachedTitle'), t('toasts.limitReachedText'));
+      } else {
+        showToast.error(t('toasts.errorSendingMessage'), err.message || t('toasts.genericError'));
+      }
+    },
+  });
+
   // Helper function to get logo source safely
   const getLogoSrc = () => {
     if (!mounted) {
@@ -101,8 +187,6 @@ const ChatPage = () => {
     return theme === 'dark' ? "/logo-dark.png" : "/logo.png";
   };
 
-  const searchParams = useSearchParams();
-  const router = useRouter();
   const messagesEndRef = useRef<HTMLDivElement | null>(null);
 
   // Mounted effect for theme
@@ -164,9 +248,8 @@ const ChatPage = () => {
           await loadChatHistory();
 
           // Check for chatId in URL and load it
-          const chatIdFromUrl = searchParams.get('id');
-          if (chatIdFromUrl) {
-            loadChatSession(chatIdFromUrl);
+          if (initialConversationId) {
+            loadChatSession(initialConversationId);
           }
         } else {
           // For guest users, set loading states to false
@@ -302,34 +385,39 @@ const ChatPage = () => {
 
     setIsLoadingMessages(true);
     setActiveChatId(chatId);
+    setConversationId(chatId); // Ensure conversationId is also set
     
     try {
       const response = await fetch(`/api/conversations/${chatId}/messages`);
       if (response.ok) {
         const data = await response.json();
-        setMessages(data.conversation.messages);
+        setMessages(data.conversation.messages); // Use setMessages from useChat
         // Update URL without full page reload
-        router.push(`/chat?id=${chatId}`, { scroll: false });
+        router.push(`/${locale}/chat?id=${chatId}`, { scroll: false });
       } else {
         console.error(t('toasts.errorLoadingSession', { chatId }));
         setActiveChatId(null);
-        router.push('/chat', { scroll: false }); // Clear URL param
+        setConversationId(null); // Also reset conversationId
+        router.push(`/${locale}/chat`, { scroll: false }); // Clear URL param
       }
     } catch (error) {
       handleApiError(error, 'load chat session');
       setActiveChatId(null);
+      setConversationId(null); // Also reset conversationId
     } finally {
       setIsLoadingMessages(false);
     }
-  }, [activeChatId, messages.length, router, handleApiError, setIsLoadingMessages, setActiveChatId, setMessages, t]);
+  }, [activeChatId, messages.length, router, handleApiError, setIsLoadingMessages, setActiveChatId, setConversationId, setMessages, t, locale]);
 
   const handleNewChat = useCallback(async () => {
     setActiveChatId(null);
-    setMessages([]);
+    setConversationId(null); // Also reset conversationId
+    setMessages([]); // Use setMessages from useChat
+    setInput(''); // Use setInput from useChat
     setSelectedImage(null);
     setImagePreview(null);
-    router.push('/chat', { scroll: false });
-  }, [router, setActiveChatId, setMessages, setSelectedImage, setImagePreview]);
+    router.push(`/${locale}/chat`, { scroll: false });
+  }, [router, setActiveChatId, setConversationId, setMessages, setInput, setSelectedImage, setImagePreview, locale]);
 
   const handleDeleteChat = useCallback(async (chatId: string, e: React.MouseEvent) => {
     // Prevent the chat from being selected when delete button is clicked
@@ -355,8 +443,9 @@ const ChatPage = () => {
         // If the deleted chat was active, redirect to new chat
         if (activeChatId === chatId) {
           setActiveChatId(null);
-          setMessages([]);
-          router.push('/chat', { scroll: false });
+          setConversationId(null); // Also reset conversationId
+          setMessages([]); // Use setMessages from useChat
+          router.push(`/${locale}/chat`, { scroll: false });
         }
         
         showToast.success(t('toasts.deleteSuccessTitle'), t('toasts.deleteSuccessText'));
@@ -367,7 +456,7 @@ const ChatPage = () => {
     } catch (error) {
       handleApiError(error, 'delete chat');
     }
-  }, [chatHistory, activeChatId, router, handleApiError, setChatHistory, setActiveChatId, setMessages, t]);
+  }, [chatHistory, activeChatId, router, handleApiError, setChatHistory, setActiveChatId, setConversationId, setMessages, t, locale]);
 
   const copyMessage = useCallback(async (content: string) => {
     try {
@@ -381,12 +470,13 @@ const ChatPage = () => {
 
   const toggleSidebar = useCallback(() => setIsSidebarOpen(!isSidebarOpen), [isSidebarOpen, setIsSidebarOpen]);
 
-  const handleInputChange = useCallback((e: React.ChangeEvent<HTMLTextAreaElement>) => {
+  // Override handleInputChange to add character limit
+  const customHandleInputChange = useCallback((e: React.ChangeEvent<HTMLTextAreaElement>) => {
     const value = e.target.value;
     if (value.length <= 2000) {
-      setInput(value);
+      handleInputChange(e); // Use the one from useChat
     }
-  }, [setInput]);
+  }, [handleInputChange]);
 
   // Image handling functions
   const handleImageSelect = useCallback((e: React.ChangeEvent<HTMLInputElement>) => {
@@ -457,10 +547,11 @@ const ChatPage = () => {
     }
   }, [selectedImage, setSelectedImage, setImagePreview, t]);
 
-  const handleSubmit = useCallback(async (e: React.FormEvent | KeyboardEvent) => {
+  // Custom submit handler to add additional checks before using AI SDK's handleSubmit
+  const onSubmit = useCallback(async (e: React.FormEvent) => {
     e.preventDefault();
     
-    if ((!input.trim() && !selectedImage) || isSendingMessage) return;
+    if ((!input.trim() && !selectedImage) || isLoading) return;
 
     // Check if user is a guest and has reached the message limit (4 messages)
     if (!user && guestMessageCount >= 4) {
@@ -468,221 +559,21 @@ const ChatPage = () => {
       return;
     }
 
-    const userMessage = input.trim() || (selectedImage ? '[Image]' : '');
-    const imageFile = selectedImage;
-    let imageDataForMessage = '';
-    
-    // Convert image to base64 for display if present
-    if (imageFile) {
-      imageDataForMessage = await new Promise((resolve) => {
-        const reader = new FileReader();
-        reader.onload = (e) => resolve(e.target?.result as string);
-        reader.readAsDataURL(imageFile);
-      });
-    }
-    
-    setInput('');
+    // Clear image state before submitting
     setSelectedImage(null);
     setImagePreview(null);
-    setIsSendingMessage(true);
 
-    // If the user is a guest, increment their message count
-    if (!user) {
-      setGuestMessageCount(prev => prev + 1);
-    }
-
-    // Optimistically add user message
-    const tempUserMessage: Message = {
-      id: Date.now().toString(),
-      role: 'user',
-      content: userMessage,
-      createdAt: new Date().toISOString(),
-      imageData: imageDataForMessage || undefined,
-      imageMimeType: imageFile?.type || undefined,
-    };
-    setMessages(prev => [...prev, tempUserMessage]);
-    setIsAiThinking(true);
-
-    try {
-      let response;
-      
-      if (imageFile) {
-        // Use FormData for multipart/form-data request
-        const formData = new FormData();
-        formData.append('message', userMessage);
-        formData.append('image', imageFile);
-        formData.append('conversationId', activeChatId || '');
-        formData.append('isGuest', (!user).toString());
-
-        response = await fetch('/api/chat', {
-          method: 'POST',
-          body: formData,
-        });
-      } else {
-        // Use JSON for text-only requests
-        response = await fetch('/api/chat', {
-          method: 'POST',
-          headers: {
-            'Content-Type': 'application/json',
-          },
-          body: JSON.stringify({
-            conversationId: activeChatId,
-            message: userMessage,
-            isGuest: !user, // Send isGuest flag for non-authenticated users
-          }),
-        });
-      }
-
-      if (!response.ok) {
-        // Try to parse error response
-        let errorData;
-        try {
-          errorData = await response.json();
-        } catch (parseError) {
-          console.warn('Failed to parse error response:', parseError);
-          errorData = { 
-            message: t('toasts.errorSendingMessage'),
-            type: 'NETWORK',
-            status: response.status,
-            statusText: response.statusText
-          };
-        }
-        
-        // Handle subscription limit errors specifically
-        if (response.status === 429 && errorData.error === 'MESSAGE_LIMIT_REACHED') {
-          // Update user plan state to reflect the limit
-          if (userPlan) {
-            setUserPlan(prev => prev ? { ...prev, messagesUsedToday: prev.dailyLimit } : null);
-          }
-          showToast.error(t('toasts.limitReachedTitle'), errorData.message || t('toasts.limitReachedText'));
-          return; // Don't throw, just return early
-        }
-        
-        throw errorData;
-      }
-
-      const data = await response.json();
-      
-      // Validate response data structure
-      if (!data || !data.assistantMessage || !data.userMessage) {
-        throw new Error('Invalid response structure from chat API');
-      }
-      
-      // Update messages with actual data from server
-      setMessages(prev => {
-        const filtered = prev.filter(msg => msg.id !== tempUserMessage.id);
-        return [
-          ...filtered,
-          {
-            id: data.userMessage.id,
-            role: 'user',
-            content: data.userMessage.content,
-            createdAt: data.userMessage.createdAt,
-            // Use image data from server response if available, otherwise preserve temporary data
-            imageData: data.userMessage.imageData || tempUserMessage.imageData,
-            imageMimeType: data.userMessage.imageMimeType || tempUserMessage.imageMimeType,
-          },
-          {
-            id: data.assistantMessage.id,
-            role: 'assistant',
-            content: data.assistantMessage.content,
-            createdAt: data.assistantMessage.createdAt,
-          }
-        ];
-      });
-
-      // Update active chat ID if this was a new conversation
-      if (!activeChatId && data.conversationId) {
-        setActiveChatId(data.conversationId);
-        router.push(`/chat?id=${data.conversationId}`, { scroll: false });
-        // Refresh chat history
-        loadChatHistory();
-      }
-
-      // Update user plan state to reflect the new message count
-      if (user && userPlan && userPlan.plan === 'FREE') {
-        setUserPlan(prev => prev ? { 
-          ...prev, 
-          messagesUsedToday: Math.min(prev.messagesUsedToday + 1, prev.dailyLimit)
-        } : null);
-      }
-
-    } catch (error) {
-      // Enhanced error logging with better serialization
-      const errorDetails = {
-        errorType: typeof error,
-        activeChatId,
-        isSecondMessage: messages.length > 0,
-        userExists: !!user,
-        messageCount: messages.length,
-        isGuest: !user
-      };
-
-      // Handle different error types
-      if (error instanceof Error) {
-        console.error('Chat message error details:', {
-          ...errorDetails,
-          errorName: error.name,
-          errorMessage: error.message,
-          errorStack: error.stack
-        });
-      } else if (error && typeof error === 'object') {
-        console.error('Chat message error details:', {
-          ...errorDetails,
-          errorObject: JSON.stringify(error, null, 2)
-        });
-      } else {
-        console.error('Chat message error details:', {
-          ...errorDetails,
-          rawError: String(error)
-        });
-      }
-      
-      handleApiError(error, 'send message');
-      
-      // Remove the optimistic message on error
-      setMessages(prev => prev.filter(msg => msg.id !== tempUserMessage.id));
-      setInput(userMessage); // Restore the input
-      if (imageFile) {
-        setSelectedImage(imageFile);
-        setImagePreview(imageDataForMessage || URL.createObjectURL(imageFile));
-      }
-    } finally {
-      setIsSendingMessage(false);
-      setIsAiThinking(false);
-    }
-  }, [
-    input, 
-    selectedImage,
-    isSendingMessage, 
-    user, 
-    guestMessageCount, 
-    activeChatId, 
-    router, 
-    loadChatHistory, 
-    handleApiError,
-    setInput,
-    setSelectedImage,
-    setImagePreview,
-    setIsSendingMessage,
-    setShowLoginDialog,
-    setGuestMessageCount,
-    setMessages,
-    messages.length, // Added missing dependency
-    setIsAiThinking,
-    setActiveChatId,
-    userPlan,
-    setUserPlan,
-    t
-  ]);
+    // Use the AI SDK's handleSubmit function
+    handleSubmit(e);
+  }, [input, selectedImage, isLoading, user, guestMessageCount, setShowLoginDialog, setSelectedImage, setImagePreview, handleSubmit]);
 
   // Add keyboard shortcuts support
   useEffect(() => {
     const handleKeyDown = (e: KeyboardEvent) => {
       // Cmd/Ctrl + Enter to send message
-      if ((e.metaKey || e.ctrlKey) && e.key === 'Enter' && (input.trim() || selectedImage) && !isSendingMessage) {
+      if ((e.metaKey || e.ctrlKey) && e.key === 'Enter' && (input.trim() || selectedImage) && !isLoading) {
         e.preventDefault();
-        handleSubmit(e);
+        onSubmit(e as unknown as React.FormEvent);
       }
       
       // Cmd/Ctrl + N for new chat
@@ -706,7 +597,7 @@ const ChatPage = () => {
 
     document.addEventListener('keydown', handleKeyDown);
     return () => document.removeEventListener('keydown', handleKeyDown);
-  }, [input, selectedImage, isSendingMessage, user, isMobile, isSidebarOpen, handleSubmit, handleNewChat, setIsSidebarOpen]);
+  }, [input, selectedImage, isLoading, user, isMobile, isSidebarOpen, onSubmit, handleNewChat, setIsSidebarOpen]);
 
   // Add global paste event listener for images
   useEffect(() => {
@@ -1180,8 +1071,9 @@ const ChatPage = () => {
                     setUser(null);
                     setUserRole('user');
                     setChatHistory([]);
-                    setMessages([]);
+                    setMessages([]); // Use setMessages from useChat
                     setActiveChatId(null);
+                    setConversationId(null); // Also reset conversationId
                     setGuestMessageCount(0);
                     setSelectedImage(null);
                     setImagePreview(null);
@@ -1190,13 +1082,13 @@ const ChatPage = () => {
                     await supabase.auth.signOut();
                     
                     // Redirect to home or chat page
-                    router.push('/');
+                    router.push(`/${locale}/`);
                     showToast.success(t('toasts.logoutSuccessTitle'), t('toasts.logoutSuccessText'));
                   } catch (error) {
                     console.error('Logout error:', error);
                     showToast.error(t('toasts.logoutErrorTitle'), t('toasts.logoutErrorText'));
                     // If there's an error, we might want to reload the page to ensure clean state
-                    window.location.href = '/';
+                    window.location.href = `/${locale}/`;
                   }
                 }}>
                   <LogOut className="mr-2 h-4 w-4" />
@@ -1349,16 +1241,16 @@ const ChatPage = () => {
                         >
                           <MessageContent 
                             content={content} 
-                            role={msg.role}
-                            imageData={msg.imageData}
-                            imageMimeType={msg.imageMimeType}
+                            role={msg.role as 'user' | 'assistant'}
+                            imageData={(msg as unknown as { imageData?: string }).imageData}
+                            imageMimeType={(msg as unknown as { imageMimeType?: string }).imageMimeType}
                           />
                           
                           {/* Article Links at bottom of message bubble */}
                           {articleLinks && (
                             <ArticleLinks 
                               links={articleLinks} 
-                              messageRole={msg.role}
+                              messageRole={msg.role as 'user' | 'assistant'}
                             />
                           )}
                         </div>
@@ -1376,7 +1268,7 @@ const ChatPage = () => {
               </div>
             ))}
             
-            {isAiThinking && (
+            {isLoading && (
               <div className="group flex items-start space-x-3 md:space-x-4 animate-fade-in">
                 <div className="flex-shrink-0">
                   <div className="h-8 w-8 md:h-10 md:w-10 rounded-full bg-gradient-to-br from-slate-100 to-slate-200 dark:from-slate-800 dark:to-slate-700 border-2 border-border/50 flex items-center justify-center overflow-hidden shadow-md hover-lift">
@@ -1406,7 +1298,7 @@ const ChatPage = () => {
         {/* Enhanced Chat Input Area */}
         <div className="absolute bottom-0 left-0 right-0 p-2 md:p-4 bg-background/80 backdrop-blur-sm border-t border-border/30">
           <div className="w-full max-w-5xl mx-auto">
-            <form onSubmit={handleSubmit} className="relative">
+            <form onSubmit={onSubmit} className="relative">
               {/* Image Preview */}
               {imagePreview && (
                 <div className="absolute bottom-full left-0 mb-2 p-1.5 bg-muted rounded-xl shadow-lg border border-border/50 animate-scale-in">
@@ -1428,7 +1320,7 @@ const ChatPage = () => {
               <div className="relative flex items-center">
                 <ArabicAwareTextarea
                   value={input}
-                  onChange={handleInputChange}
+                  onChange={customHandleInputChange}
                   onPaste={handlePaste}
                   placeholder={t('main.inputPlaceholder')}
                   className="w-full pr-24 pl-12 py-3 text-base rounded-2xl glass-input resize-none"
@@ -1442,8 +1334,8 @@ const ChatPage = () => {
                   <input type="file" id="image-upload" accept="image/*" className="hidden" onChange={handleImageSelect} />
                 </div>
                 <div className="absolute right-3 top-1/2 -translate-y-1/2 flex items-center">
-                  <Button type="submit" size="icon" className="h-9 w-9 rounded-xl gradient-primary text-white shadow-lg hover-lift" disabled={isSendingMessage || (!input.trim() && !selectedImage)}>
-                    {isSendingMessage ? <Loader2 className="h-5 w-5 animate-spin" /> : <Send className="h-5 w-5" />}
+                  <Button type="submit" size="icon" className="h-9 w-9 rounded-xl gradient-primary text-white shadow-lg hover-lift" disabled={isLoading || (!input.trim() && !selectedImage)}>
+                    {isLoading ? <Loader2 className="h-5 w-5 animate-spin" /> : <Send className="h-5 w-5" />}
                   </Button>
                 </div>
               </div>
