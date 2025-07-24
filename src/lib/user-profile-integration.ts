@@ -110,12 +110,12 @@ export async function fetchUserProfile(userId: string): Promise<UserProfileData 
       weight: clientMemory.weight || undefined,
       bodyFatPercentage: clientMemory.bodyFatPercentage || undefined,
       
-      trainingExperience: clientMemory.trainingExperience as any || undefined,
+      trainingExperience: clientMemory.trainingExperience as UserProfileData['trainingExperience'] || undefined,
       weeklyTrainingDays: clientMemory.weeklyTrainingDays || undefined,
       preferredTrainingStyle: clientMemory.preferredTrainingStyle || undefined,
       availableTime: clientMemory.availableTime || undefined,
       
-      primaryGoal: clientMemory.primaryGoal as any || undefined,
+      primaryGoal: clientMemory.primaryGoal as UserProfileData['primaryGoal'] || undefined,
       targetWeight: clientMemory.targetWeight || undefined,
       motivation: clientMemory.motivation || undefined,
       
@@ -128,7 +128,7 @@ export async function fetchUserProfile(userId: string): Promise<UserProfileData 
       
       dietaryPreferences: clientMemory.dietaryPreferences || undefined,
       sleepHours: clientMemory.sleepHours || undefined,
-      stressLevel: clientMemory.stressLevel as any || undefined,
+      stressLevel: clientMemory.stressLevel as UserProfileData['stressLevel'] || undefined,
       
       // Progress Tracking
       currentBench: clientMemory.currentBench || undefined,

@@ -37,8 +37,7 @@ export interface SearchOptions {
  */
 export async function enhancedKnowledgeRetrieval(
   userQuery: string,
-  options: SearchOptions,
-  userId?: string
+  options: SearchOptions
 ): Promise<EnhancedKnowledgeContext[]> {
   
   console.log('🚀 Starting Enhanced RAG Retrieval');
@@ -110,7 +109,7 @@ async function enhanceQueryWithHistory(
   }
   
   try {
-    const { GoogleGenerativeAI } = require('@google/generative-ai');
+    const { GoogleGenerativeAI } = await import('@google/generative-ai');
     const genAI = new GoogleGenerativeAI(process.env.GEMINI_API_KEY!);
     
     const model = genAI.getGenerativeModel({ 
@@ -245,15 +244,19 @@ async function performVectorSearch(query: string, limit: number): Promise<Enhanc
     const queryEmbedding = await generateEmbedding(query);
     
     // Use existing fallback search from vector-search.ts
-    const { fallbackJsonSimilaritySearch } = require('./vector-search');
-    const results = await fallbackJsonSimilaritySearch(
+    const vectorSearch = await import('./vector-search');
+    const results = await vectorSearch.fallbackJsonSimilaritySearch(
       queryEmbedding.embedding,
       limit,
       0.3 // Lower threshold for candidates
     );
     
-    return results.map((result: any) => ({
-      ...result,
+    return results.map((result) => ({
+      content: result.content,
+      knowledgeId: result.knowledgeId,
+      title: result.title,
+      similarity: result.similarity,
+      chunkIndex: result.chunkIndex,
       source: 'vector' as const
     }));
     
@@ -294,7 +297,13 @@ async function performKeywordSearch(query: string, limit: number): Promise<Enhan
       LIMIT ${limit}
     `;
     
-    return (chunks as any[]).map(chunk => ({
+    return (chunks as Array<{
+      content: string;
+      knowledgeId: string; 
+      title: string;
+      chunkIndex: number;
+      keyword_score: string;
+    }>).map(chunk => ({
       content: chunk.content,
       knowledgeId: chunk.knowledgeId,
       title: chunk.title,
@@ -467,7 +476,6 @@ function diversifyResults(
   const sources = Array.from(sourceChunks.entries())
     .sort(([, a], [, b]) => (b[0].hybridScore || b[0].similarity) - (a[0].hybridScore || a[0].similarity));
   
-  let sourceIndex = 0;
   const sourceIndices = new Map<string, number>();
   
   while (diversified.length < maxResults && sources.length > 0) {

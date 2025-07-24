@@ -464,10 +464,9 @@ RESPONSE APPROACH:
 - Start with the most relevant information from the context
 - Present information as your expert knowledge with proper citations
 - Provide specific, actionable guidance based on available evidence
-- Include source references for key recommendations and facts
 - Focus on direct answers with proper attribution
 
-Your Task: Provide personalized coaching advice that integrates the knowledge base context with proper citations and considers the client's specific circumstances and question.` 
+Your Task: Provide personalized coaching advice that integrates the knowledge base context and considers the client's specific circumstances and question.` 
 
 : 
 

@@ -129,12 +129,12 @@ export async function processFileWithEnhancedChunking(
     let content = '';
     
     if (mimeType === 'application/pdf') {
-      const pdfParse = require('pdf-parse');
-      const pdfData = await pdfParse(fileBuffer);
+      const pdfParse = await import('pdf-parse');
+      const pdfData = await pdfParse.default(fileBuffer);
       content = pdfData.text;
     } else if (mimeType.includes('application/vnd.openxmlformats-officedocument.wordprocessingml.document') || 
                mimeType.includes('application/msword')) {
-      const mammoth = require('mammoth');
+      const mammoth = await import('mammoth');
       const result = await mammoth.extractRawText({ buffer: fileBuffer });
       content = result.value;
     } else if (mimeType.includes('text/')) {
@@ -226,7 +226,7 @@ async function enhanceSourcesWithMetadata(
         });
         
         // Get chunk data (no metadata field exists in schema)
-        const chunk = await prisma.knowledgeChunk.findFirst({
+        await prisma.knowledgeChunk.findFirst({
           where: {
             knowledgeItemId: source.knowledgeId,
             chunkIndex: source.chunkIndex
@@ -267,7 +267,7 @@ async function enhanceSourcesWithMetadata(
  * Generate embedding using the Gemini API
  */
 async function generateEmbedding(text: string): Promise<number[]> {
-  const { GoogleGenerativeAI } = require('@google/generative-ai');
+  const { GoogleGenerativeAI } = await import('@google/generative-ai');
   
   if (!process.env.GEMINI_API_KEY) {
     throw new Error('GEMINI_API_KEY not configured');
@@ -323,8 +323,10 @@ export async function testEnhancedRAGSystem(
   }
 }
 
-export default {
+const enhancedRagIntegration = {
   getEnhancedRAGContext,
   processFileWithEnhancedChunking,
   testEnhancedRAGSystem
 };
+
+export default enhancedRagIntegration;

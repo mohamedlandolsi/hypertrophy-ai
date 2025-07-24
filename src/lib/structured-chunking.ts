@@ -1,12 +1,11 @@
 /**
- * Enhanced Document Chunking with Structured Processing
+ * Enhanced Document Chunkin  knowledgeItemId?: string; // Made optional and marked as potentially unused
+  // eslint-disable-next-line @typescript-eslint/no-unused-vars
+  _knowledgeItemId?: string; // Alternative name to indicate it may be unused with Structured Processing
  * 
  * This module provides intelligent document chunking that preserves
  * structure, metadata, and semantic coherence for better RAG performance.
  */
-
-import { generateEmbedding } from './vector-embeddings';
-import { prisma } from './prisma';
 
 export interface StructuredChunk {
   content: string;
@@ -34,7 +33,8 @@ export interface ChunkMetadata {
 export async function processDocumentWithStructuredChunking(
   content: string,
   fileName: string,
-  knowledgeItemId: string
+  // eslint-disable-next-line @typescript-eslint/no-unused-vars
+  _knowledgeItemId: string
 ): Promise<StructuredChunk[]> {
   
   console.log(`📄 Starting structured document processing: ${fileName}`);
@@ -46,14 +46,13 @@ export async function processDocumentWithStructuredChunking(
     console.log(`🔍 Detected structure type: ${documentStructure.type}`);
     
     // Step 2: Extract structural elements
-    const structuralElements = extractStructuralElements(content, documentStructure);
+    const structuralElements = extractStructuralElements(content);
     console.log(`📚 Extracted ${structuralElements.length} structural elements`);
     
     // Step 3: Create intelligent chunks preserving structure
     const structuredChunks = await createStructuredChunks(
       structuralElements, 
-      fileName, 
-      knowledgeItemId
+      fileName
     );
     
     // Step 4: Enhance chunks with metadata and context
@@ -67,7 +66,7 @@ export async function processDocumentWithStructuredChunking(
   } catch (error) {
     console.error('❌ Structured chunking error:', error);
     // Fallback to simple chunking
-    return await fallbackSimpleChunking(content, fileName, knowledgeItemId);
+    return await fallbackSimpleChunking(content, fileName);
   }
 }
 
@@ -117,7 +116,7 @@ function analyzeDocumentStructure(content: string, fileName: string): DocumentSt
 /**
  * Extract and categorize structural elements from document
  */
-function extractStructuralElements(content: string, structure: DocumentStructure): StructuralElement[] {
+function extractStructuralElements(content: string): StructuralElement[] {
   const elements: StructuralElement[] = [];
   const lines = content.split('\n');
   
@@ -256,8 +255,7 @@ function extractStructuralElements(content: string, structure: DocumentStructure
  */
 async function createStructuredChunks(
   elements: StructuralElement[],
-  fileName: string,
-  knowledgeItemId: string
+  fileName: string
 ): Promise<StructuredChunk[]> {
   
   const chunks: StructuredChunk[] = [];
@@ -294,7 +292,7 @@ async function createStructuredChunks(
       chunks.push({
         content: combinedContent,
         chunkIndex: chunkIndex++,
-        structuralType: combinedType as any,
+        structuralType: combinedType as 'header' | 'paragraph' | 'list' | 'table' | 'quote' | 'mixed',
         metadata: {
           sourceDocument: fileName,
           section: element.section,
@@ -312,7 +310,7 @@ async function createStructuredChunks(
       
     } else {
       // Large element needs to be split
-      const splitChunks = await splitLargeElement(element, maxChunkSize, contextOverlap);
+      const splitChunks = splitLargeElement(element.content);
       
       splitChunks.forEach(chunk => {
         chunks.push({
@@ -340,14 +338,15 @@ async function createStructuredChunks(
  */
 async function enhanceChunksWithMetadata(
   chunks: StructuredChunk[],
-  originalContent: string
+  // eslint-disable-next-line @typescript-eslint/no-unused-vars
+  _originalContent: string
 ): Promise<StructuredChunk[]> {
   
-  return chunks.map((chunk, index) => ({
+  return chunks.map((chunk) => ({
     ...chunk,
     metadata: {
       ...chunk.metadata,
-      importance: refineImportanceScore(chunk, originalContent),
+      importance: refineImportanceScore(chunk),
       keywords: enhanceFitnessKeywords(chunk.metadata.keywords, chunk.content),
       conceptTags: enhanceFitnessConceptTags(chunk.metadata.conceptTags, chunk.content)
     }
@@ -439,7 +438,7 @@ function extractConceptTags(content: string): string[] {
   return tags;
 }
 
-function refineImportanceScore(chunk: StructuredChunk, originalContent: string): 'high' | 'medium' | 'low' {
+function refineImportanceScore(chunk: StructuredChunk): 'high' | 'medium' | 'low' {
   let score = chunk.metadata.importance === 'high' ? 3 : chunk.metadata.importance === 'medium' ? 2 : 1;
   
   // Boost for fitness-specific content
@@ -477,61 +476,35 @@ function enhanceFitnessConceptTags(tags: string[], content: string): string[] {
   return [...new Set([...tags, ...additionalTags])];
 }
 
-async function splitLargeElement(
-  element: StructuralElement,
-  maxSize: number,
-  overlap: number
-): Promise<Omit<StructuredChunk, 'chunkIndex' | 'metadata'>[]> {
+function splitLargeElement(
+  content: string
+): Omit<StructuredChunk, 'chunkIndex' | 'metadata'>[] {
   
   const chunks: Omit<StructuredChunk, 'chunkIndex' | 'metadata'>[] = [];
+  const maxSize = 800;
+  const overlap = 100;
   
-  if (element.type === 'list') {
-    // Split lists by items
-    const items = element.content.split(/\n(?=\s*[-*•]\s|\s*\d+\.\s)/);
-    let currentChunk = '';
-    
-    for (const item of items) {
-      if (currentChunk.length + item.length > maxSize && currentChunk) {
-        chunks.push({
-          content: currentChunk.trim(),
-          structuralType: 'list'
-        });
-        currentChunk = currentChunk.slice(-overlap) + '\n' + item;
-      } else {
-        currentChunk += (currentChunk ? '\n' : '') + item;
-      }
-    }
-    
-    if (currentChunk.trim()) {
+  // Simple text splitting by sentences
+  const sentences = content.match(/[^.!?]+[.!?]+/g) || [content];
+  let currentChunk = '';
+  
+  for (const sentence of sentences) {
+    if (currentChunk.length + sentence.length > maxSize && currentChunk) {
       chunks.push({
         content: currentChunk.trim(),
-        structuralType: 'list'
+        structuralType: 'paragraph'
       });
+      currentChunk = currentChunk.slice(-overlap) + ' ' + sentence;
+    } else {
+      currentChunk += (currentChunk ? ' ' : '') + sentence;
     }
-    
-  } else {
-    // Split paragraphs by sentences
-    const sentences = element.content.match(/[^.!?]+[.!?]+/g) || [element.content];
-    let currentChunk = '';
-    
-    for (const sentence of sentences) {
-      if (currentChunk.length + sentence.length > maxSize && currentChunk) {
-        chunks.push({
-          content: currentChunk.trim(),
-          structuralType: element.type as any
-        });
-        currentChunk = currentChunk.slice(-overlap) + ' ' + sentence;
-      } else {
-        currentChunk += (currentChunk ? ' ' : '') + sentence;
-      }
-    }
-    
-    if (currentChunk.trim()) {
-      chunks.push({
-        content: currentChunk.trim(),
-        structuralType: element.type as any
-      });
-    }
+  }
+  
+  if (currentChunk.trim()) {
+    chunks.push({
+      content: currentChunk.trim(),
+      structuralType: 'paragraph'
+    });
   }
   
   return chunks;
@@ -539,8 +512,7 @@ async function splitLargeElement(
 
 async function fallbackSimpleChunking(
   content: string,
-  fileName: string,
-  knowledgeItemId: string
+  fileName: string
 ): Promise<StructuredChunk[]> {
   
   console.log('🔄 Using fallback simple chunking');
