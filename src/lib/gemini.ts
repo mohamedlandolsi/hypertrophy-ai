@@ -61,7 +61,7 @@ export async function getAIConfiguration() {
 }
 
 export interface ConversationMessage {
-  role: 'user' | 'assistant';
+  role: 'user' | 'model'; // Fix: Use 'model' to match Gemini API expectations
   content: string;
   imageData?: string; // Base64 image data
   imageMimeType?: string; // Image MIME type
@@ -756,7 +756,7 @@ RESPONSE QUALITY REQUIREMENTS:
 // Helper function to format conversation for Gemini
 export function formatConversationForGemini(messages: Array<{ role: string; content: string; imageData?: string | null; imageMimeType?: string | null }>): ConversationMessage[] {
   return messages.map(msg => ({
-    role: msg.role === 'USER' ? 'user' : 'assistant',
+    role: msg.role === 'USER' ? 'user' : 'model', // Fix: Gemini expects 'model' not 'assistant'
     content: msg.content,
     imageData: msg.imageData || undefined,
     imageMimeType: msg.imageMimeType || undefined

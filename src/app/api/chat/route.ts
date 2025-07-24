@@ -5,8 +5,7 @@ import { sendToGeminiWithCitations, formatConversationForGemini } from '@/lib/ge
 import { 
   ApiErrorHandler, 
   ValidationError, 
-  AuthenticationError, 
-  NotFoundError,
+  AuthenticationError,
   logger 
 } from '@/lib/error-handler';
 import { canUserSendMessage, incrementUserMessageCount } from '@/lib/subscription';
@@ -16,13 +15,15 @@ export async function POST(request: NextRequest) {
   let user: { id: string } | null = null;
   
   try {
+    console.log("🛬 Chat API hit");
+    
     logger.info('Chat API request received', context);
     
     // Get the authenticated user (but don't require it for guest users)
     const supabase = await createClient();
     const { data: { user: authUser }, error: authError } = await supabase.auth.getUser();
     user = authUser;
-    
+
     // Parse request body - handle both JSON and FormData
     let body: {
       conversationId?: string;
@@ -34,9 +35,11 @@ export async function POST(request: NextRequest) {
     let imageMimeType: string | null = null;
     
     const contentType = request.headers.get('content-type');
+    console.log("📦 Content-Type:", contentType);
     
     if (contentType?.includes('multipart/form-data')) {
       // Handle multipart/form-data for image uploads
+      console.log("🧾 Raw Request Body: [multipart]");
       const formData = await request.formData();
       body = {
         conversationId: formData.get('conversationId') as string,
@@ -57,10 +60,21 @@ export async function POST(request: NextRequest) {
       }
     } else {
       // Handle JSON for text-only messages
-      body = await request.json();
+      const rawBody = await request.text();
+      console.log("🧾 Raw Request Body:", rawBody);
+      body = JSON.parse(rawBody);
     }
     
+    console.log("✅ Parsed Body:", body);
+    
     const { conversationId, message, isGuest = false } = body;
+
+    console.log("🧠 conversationId:", conversationId);
+    console.log("👤 userId:", user?.id);
+    console.log("📝 message length:", message?.length);
+    console.log("🎭 isGuest:", isGuest);
+
+    logger.info('Received conversationId from frontend:', { conversationId, userId: user?.id, messageLength: message?.length });
 
     // Validate required fields
     if (!message || typeof message !== 'string') {
@@ -134,6 +148,7 @@ export async function POST(request: NextRequest) {
 
     // If conversationId is provided, fetch existing messages
     if (conversationId) {
+      console.log("🔍 Looking for existing chat with ID:", conversationId);
       const existingChat = await prisma.chat.findFirst({
         where: {
           id: conversationId,
@@ -146,18 +161,27 @@ export async function POST(request: NextRequest) {
         }
       });
 
-      if (existingChat) {
-        existingMessages = existingChat.messages;
-      } else {
-        throw new NotFoundError('Chat conversation');
+      if (!existingChat) {
+        console.warn("🚨 Chat not found or does not belong to user", {
+          conversationId,
+          userId: user.id,
+        });
+        logger.warn('Invalid conversationId provided by user', { ...context, userId: user.id, conversationId });
+        throw new ValidationError(`Chat not found for ID: ${conversationId}. Please refresh the page and try again.`);
       }
+      
+      console.log("✅ Found existing chat with", existingChat.messages.length, "messages");
+      existingMessages = existingChat.messages;
     } else {
       // Create a new chat if no conversationId provided
+      console.log("🆕 Creating new chat");
       const newChat = await prisma.chat.create({
         data: {
           title: message.substring(0, 50) + (message.length > 50 ? '...' : ''),
-          userId: user.id,        }
+          userId: user.id,
+        }
       });
+      console.log("✅ Created new chat with ID:", newChat.id);
       chatId = newChat.id;
     }
 

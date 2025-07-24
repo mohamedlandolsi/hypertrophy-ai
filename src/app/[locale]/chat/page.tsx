@@ -108,16 +108,22 @@ const ChatPage = () => {
   const sendMessage = useCallback(async (messageText: string, imageFile?: File) => {
     if ((!messageText.trim() && !imageFile) || isLoading) return;
 
-    // Check if user is a guest and has reached the message limit (4 messages)
     if (!user && guestMessageCount >= 4) {
       setShowLoginDialog(true);
+      return;
+    }
+
+    // Safety guard: If we're sending a second message but don't have a conversationId yet,
+    // wait a moment for the state to update
+    if (messages.length > 0 && !conversationId) {
+      console.warn("⚠️ Attempting to send second message without conversationId, waiting...");
+      showToast.error(t('toasts.errorSendingMessage'), "Chat not fully initialized. Please wait a moment and try again.");
       return;
     }
 
     setIsLoading(true);
 
     try {
-      // Add user message to the UI immediately
       const userMessage = {
         id: Date.now().toString(),
         role: 'user' as const,
@@ -127,30 +133,41 @@ const ChatPage = () => {
       };
 
       setMessages(prev => [...prev, userMessage]);
-      setInput(''); // Clear input
+      setInput('');
 
-      // Prepare request body
+      // Use local variable instead of stale state
+      let tempConversationId = conversationId;
+
+      console.log("▶️ Sending message:", messageText);
+      console.log("📨 Conversation ID:", tempConversationId);
+      console.log("🕒 Original conversationId state:", conversationId);
+
       let body: FormData | string;
       let contentType: string | undefined;
 
       if (imageFile) {
         const formData = new FormData();
         formData.append('message', messageText);
-        formData.append('conversationId', conversationId || '');
+        formData.append('conversationId', tempConversationId || '');
         formData.append('isGuest', (!user).toString());
         formData.append('image', imageFile);
         body = formData;
-        // Don't set content-type for FormData - let browser set it
+        console.log("📤 Request Body (FormData):", {
+          message: messageText,
+          conversationId: tempConversationId || '',
+          isGuest: !user,
+          hasImage: true
+        });
       } else {
         body = JSON.stringify({
           message: messageText,
-          conversationId,
+          conversationId: tempConversationId || '',
           isGuest: !user,
         });
         contentType = 'application/json';
+        console.log("📤 Request Body (JSON):", body);
       }
 
-      // Send request
       const response = await fetch('/api/chat', {
         method: 'POST',
         body,
@@ -158,30 +175,41 @@ const ChatPage = () => {
       });
 
       if (!response.ok) {
-        const errorData = await response.json().catch(() => ({ error: 'Unknown error' }));
-        
-        if (errorData.error === 'MESSAGE_LIMIT_REACHED') {
+        let errorPayload;
+        try {
+          errorPayload = await response.json();
+        } catch {
+          const errorText = await response.text();
+          throw new Error(`Server error: ${response.statusText} (${errorText})`);
+        }
+
+        if (errorPayload.error === 'MESSAGE_LIMIT_REACHED') {
           if (userPlan) {
             setUserPlan(prev => prev ? { ...prev, messagesUsedToday: prev.dailyLimit } : null);
           }
           showToast.error(t('toasts.limitReachedTitle'), t('toasts.limitReachedText'));
           return;
         }
-        
-        throw new Error(errorData.error || 'Failed to send message');
+
+        throw new Error(errorPayload.message || errorPayload.error || 'An unknown server error occurred.');
       }
 
-      const responseData = await response.json();
+      let responseData;
+      try {
+        responseData = await response.json();
+      } catch {
+        const text = await response.text().catch(() => "N/A");
+        throw new Error(`Invalid JSON from server. Response: ${text}`);
+      }
 
-      // Handle conversation ID for new conversations
+      // Capture and persist the new conversationId
       if (responseData.conversationId && !conversationId) {
-        setConversationId(responseData.conversationId);
-        setActiveChatId(responseData.conversationId);
-        window.history.replaceState(null, '', `/${locale}/chat?id=${responseData.conversationId}`);
-        // Reload chat history to include the new conversation - we'll do this separately
+        tempConversationId = responseData.conversationId;
+        setConversationId(tempConversationId);
+        setActiveChatId(tempConversationId);
+        window.history.replaceState(null, '', `/${locale}/chat?id=${tempConversationId}`);
       }
 
-      // Add assistant message to the UI
       const assistantMessage = {
         id: responseData.assistantMessage?.id || (Date.now() + 1).toString(),
         role: 'assistant' as const,
@@ -190,7 +218,6 @@ const ChatPage = () => {
 
       setMessages(prev => [...prev, assistantMessage]);
 
-      // Update user plan state to reflect the new message count
       if (user && userPlan && userPlan.plan === 'FREE') {
         setUserPlan(prev => prev ? {
           ...prev,
@@ -198,28 +225,25 @@ const ChatPage = () => {
         } : null);
       }
 
-      // If user is a guest, increment their message count
       if (!user) {
         setGuestMessageCount(prev => prev + 1);
       }
 
     } catch (error) {
       console.error('Chat error:', error);
-      showToast.error(t('toasts.errorSendingMessage'), error instanceof Error ? error.message : t('toasts.genericError'));
-      
-      // Remove the user message from UI on error
+      showToast.error(t('toasts.errorSendingMessage'), error instanceof Error ? error.message : 'Unexpected error');
       setMessages(prev => prev.slice(0, -1));
     } finally {
       setIsLoading(false);
     }
-  }, [user, guestMessageCount, conversationId, userPlan, locale, t, setShowLoginDialog, setMessages, setInput, setIsLoading, setConversationId, setActiveChatId, setUserPlan, setGuestMessageCount]);
+  }, [user, guestMessageCount, conversationId, userPlan, locale, t, isLoading, messages.length, setShowLoginDialog, setMessages, setInput, setIsLoading, setConversationId, setActiveChatId, setUserPlan, setGuestMessageCount]);
 
   // Helper function to convert File to base64
   const convertFileToBase64 = (file: File): Promise<string> => {
     return new Promise((resolve, reject) => {
       const reader = new FileReader();
       reader.onload = () => resolve(reader.result as string);
-      reader.onerror = reject;
+      reader.onerror = () => reject(new Error(`Failed to read file: ${file.name}`));
       reader.readAsDataURL(file);
     });
   };
