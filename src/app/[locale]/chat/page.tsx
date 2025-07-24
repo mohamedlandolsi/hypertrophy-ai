@@ -2,7 +2,6 @@
 
 import { createClient } from '@/lib/supabase/client';
 import { useEffect, useState as reactUseState, useRef, useCallback } from 'react';
-import { useChat } from 'ai/react';
 import { Button } from '@/components/ui/button';
 import { Settings, MessageSquare, Send, ChevronLeft, Menu, User, LogOut, Database, Trash2, Copy, Loader2, Image as ImageIcon, X } from 'lucide-react';
 import Link from 'next/link';
@@ -89,95 +88,141 @@ const ChatPage = () => {
   const { theme } = useTheme();
   const [mounted, setMounted] = reactUseState(false);
 
-  // Configure useChat hook for robust conversation handling
-  const {
-    messages,
-    input,
-    handleInputChange,
-    handleSubmit,
-    isLoading,
-    setMessages,
-    setInput,
-  } = useChat({
-    api: '/api/chat',
-    
-    // Pass conversation ID and other context in the request body
-    body: {
-      conversationId,
-      isGuest: !user,
-    },
-    
-    // Transform the request to match API expectations using experimental feature
-    experimental_prepareRequestBody: ({ messages, requestBody }) => {
-      const lastMessage = messages[messages.length - 1];
-      
-      // Prepare form data if we have an image
-      if (selectedImage) {
+  // Message state - custom implementation instead of useChat to avoid streaming issues
+  const [messages, setMessages] = reactUseState<Array<{
+    id: string;
+    role: 'user' | 'assistant';
+    content: string;
+    imageData?: string;
+    imageMimeType?: string;
+  }>>([]);
+  const [input, setInput] = reactUseState('');
+  const [isLoading, setIsLoading] = reactUseState(false);
+
+  // Custom input change handler
+  const handleInputChange = useCallback((e: React.ChangeEvent<HTMLTextAreaElement>) => {
+    setInput(e.target.value);
+  }, [setInput]);
+
+  // Custom submit handler
+  const sendMessage = useCallback(async (messageText: string, imageFile?: File) => {
+    if ((!messageText.trim() && !imageFile) || isLoading) return;
+
+    // Check if user is a guest and has reached the message limit (4 messages)
+    if (!user && guestMessageCount >= 4) {
+      setShowLoginDialog(true);
+      return;
+    }
+
+    setIsLoading(true);
+
+    try {
+      // Add user message to the UI immediately
+      const userMessage = {
+        id: Date.now().toString(),
+        role: 'user' as const,
+        content: messageText,
+        imageData: imageFile ? await convertFileToBase64(imageFile) : undefined,
+        imageMimeType: imageFile?.type,
+      };
+
+      setMessages(prev => [...prev, userMessage]);
+      setInput(''); // Clear input
+
+      // Prepare request body
+      let body: FormData | string;
+      let contentType: string | undefined;
+
+      if (imageFile) {
         const formData = new FormData();
-        formData.append('message', lastMessage.content);
+        formData.append('message', messageText);
         formData.append('conversationId', conversationId || '');
         formData.append('isGuest', (!user).toString());
-        formData.append('image', selectedImage);
-        
-        return formData;
+        formData.append('image', imageFile);
+        body = formData;
+        // Don't set content-type for FormData - let browser set it
+      } else {
+        body = JSON.stringify({
+          message: messageText,
+          conversationId,
+          isGuest: !user,
+        });
+        contentType = 'application/json';
       }
-      
-      // For text-only messages, return JSON with 'message' field
-      return {
-        ...(requestBody as object),
-        message: lastMessage.content,
-      };
-    },
-    
-    // Extract metadata from response headers
-    onResponse: async (response: Response) => {
+
+      // Send request
+      const response = await fetch('/api/chat', {
+        method: 'POST',
+        body,
+        ...(contentType && { headers: { 'Content-Type': contentType } }),
+      });
+
       if (!response.ok) {
-        throw new Error('Failed to send message');
+        const errorData = await response.json().catch(() => ({ error: 'Unknown error' }));
+        
+        if (errorData.error === 'MESSAGE_LIMIT_REACHED') {
+          if (userPlan) {
+            setUserPlan(prev => prev ? { ...prev, messagesUsedToday: prev.dailyLimit } : null);
+          }
+          showToast.error(t('toasts.limitReachedTitle'), t('toasts.limitReachedText'));
+          return;
+        }
+        
+        throw new Error(errorData.error || 'Failed to send message');
       }
-      
-      // Extract conversation ID from headers for first message
-      const responseConversationId = response.headers.get('X-Conversation-Id');
-      if (responseConversationId && !initialConversationId && !conversationId) {
-        setConversationId(responseConversationId);
-        setActiveChatId(responseConversationId);
-        window.history.replaceState(null, '', `/${locale}/chat?id=${responseConversationId}`);
-        loadChatHistory();
+
+      const responseData = await response.json();
+
+      // Handle conversation ID for new conversations
+      if (responseData.conversationId && !conversationId) {
+        setConversationId(responseData.conversationId);
+        setActiveChatId(responseData.conversationId);
+        window.history.replaceState(null, '', `/${locale}/chat?id=${responseData.conversationId}`);
+        // Reload chat history to include the new conversation - we'll do this separately
       }
-      
-      // Don't return anything - just process the response
-    },
-    
-    // Handle successful message completion
-    onFinish: () => {
+
+      // Add assistant message to the UI
+      const assistantMessage = {
+        id: responseData.assistantMessage?.id || (Date.now() + 1).toString(),
+        role: 'assistant' as const,
+        content: responseData.content,
+      };
+
+      setMessages(prev => [...prev, assistantMessage]);
+
       // Update user plan state to reflect the new message count
       if (user && userPlan && userPlan.plan === 'FREE') {
-        setUserPlan(prev => prev ? { 
-          ...prev, 
+        setUserPlan(prev => prev ? {
+          ...prev,
           messagesUsedToday: Math.min(prev.messagesUsedToday + 1, prev.dailyLimit)
         } : null);
       }
-      
+
       // If user is a guest, increment their message count
       if (!user) {
         setGuestMessageCount(prev => prev + 1);
       }
-    },
-    
-    // Handle errors
-    onError: (err) => {
-      console.error('Chat error:', err);
+
+    } catch (error) {
+      console.error('Chat error:', error);
+      showToast.error(t('toasts.errorSendingMessage'), error instanceof Error ? error.message : t('toasts.genericError'));
       
-      // Handle subscription limit errors specifically
-      if (err.message?.includes('MESSAGE_LIMIT_REACHED')) {
-        if (userPlan) {
-          setUserPlan(prev => prev ? { ...prev, messagesUsedToday: prev.dailyLimit } : null);
-        }
-        showToast.error(t('toasts.limitReachedTitle'), t('toasts.limitReachedText'));
-      } else {
-        showToast.error(t('toasts.errorSendingMessage'), err.message || t('toasts.genericError'));
-      }
-    },
-  });
+      // Remove the user message from UI on error
+      setMessages(prev => prev.slice(0, -1));
+    } finally {
+      setIsLoading(false);
+    }
+  }, [user, guestMessageCount, conversationId, userPlan, locale, t, setShowLoginDialog, setMessages, setInput, setIsLoading, setConversationId, setActiveChatId, setUserPlan, setGuestMessageCount]);
+
+  // Helper function to convert File to base64
+  const convertFileToBase64 = (file: File): Promise<string> => {
+    return new Promise((resolve, reject) => {
+      const reader = new FileReader();
+      reader.onload = () => resolve(reader.result as string);
+      reader.onerror = reject;
+      reader.readAsDataURL(file);
+    });
+  };
 
   // Helper function to get logo source safely
   const getLogoSrc = () => {
@@ -470,11 +515,11 @@ const ChatPage = () => {
 
   const toggleSidebar = useCallback(() => setIsSidebarOpen(!isSidebarOpen), [isSidebarOpen, setIsSidebarOpen]);
 
-  // Override handleInputChange to add character limit
+  // Custom input change handler with character limit
   const customHandleInputChange = useCallback((e: React.ChangeEvent<HTMLTextAreaElement>) => {
     const value = e.target.value;
     if (value.length <= 2000) {
-      handleInputChange(e); // Use the one from useChat
+      handleInputChange(e); // Use our custom handleInputChange
     }
   }, [handleInputChange]);
 
@@ -547,7 +592,7 @@ const ChatPage = () => {
     }
   }, [selectedImage, setSelectedImage, setImagePreview, t]);
 
-  // Custom submit handler to add additional checks before using AI SDK's handleSubmit
+  // Custom submit handler to use our sendMessage function
   const onSubmit = useCallback(async (e: React.FormEvent) => {
     e.preventDefault();
     
@@ -559,13 +604,13 @@ const ChatPage = () => {
       return;
     }
 
-    // Clear image state before submitting
+    // Send the message using our custom function
+    await sendMessage(input, selectedImage || undefined);
+    
+    // Clear image state after submitting
     setSelectedImage(null);
     setImagePreview(null);
-
-    // Use the AI SDK's handleSubmit function
-    handleSubmit(e);
-  }, [input, selectedImage, isLoading, user, guestMessageCount, setShowLoginDialog, setSelectedImage, setImagePreview, handleSubmit]);
+  }, [input, selectedImage, isLoading, user, guestMessageCount, setShowLoginDialog, setSelectedImage, setImagePreview, sendMessage]);
 
   // Add keyboard shortcuts support
   useEffect(() => {

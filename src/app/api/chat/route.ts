@@ -80,45 +80,22 @@ export async function POST(request: NextRequest) {
       // Get AI response from Gemini (pass undefined for user ID since it's a guest)
       const aiResult = await sendToGeminiWithCitations(conversationForGemini, undefined, imageBuffer, imageMimeType);
 
-      // Return streaming response for AI SDK compatibility
-      const encoder = new TextEncoder();
-      const stream = new ReadableStream({
-        start(controller) {
-          // Send the message content as a data chunk
-          const textChunk = `0:"${aiResult.content.replace(/"/g, '\\"').replace(/\n/g, '\\n')}"\n`;
-          controller.enqueue(encoder.encode(textChunk));
-          
-          // Send finish signal
-          const finishChunk = `d:{"finishReason":"stop","usage":{"promptTokens":0,"completionTokens":0}}\n`;
-          controller.enqueue(encoder.encode(finishChunk));
-          
-          controller.close();
-        }
-      });
-
-      return new Response(stream, {
-        status: 200,
-        headers: {
-          'Content-Type': 'text/plain; charset=utf-8',
-          'X-Conversation-Id': '', // No conversation ID for guests
-          'X-Citations': JSON.stringify(aiResult.citations || []),
-          'X-Response-Data': JSON.stringify({
-            conversationId: null, // No conversation ID for guests
-            assistantReply: aiResult.content,
-            citations: aiResult.citations || [],
-            userMessage: {
-              id: Date.now().toString(), // Temporary ID
-              content: message,
-              role: 'USER',
-              createdAt: new Date().toISOString(),
-            },
-            assistantMessage: {
-              id: (Date.now() + 1).toString(), // Temporary ID
-              content: aiResult.content,
-              role: 'ASSISTANT',
-              createdAt: new Date().toISOString(),
-            }
-          })
+      // Return JSON response for guest users
+      return NextResponse.json({
+        content: aiResult.content,
+        conversationId: null, // No conversation ID for guests
+        citations: aiResult.citations || [],
+        userMessage: {
+          id: Date.now().toString(), // Temporary ID
+          content: message,
+          role: 'USER',
+          createdAt: new Date().toISOString(),
+        },
+        assistantMessage: {
+          id: (Date.now() + 1).toString(), // Temporary ID
+          content: aiResult.content,
+          role: 'ASSISTANT',
+          createdAt: new Date().toISOString(),
         }
       });
     }
@@ -222,52 +199,25 @@ export async function POST(request: NextRequest) {
       citationsCount: aiResult.citations?.length || 0
     });
 
-    // Return response in a format compatible with Vercel AI SDK
-    // The AI SDK expects a streaming data format
-    const encoder = new TextEncoder();
-    const stream = new ReadableStream({
-      start(controller) {
-        // Send the message content as a data chunk
-        const textChunk = `0:"${aiResult.content.replace(/"/g, '\\"').replace(/\n/g, '\\n')}"\n`;
-        controller.enqueue(encoder.encode(textChunk));
-        
-        // Send finish signal
-        const finishChunk = `d:{"finishReason":"stop","usage":{"promptTokens":0,"completionTokens":0}}\n`;
-        controller.enqueue(encoder.encode(finishChunk));
-        
-        controller.close();
-      }
-    });
-
-    return new Response(stream, {
-      status: 200,
-      headers: {
-        'Content-Type': 'text/plain; charset=utf-8',
-        // Include metadata in custom headers for the frontend to access
-        'X-Conversation-Id': chatId || '',
-        'X-User-Message-Id': userMessage.id,
-        'X-Assistant-Message-Id': assistantMessage.id,
-        'X-Citations': JSON.stringify(aiResult.citations || []),
-        // Include full message data for compatibility
-        'X-Response-Data': JSON.stringify({
-          conversationId: chatId,
-          assistantReply: aiResult.content,
-          citations: aiResult.citations || [],
-          userMessage: {
-            id: userMessage.id,
-            content: userMessage.content,
-            role: userMessage.role,
-            createdAt: userMessage.createdAt,
-            imageData: userMessage.imageData ? `data:${userMessage.imageMimeType};base64,${userMessage.imageData}` : undefined,
-            imageMimeType: userMessage.imageMimeType || undefined,
-          },
-          assistantMessage: {
-            id: assistantMessage.id,
-            content: assistantMessage.content,
-            role: assistantMessage.role,
-            createdAt: assistantMessage.createdAt,
-          }
-        })
+    // Return JSON response instead of streaming for better compatibility
+    // The frontend will handle the message display
+    return NextResponse.json({
+      content: aiResult.content,
+      conversationId: chatId,
+      citations: aiResult.citations || [],
+      userMessage: {
+        id: userMessage.id,
+        content: userMessage.content,
+        role: userMessage.role,
+        createdAt: userMessage.createdAt,
+        imageData: userMessage.imageData ? `data:${userMessage.imageMimeType};base64,${userMessage.imageData}` : undefined,
+        imageMimeType: userMessage.imageMimeType || undefined,
+      },
+      assistantMessage: {
+        id: assistantMessage.id,
+        content: assistantMessage.content,
+        role: assistantMessage.role,
+        createdAt: assistantMessage.createdAt,
       }
     });
 
