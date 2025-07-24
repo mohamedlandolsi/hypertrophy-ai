@@ -7,8 +7,7 @@ import {
   type MemoryUpdate
 } from './client-memory';
 import { fetchRelevantKnowledge, type KnowledgeContext } from './vector-search';
-import { generateEmbedding } from './vector-embeddings';
-import { generateSubQueries, shouldUseMultiQuery } from './query-generator';
+import { generateSubQueries } from './query-generator';
 
 // Initialize the Gemini client
 const genAI = new GoogleGenerativeAI(process.env.GEMINI_API_KEY!);
@@ -304,9 +303,9 @@ export async function sendToGeminiWithCitations(
         const userQuery = latestUserMessage.content;
         console.log(`🔍 MULTI-QUERY RAG: Starting retrieval for query: "${userQuery}" (User: ${userId || 'GUEST'})`);
         
-        // Determine if we should use multi-query retrieval
-        const useMultiQuery = shouldUseMultiQuery(userQuery);
-        console.log(`🎯 Multi-query strategy: ${useMultiQuery ? 'ENABLED' : 'DISABLED'} for this query`);
+        // Temporarily disable multi-query to get core search working first
+        const useMultiQuery = false; // shouldUseMultiQuery(userQuery);
+        console.log(`🎯 Multi-query strategy: DISABLED (temporarily for debugging)`);
         
         let allRelevantChunks: KnowledgeContext[] = [];
         
@@ -320,9 +319,11 @@ export async function sendToGeminiWithCitations(
             console.log(`🔍 Starting parallel processing for sub-query: "${query}"`);
             
             try {
-              const queryEmbedding = await generateEmbedding(query);
+              const embeddingResult = await genAI.getGenerativeModel({ model: "text-embedding-004" })
+                .embedContent(query);
+              const queryEmbedding = embeddingResult.embedding.values;
               const chunks = await fetchRelevantKnowledge(
-                queryEmbedding.embedding,
+                queryEmbedding,
                 Math.max(aiConfig.ragMaxChunks / subQueries.length, 3), // Distribute chunks across queries
                 aiConfig.ragHighRelevanceThreshold
               );
@@ -359,10 +360,12 @@ export async function sendToGeminiWithCitations(
           
         } else {
           // Step 1: Single-query retrieval (original logic)
-          const queryEmbeddingResult = await generateEmbedding(userQuery);
+          const embeddingResult = await genAI.getGenerativeModel({ model: "text-embedding-004" })
+            .embedContent(userQuery);
+          const queryEmbedding = embeddingResult.embedding.values;
           
           allRelevantChunks = await fetchRelevantKnowledge(
-            queryEmbeddingResult.embedding,
+            queryEmbedding,
             aiConfig.ragMaxChunks,
             aiConfig.ragHighRelevanceThreshold
           );
@@ -447,45 +450,25 @@ ${languageInstruction}
 ${clientMemoryContext}
 
 ${knowledgeContext ? 
-`--- KNOWLEDGE BASE CONTEXT ---
+`---
+## Knowledge Base Context
+The following information has been retrieved from the knowledge base to answer the user's query.
+
 ${knowledgeContext}
---- END OF KNOWLEDGE BASE CONTEXT ---
+---
 
-CRITICAL INSTRUCTIONS FOR CONTEXT USAGE:
-1. ALWAYS prioritize information from the Knowledge Base Context above your general knowledge
-2. Synthesize the provided information with your expert knowledge to create comprehensive advice
-3. When you use information from the knowledge base context, include article references using this format: [Article Title](article:knowledge_item_id)
-4. If the context material contradicts your general knowledge, follow the context material
-5. If the context material is insufficient, you may supplement with general knowledge
-6. When making recommendations, base them on the provided context when available
-7. Present the knowledge professionally as an expert coach while citing sources appropriately
-
-RESPONSE APPROACH:
-- Start with the most relevant information from the context
-- Present information as your expert knowledge with proper citations
-- Provide specific, actionable guidance based on available evidence
-- Focus on direct answers with proper attribution
-
-Your Task: Provide personalized coaching advice that integrates the knowledge base context and considers the client's specific circumstances and question.` 
-
+## Critical Instructions for Your Response
+- **Prioritize Knowledge Base:** You MUST base your answer primarily on the provided "Knowledge Base Context." It is your single source of truth for this query.
+- **Synthesize, Don't Repeat:** Integrate the information into your expert voice. Do not copy it verbatim.
+- **Adhere to Context:** If the context contradicts your general knowledge, the context is correct. Follow it.
+` 
 : 
-
-`IMPORTANT: No specific knowledge base content is currently available for this query. 
-
-FALLBACK INSTRUCTIONS:
-- You are authorized to draw upon your general, pre-trained knowledge base
-- Provide evidence-based fitness guidance using established scientific principles
-- Clearly indicate when information is from general knowledge vs. specific studies
-- Recommend that the user consider uploading relevant research papers or documents for more personalized advice
-- Focus on well-established, broadly accepted fitness and nutrition principles`}
-
-RESPONSE QUALITY REQUIREMENTS:
-- Be specific and actionable
-- Avoid generic advice that could apply to anyone
-- Connect recommendations to the client's specific situation
-- Use scientific terminology appropriately
-- Provide reasoning for your recommendations
-- Acknowledge any limitations in the available information`;
+`---
+## Critical Fallback Instructions
+- **No Context Available:** No relevant information was found in the knowledge base for this query.
+- **Be Cautious:** Provide safe, evidence-based guidance based on widely accepted scientific principles. Avoid any controversial or cutting-edge topics.
+- **Do Not Hallucinate:** If you cannot provide a high-quality, evidence-based answer from your general knowledge, state that you do not have enough information to answer reliably.
+`}`;
 
     // Get the generative model with function calling capabilities (only for authenticated users)
     const modelConfig = { 

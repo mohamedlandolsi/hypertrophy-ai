@@ -271,17 +271,19 @@ async function performVectorSearch(query: string, limit: number): Promise<Enhanc
  */
 async function performKeywordSearch(query: string, limit: number): Promise<EnhancedKnowledgeContext[]> {
   try {
-    // Clean and prepare search terms
+    // Clean and prepare search terms for AND logic
     const searchTerms = query
       .toLowerCase()
       .replace(/[^\w\s]/g, ' ')
       .split(' ')
       .filter(term => term.length > 2)
-      .join(' | '); // PostgreSQL OR syntax
+      .join(' & '); // PostgreSQL AND syntax for more precise results
     
     if (!searchTerms) return [];
     
-    // Use PostgreSQL to_tsvector and to_tsquery for full-text search
+    console.log(`🔍 Keyword search with AND logic: "${searchTerms}"`);
+    
+    // Use PostgreSQL to_tsvector and to_tsquery for full-text search with AND logic
     const chunks = await prisma.$queryRaw`
       SELECT 
         kc.content,

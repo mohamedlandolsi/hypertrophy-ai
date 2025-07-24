@@ -47,9 +47,9 @@ export async function fallbackJsonSimilaritySearch(
     console.log(`🔍 Starting optimized JSON similarity search for top ${topK} chunks`);
     const searchStart = Date.now();
     
-    // Fetch chunks with JSON embeddings with LIMIT to prevent timeouts
-    // Only process a reasonable number of chunks to keep response time under 30 seconds
-    const maxChunksToProcess = 1500; // Limit to 1500 chunks for faster processing
+    // Fetch ALL chunks with JSON embeddings - remove artificial limit
+    // The vector similarity calculation should work across the entire knowledge base
+    console.log('📊 Fetching all available chunks for comprehensive search...');
     
     const chunks = await prisma.knowledgeChunk.findMany({
       where: {
@@ -66,14 +66,23 @@ export async function fallbackJsonSimilaritySearch(
           }
         }
       },
-      take: maxChunksToProcess, // CRITICAL: Limit to prevent timeout
-      // No ordering for better source diversity
+      // Remove the artificial limit - search across entire knowledge base
+      // Order by creation time for consistent results, but search all chunks
+      orderBy: {
+        createdAt: 'asc'
+      }
     });
 
     const fetchTime = Date.now() - searchStart;
-    console.log(`📊 Fetched ${chunks.length} chunks in ${fetchTime}ms`);
+    console.log(`📊 Fetched ${chunks.length} chunks from entire knowledge base in ${fetchTime}ms`);
 
-    // Calculate cosine similarity in JavaScript
+    if (chunks.length === 0) {
+      console.log('⚠️ No chunks found in knowledge base');
+      return [];
+    }
+
+    // Calculate cosine similarity in JavaScript across ALL chunks
+    console.log('🧮 Computing similarity scores for all chunks...');
     const similarities = chunks.map(chunk => {
       try {
         const chunkEmbedding = JSON.parse(chunk.embeddingData!) as number[];
@@ -92,91 +101,60 @@ export async function fallbackJsonSimilaritySearch(
       }
     }).filter(Boolean) as KnowledgeContext[];
 
-    // Sort by similarity descending
+    // Sort by similarity descending to get the best matches first
     const sortedSimilarities = similarities.sort((a, b) => b.similarity - a.similarity);
+    
+    console.log(`🎯 Top similarity scores: ${sortedSimilarities.slice(0, 5).map(s => s.similarity.toFixed(4)).join(', ')}`);
 
-    // Step 1: Fetch a larger pool for source diversification (3x topK, minimum 15)
-    const initialFetchLimit = Math.max(topK * 3, 15);
-    let candidateChunks = sortedSimilarities.slice(0, initialFetchLimit);
-
-    // Step 2: Apply high relevance threshold filtering if provided
+    // Apply high relevance threshold filtering if provided
+    let candidateChunks = sortedSimilarities;
     if (highRelevanceThreshold !== undefined) {
-      candidateChunks = candidateChunks.filter(
+      candidateChunks = sortedSimilarities.filter(
         chunk => chunk.similarity >= highRelevanceThreshold
       );
       
       console.log(`🔍 High relevance filtering: ${sortedSimilarities.length} total → ${candidateChunks.length} above threshold ${highRelevanceThreshold}`);
     }
 
-    // Step 3: Implement interleaved source diversification
-    const diversifiedChunks: KnowledgeContext[] = [];
-    
-    // Group chunks by knowledge item
-    const chunksBySource = candidateChunks.reduce((groups, chunk) => {
-      if (!groups[chunk.knowledgeId]) {
-        groups[chunk.knowledgeId] = [];
-      }
-      groups[chunk.knowledgeId].push(chunk);
-      return groups;
-    }, {} as Record<string, KnowledgeContext[]>);
-    
-    // Sort sources by their best chunk's similarity (descending)
-    const sortedSources = Object.entries(chunksBySource)
-      .sort(([, a], [, b]) => b[0].similarity - a[0].similarity)
-      .map(([sourceId, chunks]) => ({ sourceId, chunks }));
-    
-    console.log(`🔍 Found ${sortedSources.length} unique sources for interleaving`);
-    
-    // Interleave chunks: take best chunk from each source in round-robin fashion
-    let sourceIndex = 0;
-    const sourceChunkIndices = new Array(sortedSources.length).fill(0);
-    
-    while (diversifiedChunks.length < topK) {
-      let addedInThisRound = 0;
-      
-      // Try to add one chunk from each source in this round
-      for (let i = 0; i < sortedSources.length && diversifiedChunks.length < topK; i++) {
-        const currentSourceIndex = (sourceIndex + i) % sortedSources.length;
-        const source = sortedSources[currentSourceIndex];
-        const chunkIndex = sourceChunkIndices[currentSourceIndex];
-        
-        if (chunkIndex < source.chunks.length) {
-          const chunk = source.chunks[chunkIndex];
-          
-          // Avoid duplicate content
-          if (!diversifiedChunks.some(dc => dc.content === chunk.content)) {
-            diversifiedChunks.push(chunk);
-            addedInThisRound++;
-          }
-          
-          sourceChunkIndices[currentSourceIndex]++;
-        }
-      }
-      
-      // If no chunks were added in this round, break to avoid infinite loop
-      if (addedInThisRound === 0) {
-        break;
-      }
-      
-      sourceIndex = (sourceIndex + 1) % sortedSources.length;
+    if (candidateChunks.length === 0) {
+      console.log('⚠️ No chunks meet the similarity criteria');
+      return [];
     }
 
-    const uniqueSourceCount = new Set(diversifiedChunks.map(chunk => chunk.knowledgeId)).size;
-    console.log(`🔍 Interleaved diversification: ${diversifiedChunks.length} chunks from ${uniqueSourceCount} unique sources`);
+    // Simplified diversification: ensure we get results from multiple sources
+    const diversifiedChunks: KnowledgeContext[] = [];
+    const usedSources = new Set<string>();
+    const maxPerSource = Math.max(1, Math.floor(topK / 3)); // Allow max 1/3 of results from same source
     
-    // Log source distribution for debugging
-    const sourceDistribution = diversifiedChunks.reduce((dist, chunk) => {
-      dist[chunk.title] = (dist[chunk.title] || 0) + 1;
-      return dist;
-    }, {} as Record<string, number>);
+    // First pass: take the best chunk from each unique source
+    for (const chunk of candidateChunks) {
+      if (!usedSources.has(chunk.knowledgeId) && diversifiedChunks.length < topK) {
+        diversifiedChunks.push(chunk);
+        usedSources.add(chunk.knowledgeId);
+      }
+    }
     
-    console.log(`📊 Source distribution:`, sourceDistribution);
+    // Second pass: fill remaining slots with best available chunks, respecting per-source limits
+    const sourceCount = new Map<string, number>();
+    for (const chunk of candidateChunks) {
+      if (diversifiedChunks.length >= topK) break;
+      
+      const currentCount = sourceCount.get(chunk.knowledgeId) || 0;
+      if (currentCount < maxPerSource && !diversifiedChunks.some(dc => dc.chunkIndex === chunk.chunkIndex && dc.knowledgeId === chunk.knowledgeId)) {
+        diversifiedChunks.push(chunk);
+        sourceCount.set(chunk.knowledgeId, currentCount + 1);
+      }
+    }
+
+    console.log(`� Diversified results: ${diversifiedChunks.length} chunks from ${usedSources.size} sources`);
+
+    const searchTime = Date.now() - searchStart;
+    console.log(`✅ Vector search completed in ${searchTime}ms`);
 
     return diversifiedChunks;
-
   } catch (error) {
-    console.error('❌ Fallback similarity search error:', error);
-    return [];
+    console.error('❌ Fallback JSON similarity search failed:', error);
+    throw error;
   }
 }
 
