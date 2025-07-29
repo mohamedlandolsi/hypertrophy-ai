@@ -40,10 +40,12 @@ export const ArabicAwareTextarea: React.FC<ArabicAwareTextareaProps> = ({
     return placeholder;
   };
   
-  // Auto-resize textarea based on content
+  // Auto-resize textarea based on content with better mobile handling
   const autoResize = (textarea: HTMLTextAreaElement) => {
     textarea.style.height = 'auto';
-    const newHeight = Math.min(textarea.scrollHeight, 120); // Max height of ~5 lines
+    const isMobile = window.innerWidth < 768;
+    const maxHeight = isMobile ? 150 : 200; // Taller on desktop, shorter on mobile for better UX
+    const newHeight = Math.min(textarea.scrollHeight, maxHeight);
     textarea.style.height = `${newHeight}px`;
   };
   
@@ -53,8 +55,21 @@ export const ArabicAwareTextarea: React.FC<ArabicAwareTextareaProps> = ({
   };
   
   const handleKeyDown = (e: React.KeyboardEvent<HTMLTextAreaElement>) => {
-    // Auto-resize on Enter
-    if (e.key === 'Enter') {
+    // Handle Enter key to send message (instead of Ctrl+Enter)
+    if (e.key === 'Enter' && !e.shiftKey) {
+      e.preventDefault();
+      // Trigger form submission by dispatching a submit event
+      const form = e.currentTarget.closest('form');
+      if (form) {
+        const submitEvent = new Event('submit', { bubbles: true, cancelable: true });
+        form.dispatchEvent(submitEvent);
+      }
+      return;
+    }
+    
+    // Shift + Enter creates a new line (default behavior)
+    if (e.key === 'Enter' && e.shiftKey) {
+      // Allow default behavior for new line
       setTimeout(() => autoResize(e.target as HTMLTextAreaElement), 0);
     }
     
@@ -66,7 +81,7 @@ export const ArabicAwareTextarea: React.FC<ArabicAwareTextareaProps> = ({
   return (
     <Textarea
       placeholder={getPlaceholder()}
-      className={`${className} ${direction === 'rtl' ? 'text-right' : ''} resize-none overflow-y-auto max-h-[120px] chat-textarea`}
+      className={`${className} ${direction === 'rtl' ? 'text-right' : ''} resize-none overflow-y-auto scrollbar-thin scrollbar-thumb-muted scrollbar-track-transparent chat-textarea`}
       value={value}
       onChange={handleChange}
       disabled={disabled}
@@ -80,7 +95,10 @@ export const ArabicAwareTextarea: React.FC<ArabicAwareTextareaProps> = ({
         unicodeBidi: direction === 'auto' ? 'plaintext' : 'normal',
         textAlign: direction === 'rtl' ? 'right' : 'left',
         minHeight: '48px', // Match the h-12 class (3rem = 48px)
-        lineHeight: '1.5'
+        maxHeight: window?.innerWidth < 768 ? '150px' : '200px', // Responsive max height
+        lineHeight: '1.5',
+        wordWrap: 'break-word',
+        overflowWrap: 'break-word'
       }}
       onInput={(e: React.FormEvent<HTMLTextAreaElement>) => autoResize(e.target as HTMLTextAreaElement)}
     />

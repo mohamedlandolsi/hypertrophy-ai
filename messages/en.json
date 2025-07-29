@@ -885,7 +885,7 @@
       "welcomeMessage": "Start a new conversation or select one from the sidebar.",
       "startNewConversation": "Start a new conversation",
       "askAnything": "Ask anything about fitness, nutrition, or training",
-      "inputPlaceholder": "Type your message here... (e.g., 'How can I improve my bench press?')",
+      "inputPlaceholder": "Type your message here...",
       "send": "Send",
       "sendShortcut": "Enter to send",
       "shortcuts": "Shortcuts",
@@ -899,6 +899,7 @@
     "keyboardShortcuts": {
       "title": "Keyboard Shortcuts",
       "send": "Send message",
+      "newLine": "New line",
       "newChat": "New chat",
       "focusInput": "Focus input",
       "pasteImage": "Paste image",

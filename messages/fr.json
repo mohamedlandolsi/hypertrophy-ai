@@ -911,7 +911,7 @@
       "welcomeMessage": "Commencez une nouvelle conversation ou sélectionnez-en une dans la barre latérale.",
       "startNewConversation": "Commencer une nouvelle conversation",
       "askAnything": "Posez vos questions sur le fitness, la nutrition ou l'entraînement",
-      "inputPlaceholder": "Tapez votre message ici... (ex: 'Comment puis-je améliorer mon développé couché ?')",
+      "inputPlaceholder": "Tapez votre message ici...",
       "send": "Envoyer",
       "sendShortcut": "Entrée pour envoyer",
       "shortcuts": "Raccourcis",
@@ -925,6 +925,7 @@
     "keyboardShortcuts": {
       "title": "Raccourcis Clavier",
       "send": "Envoyer le message",
+      "newLine": "Nouvelle ligne",
       "newChat": "Nouvelle discussion",
       "focusInput": "Focus sur l'entrée",
       "pasteImage": "Coller une image",

@@ -639,12 +639,6 @@ const ChatPage = () => {
   // Add keyboard shortcuts support
   useEffect(() => {
     const handleKeyDown = (e: KeyboardEvent) => {
-      // Cmd/Ctrl + Enter to send message
-      if ((e.metaKey || e.ctrlKey) && e.key === 'Enter' && (input.trim() || selectedImage) && !isLoading) {
-        e.preventDefault();
-        onSubmit(e as unknown as React.FormEvent);
-      }
-      
       // Cmd/Ctrl + N for new chat
       if ((e.metaKey || e.ctrlKey) && e.key === 'n' && user) {
         e.preventDefault();
@@ -666,7 +660,7 @@ const ChatPage = () => {
 
     document.addEventListener('keydown', handleKeyDown);
     return () => document.removeEventListener('keydown', handleKeyDown);
-  }, [input, selectedImage, isLoading, user, isMobile, isSidebarOpen, onSubmit, handleNewChat, setIsSidebarOpen]);
+  }, [user, isMobile, isSidebarOpen, handleNewChat, setIsSidebarOpen]);
 
   // Add global paste event listener for images
   useEffect(() => {
@@ -718,7 +712,74 @@ const ChatPage = () => {
     return () => document.removeEventListener('paste', handleGlobalPaste);
   }, [selectedImage, setSelectedImage, setImagePreview, t]);
 
-  // Enhanced keyboard shortcuts tooltip
+  // Add mobile sidebar slide gesture support
+  useEffect(() => {
+    if (!isMobile) return;
+
+    let startX = 0;
+    let startY = 0;
+    let isDragging = false;
+
+    const handleTouchStart = (e: Event) => {
+      const touchEvent = e as TouchEvent;
+      startX = touchEvent.touches[0].clientX;
+      startY = touchEvent.touches[0].clientY;
+      isDragging = false;
+    };
+
+    const handleTouchMove = (e: Event) => {
+      const touchEvent = e as TouchEvent;
+      if (!touchEvent.touches[0]) return;
+      
+      const currentX = touchEvent.touches[0].clientX;
+      const currentY = touchEvent.touches[0].clientY;
+      const deltaX = currentX - startX;
+      const deltaY = Math.abs(currentY - startY);
+      
+      // Only trigger if horizontal swipe is more dominant than vertical
+      if (Math.abs(deltaX) > deltaY && Math.abs(deltaX) > 10) {
+        isDragging = true;
+        
+        // Prevent scrolling when dragging sidebar
+        e.preventDefault();
+      }
+    };
+
+    const handleTouchEnd = (e: Event) => {
+      const touchEvent = e as TouchEvent;
+      if (!isDragging) return;
+      
+      const endX = touchEvent.changedTouches[0].clientX;
+      const deltaX = endX - startX;
+      const threshold = 50; // Minimum swipe distance
+      
+      // Right swipe to open sidebar (when closed)
+      if (deltaX > threshold && !isSidebarOpen) {
+        setIsSidebarOpen(true);
+      }
+      // Left swipe to close sidebar (when open)
+      else if (deltaX < -threshold && isSidebarOpen) {
+        setIsSidebarOpen(false);
+      }
+      
+      isDragging = false;
+    };
+
+    const chatArea = document.querySelector('.message-area');
+    if (chatArea) {
+      chatArea.addEventListener('touchstart', handleTouchStart, { passive: false });
+      chatArea.addEventListener('touchmove', handleTouchMove, { passive: false });
+      chatArea.addEventListener('touchend', handleTouchEnd, { passive: false });
+      
+      return () => {
+        chatArea.removeEventListener('touchstart', handleTouchStart);
+        chatArea.removeEventListener('touchmove', handleTouchMove);
+        chatArea.removeEventListener('touchend', handleTouchEnd);
+      };
+    }
+  }, [isMobile, isSidebarOpen, setIsSidebarOpen]);
+
+  // Enhanced keyboard shortcuts tooltip state
   const [showShortcuts, setShowShortcuts] = reactUseState(false);
 
   const KeyboardShortcuts = () => (
@@ -730,7 +791,11 @@ const ChatPage = () => {
       <div className="space-y-2 text-xs">
         <div className="flex justify-between items-center py-1">
           <span className="text-muted-foreground">{t('keyboardShortcuts.send')}</span>
-          <kbd className="px-2 py-1 bg-muted/60 rounded-md text-xs font-mono border border-border/40">⌘ + Enter</kbd>
+          <kbd className="px-2 py-1 bg-muted/60 rounded-md text-xs font-mono border border-border/40">Enter</kbd>
+        </div>
+        <div className="flex justify-between items-center py-1">
+          <span className="text-muted-foreground">{t('keyboardShortcuts.newLine')}</span>
+          <kbd className="px-2 py-1 bg-muted/60 rounded-md text-xs font-mono border border-border/40">⇧ + Enter</kbd>
         </div>
         <div className="flex justify-between items-center py-1">
           <span className="text-muted-foreground">{t('keyboardShortcuts.newChat')}</span>
@@ -1037,7 +1102,7 @@ const ChatPage = () => {
           </div>
         )}
       </div>      {/* Main Chat Area */}
-      <div className={`flex-1 flex flex-col bg-background relative ${isMobile && isSidebarOpen ? 'pointer-events-none' : ''}`}>
+      <div className={`flex-1 flex flex-col bg-background relative min-w-0 ${isMobile && isSidebarOpen ? 'pointer-events-none' : ''}`}>
         {/* Enhanced Header with Glassmorphism */}
         <div className="p-3 md:p-4 flex items-center justify-between h-14 md:h-16 flex-shrink-0 glass-header sticky top-0 z-10">
           <div className="flex items-center min-w-0 flex-1">
@@ -1178,7 +1243,7 @@ const ChatPage = () => {
 
         {/* Enhanced Chat Messages Area */}
         <div 
-          className="flex-1 overflow-y-auto pb-40 message-area w-full"
+          className={`flex-1 overflow-y-auto message-area w-full ${messages.length === 0 ? 'flex items-center justify-center' : 'pb-40'}`}
           onScroll={handleScroll}
         >
           {/* Offline warning banner */}
@@ -1365,7 +1430,7 @@ const ChatPage = () => {
         </div>
 
         {/* Enhanced Chat Input Area */}
-        <div className="absolute bottom-0 left-0 right-0 p-2 md:p-4 bg-background/80 backdrop-blur-sm border-t border-border/30">
+        <div className={`${messages.length === 0 ? 'relative' : 'absolute bottom-0 left-0 right-0'} p-2 md:p-4 ${messages.length > 0 ? 'bg-background/80 backdrop-blur-sm border-t border-border/30' : ''}`}>
           <div className="w-full max-w-5xl mx-auto">
             <form onSubmit={onSubmit} className="relative">
               {/* Image Preview */}
@@ -1415,7 +1480,7 @@ const ChatPage = () => {
                   onMouseEnter={() => setShowShortcuts(true)}
                   onMouseLeave={() => setShowShortcuts(false)}
                 >
-                  <span>⌘+Enter</span>
+                  <span>Enter to send • Shift+Enter for new line</span>
                 </button>
                 <span className={`${input.length > 1800 ? 'text-orange-500' : ''}`}>{input.length}/2000</span>
               </div>

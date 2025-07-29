@@ -383,7 +383,7 @@
 
 /* Message area scrollbar */
 .message-area::-webkit-scrollbar {
-  width: 8px;
+  width: 6px;
 }
 
 .message-area::-webkit-scrollbar-track {
@@ -391,20 +391,64 @@
 }
 
 .message-area::-webkit-scrollbar-thumb {
-  background: oklch(var(--muted-foreground) / 0.2);
-  border-radius: 4px;
+  background: oklch(var(--muted-foreground) / 0.3);
+  border-radius: 3px;
   transition: background 0.2s ease;
 }
 
 .message-area::-webkit-scrollbar-thumb:hover {
-  background: oklch(var(--muted-foreground) / 0.4);
+  background: oklch(var(--muted-foreground) / 0.5);
 }
 
 /* Smooth scrolling for message area */
 .message-area {
   scroll-behavior: smooth;
+  overflow-anchor: none;
+}
+
+/* Custom scrollbar classes for textarea */
+.scrollbar-thin {
   scrollbar-width: thin;
-  scrollbar-color: oklch(var(--muted-foreground) / 0.2) transparent;
+}
+
+.scrollbar-thin::-webkit-scrollbar {
+  width: 4px;
+}
+
+.scrollbar-thumb-muted::-webkit-scrollbar-thumb {
+  background: oklch(var(--muted-foreground) / 0.3);
+  border-radius: 2px;
+}
+
+.scrollbar-track-transparent::-webkit-scrollbar-track {
+  background: transparent;
+}
+
+/* Mobile responsiveness fixes */
+@media (max-width: 767px) {
+  .message-area {
+    overscroll-behavior: contain;
+    -webkit-overflow-scrolling: touch;
+  }
+  
+  .message-area > div {
+    max-width: 100%;
+    overflow-wrap: break-word;
+  }
+  
+  /* Prevent horizontal scroll on mobile */
+  body {
+    overflow-x: hidden;
+  }
+  
+  /* Better mobile chat bubbles */
+  .chat-bubble-user,
+  .chat-bubble-ai {
+    max-width: calc(100vw - 6rem);
+    word-wrap: break-word;
+    overflow-wrap: break-word;
+    hyphens: auto;
+  }
 }
 
 /* Enhanced focus states */
