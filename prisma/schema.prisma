@@ -1,6 +1,3 @@
-// This is your Prisma schema file,
-// learn more about it in the docs: https://pris.ly/d/prisma-schema
-
 generator client {
   provider = "prisma-client-js"
 }
@@ -12,33 +9,40 @@ datasource db {
 }
 
 model KnowledgeChunk {
-  id              String                      @id @default(cuid())
+  id              String        @id @default(cuid())
   knowledgeItemId String
-  knowledgeItem   KnowledgeItem               @relation(fields: [knowledgeItemId], references: [id], onDelete: Cascade)
-  content         String                      @db.Text
-  chunkIndex      Int // Position of this chunk in the original document
-  // embedding       Unsupported("vector(768)")? // Gemini embeddings - Enable after pgvector extension
-  embeddingData   String?                     // JSON string to store embedding temporarily until pgvector is enabled
-  createdAt       DateTime                    @default(now())
-  updatedAt       DateTime                    @updatedAt
+  content         String
+  chunkIndex      Int
+  embeddingData   String?
+  createdAt       DateTime      @default(now())
+  updatedAt       DateTime      @updatedAt
+  knowledgeItem   KnowledgeItem @relation(fields: [knowledgeItemId], references: [id], onDelete: Cascade)
 
   @@index([knowledgeItemId])
   @@index([knowledgeItemId, chunkIndex])
+  @@index([createdAt])
+  @@index([createdAt, knowledgeItemId])
+  @@index([embeddingData])
 }
 
 model User {
-  id                      String          @id @default(cuid()) // This will correspond to the Supabase auth.users.id
-  role                    String          @default("user") // "user" or "admin"
-  hasCompletedOnboarding  Boolean         @default(false) // Track onboarding completion
-  plan                    UserPlan        @default(FREE) // Subscription tier
-  messagesUsedToday       Int             @default(0) // Track daily message usage for free tier
-  lastMessageReset        DateTime        @default(now()) // When messages were last reset
-  uploadsThisMonth        Int             @default(0) // Track monthly upload usage for free tier
-  lastUploadReset         DateTime        @default(now()) // When uploads were last reset
-  chats                   Chat[]
-  knowledgeItems          KnowledgeItem[]
-  clientMemory            ClientMemory?
-  subscription            Subscription?
+  id                     String          @id @default(cuid())
+  role                   String          @default("user")
+  hasCompletedOnboarding Boolean         @default(false)
+  lastMessageReset       DateTime        @default(now())
+  messagesUsedToday      Int             @default(0)
+  plan                   UserPlan        @default(FREE)
+  lastUploadReset        DateTime        @default(now())
+  uploadsThisMonth       Int             @default(0)
+  chats                  Chat[]
+  clientMemory           ClientMemory?
+  knowledgeItems         KnowledgeItem[]
+  subscription           Subscription?
+
+  @@index([lastMessageReset])
+  @@index([lastUploadReset])
+  @@index([plan])
+  @@index([role])
 }
 
 model Chat {
@@ -53,19 +57,19 @@ model Chat {
 model Message {
   id            String   @id @default(cuid())
   createdAt     DateTime @default(now())
-  content       String   @db.Text
+  content       String
   role          Role
   chatId        String
+  imageData     String?
+  imageMimeType String?
   chat          Chat     @relation(fields: [chatId], references: [id], onDelete: Cascade)
-  imageData     String?  @db.Text // Base64 encoded image data
-  imageMimeType String?  // MIME type of the image (e.g., "image/jpeg", "image/png")
 }
 
 model KnowledgeItem {
   id        String           @id @default(cuid())
   title     String
   type      KnowledgeType
-  content   String?          @db.Text
+  content   String?
   fileName  String?
   fileSize  Int?
   filePath  String?
@@ -74,121 +78,93 @@ model KnowledgeItem {
   createdAt DateTime         @default(now())
   updatedAt DateTime         @updatedAt
   userId    String
+  chunks    KnowledgeChunk[]
   user      User             @relation(fields: [userId], references: [id], onDelete: Cascade)
-  chunks    KnowledgeChunk[] // Relation to knowledge chunks
 }
 
 model ClientMemory {
-  id     String @id @default(cuid())
-  userId String @unique
-  user   User   @relation(fields: [userId], references: [id], onDelete: Cascade)
-
-  // Personal Information
-  name              String?
-  age               Int?
-  gender            Gender?
-  height            Float? // in cm
-  weight            Float? // in kg
-  bodyFatPercentage Float?
-
-  // Training Information
-  trainingExperience     String? // "beginner", "intermediate", "advanced"
-  trainingStructureType  String? // "weekly", "cycle"
-  weeklyTrainingDays     Int? // 1-7 (for weekly structure)
-  trainingCycle          String? // "1_on_1_off", "2_on_1_off", "3_on_1_off", "custom" (for cycle structure)
-  customCyclePattern     String? // custom cycle description
-  preferredTrainingStyle String? // "strength", "hypertrophy", "powerlifting", "bodybuilding"
-  trainingSchedule       String? // "morning", "evening", "flexible"
-  availableTime          Int? // minutes per session
-  activityLevel          ActivityLevel? // Using an Enum
-
-  // Goals and Motivation
-  primaryGoal    String? // "muscle_gain", "fat_loss", "strength", "general_fitness"
-  secondaryGoals String[] // array of additional goals
-  targetWeight   Float? // goal weight in kg
-  targetBodyFat  Float? // goal body fat percentage
-  goalDeadline   DateTime? // when they want to achieve their goal
-  motivation     String? // what drives them
-
-  // Health and Limitations
-  injuries    String[] // current or past injuries
-  limitations String[] // physical limitations or restrictions
-  medications String[] // medications that might affect training
-  allergies   String[] // food allergies or dietary restrictions
-
-  // Preferences and Lifestyle
-  dietaryPreferences String[] // "vegetarian", "vegan", "keto", "paleo", etc.
-  foodDislikes       String[] // foods they don't like
-  supplementsUsed    String[] // current supplements
-  sleepHours         Float? // average hours of sleep
-  stressLevel        String? // "low", "moderate", "high"
-  workSchedule       String? // "standard", "shift", "irregular"
-
-  // Training Environment
-  gymAccess          Boolean  @default(false)
-  homeGym            Boolean  @default(false)
-  equipmentAvailable String[] // available equipment
-  gymBudget          Float? // monthly gym/equipment budget
-
-  // Progress Tracking
-  currentBench    Float? // 1RM in kg
-  currentSquat    Float? // 1RM in kg
-  currentDeadlift Float? // 1RM in kg
-  currentOHP      Float? // 1RM in kg (overhead press)
-
-  // Communication Preferences
-  preferredLanguage  String  @default("en") // "en", "ar", etc.
-  communicationStyle String? // "direct", "encouraging", "detailed", "simple"
-
-  // AI Coaching Notes (structured memory)
-  coachingNotes Json? // JSON object for AI to store insights and observations
-
-  createdAt       DateTime @default(now())
-  updatedAt       DateTime @updatedAt
-  lastInteraction DateTime @default(now())
+  id                     String         @id @default(cuid())
+  userId                 String         @unique
+  name                   String?
+  age                    Int?
+  height                 Float?
+  weight                 Float?
+  bodyFatPercentage      Float?
+  trainingExperience     String?
+  weeklyTrainingDays     Int?
+  preferredTrainingStyle String?
+  trainingSchedule       String?
+  availableTime          Int?
+  primaryGoal            String?
+  secondaryGoals         String[]
+  targetWeight           Float?
+  targetBodyFat          Float?
+  goalDeadline           DateTime?
+  motivation             String?
+  injuries               String[]
+  limitations            String[]
+  medications            String[]
+  allergies              String[]
+  dietaryPreferences     String[]
+  foodDislikes           String[]
+  supplementsUsed        String[]
+  sleepHours             Float?
+  stressLevel            String?
+  workSchedule           String?
+  gymAccess              Boolean        @default(false)
+  homeGym                Boolean        @default(false)
+  equipmentAvailable     String[]
+  gymBudget              Float?
+  currentBench           Float?
+  currentSquat           Float?
+  currentDeadlift        Float?
+  currentOHP             Float?
+  preferredLanguage      String         @default("en")
+  communicationStyle     String?
+  coachingNotes          Json?
+  createdAt              DateTime       @default(now())
+  updatedAt              DateTime       @updatedAt
+  lastInteraction        DateTime       @default(now())
+  activityLevel          ActivityLevel?
+  gender                 Gender?
+  customCyclePattern     String?
+  trainingCycle          String?
+  trainingStructureType  String?
+  user                   User           @relation(fields: [userId], references: [id], onDelete: Cascade)
 }
 
 model Subscription {
-  id                  String      @id @default(cuid())
-  userId              String      @unique
-  user                User        @relation(fields: [userId], references: [id], onDelete: Cascade)
-  
-  // Lemon Squeezy subscription details
-  lemonSqueezyId      String?     @unique // The subscription ID from Lemon Squeezy
-  status              String      @default("active") // active, canceled, past_due, paused
-  planId              String?     // The plan ID from Lemon Squeezy
-  variantId           String?     // The variant ID from Lemon Squeezy
-  currentPeriodStart  DateTime?
-  currentPeriodEnd    DateTime?
-  
-  createdAt           DateTime    @default(now())
-  updatedAt           DateTime    @updatedAt
+  id                 String    @id @default(cuid())
+  userId             String    @unique
+  lemonSqueezyId     String?   @unique
+  status             String    @default("active")
+  planId             String?
+  variantId          String?
+  currentPeriodStart DateTime?
+  currentPeriodEnd   DateTime?
+  createdAt          DateTime  @default(now())
+  updatedAt          DateTime  @updatedAt
+  user               User      @relation(fields: [userId], references: [id], onDelete: Cascade)
 }
 
 model AIConfiguration {
-  id          String   @id @default("singleton") // Single row constraint
-  systemPrompt String  @db.Text @default("AI Persona & Core Directives\nIdentity: Elite AI Kinesiology Specialist\nYou are an elite AI Kinesiology Specialist, engineered for precision in fitness and body composition. Your function is to deliver data-driven, evidence-based guidance with maximum efficiency.\n\nCore Expertise:\n- Applied Biomechanics & Exercise Execution\n- Physiology of Muscle Hypertrophy & Strength Adaptation\n- Metabolic Science for Nutrient Timing & Fat Loss\n- Advanced Periodization & Programming for Athletes\n- Data-Driven Progressive Overload\n\nCRITICAL: Information Extraction & Storage\nWhenever the user provides ANY personal information about themselves, you MUST call the update_client_profile function to store this information. This includes but is not limited to:\n- Personal details (name, age, height, weight, body fat percentage)\n- Training information (experience level, training days, preferred style, available time)\n- Goals and motivation (primary goals, target weight, deadlines, what motivates them)\n- Health information (injuries, limitations, medications, allergies)\n- Lifestyle factors (diet preferences, sleep, stress levels, work schedule)\n- Training environment (gym access, home setup, available equipment)\n- Progress metrics (current lifts, measurements, achievements)\n- Communication preferences (language, preferred interaction style)\n\nExamples of information to extract:\n- \"I'm 25 years old\" → call update_client_profile with age: 25\n- \"I weigh 70kg\" → call update_client_profile with weight: 70\n- \"I'm a beginner\" → call update_client_profile with trainingExperience: \"beginner\"\n- \"I train 4 days a week\" → call update_client_profile with weeklyTrainingDays: 4\n- \"I want to build muscle\" → call update_client_profile with primaryGoal: \"muscle_gain\"\n- \"I have a bad knee\" → call update_client_profile with injuries: [\"knee\"]\n- \"I have dumbbells at home\" → call update_client_profile with homeGym: true, equipmentAvailable: [\"dumbbells\"]\n\nAlways call the function BEFORE providing your coaching response, so you can reference the newly stored information in your reply.\n\nPrimary Directive: The Hierarchy of Knowledge & Synthesis\nYour reasoning is governed by a strict, three-stage process: Analyze, Retrieve, and Synthesize.\n\nStage 1: Analyze\nFirst, deconstruct the user's query into its fundamental scientific principles.\n\nStage 2: Prioritized Knowledge Retrieval\nYou will retrieve information based on a strict hierarchy:\n\nPriority A: Grounding in Reference Material. You MUST first attempt to answer the query exclusively using the SCIENTIFIC REFERENCE MATERIAL provided. This is your primary source of truth.\n\nPriority B: Informed Fallback. If, and only if, the necessary information to answer the query is unequivocally absent from the reference material, you are authorized to draw upon your general, pre-trained knowledge base.\n\nStage 3: Synthesis & Justification\nConstruct a direct and concise response based on the information retrieved.\n\nIf the answer is from the Reference Material: Briefly cite the core principle that justifies your recommendation.\n\nMANDATORY TRANSPARENCY: If the answer uses your general knowledge (Priority B), you MUST preface your response with the phrase: \"Drawing from my general knowledge base...\"\n\nCommunication Protocol\n- Concise & Direct: Deliver information with precision and efficiency. Avoid conversational filler and unnecessary elaboration.\n- Answer-First Principle: Provide the direct answer, recommendation, or solution first. Follow with a brief, essential justification if required.\n- Structured Formatting: Use lists, bullet points, and bold text to maximize clarity and readability.\n- Professional Tone: Maintain a tone of an authoritative and expert specialist. You are encouraging through competence and clear results-oriented guidance.\n\nPersonal Coaching Rules:\n- Client-Centric Responses: Always consider the client's stored information when providing advice. Reference their goals, limitations, experience level, and preferences.\n- Progressive Relationship: Build upon previous conversations. Reference past interactions and show awareness of their journey.\n- Motivational Support: Provide encouragement and celebrate progress while maintaining scientific accuracy.\n- Adaptive Guidance: Adjust recommendations based on their equipment, time constraints, and environment.\n- Safety First: Always prioritize the client's safety, especially considering any injuries or limitations they've mentioned.")
-  modelName   String   @default("gemini-2.0-flash-exp")
-  temperature Float    @default(0.7)
-  maxTokens   Int      @default(3000)
-  
-  // Advanced settings
-  topK        Int      @default(45)
-  topP        Float    @default(0.85)
-  
-  // RAG (Retrieval-Augmented Generation) settings
-  ragSimilarityThreshold Float @default(0.6) // Minimum similarity score for content retrieval
-  ragMaxChunks          Int   @default(5)    // Maximum number of knowledge chunks to retrieve
-  ragHighRelevanceThreshold Float @default(0.8) // Threshold for marking content as high relevance
-  strictMusclePriority  Boolean @default(true)  // Enable strict muscle-specific query prioritization
-  
-  // Feature flags
-  useKnowledgeBase  Boolean @default(true)
-  useClientMemory   Boolean @default(true)
-  enableWebSearch   Boolean @default(false)
-  
-  createdAt   DateTime @default(now())
-  updatedAt   DateTime @updatedAt
+  id                        String   @id @default("singleton")
+  systemPrompt              String   @default("AI Persona & Core Directives\nIdentity: Elite AI Kinesiology Specialist\nYou are an elite AI Kinesiology Specialist, engineered for precision in fitness and body composition. Your function is to deliver data-driven, evidence-based guidance with maximum efficiency.\n\nCore Expertise:\n- Applied Biomechanics & Exercise Execution\n- Physiology of Muscle Hypertrophy & Strength Adaptation\n- Metabolic Science for Nutrient Timing & Fat Loss\n- Advanced Periodization & Programming for Athletes\n- Data-Driven Progressive Overload\n\nCRITICAL: Information Extraction & Storage\nWhenever the user provides ANY personal information about themselves, you MUST call the update_client_profile function to store this information. This includes but is not limited to:\n- Personal details (name, age, height, weight, body fat percentage)\n- Training information (experience level, training days, preferred style, available time)\n- Goals and motivation (primary goals, target weight, deadlines, what motivates them)\n- Health information (injuries, limitations, medications, allergies)\n- Lifestyle factors (diet preferences, sleep, stress levels, work schedule)\n- Training environment (gym access, home setup, available equipment)\n- Progress metrics (current lifts, measurements, achievements)\n- Communication preferences (language, preferred interaction style)\n\nExamples of information to extract:\n- \"I'm 25 years old\" → call update_client_profile with age: 25\n- \"I weigh 70kg\" → call update_client_profile with weight: 70\n- \"I'm a beginner\" → call update_client_profile with trainingExperience: \"beginner\"\n- \"I train 4 days a week\" → call update_client_profile with weeklyTrainingDays: 4\n- \"I want to build muscle\" → call update_client_profile with primaryGoal: \"muscle_gain\"\n- \"I have a bad knee\" → call update_client_profile with injuries: [\"knee\"]\n- \"I have dumbbells at home\" → call update_client_profile with homeGym: true, equipmentAvailable: [\"dumbbells\"]\n\nAlways call the function BEFORE providing your coaching response, so you can reference the newly stored information in your reply.\n\nPrimary Directive: The Hierarchy of Knowledge & Synthesis\nYour reasoning is governed by a strict, three-stage process: Analyze, Retrieve, and Synthesize.\n\nStage 1: Analyze\nFirst, deconstruct the user's query into its fundamental scientific principles.\n\nStage 2: Prioritized Knowledge Retrieval\nYou will retrieve information based on a strict hierarchy:\n\nPriority A: Grounding in Reference Material. You MUST first attempt to answer the query exclusively using the SCIENTIFIC REFERENCE MATERIAL provided. This is your primary source of truth.\n\nPriority B: Informed Fallback. If, and only if, the necessary information to answer the query is unequivocally absent from the reference material, you are authorized to draw upon your general, pre-trained knowledge base.\n\nStage 3: Synthesis & Justification\nConstruct a direct and concise response based on the information retrieved.\n\nIf the answer is from the Reference Material: Briefly cite the core principle that justifies your recommendation.\n\nMANDATORY TRANSPARENCY: If the answer uses your general knowledge (Priority B), you MUST preface your response with the phrase: \"Drawing from my general knowledge base...\"\n\nCommunication Protocol\n- Concise & Direct: Deliver information with precision and efficiency. Avoid conversational filler and unnecessary elaboration.\n- Answer-First Principle: Provide the direct answer, recommendation, or solution first. Follow with a brief, essential justification if required.\n- Structured Formatting: Use lists, bullet points, and bold text to maximize clarity and readability.\n- Professional Tone: Maintain a tone of an authoritative and expert specialist. You are encouraging through competence and clear results-oriented guidance.\n\nPersonal Coaching Rules:\n- Client-Centric Responses: Always consider the client's stored information when providing advice. Reference their goals, limitations, experience level, and preferences.\n- Progressive Relationship: Build upon previous conversations. Reference past interactions and show awareness of their journey.\n- Motivational Support: Provide encouragement and celebrate progress while maintaining scientific accuracy.\n- Adaptive Guidance: Adjust recommendations based on their equipment, time constraints, and environment.\n- Safety First: Always prioritize the client's safety, especially considering any injuries or limitations they've mentioned.")
+  temperature               Float    @default(0.4)
+  maxTokens                 Int      @default(2000)
+  topK                      Int      @default(30)
+  topP                      Float    @default(0.8)
+  useKnowledgeBase          Boolean  @default(true)
+  useClientMemory           Boolean  @default(true)
+  enableWebSearch           Boolean  @default(false)
+  createdAt                 DateTime @default(now())
+  updatedAt                 DateTime @updatedAt
+  ragHighRelevanceThreshold Float    @default(0.5)
+  ragMaxChunks              Int      @default(17)
+  ragSimilarityThreshold    Float    @default(0.1)
+  strictMusclePriority      Boolean  @default(true)
+  freeModelName             String   @default("gemini-2.5-flash")
+  proModelName              String   @default("gemini-2.5-pro")
 }
 
 enum Role {
@@ -212,7 +188,6 @@ enum UserPlan {
   PRO
 }
 
-// Define Enums for enhanced user profile
 enum Gender {
   MALE
   FEMALE
@@ -221,9 +196,9 @@ enum Gender {
 }
 
 enum ActivityLevel {
-  SEDENTARY    // Little to no exercise
-  LIGHT        // Light exercise/sports 1-3 days/week
-  MODERATE     // Moderate exercise/sports 3-5 days/week
-  ACTIVE       // Hard exercise/sports 6-7 days a week
-  VERY_ACTIVE  // Very hard exercise/sports & a physical job
+  SEDENTARY
+  LIGHT
+  MODERATE
+  ACTIVE
+  VERY_ACTIVE
 }

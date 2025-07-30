@@ -15,7 +15,8 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@
 interface AIConfiguration {
   id: string;
   systemPrompt: string;
-  modelName: string;
+  freeModelName: string;
+  proModelName: string;
   temperature: number;
   maxTokens: number;
   topK: number;
@@ -313,39 +314,78 @@ export default function AdminSettingsPage() {
               </div>
 
               {/* Model Configuration */}
-              <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                <div className="space-y-2">
-                  <Label htmlFor="modelName">Model Name</Label>
-                  <Select
-                    value={config.modelName}
-                    onValueChange={(value) => updateConfig('modelName', value)}
-                  >
-                    <SelectTrigger>
-                      <SelectValue placeholder="Select a Gemini model" />
-                    </SelectTrigger>
-                    <SelectContent>
-                      {AI_MODELS.map((model) => (
-                        <SelectItem key={model.value} value={model.value}>
-                          <div className="flex flex-col">
-                            <div className="flex items-center gap-2">
-                              <span className="font-medium">{model.label}</span>
-                              <span className="text-xs px-1.5 py-0.5 bg-muted rounded-md">
-                                {model.provider}
+              <div className="space-y-4">
+                <h3 className="text-lg font-medium">Model Configuration</h3>
+                <p className="text-sm text-gray-600">Configure AI models for different user tiers</p>
+                
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+                  <div className="space-y-2">
+                    <Label htmlFor="freeModelName">Free Tier Model</Label>
+                    <Select
+                      value={config.freeModelName}
+                      onValueChange={(value) => updateConfig('freeModelName', value)}
+                    >
+                      <SelectTrigger>
+                        <SelectValue placeholder="Select model for free users" />
+                      </SelectTrigger>
+                      <SelectContent>
+                        {AI_MODELS.map((model) => (
+                          <SelectItem key={model.value} value={model.value}>
+                            <div className="flex flex-col">
+                              <div className="flex items-center gap-2">
+                                <span className="font-medium">{model.label}</span>
+                                <span className="text-xs px-1.5 py-0.5 bg-muted rounded-md">
+                                  {model.provider}
+                                </span>
+                              </div>
+                              <span className="text-xs text-muted-foreground">
+                                {model.description}
                               </span>
                             </div>
-                            <span className="text-xs text-muted-foreground">
-                              {model.description}
-                            </span>
-                          </div>
-                        </SelectItem>
-                      ))}
-                    </SelectContent>
-                  </Select>
-                  <p className="text-xs text-gray-500">
-                    Choose the AI model for text generation
-                  </p>
+                          </SelectItem>
+                        ))}
+                      </SelectContent>
+                    </Select>
+                    <p className="text-xs text-gray-500">
+                      AI model for free tier users
+                    </p>
+                  </div>
+
+                  <div className="space-y-2">
+                    <Label htmlFor="proModelName">Pro Tier Model</Label>
+                    <Select
+                      value={config.proModelName}
+                      onValueChange={(value) => updateConfig('proModelName', value)}
+                    >
+                      <SelectTrigger>
+                        <SelectValue placeholder="Select model for pro users" />
+                      </SelectTrigger>
+                      <SelectContent>
+                        {AI_MODELS.map((model) => (
+                          <SelectItem key={model.value} value={model.value}>
+                            <div className="flex flex-col">
+                              <div className="flex items-center gap-2">
+                                <span className="font-medium">{model.label}</span>
+                                <span className="text-xs px-1.5 py-0.5 bg-muted rounded-md">
+                                  {model.provider}
+                                </span>
+                              </div>
+                              <span className="text-xs text-muted-foreground">
+                                {model.description}
+                              </span>
+                            </div>
+                          </SelectItem>
+                        ))}
+                      </SelectContent>
+                    </Select>
+                    <p className="text-xs text-gray-500">
+                      AI model for pro tier users
+                    </p>
+                  </div>
                 </div>
-                
+              </div>
+
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                 <div className="space-y-2">
                   <Label htmlFor="maxTokens">Max Tokens</Label>
                   <Input

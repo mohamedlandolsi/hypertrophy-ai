@@ -82,7 +82,8 @@ export async function POST(request: NextRequest) {
     const body = await request.json();
     const {
       systemPrompt,
-      modelName,
+      freeModelName,
+      proModelName,
       temperature,
       maxTokens,
       topK,
@@ -103,9 +104,16 @@ export async function POST(request: NextRequest) {
       );
     }
 
-    if (typeof modelName !== 'string' || modelName.trim().length === 0) {
+    if (typeof freeModelName !== 'string' || freeModelName.trim().length === 0) {
       return NextResponse.json(
-        { error: 'Model name is required' },
+        { error: 'Free tier model name is required' },
+        { status: 400 }
+      );
+    }
+
+    if (typeof proModelName !== 'string' || proModelName.trim().length === 0) {
+      return NextResponse.json(
+        { error: 'Pro tier model name is required' },
         { status: 400 }
       );
     }
@@ -164,7 +172,8 @@ export async function POST(request: NextRequest) {
       where: { id: 'singleton' },
       update: {
         systemPrompt: systemPrompt.trim(),
-        modelName: modelName.trim(),
+        freeModelName: freeModelName.trim(),
+        proModelName: proModelName.trim(),
         temperature,
         maxTokens,
         topK,
@@ -179,7 +188,8 @@ export async function POST(request: NextRequest) {
       create: {
         id: 'singleton',
         systemPrompt: systemPrompt.trim(),
-        modelName: modelName.trim(),
+        freeModelName: freeModelName.trim(),
+        proModelName: proModelName.trim(),
         temperature,
         maxTokens,
         topK,

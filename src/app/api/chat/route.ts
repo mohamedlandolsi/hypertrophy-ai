@@ -91,8 +91,8 @@ export async function POST(request: NextRequest) {
       // For guest users, just get AI response without saving to database
       const conversationForGemini = [{ role: 'user' as const, content: message }];
       
-      // Get AI response from Gemini (pass undefined for user ID since it's a guest)
-      const aiResult = await sendToGeminiWithCitations(conversationForGemini, undefined, imageBuffer, imageMimeType);
+      // Get AI response from Gemini (pass undefined for user ID since it's a guest, use FREE plan)
+      const aiResult = await sendToGeminiWithCitations(conversationForGemini, undefined, imageBuffer, imageMimeType, 'FREE');
 
       // Return JSON response for guest users
       return NextResponse.json({
@@ -136,12 +136,15 @@ export async function POST(request: NextRequest) {
       }, { status: 429 });
     }
 
-    // Ensure user exists in our database
-    await prisma.user.upsert({
+    // Ensure user exists in our database and get their plan
+    const dbUser = await prisma.user.upsert({
       where: { id: user.id },
       update: {},
-      create: { id: user.id }
+      create: { id: user.id },
+      select: { plan: true }
     });
+    
+    const userPlan = dbUser.plan;
 
     let chatId = conversationId;
     let existingMessages: Array<{ role: string; content: string }> = [];
@@ -198,8 +201,8 @@ export async function POST(request: NextRequest) {
     const allMessages = [...existingMessages, userMessage];
     const conversationForGemini = formatConversationForGemini(allMessages);
 
-    // Get AI response from Gemini - NEW RAG SYSTEM WITH CITATIONS
-    const aiResult = await sendToGeminiWithCitations(conversationForGemini, user.id, imageBuffer, imageMimeType);
+    // Get AI response from Gemini - NEW RAG SYSTEM WITH CITATIONS (with user's plan)
+    const aiResult = await sendToGeminiWithCitations(conversationForGemini, user.id, imageBuffer, imageMimeType, userPlan);
 
     // Save assistant message to database
     const assistantMessage = await prisma.message.create({

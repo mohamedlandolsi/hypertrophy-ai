@@ -19,7 +19,7 @@ interface GeminiResponse {
 }
 
 // Function to get AI configuration - REQUIRES admin configuration
-export async function getAIConfiguration() {
+export async function getAIConfiguration(userPlan: 'FREE' | 'PRO' = 'FREE') {
   try {
     const config = await prisma.aIConfiguration.findUnique({
       where: { id: 'singleton' }
@@ -34,13 +34,16 @@ export async function getAIConfiguration() {
       throw new Error('System prompt is not configured. Please set up the AI system prompt through the Admin Settings page.');
     }
 
-    if (!config.modelName || config.modelName.trim() === '') {
-      throw new Error('AI model is not configured. Please select an AI model through the Admin Settings page.');
+    // Select model based on user plan
+    const modelName = userPlan === 'PRO' ? config.proModelName : config.freeModelName;
+    
+    if (!modelName || modelName.trim() === '') {
+      throw new Error(`AI model for ${userPlan} tier is not configured. Please select an AI model through the Admin Settings page.`);
     }
 
     return {
       systemPrompt: config.systemPrompt,
-      modelName: config.modelName,
+      modelName: modelName,
       temperature: config.temperature ?? 0.7,
       maxTokens: config.maxTokens || 3000,
       topK: config.topK || 45,
@@ -262,14 +265,15 @@ export async function sendToGeminiWithCitations(
   conversation: ConversationMessage[], 
   userId?: string,
   imageBuffer?: Buffer | null,
-  imageMimeType?: string | null
+  imageMimeType?: string | null,
+  userPlan: 'FREE' | 'PRO' = 'FREE'
 ): Promise<GeminiResponse> {
   const geminiStartTime = Date.now();
-  console.log(`🚀 Starting sendToGeminiWithCitations (User: ${userId || 'GUEST'})`);
+  console.log(`🚀 Starting sendToGeminiWithCitations (User: ${userId || 'GUEST'}, Plan: ${userPlan})`);
   
   try {
-    // Fetch AI configuration - will throw if not properly configured
-    const aiConfig = await getAIConfiguration();
+    // Fetch AI configuration with user plan - will throw if not properly configured
+    const aiConfig = await getAIConfiguration(userPlan);
 
     if (!process.env.GEMINI_API_KEY) {
       // Get the latest user message to detect language for fallback
