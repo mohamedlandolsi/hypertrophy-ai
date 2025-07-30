@@ -29,9 +29,116 @@ export async function fetchRelevantKnowledge(
   topK: number,
   highRelevanceThreshold?: number
 ): Promise<KnowledgeContext[]> {
-  // For now, use JSON-based similarity as primary method since pgvector may not be installed
-  // This provides better reliability until pgvector extension is properly configured
-  return await fallbackJsonSimilaritySearch(queryEmbedding, topK, highRelevanceThreshold);
+  // Use optimized search with batching for better performance
+  return await optimizedJsonSimilaritySearch(queryEmbedding, topK, highRelevanceThreshold);
+}
+
+/**
+ * Optimized JSON similarity search with batching and caching
+ * Only processes chunks in batches to reduce memory usage and improve speed
+ */
+export async function optimizedJsonSimilaritySearch(
+  queryEmbedding: number[],
+  topK: number,
+  highRelevanceThreshold?: number
+): Promise<KnowledgeContext[]> {
+  try {
+    console.log(`🚀 Starting optimized similarity search for top ${topK} chunks`);
+    const searchStart = Date.now();
+    
+    // Process chunks in smaller batches for better performance
+    const batchSize = 50; // Process 50 chunks at a time
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
+    const allSimilarities: Array<{chunk: any, similarity: number}> = [];
+    let offset = 0;
+    let hasMore = true;
+    
+    while (hasMore) {
+      const chunks = await prisma.knowledgeChunk.findMany({
+        where: {
+          embeddingData: { not: null },
+          knowledgeItem: {
+            status: 'READY'
+          }
+        },
+        include: {
+          knowledgeItem: {
+            select: {
+              id: true,
+              title: true
+            }
+          }
+        },
+        orderBy: {
+          createdAt: 'asc'
+        },
+        take: batchSize,
+        skip: offset
+      });
+      
+      if (chunks.length === 0) {
+        hasMore = false;
+        continue;
+      }
+      
+      // Calculate similarities for this batch
+      const batchSimilarities = chunks.map(chunk => {
+        try {
+          const chunkEmbedding = JSON.parse(chunk.embeddingData!) as number[];
+          const similarity = cosineSimilarity(queryEmbedding, chunkEmbedding);
+          return { chunk, similarity };
+        } catch (error) {
+          console.error(`❌ Error parsing embedding for chunk ${chunk.id}:`, error);
+          return { chunk, similarity: 0 };
+        }
+      });
+      
+      allSimilarities.push(...batchSimilarities);
+      offset += batchSize;
+      
+      // Process all chunks to ensure we find the most relevant content
+      // (Removed early stopping to prevent missing high-relevance chunks)
+    }
+    
+    // Sort all results by similarity
+    allSimilarities.sort((a, b) => b.similarity - a.similarity);
+    
+    // Apply high relevance threshold if specified
+    let candidateSimilarities = allSimilarities;
+    if (highRelevanceThreshold && highRelevanceThreshold > 0) {
+      candidateSimilarities = allSimilarities.filter(
+        item => item.similarity >= highRelevanceThreshold
+      );
+      console.log(`🔍 High relevance filtering: ${allSimilarities.length} total → ${candidateSimilarities.length} above threshold ${highRelevanceThreshold}`);
+    }
+    
+    // Take top results with source diversification
+    const results: KnowledgeContext[] = [];
+    const maxPerSource = Math.max(1, Math.floor(topK / 3));
+    
+    for (const {chunk, similarity} of candidateSimilarities) {
+      if (results.length >= topK) break;
+      
+      const sourceCount = results.filter(r => r.knowledgeId === chunk.knowledgeItem.id).length;
+      if (sourceCount < maxPerSource) {
+        results.push({
+          content: chunk.content,
+          knowledgeId: chunk.knowledgeItem.id,
+          title: chunk.knowledgeItem.title,
+          similarity,
+          chunkIndex: chunk.chunkIndex
+        });
+      }
+    }
+    
+    const searchTime = Date.now() - searchStart;
+    console.log(`✅ Optimized search completed in ${searchTime}ms: ${results.length} results from ${allSimilarities.length} processed chunks`);
+    
+    return results;
+  } catch (error) {
+    console.error('❌ Optimized search failed, falling back to standard search:', error);
+    return await fallbackJsonSimilaritySearch(queryEmbedding, topK, highRelevanceThreshold);
+  }
 }
 
 /**
@@ -43,35 +150,41 @@ export async function fallbackJsonSimilaritySearch(
   topK: number,
   highRelevanceThreshold?: number
 ): Promise<KnowledgeContext[]> {
-  try {
-    console.log(`🔍 Starting optimized JSON similarity search for top ${topK} chunks`);
-    const searchStart = Date.now();
-    
-    // Fetch ALL chunks with JSON embeddings - remove artificial limit
-    // The vector similarity calculation should work across the entire knowledge base
-    console.log('📊 Fetching all available chunks for comprehensive search...');
-    
-    const chunks = await prisma.knowledgeChunk.findMany({
-      where: {
-        embeddingData: { not: null },
-        knowledgeItem: {
-          status: 'READY'
-        }
-      },
-      include: {
-        knowledgeItem: {
-          select: {
-            id: true,
-            title: true
+  let retries = 3;
+  
+  while (retries > 0) {
+    try {
+      console.log(`🔍 Starting optimized JSON similarity search for top ${topK} chunks (${4 - retries}/3 attempts)`);
+      const searchStart = Date.now();
+      
+      // Ensure database connection is fresh
+      await prisma.$connect();
+      
+      // Fetch ALL chunks with JSON embeddings - remove artificial limit
+      // The vector similarity calculation should work across the entire knowledge base
+      console.log('📊 Fetching all available chunks for comprehensive search...');
+      
+      const chunks = await prisma.knowledgeChunk.findMany({
+        where: {
+          embeddingData: { not: null },
+          knowledgeItem: {
+            status: 'READY'
           }
+        },
+        include: {
+          knowledgeItem: {
+            select: {
+              id: true,
+              title: true
+            }
+          }
+        },
+        // Remove the artificial limit - search across entire knowledge base
+        // Order by creation time for consistent results, but search all chunks
+        orderBy: {
+          createdAt: 'asc'
         }
-      },
-      // Remove the artificial limit - search across entire knowledge base
-      // Order by creation time for consistent results, but search all chunks
-      orderBy: {
-        createdAt: 'asc'
-      }
-    });
+      });
 
     const fetchTime = Date.now() - searchStart;
     console.log(`📊 Fetched ${chunks.length} chunks from entire knowledge base in ${fetchTime}ms`);
@@ -152,10 +265,24 @@ export async function fallbackJsonSimilaritySearch(
     console.log(`✅ Vector search completed in ${searchTime}ms`);
 
     return diversifiedChunks;
-  } catch (error) {
-    console.error('❌ Fallback JSON similarity search failed:', error);
-    throw error;
+    } catch (error) {
+      console.error(`❌ Fallback JSON similarity search failed (attempt ${4 - retries}/3):`, error);
+      retries--;
+      
+      if (retries === 0) {
+        console.error('❌ All retry attempts failed for JSON similarity search');
+        throw error;
+      }
+      
+      // Disconnect and wait before retry
+      await prisma.$disconnect();
+      await new Promise(resolve => setTimeout(resolve, 1000 * (4 - retries))); // Exponential backoff
+      console.log(`🔄 Retrying database connection... (${retries} attempts remaining)`);
+    }
   }
+  
+  // This should never be reached, but TypeScript needs it
+  throw new Error('Unexpected end of retry loop');
 }
 
 /**

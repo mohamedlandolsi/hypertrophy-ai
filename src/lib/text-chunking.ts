@@ -14,7 +14,14 @@
 export function cleanText(text: string): string {
   if (!text) return '';
   
-  return text
+  let cleaned = text;
+  
+  // Check if text contains HTML and convert it
+  if (/<[^>]*>/g.test(text)) {
+    cleaned = htmlToText(text);
+  }
+  
+  return cleaned
     // Normalize whitespace
     .replace(/\r\n/g, '\n')  // Windows line endings to Unix
     .replace(/\r/g, '\n')    // Mac line endings to Unix
@@ -33,6 +40,33 @@ export function cleanText(text: string): string {
     // Remove excessive newlines but preserve paragraph structure
     .replace(/\n{3,}/g, '\n\n')           // Max 2 consecutive newlines
     .replace(/^\s+|\s+$/g, '');           // Trim start and end
+}
+
+/**
+ * Convert HTML to plain text
+ * 
+ * @param html HTML content to convert
+ * @returns Plain text content
+ */
+function htmlToText(html: string): string {
+  return html
+    .replace(/<script[^>]*>[\s\S]*?<\/script>/gi, '') // Remove scripts
+    .replace(/<style[^>]*>[\s\S]*?<\/style>/gi, '') // Remove styles
+    .replace(/<br\s*\/?>/gi, '\n') // Convert br to newlines
+    .replace(/<\/p>/gi, '\n\n') // Convert closing p to double newlines
+    .replace(/<\/div>/gi, '\n') // Convert closing div to newlines
+    .replace(/<\/h[1-6]>/gi, '\n\n') // Convert closing headers to double newlines
+    .replace(/<li[^>]*>/gi, '• ') // Convert li to bullet points
+    .replace(/<\/li>/gi, '\n') // Convert closing li to newlines
+    .replace(/<[^>]*>/g, '') // Remove all other HTML tags
+    .replace(/&nbsp;/g, ' ') // Convert &nbsp; to spaces
+    .replace(/&amp;/g, '&') // Convert &amp; to &
+    .replace(/&lt;/g, '<') // Convert &lt; to <
+    .replace(/&gt;/g, '>') // Convert &gt; to >
+    .replace(/&quot;/g, '"') // Convert &quot; to "
+    .replace(/&#39;/g, "'") // Convert &#39; to '
+    .replace(/\n{3,}/g, '\n\n') // Limit consecutive newlines to 2
+    .trim();
 }
 
 /**

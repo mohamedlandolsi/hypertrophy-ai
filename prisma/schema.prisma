@@ -22,7 +22,7 @@ model KnowledgeChunk {
   @@index([knowledgeItemId, chunkIndex])
   @@index([createdAt])
   @@index([createdAt, knowledgeItemId])
-  @@index([embeddingData])
+  // Removed embeddingData index - too large for B-tree index
 }
 
 model User {

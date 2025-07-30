@@ -197,8 +197,10 @@ const ChatPage = () => {
       let responseData;
       try {
         responseData = await response.json();
-      } catch {
+      } catch (parseError) {
+        console.error("❌ JSON parse error:", parseError);
         const text = await response.text().catch(() => "N/A");
+        console.error("❌ Raw response text:", text);
         throw new Error(`Invalid JSON from server. Response: ${text}`);
       }
 

@@ -552,9 +552,12 @@ ${knowledgeContext}
     console.log(`🤖 Sending message to Gemini API (${aiConfig.modelName})...`);
     const geminiStart = Date.now();
     
-    // Create a timeout promise
+    // Create a timeout promise - shorter timeout for flash models
+    const timeoutDuration = aiConfig.modelName.includes('pro') ? 30000 : 20000; // 30s for PRO, 20s for others
+    console.log(`⏱️ Setting timeout to ${timeoutDuration/1000} seconds for ${aiConfig.modelName}`);
+    
     const timeoutPromise = new Promise((_, reject) =>
-      setTimeout(() => reject(new Error('Gemini API timeout after 15 seconds')), 15000)
+      setTimeout(() => reject(new Error(`Gemini API timeout after ${timeoutDuration/1000} seconds`)), timeoutDuration)
     );
     
     try {
@@ -588,7 +591,7 @@ ${knowledgeContext}
         const followUpStart = Date.now();
         
         const followUpTimeoutPromise = new Promise((_, reject) =>
-          setTimeout(() => reject(new Error('Follow-up Gemini API timeout after 15 seconds')), 15000)
+          setTimeout(() => reject(new Error('Follow-up Gemini API timeout after 30 seconds')), 30000)
         );
         
         const followUpResult = await Promise.race([
@@ -709,9 +712,7 @@ ${knowledgeContext}
         };
       }
       throw error;
-    }
-    
-  } catch (error) {
+    }  } catch (error) {
     console.error('Error calling Gemini API:', error);
     
     // Handle configuration errors specifically
