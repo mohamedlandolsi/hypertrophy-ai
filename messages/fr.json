@@ -903,7 +903,9 @@
       "signIn": "Se Connecter",
       "createAccount": "Créer un Compte",
       "messagesRemaining": "Messages restants : {count}",
-      "viewProfile": "Appuyez pour voir le profil"
+      "viewProfile": "Appuyez pour voir le profil",
+      "loadMore": "Charger Plus de Discussions",
+      "loadingMore": "Chargement..."
     },
     "main": {
       "welcomeTitle": "Discutez avec HypertroQ",
@@ -966,6 +968,29 @@
       "bestRepRange": "Meilleure gamme de répétitions pour la croissance musculaire?",
       "weeklyTraining": "Structure d'entraînement hebdomadaire?",
       "supplementRecommendations": "Recommandations de suppléments?"
+    },
+    "dialogs": {
+      "deleteChat": {
+        "title": "Supprimer la Discussion",
+        "description": "Êtes-vous sûr de vouloir supprimer cette conversation ? Cette action ne peut pas être annulée.",
+        "chatPreview": "Conversation à supprimer",
+        "warningTitle": "Attention : Action Permanente",
+        "warning1": "Cette conversation sera complètement supprimée",
+        "warning2": "Tous les messages et l'historique de discussion seront supprimés",
+        "warning3": "Cette action ne peut pas être annulée",
+        "confirm": "Supprimer Définitivement",
+        "deleting": "Suppression en cours..."
+      }
+    },
+    "common": {
+      "cancel": "Annuler",
+      "delete": "Supprimer",
+      "save": "Enregistrer",
+      "edit": "Modifier",
+      "close": "Fermer",
+      "back": "Retour",
+      "continue": "Continuer",
+      "confirm": "Confirmer"
     }
   }
 }

@@ -33,6 +33,14 @@ import {
   AvatarFallback,
   AvatarImage,
 } from "@/components/ui/avatar";
+import {
+  Dialog,
+  DialogContent,
+  DialogDescription,
+  DialogFooter,
+  DialogHeader,
+  DialogTitle,
+} from "@/components/ui/dialog";
 import { useSearchParams, useRouter, useParams } from 'next/navigation';
 import { LoginPromptDialog } from '@/components/login-prompt-dialog';
 import { MessageLimitIndicator } from '@/components/message-limit-indicator';
@@ -76,6 +84,16 @@ const ChatPage = () => {
   const [showLoginDialog, setShowLoginDialog] = reactUseState(false);
   const [guestMessageCount, setGuestMessageCount] = reactUseState(0);
   const [isInitializing, setIsInitializing] = reactUseState(true);
+
+  // Chat history pagination state
+  const [chatHistoryPage, setChatHistoryPage] = reactUseState(1);
+  const [hasMoreChats, setHasMoreChats] = reactUseState(false);
+  const [isLoadingMoreChats, setIsLoadingMoreChats] = reactUseState(false);
+
+  // Delete chat dialog state
+  const [deleteDialogOpen, setDeleteDialogOpen] = reactUseState(false);
+  const [chatToDelete, setChatToDelete] = reactUseState<{ id: string; title: string } | null>(null);
+  const [isDeletingChat, setIsDeletingChat] = reactUseState(false);
 
   // Image upload state
   const [selectedImage, setSelectedImage] = reactUseState<File | null>(null);
@@ -210,6 +228,11 @@ const ChatPage = () => {
         setConversationId(tempConversationId);
         setActiveChatId(tempConversationId);
         window.history.replaceState(null, '', `/${locale}/chat?id=${tempConversationId}`);
+        
+        // Refresh chat history to show the new conversation in sidebar
+        if (user) {
+          loadChatHistory();
+        }
       }
 
       const assistantMessage = {
@@ -436,20 +459,38 @@ const ChatPage = () => {
     }
   }, [isOnline, t]);
 
-  const loadChatHistory = useCallback(async () => {
+  const loadChatHistory = useCallback(async (page = 1, append = false, customLimit?: number) => {
     try {
-      setIsLoadingHistory(true);
-      const response = await fetch('/api/conversations');
+      if (!append) {
+        setIsLoadingHistory(true);
+      } else {
+        setIsLoadingMoreChats(true);
+      }
+      
+      const limit = customLimit || 10; // Default to 10 for initial load
+      const response = await fetch(`/api/conversations?page=${page}&limit=${limit}`);
       if (response.ok) {
         const data = await response.json();
-        setChatHistory(data.conversations);
+        if (append) {
+          setChatHistory(prev => [...prev, ...data.conversations]);
+        } else {
+          setChatHistory(data.conversations);
+        }
+        setHasMoreChats(data.pagination.hasMore);
+        setChatHistoryPage(page);
       }
     } catch (error) {
       handleApiError(error, 'load chat history');
     } finally {
       setIsLoadingHistory(false);
+      setIsLoadingMoreChats(false);
     }
-  }, [handleApiError, setChatHistory, setIsLoadingHistory]);
+  }, [handleApiError, setChatHistory, setIsLoadingHistory, setIsLoadingMoreChats, setHasMoreChats, setChatHistoryPage]);
+
+  const loadMoreChats = useCallback(async () => {
+    const nextPage = chatHistoryPage + 1;
+    await loadChatHistory(nextPage, true, 20); // Fetch 20 more chats on "Load More"
+  }, [chatHistoryPage, loadChatHistory]);
 
   const loadChatSession = useCallback(async (chatId: string) => {
     if (activeChatId === chatId && messages.length > 0) return; // Avoid reloading if already active and has messages
@@ -498,21 +539,26 @@ const ChatPage = () => {
     const chatToDelete = chatHistory.find(chat => chat.id === chatId);
     const chatTitle = chatToDelete?.title || `Chat from ${chatToDelete ? new Date(chatToDelete.createdAt).toLocaleDateString() : 'Unknown date'}`;
     
-    if (!confirm(t('toasts.deleteConfirmText', { chatTitle }))) {
-      return;
-    }
+    // Set the chat to delete and open dialog
+    setChatToDelete({ id: chatId, title: chatTitle });
+    setDeleteDialogOpen(true);
+  }, [chatHistory, setChatToDelete, setDeleteDialogOpen]);
 
+  const confirmDeleteChat = useCallback(async () => {
+    if (!chatToDelete) return;
+    
+    setIsDeletingChat(true);
     try {
-      const response = await fetch(`/api/conversations/${chatId}`, {
+      const response = await fetch(`/api/conversations/${chatToDelete.id}`, {
         method: 'DELETE',
       });
 
       if (response.ok) {
         // Remove the chat from local state
-        setChatHistory(prev => prev.filter(chat => chat.id !== chatId));
+        setChatHistory(prev => prev.filter(chat => chat.id !== chatToDelete.id));
         
         // If the deleted chat was active, redirect to new chat
-        if (activeChatId === chatId) {
+        if (activeChatId === chatToDelete.id) {
           setActiveChatId(null);
           setConversationId(null); // Also reset conversationId
           setMessages([]); // Use setMessages from useChat
@@ -526,8 +572,12 @@ const ChatPage = () => {
       }
     } catch (error) {
       handleApiError(error, 'delete chat');
+    } finally {
+      setIsDeletingChat(false);
+      setDeleteDialogOpen(false);
+      setChatToDelete(null);
     }
-  }, [chatHistory, activeChatId, router, handleApiError, setChatHistory, setActiveChatId, setConversationId, setMessages, t, locale]);
+  }, [chatToDelete, activeChatId, router, handleApiError, setChatHistory, setActiveChatId, setConversationId, setMessages, t, locale, setIsDeletingChat, setDeleteDialogOpen, setChatToDelete]);
 
   const copyMessage = useCallback(async (content: string) => {
     try {
@@ -955,7 +1005,7 @@ const ChatPage = () => {
                   </h3>
                   
                   {/* Chat History List */}
-                  <div className="flex-1 overflow-y-auto -mr-2 pr-2 space-y-1">
+                  <div className="flex-1 overflow-y-auto chat-history-scroll -mr-2 pr-2 space-y-1">
                     {isLoadingHistory ? (
                       <div className="flex items-center justify-center py-8">
                         <InlineLoading 
@@ -1011,6 +1061,28 @@ const ChatPage = () => {
                         <MessageSquare className="h-8 w-8 text-muted-foreground/50 mb-2" />
                         <p className="text-sm text-muted-foreground">{t('sidebar.noHistory')}</p>
                         <p className="text-xs text-muted-foreground/70 mt-1">{t('sidebar.noHistorySubtext')}</p>
+                      </div>
+                    )}
+                    
+                    {/* Load More Button */}
+                    {hasMoreChats && (
+                      <div className="pt-3 border-t border-border/30">
+                        <Button
+                          variant="ghost"
+                          size="sm"
+                          className="w-full justify-center h-9 text-muted-foreground hover:text-foreground hover:bg-muted/50"
+                          onClick={loadMoreChats}
+                          disabled={isLoadingMoreChats}
+                        >
+                          {isLoadingMoreChats ? (
+                            <>
+                              <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+                              {t('sidebar.loadingMore')}
+                            </>
+                          ) : (
+                            t('sidebar.loadMore')
+                          )}
+                        </Button>
                       </div>
                     )}
                   </div>
@@ -1497,6 +1569,83 @@ const ChatPage = () => {
           variant={!user && guestMessageCount >= 4 ? 'messageLimit' : 'initial'}
         />
       </Suspense>
+
+      {/* Delete Chat Confirmation Dialog */}
+      <Dialog open={deleteDialogOpen} onOpenChange={setDeleteDialogOpen}>
+        <DialogContent className="max-w-md">
+          <DialogHeader>
+            <DialogTitle className="flex items-center gap-2">
+              <Trash2 className="h-5 w-5 text-destructive" />
+              {t('dialogs.deleteChat.title')}
+            </DialogTitle>
+            <DialogDescription>
+              {t('dialogs.deleteChat.description')}
+            </DialogDescription>
+          </DialogHeader>
+
+          {chatToDelete && (
+            <div className="py-4">
+              <div className="p-3 bg-muted/50 rounded-lg border border-border/50">
+                <div className="flex items-center gap-3">
+                  <MessageSquare className="h-4 w-4 text-muted-foreground flex-shrink-0" />
+                  <div className="min-w-0 flex-1">
+                    <p className="text-sm font-medium text-foreground truncate">
+                      {chatToDelete.title}
+                    </p>
+                    <p className="text-xs text-muted-foreground">
+                      {t('dialogs.deleteChat.chatPreview')}
+                    </p>
+                  </div>
+                </div>
+              </div>
+              
+              <div className="mt-4 p-3 bg-destructive/5 border border-destructive/20 rounded-lg">
+                <div className="flex items-start gap-2">
+                  <div className="w-2 h-2 bg-destructive rounded-full mt-2 flex-shrink-0"></div>
+                  <div className="text-sm text-destructive-foreground">
+                    <p className="font-medium mb-1">{t('dialogs.deleteChat.warningTitle')}</p>
+                    <ul className="text-xs space-y-1 text-destructive-foreground/80">
+                      <li>• {t('dialogs.deleteChat.warning1')}</li>
+                      <li>• {t('dialogs.deleteChat.warning2')}</li>
+                      <li>• {t('dialogs.deleteChat.warning3')}</li>
+                    </ul>
+                  </div>
+                </div>
+              </div>
+            </div>
+          )}
+
+          <DialogFooter>
+            <Button
+              variant="outline"
+              onClick={() => {
+                setDeleteDialogOpen(false);
+                setChatToDelete(null);
+              }}
+              disabled={isDeletingChat}
+            >
+              {t('common.cancel')}
+            </Button>
+            <Button
+              variant="destructive"
+              onClick={confirmDeleteChat}
+              disabled={isDeletingChat}
+            >
+              {isDeletingChat ? (
+                <>
+                  <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+                  {t('dialogs.deleteChat.deleting')}
+                </>
+              ) : (
+                <>
+                  <Trash2 className="mr-2 h-4 w-4" />
+                  {t('dialogs.deleteChat.confirm')}
+                </>
+              )}
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
     </div>
   );
 };

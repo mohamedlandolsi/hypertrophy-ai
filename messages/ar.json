@@ -877,7 +877,9 @@
       "signIn": "تسجيل الدخول",
       "createAccount": "إنشاء حساب",
       "messagesRemaining": "الرسائل المتبقية: {count}",
-      "viewProfile": "انقر لعرض الملف الشخصي"
+      "viewProfile": "انقر لعرض الملف الشخصي",
+      "loadMore": "تحميل المزيد من الدردشات",
+      "loadingMore": "جاري التحميل..."
     },
     "main": {
       "welcomeTitle": "تحدث مع HypertroQ",
@@ -940,6 +942,29 @@
       "bestRepRange": "ما هو أفضل نطاق تكرارات لنمو العضلات؟",
       "weeklyTraining": "هيكل التدريب الأسبوعي؟",
       "supplementRecommendations": "توصيات المكملات الغذائية؟"
+    },
+    "dialogs": {
+      "deleteChat": {
+        "title": "حذف الدردشة",
+        "description": "هل أنت متأكد من رغبتك في حذف هذه المحادثة؟ لا يمكن التراجع عن هذا الإجراء.",
+        "chatPreview": "المحادثة المراد حذفها",
+        "warningTitle": "تحذير: إجراء دائم",
+        "warning1": "ستتم إزالة هذه المحادثة بالكامل",
+        "warning2": "سيتم حذف جميع الرسائل وسجل الدردشة",
+        "warning3": "لا يمكن التراجع عن هذا الإجراء",
+        "confirm": "حذف نهائياً",
+        "deleting": "جاري الحذف..."
+      }
+    },
+    "common": {
+      "cancel": "إلغاء",
+      "delete": "حذف",
+      "save": "حفظ",
+      "edit": "تحرير",
+      "close": "إغلاق",
+      "back": "رجوع",
+      "continue": "متابعة",
+      "confirm": "تأكيد"
     }
   }
 }
