@@ -163,6 +163,7 @@ model AIConfiguration {
   ragMaxChunks              Int      @default(17)
   ragSimilarityThreshold    Float    @default(0.1)
   strictMusclePriority      Boolean  @default(true)
+  toolEnforcementMode       String   @default("AUTO")  // AUTO or STRICT
   freeModelName             String   @default("gemini-2.5-flash")
   proModelName              String   @default("gemini-2.5-pro")
 }

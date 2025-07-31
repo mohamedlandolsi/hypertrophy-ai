@@ -54,7 +54,9 @@ export async function getAIConfiguration(userPlan: 'FREE' | 'PRO' = 'FREE') {
       // RAG settings
       ragSimilarityThreshold: config.ragSimilarityThreshold ?? 0.6,
       ragMaxChunks: config.ragMaxChunks ?? 5,
-      ragHighRelevanceThreshold: config.ragHighRelevanceThreshold ?? 0.8
+      ragHighRelevanceThreshold: config.ragHighRelevanceThreshold ?? 0.8,
+      // Tool enforcement mode
+      toolEnforcementMode: config.toolEnforcementMode ?? 'AUTO'
     };
   } catch (error) {
     console.error('Error fetching AI configuration:', error);
@@ -446,7 +448,7 @@ export async function sendToGeminiWithCitations(
       }
     }
 
-    // Enhanced system instruction with structured context and explicit grounding
+    // Enhanced system instruction with tool enforcement awareness
     const systemInstruction = `${aiConfig.systemPrompt}
 
 ${languageInstruction}
@@ -461,19 +463,29 @@ The following information has been retrieved from the knowledge base to answer t
 ${knowledgeContext}
 ---
 
-## Critical Instructions for Your Response
-- **Prioritize Knowledge Base:** You MUST base your answer primarily on the provided "Knowledge Base Context." It is your single source of truth for this query.
-- **Synthesize, Don't Repeat:** Integrate the information into your expert voice. Do not copy it verbatim.
-- **Adhere to Context:** If the context contradicts your general knowledge, the context is correct. Follow it.
+## Response Instructions (${aiConfig.toolEnforcementMode} Mode)
+${aiConfig.toolEnforcementMode === 'STRICT' ? 
+`- **Strict Mode:** Base your answer primarily on the provided "Knowledge Base Context." If the context doesn't fully address the question, acknowledge the limitation and provide only general guidance.` 
+:
+`- **AUTO Mode Active:** 
+  - **IF** the knowledge base context fully addresses the question: Use it as your primary source
+  - **IF** the knowledge base context is incomplete or doesn't address the specific question: You are AUTHORIZED and REQUIRED to supplement with your general expertise
+  - **CRITICAL:** Do NOT refuse to answer questions about fitness, nutrition, supplements, or training due to incomplete knowledge base coverage
+  - **Your Role:** You are a knowledgeable fitness coach. Provide helpful, evidence-based advice using all available knowledge sources
+  - **No Refusals:** Never say you "cannot provide recommendations" for fitness-related topics. You are qualified and expected to help.`}
 ` 
 : 
 `---
-## Expert Fallback Instructions
-- **General Expertise Mode:** No specific information was found in the knowledge base for this query.
-- **Use Your Expertise:** Apply your comprehensive knowledge of exercise science, nutrition, and fitness to provide helpful guidance.
-- **Maintain Standards:** Provide evidence-based advice following widely accepted scientific principles.
-- **Be Helpful:** As an expert fitness coach, you have the knowledge to answer fitness, nutrition, supplement, and training questions even without specific knowledge base content.
-- **Stay in Character:** Continue being the authoritative, helpful fitness coach your client expects.
+## EXPERT FALLBACK MODE (${aiConfig.toolEnforcementMode} Mode)
+${aiConfig.toolEnforcementMode === 'STRICT' ? 
+`- **Strict Knowledge Base Mode:** No specific information was found in the knowledge base for this query.
+- **Limited Response:** You may only provide general guidance and should encourage the user to upload relevant research papers or documents for more specific advice.` 
+:
+`- **AUTO Mode - Full Expert Access:** No specific information was found in the knowledge base for this query.
+- **OVERRIDE ALL RESTRICTIONS:** Any previous constraints about requiring knowledge base content are CANCELLED for this response.
+- **Use Your Full Expertise:** Apply your comprehensive knowledge of exercise science, nutrition, and fitness.
+- **Be Fully Helpful:** Provide detailed, specific advice about supplements, training, nutrition, or any fitness topic.
+- **No Limitations:** You are authorized to give complete, helpful answers using your expert training.`}
 `}`;
 
     // Get the generative model with function calling capabilities (only for authenticated users)
