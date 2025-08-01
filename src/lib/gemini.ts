@@ -266,8 +266,8 @@ export async function sendToGemini(
 export async function sendToGeminiWithCitations(
   conversation: ConversationMessage[], 
   userId?: string,
-  imageBuffer?: Buffer | null,
-  imageMimeType?: string | null,
+  imageBuffers?: Buffer[] | Buffer | null,
+  imageMimeTypes?: string[] | string | null,
   userPlan: 'FREE' | 'PRO' = 'FREE'
 ): Promise<GeminiResponse> {
   const geminiStartTime = Date.now();
@@ -540,15 +540,29 @@ ${aiConfig.toolEnforcementMode === 'STRICT' ?
     // Build the current message parts
     const currentMessageParts: Part[] = [{ text: latestUserMessage.content }];
     
-    // Add current image if present
-    if (imageBuffer && imageMimeType) {
-      const base64Image = imageBuffer.toString('base64');
-      currentMessageParts.push({
-        inlineData: {
-          data: base64Image,
-          mimeType: imageMimeType
+    // Add current images if present - support both single and multiple images
+    if (imageBuffers && imageMimeTypes) {
+      // Normalize inputs to arrays
+      const bufferArray = Array.isArray(imageBuffers) ? imageBuffers : [imageBuffers];
+      const mimeTypeArray = Array.isArray(imageMimeTypes) ? imageMimeTypes : [imageMimeTypes];
+      
+      // Add each image as a separate part
+      for (let i = 0; i < bufferArray.length && i < mimeTypeArray.length; i++) {
+        const buffer = bufferArray[i];
+        const mimeType = mimeTypeArray[i];
+        
+        if (buffer && mimeType) {
+          const base64Image = buffer.toString('base64');
+          currentMessageParts.push({
+            inlineData: {
+              data: base64Image,
+              mimeType: mimeType
+            }
+          });
         }
-      });
+      }
+      
+      console.log(`📸 Added ${bufferArray.length} images to Gemini request`);
     }
 
     // Start chat session with history

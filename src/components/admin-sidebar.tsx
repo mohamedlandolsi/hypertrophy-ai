@@ -7,6 +7,7 @@ import { usePathname } from 'next/navigation';
 import { cn } from '@/lib/utils';
 import { Button } from '@/components/ui/button';
 import { Sheet, SheetContent, SheetTrigger, SheetTitle } from '@/components/ui/sheet';
+import { ThemeToggle } from '@/components/theme-toggle';
 import { 
   Settings, 
   Database, 
@@ -118,7 +119,10 @@ function AdminSidebarContent({ onClose }: { onClose?: () => void }) {
       </nav>
 
       {/* Footer */}
-      <div className="border-t border-border p-6">
+      <div className="border-t border-border p-6 space-y-4">
+        <div className="flex items-center justify-center">
+          <ThemeToggle />
+        </div>
         <Link
           href="/dashboard"
           className="flex items-center space-x-2 text-sm text-muted-foreground hover:text-foreground transition-colors"

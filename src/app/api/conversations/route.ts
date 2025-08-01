@@ -3,14 +3,20 @@ import { createClient } from '@/lib/supabase/server';
 import { prisma } from '@/lib/prisma';
 
 export async function GET(request: NextRequest) {
+  const startTime = Date.now();
+  console.log('📝 Conversations API: Starting request');
+  
   try {
     // Get the authenticated user
     const supabase = await createClient();
     const { data: { user }, error: authError } = await supabase.auth.getUser();
     
     if (authError || !user) {
+      console.log('❌ Conversations API: Authentication failed');
       return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
     }
+
+    console.log(`👤 Conversations API: User authenticated - ${user.id}`);
 
     // Get pagination parameters from URL
     const { searchParams } = new URL(request.url);
@@ -18,7 +24,10 @@ export async function GET(request: NextRequest) {
     const limit = parseInt(searchParams.get('limit') || '10', 10);
     const skip = (page - 1) * limit;
 
-    // Ensure user exists in our database
+    console.log(`📄 Conversations API: Pagination - page: ${page}, limit: ${limit}, skip: ${skip}`);
+
+    // Ensure user exists in our database (simple upsert)
+    console.log('🔄 Conversations API: Upserting user');
     await prisma.user.upsert({
       where: { id: user.id },
       update: {},
@@ -26,22 +35,19 @@ export async function GET(request: NextRequest) {
     });
 
     // Get total count for pagination info
+    console.log('🔢 Conversations API: Getting total count');
     const totalCount = await prisma.chat.count({
       where: {
         userId: user.id,
       }
     });
+    console.log(`📊 Conversations API: Total count - ${totalCount}`);
 
-    // Fetch conversations for the user with pagination
+    // Fetch conversations for the user with pagination (optimized - no message includes)
+    console.log('💬 Conversations API: Fetching conversations');
     const conversations = await prisma.chat.findMany({
       where: {
         userId: user.id,
-      },
-      include: {
-        messages: {
-          orderBy: { createdAt: 'desc' },
-          take: 1, // Get only the last message for preview
-        }
       },
       orderBy: {
         createdAt: 'desc'
@@ -49,19 +55,23 @@ export async function GET(request: NextRequest) {
       skip,
       take: limit,
     });
+    console.log(`✅ Conversations API: Found ${conversations.length} conversations`);
 
-    // Format the response
+    // Format the response (simplified without message data for performance)
     const formattedConversations = conversations.map(chat => ({
       id: chat.id,
       title: chat.title,
       createdAt: chat.createdAt,
-      updatedAt: chat.messages[0]?.createdAt || chat.createdAt,
-      lastMessage: chat.messages[0]?.content || null,
-      messageCount: chat.messages.length
+      updatedAt: chat.createdAt, // Use chat createdAt since we don't have message data
+      lastMessage: null, // Remove for performance - can be added back with separate query if needed
+      messageCount: 0 // Remove for performance - can be added back with separate query if needed
     }));
 
     const hasMore = skip + limit < totalCount;
     const totalPages = Math.ceil(totalCount / limit);
+
+    const duration = Date.now() - startTime;
+    console.log(`🎉 Conversations API: Request completed in ${duration}ms`);
 
     return NextResponse.json({ 
       conversations: formattedConversations,
@@ -75,7 +85,8 @@ export async function GET(request: NextRequest) {
     });
 
   } catch (error) {
-    console.error('Conversations API error:', error);
+    const duration = Date.now() - startTime;
+    console.error(`❌ Conversations API error (after ${duration}ms):`, error);
     return NextResponse.json(
       { error: 'Internal server error' },
       { status: 500 }

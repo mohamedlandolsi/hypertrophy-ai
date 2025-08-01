@@ -15,13 +15,67 @@ import {
 interface MessageContentProps {
   content: string;
   role: 'user' | 'assistant';
-  imageData?: string;
-  imageMimeType?: string;
+  imageData?: string | string[]; // Support both single and multiple images
+  imageMimeType?: string | string[];
+  images?: Array<{ // New structured format for multiple images
+    data: string;
+    mimeType: string;
+    name?: string;
+  }>;
 }
 
-export const MessageContent: React.FC<MessageContentProps> = ({ content, imageData }) => {
+export const MessageContent: React.FC<MessageContentProps> = ({ content, imageData, images }) => {
   const formatting = getTextFormatting(content);
   const [isImageDialogOpen, setIsImageDialogOpen] = useState(false);
+  const [selectedImageIndex, setSelectedImageIndex] = useState(0);
+  
+  // Process images - prioritize new structured format, then handle legacy formats
+  const processedImages = React.useMemo(() => {
+    let rawImages: Array<{ data: string; mimeType: string; name?: string }> = [];
+    
+    if (images && images.length > 0) {
+      rawImages = images;
+    } else if (imageData) {
+      if (Array.isArray(imageData)) {
+        rawImages = imageData.map((data, index) => ({
+          data,
+          mimeType: 'image/jpeg', // Default fallback
+          name: `Image ${index + 1}`
+        }));
+      } else {
+        rawImages = [{
+          data: imageData,
+          mimeType: 'image/jpeg', // Default fallback
+          name: 'Image'
+        }];
+      }
+    }
+    
+    // Filter out any images with empty or invalid data
+    const filtered = rawImages.filter(image =>
+      image && typeof image.data === 'string' && image.data.trim().length > 0
+    );
+    
+    // Debug logging to help identify the issue
+    if (rawImages.length > 0) {
+      console.log('🖼️ MessageContent: Processing images', {
+        rawCount: rawImages.length,
+        filteredCount: filtered.length,
+        rawImages: rawImages.map(img => ({
+          hasData: !!img.data,
+          dataLength: img.data?.length || 0,
+          dataPreview: img.data?.substring(0, 50) + '...'
+        }))
+      });
+    }
+    
+    return filtered;
+  }, [images, imageData]);
+
+  const openImageDialog = (index: number) => {
+    setSelectedImageIndex(index);
+    setIsImageDialogOpen(true);
+  };
   
   return (
     <div
@@ -30,38 +84,138 @@ export const MessageContent: React.FC<MessageContentProps> = ({ content, imageDa
       style={formatting.style}
       className={`message-content ${formatting.className}`}
     >
-      {/* Display image if present */}
-      {imageData && (
-        <div className={content && content !== '[Image]' ? 'mb-3' : ''}>
-          <Dialog open={isImageDialogOpen} onOpenChange={setIsImageDialogOpen}>
-            <DialogTrigger asChild>
-              <div className="relative cursor-pointer hover:opacity-80 transition-opacity">
-                <Image
-                  src={imageData}
-                  alt="Uploaded image"
-                  width={300}
-                  height={256}
-                  className="max-w-full max-h-64 object-contain rounded-lg border border-white/20"
-                  style={{ maxWidth: '300px' }}
-                  title="Click to view full size"
-                  unoptimized={imageData.startsWith('data:')}
-                />
+      {/* Display images if present */}
+      {processedImages.length > 0 && (
+        <div className={`${content && content !== '[Image]' ? 'mb-3' : ''} w-full overflow-hidden`}>
+          {processedImages.length === 1 && processedImages[0]?.data ? (
+            // Single image display
+            <Dialog open={isImageDialogOpen} onOpenChange={setIsImageDialogOpen}>
+              <DialogTrigger asChild>
+                <div className="relative cursor-pointer hover:opacity-80 transition-opacity">
+                  <Image
+                    src={processedImages[0].data}
+                    alt="Uploaded image"
+                    width={300}
+                    height={256}
+                    className="w-full max-w-sm max-h-48 sm:max-h-64 object-contain rounded-lg border border-white/20"
+                    style={{ maxWidth: '100%', height: 'auto' }}
+                    title="Click to view full size"
+                    unoptimized={processedImages[0].data.startsWith('data:')}
+                  />
+                </div>
+              </DialogTrigger>
+              <DialogContent className="max-w-[90vw] max-h-[90vh] p-2" showCloseButton={true}>
+                <DialogTitle className="sr-only">Image Preview</DialogTitle>
+                <div className="flex items-center justify-center">
+                  <Image
+                    src={processedImages[0].data}
+                    alt="Uploaded image - Full size"
+                    width={800}
+                    height={600}
+                    className="max-w-full max-h-[80vh] object-contain rounded-lg"
+                    unoptimized={processedImages[0].data.startsWith('data:')}
+                  />
+                </div>
+              </DialogContent>
+            </Dialog>
+          ) : processedImages.length > 1 ? (
+            // Multiple images display
+            <div className="space-y-3 w-full">
+              <div className="grid grid-cols-2 gap-1.5 sm:gap-2 w-full max-w-xs sm:max-w-sm">
+                {processedImages.slice(0, 4).map((image, index) => {
+                  // Extra defensive check
+                  if (!image?.data || image.data.trim() === '') {
+                    return null;
+                  }
+                  
+                  return (
+                    <div key={index} className="relative">
+                      <div 
+                        className="relative cursor-pointer hover:opacity-80 transition-opacity"
+                        onClick={() => openImageDialog(index)}
+                      >
+                        <Image
+                          src={image.data}
+                          alt={`Image ${index + 1}`}
+                          width={150}
+                          height={150}
+                          className="w-full aspect-square object-cover rounded-lg border border-white/20"
+                          style={{ height: 'auto', minHeight: '60px', maxHeight: '120px' }}
+                          unoptimized={image.data.startsWith('data:')}
+                        />
+                        {index === 3 && processedImages.length > 4 && (
+                          <div className="absolute inset-0 bg-black/50 rounded-lg flex items-center justify-center">
+                            <span className="text-white text-sm font-semibold">
+                              +{processedImages.length - 4}
+                            </span>
+                          </div>
+                        )}
+                      </div>
+                    </div>
+                  );
+                })}
               </div>
-            </DialogTrigger>
-            <DialogContent className="max-w-[90vw] max-h-[90vh] p-2" showCloseButton={true}>
-              <DialogTitle className="sr-only">Image Preview</DialogTitle>
-              <div className="flex items-center justify-center">
-                <Image
-                  src={imageData}
-                  alt="Uploaded image - Full size"
-                  width={800}
-                  height={600}
-                  className="max-w-full max-h-[80vh] object-contain rounded-lg"
-                  unoptimized={imageData.startsWith('data:')}
-                />
-              </div>
-            </DialogContent>
-          </Dialog>
+              
+              {/* Multi-image dialog */}
+              <Dialog open={isImageDialogOpen} onOpenChange={setIsImageDialogOpen}>
+                <DialogContent className="max-w-[90vw] max-h-[90vh] p-2" showCloseButton={true}>
+                  <DialogTitle className="sr-only">Image gallery</DialogTitle>
+                  <div className="space-y-4">
+                    <div className="flex items-center justify-center">
+                      {processedImages[selectedImageIndex]?.data && processedImages[selectedImageIndex].data.trim() !== '' && (
+                        <Image
+                          src={processedImages[selectedImageIndex].data}
+                          alt={`Image ${selectedImageIndex + 1}`}
+                          width={800}
+                          height={600}
+                          className="max-w-full max-h-[70vh] object-contain rounded-lg"
+                          unoptimized={processedImages[selectedImageIndex].data.startsWith('data:')}
+                        />
+                      )}
+                    </div>
+                    
+                    {/* Image thumbnails navigation */}
+                    {processedImages.length > 1 && (
+                      <div className="flex gap-2 justify-center overflow-x-auto pb-2">
+                        {processedImages.map((image, index) => {
+                          // Extra defensive check for thumbnails
+                          if (!image?.data || image.data.trim() === '') {
+                            return null;
+                          }
+                          
+                          return (
+                            <button
+                              key={index}
+                              onClick={() => setSelectedImageIndex(index)}
+                              className={`flex-shrink-0 w-16 h-16 rounded-lg overflow-hidden border-2 transition-all ${
+                                index === selectedImageIndex 
+                                  ? 'border-primary ring-2 ring-primary/20' 
+                                  : 'border-white/20 hover:border-white/40'
+                              }`}
+                            >
+                              <Image
+                                src={image.data}
+                                alt={`Thumbnail ${index + 1}`}
+                                width={64}
+                                height={64}
+                                className="w-full h-full object-cover"
+                                unoptimized={image.data.startsWith('data:')}
+                              />
+                            </button>
+                          );
+                        })}
+                      </div>
+                    )}
+                    
+                    {/* Image counter */}
+                    <div className="text-center text-sm text-muted-foreground">
+                      {selectedImageIndex + 1} of {processedImages.length}
+                    </div>
+                  </div>
+                </DialogContent>
+              </Dialog>
+            </div>
+          ) : null}
         </div>
       )}
       

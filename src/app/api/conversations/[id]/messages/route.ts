@@ -44,14 +44,56 @@ export async function GET(
     }
 
     // Format messages for the frontend
-    const messages = conversation.messages.map(msg => ({
-      id: msg.id,
-      role: msg.role.toLowerCase(), // Convert 'USER'/'ASSISTANT' to 'user'/'assistant'
-      content: msg.content,
-      createdAt: msg.createdAt,
-      imageData: msg.imageData ? `data:${msg.imageMimeType};base64,${msg.imageData}` : undefined,
-      imageMimeType: msg.imageMimeType || undefined,
-    }));
+    const messages = conversation.messages.map(msg => {
+      const messageResponse: {
+        id: string;
+        role: string;
+        content: string;
+        createdAt: Date;
+        imageData?: string;
+        imageMimeType?: string;
+        images?: Array<{ data: string; mimeType: string; name: string }>;
+      } = {
+        id: msg.id,
+        role: msg.role.toLowerCase(), // Convert 'USER'/'ASSISTANT' to 'user'/'assistant'
+        content: msg.content,
+        createdAt: msg.createdAt,
+      };
+      
+      // Handle image data based on storage format
+      if (msg.imageData && msg.imageMimeType) {
+        if (msg.imageMimeType === 'application/json') {
+          // Multiple images stored as JSON
+          try {
+            const imagesJson = JSON.parse(msg.imageData) as Array<{ data: string; mimeType: string; name: string }>;
+            messageResponse.images = imagesJson.map((img) => ({
+              data: `data:${img.mimeType};base64,${img.data}`,
+              mimeType: img.mimeType,
+              name: img.name
+            }));
+            // For backward compatibility, also set single image fields to the first image
+            if (imagesJson.length > 0) {
+              messageResponse.imageData = `data:${imagesJson[0].mimeType};base64,${imagesJson[0].data}`;
+              messageResponse.imageMimeType = imagesJson[0].mimeType;
+            }
+          } catch (error) {
+            console.error('Error parsing images JSON for message:', msg.id, error);
+          }
+        } else {
+          // Single image stored directly
+          messageResponse.imageData = `data:${msg.imageMimeType};base64,${msg.imageData}`;
+          messageResponse.imageMimeType = msg.imageMimeType;
+          // Also provide in new structured format
+          messageResponse.images = [{
+            data: `data:${msg.imageMimeType};base64,${msg.imageData}`,
+            mimeType: msg.imageMimeType,
+            name: 'Image'
+          }];
+        }
+      }
+      
+      return messageResponse;
+    });
 
     return NextResponse.json({
       conversation: {

@@ -10,6 +10,8 @@ interface ArabicAwareTextareaProps {
   disabled?: boolean;
   onKeyDown?: (e: React.KeyboardEvent<HTMLTextAreaElement>) => void;
   onPaste?: (e: React.ClipboardEvent<HTMLTextAreaElement>) => void;
+  onFocus?: () => void;
+  onBlur?: () => void;
   rows?: number;
   maxLength?: number;
 }
@@ -22,6 +24,8 @@ export const ArabicAwareTextarea: React.FC<ArabicAwareTextareaProps> = ({
   disabled = false,
   onKeyDown,
   onPaste,
+  onFocus,
+  onBlur,
   rows = 1,
   maxLength
 }) => {
@@ -87,6 +91,8 @@ export const ArabicAwareTextarea: React.FC<ArabicAwareTextareaProps> = ({
       disabled={disabled}
       onKeyDown={handleKeyDown}
       onPaste={onPaste}
+      onFocus={onFocus}
+      onBlur={onBlur}
       dir={direction}
       lang={isArabicText(value) ? 'ar' : 'en'}
       rows={rows}

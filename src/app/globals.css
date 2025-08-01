@@ -404,6 +404,8 @@
 .message-area {
   scroll-behavior: smooth;
   overflow-anchor: none;
+  overscroll-behavior-y: contain; /* Prevent rubber band scrolling */
+  -webkit-overflow-scrolling: touch;
 }
 
 /* Custom scrollbar classes for textarea */
@@ -457,6 +459,8 @@
   .message-area {
     overscroll-behavior: contain;
     -webkit-overflow-scrolling: touch;
+    touch-action: pan-y; /* Allow vertical scrolling but prevent horizontal pan gestures */
+    scroll-behavior: smooth;
   }
   
   .message-area > div {
@@ -467,6 +471,39 @@
   /* Prevent horizontal scroll on mobile */
   body {
     overflow-x: hidden;
+    touch-action: manipulation; /* Improve touch responsiveness */
+    /* Prevent zoom on input focus */
+    -webkit-text-size-adjust: 100%;
+    -ms-text-size-adjust: 100%;
+  }
+  
+  /* Mobile keyboard handling */
+  html {
+    /* Prevent viewport jumping when keyboard appears */
+    height: 100vh;
+    height: -webkit-fill-available;
+  }
+  
+  body {
+    min-height: 100vh;
+    min-height: -webkit-fill-available;
+  }
+  
+  /* Sticky header for mobile */
+  .glass-header {
+    box-shadow: 0 2px 10px rgba(0, 0, 0, 0.1);
+    backdrop-filter: blur(10px);
+    -webkit-backdrop-filter: blur(10px);
+  }
+  
+  /* Chat input optimizations for mobile keyboard */
+  .chat-input-mobile {
+    /* Ensure input stays visible above keyboard */
+    position: relative;
+    z-index: 1000;
+    box-shadow: 0 -2px 20px rgba(0, 0, 0, 0.1);
+    backdrop-filter: blur(20px);
+    -webkit-backdrop-filter: blur(20px);
   }
   
   /* Better mobile chat bubbles */

@@ -1,9 +1,10 @@
 'use client';
 
+import React from 'react';
 import { createClient } from '@/lib/supabase/client';
-import { useEffect, useState as reactUseState, useRef, useCallback } from 'react';
+import { useEffect, useState as reactUseState, useRef, useCallback, useMemo } from 'react';
 import { Button } from '@/components/ui/button';
-import { Settings, MessageSquare, Send, ChevronLeft, Menu, User, LogOut, Database, Trash2, Copy, Loader2, Image as ImageIcon, X } from 'lucide-react';
+import { Settings, MessageSquare, Send, ChevronLeft, Menu, User, LogOut, Database, Trash2, Loader2, Image as ImageIcon } from 'lucide-react';
 import Link from 'next/link';
 import Image from 'next/image';
 import { ThemeToggle } from '@/components/theme-toggle';
@@ -12,12 +13,16 @@ import { showToast } from '@/lib/toast';
 import { InlineLoading, FullPageLoading } from '@/components/ui/loading';
 import type { User as SupabaseUser } from '@supabase/supabase-js';
 import { Suspense } from 'react';
-import { MessageContent } from '@/components/message-content';
-import { ArticleLinks } from '@/components/article-links';
-import { processMessageContent } from '@/lib/article-links';
 import { ArabicAwareTextarea } from '@/components/arabic-aware-textarea';
 import LanguageSwitcher from '@/components/language-switcher';
 import { useTranslations, useLocale } from 'next-intl';
+
+// Performance optimizations
+import { useDebouncedCallback } from '@/hooks/use-debounced-value';
+import { useApiCache } from '@/hooks/use-smart-cache';
+import { useOptimizedChatHistory, useOptimizedUserPlan, useOptimizedUserRole } from '@/hooks/use-optimized-fetch';
+import { OptimizedMessage } from '@/components/optimized-message';
+import { OptimizedImage } from '@/components/optimized-image';
 
 // Imports for DropdownMenu and Avatar
 import {
@@ -48,14 +53,6 @@ import { PlanBadge } from '@/components/plan-badge';
 import { UpgradeButton } from '@/components/upgrade-button';
 import { useOnlineStatus } from '@/hooks/use-online-status';
 
-interface Conversation {
-  id: string;
-  title: string;
-  createdAt: string;
-  lastMessage?: string;
-  messageCount?: number;
-}
-
 const ChatPage = () => {
   const t = useTranslations('ChatPage');
   const locale = useLocale();
@@ -66,36 +63,64 @@ const ChatPage = () => {
   // Get conversation ID from URL parameters - supports both /chat/[id] and /chat?id=...
   const initialConversationId = Array.isArray(params.id) ? params.id[0] : params.id || searchParams.get('id') || null;
   
+  // Performance optimizations
+  const cache = useApiCache(30); // 30 items cache
+  const debouncedInputChange = useDebouncedCallback((value: string) => {
+    setInput(value);
+  }, 150);
+  
   const [isSidebarOpen, setIsSidebarOpen] = reactUseState(false); // Default closed on mobile
   const [isMobile, setIsMobile] = reactUseState(false);
   const [user, setUser] = reactUseState<SupabaseUser | null>(null); // Using reactUseState
-  const [userRole, setUserRole] = reactUseState<string>('user'); // Add userRole state
-  const [userPlan, setUserPlan] = reactUseState<{
-    plan: 'FREE' | 'PRO';
-    messagesUsedToday: number;
-    dailyLimit: number;
-  } | null>(null);
-  const [chatHistory, setChatHistory] = reactUseState<Conversation[]>([]);
-  const [activeChatId, setActiveChatId] = reactUseState<string | null>(initialConversationId);
-  const [conversationId, setConversationId] = reactUseState<string | null>(initialConversationId);
   const [isLoadingHistory, setIsLoadingHistory] = reactUseState(true);
   const [isLoadingMessages, setIsLoadingMessages] = reactUseState(false);
   const [autoScroll, setAutoScroll] = reactUseState(true);
   const [showLoginDialog, setShowLoginDialog] = reactUseState(false);
-  const [guestMessageCount, setGuestMessageCount] = reactUseState(0);
   const [isInitializing, setIsInitializing] = reactUseState(true);
 
-  // Chat history pagination state
-  const [chatHistoryPage, setChatHistoryPage] = reactUseState(1);
-  const [hasMoreChats, setHasMoreChats] = reactUseState(false);
-  const [isLoadingMoreChats, setIsLoadingMoreChats] = reactUseState(false);
+  // Use optimized hooks for user data - these will cache and reduce API calls
+  const { 
+    data: userRoleData
+  } = useOptimizedUserRole(!!user);
+  
+  const { 
+    data: userPlan,
+    refetch: refetchUserPlan
+  } = useOptimizedUserPlan(!!user);
+  
+  const { 
+    data: chatHistoryData,
+    refetch: refetchChatHistory
+  } = useOptimizedChatHistory(1, 10, !!user);
+
+  // Extract data from optimized hooks with useMemo to prevent dependency issues
+  const userRole = userRoleData?.role || 'user';
+  const chatHistory = useMemo(() => chatHistoryData?.conversations || [], [chatHistoryData?.conversations]);
+  const hasMoreChats = chatHistoryData?.pagination?.hasMore || false;
+
+  // Type for chat history items
+  type ChatHistoryItem = {
+    id: string;
+    title?: string;
+    createdAt: string;
+  };
+
+  const [activeChatId, setActiveChatId] = reactUseState<string | null>(initialConversationId);
+  const [conversationId, setConversationId] = reactUseState<string | null>(initialConversationId);
 
   // Delete chat dialog state
   const [deleteDialogOpen, setDeleteDialogOpen] = reactUseState(false);
   const [chatToDelete, setChatToDelete] = reactUseState<{ id: string; title: string } | null>(null);
   const [isDeletingChat, setIsDeletingChat] = reactUseState(false);
 
-  // Image upload state
+  // State for loading more chats
+  const [isLoadingMoreChats, setIsLoadingMoreChats] = reactUseState(false);
+
+  // Multi-image upload state
+  const [selectedImages, setSelectedImages] = reactUseState<File[]>([]);
+  const [imagePreviews, setImagePreviews] = reactUseState<string[]>([]);
+  
+  // Backward compatibility - keep old single image state for gradual migration
   const [selectedImage, setSelectedImage] = reactUseState<File | null>(null);
   const [imagePreview, setImagePreview] = reactUseState<string | null>(null);
 
@@ -111,29 +136,53 @@ const ChatPage = () => {
     id: string;
     role: 'user' | 'assistant';
     content: string;
-    imageData?: string;
-    imageMimeType?: string;
+    imageData?: string | string[]; // Support both single and multiple images
+    imageMimeType?: string | string[]; // Support both single and multiple mime types
+    images?: Array<{ // New structured format for multiple images
+      data: string;
+      mimeType: string;
+      name?: string;
+    }>;
   }>>([]);
   const [input, setInput] = reactUseState('');
   const [isLoading, setIsLoading] = reactUseState(false);
 
-  // Custom input change handler
+  // Refs to access current values without causing re-renders
+  const userPlanRef = useRef(userPlan);
+  const selectedImagesRef = useRef(selectedImages);
+  const messagesRef = useRef(messages);
+  const refetchUserPlanRef = useRef(refetchUserPlan);
+  const refetchChatHistoryRef = useRef(refetchChatHistory);
+
+  // Update refs when values change
+  userPlanRef.current = userPlan;
+  selectedImagesRef.current = selectedImages;
+  messagesRef.current = messages;
+  refetchUserPlanRef.current = refetchUserPlan;
+  refetchChatHistoryRef.current = refetchChatHistory;
+
+  // Custom input change handler with debouncing for better performance
   const handleInputChange = useCallback((e: React.ChangeEvent<HTMLTextAreaElement>) => {
-    setInput(e.target.value);
-  }, [setInput]);
+    const value = e.target.value;
+    if (value.length <= 2000) {
+      debouncedInputChange(value);
+    }
+  }, [debouncedInputChange]);
 
-  // Custom submit handler
-  const sendMessage = useCallback(async (messageText: string, imageFile?: File) => {
-    if ((!messageText.trim() && !imageFile) || isLoading) return;
+  // Custom submit handler - updated for multiple images
+  const sendMessage = useCallback(async (messageText: string, imageFiles?: File[]) => {
+    const images = imageFiles || selectedImagesRef.current; // Use ref instead of state
+    if ((!messageText.trim() && (!images || images.length === 0)) || isLoading) return;
 
-    if (!user && guestMessageCount >= 4) {
+    // Guest users must login to send messages
+    if (!user) {
       setShowLoginDialog(true);
       return;
     }
 
     // Safety guard: If we're sending a second message but don't have a conversationId yet,
     // wait a moment for the state to update
-    if (messages.length > 0 && !conversationId) {
+    if (messagesRef.current.length > 0 && !conversationId) { // Use ref instead of state
       console.warn("⚠️ Attempting to send second message without conversationId, waiting...");
       showToast.error(t('toasts.errorSendingMessage'), "Chat not fully initialized. Please wait a moment and try again.");
       return;
@@ -142,39 +191,64 @@ const ChatPage = () => {
     setIsLoading(true);
 
     try {
+      // Convert multiple images to base64
+      const imageDataArray: Array<{ data: string; mimeType: string; name?: string }> = [];
+      if (images && images.length > 0) {
+        for (const file of images) {
+          const base64Data = await convertFileToBase64(file);
+          imageDataArray.push({
+            data: base64Data,
+            mimeType: file.type,
+            name: file.name
+          });
+        }
+      }
+
       const userMessage = {
         id: Date.now().toString(),
         role: 'user' as const,
         content: messageText,
-        imageData: imageFile ? await convertFileToBase64(imageFile) : undefined,
-        imageMimeType: imageFile?.type,
+        // Backward compatibility
+        imageData: imageDataArray.length > 0 ? (imageDataArray.length === 1 ? imageDataArray[0].data : imageDataArray.map(img => img.data)) : undefined,
+        imageMimeType: imageDataArray.length > 0 ? (imageDataArray.length === 1 ? imageDataArray[0].mimeType : imageDataArray.map(img => img.mimeType)) : undefined,
+        // New structured format
+        images: imageDataArray.length > 0 ? imageDataArray : undefined,
       };
 
       setMessages(prev => [...prev, userMessage]);
       setInput('');
+      // Clear selected images after sending
+      setSelectedImages([]);
+      setImagePreviews([]);
 
       // Use local variable instead of stale state
       let tempConversationId = conversationId;
 
       console.log("▶️ Sending message:", messageText);
       console.log("📨 Conversation ID:", tempConversationId);
-      console.log("🕒 Original conversationId state:", conversationId);
+      console.log("� Images count:", images?.length || 0);
 
       let body: FormData | string;
       let contentType: string | undefined;
 
-      if (imageFile) {
+      if (images && images.length > 0) {
         const formData = new FormData();
         formData.append('message', messageText);
         formData.append('conversationId', tempConversationId || '');
         formData.append('isGuest', (!user).toString());
-        formData.append('image', imageFile);
+        
+        // Append multiple images
+        images.forEach((file, index) => {
+          formData.append(`image_${index}`, file);
+        });
+        formData.append('imageCount', images.length.toString());
+        
         body = formData;
         console.log("📤 Request Body (FormData):", {
           message: messageText,
           conversationId: tempConversationId || '',
           isGuest: !user,
-          hasImage: true
+          imageCount: images.length
         });
       } else {
         body = JSON.stringify({
@@ -197,13 +271,14 @@ const ChatPage = () => {
         try {
           errorPayload = await response.json();
         } catch {
-          const errorText = await response.text();
-          throw new Error(`Server error: ${response.statusText} (${errorText})`);
+          // Don't try to read response.text() again - the stream is already consumed
+          throw new Error(`Server error: ${response.status} ${response.statusText}`);
         }
 
         if (errorPayload.error === 'MESSAGE_LIMIT_REACHED') {
           if (userPlan) {
-            setUserPlan(prev => prev ? { ...prev, messagesUsedToday: prev.dailyLimit } : null);
+            // Refetch to get updated limit status
+            refetchUserPlan();
           }
           showToast.error(t('toasts.limitReachedTitle'), t('toasts.limitReachedText'));
           return;
@@ -217,51 +292,42 @@ const ChatPage = () => {
         responseData = await response.json();
       } catch (parseError) {
         console.error("❌ JSON parse error:", parseError);
-        const text = await response.text().catch(() => "N/A");
-        console.error("❌ Raw response text:", text);
-        throw new Error(`Invalid JSON from server. Response: ${text}`);
+        // Don't try to read response.text() again - the stream is already consumed
+        throw new Error(`Invalid JSON from server. Status: ${response.status} ${response.statusText}`);
       }
 
-      // Capture and persist the new conversationId
-      if (responseData.conversationId && !conversationId) {
-        tempConversationId = responseData.conversationId;
-        setConversationId(tempConversationId);
-        setActiveChatId(tempConversationId);
-        window.history.replaceState(null, '', `/${locale}/chat?id=${tempConversationId}`);
-        
-        // Refresh chat history to show the new conversation in sidebar
-        if (user) {
-          loadChatHistory();
+        // Capture and persist the new conversationId
+        if (responseData.conversationId && !conversationId) {
+          tempConversationId = responseData.conversationId;
+          setConversationId(tempConversationId);
+          setActiveChatId(tempConversationId);
+          window.history.replaceState(null, '', `/${locale}/chat?id=${tempConversationId}`);
+          
+          // Refresh chat history to show the new conversation in sidebar
+          if (user) {
+            refetchChatHistoryRef.current();
+          }
         }
-      }
 
-      const assistantMessage = {
-        id: responseData.assistantMessage?.id || (Date.now() + 1).toString(),
-        role: 'assistant' as const,
-        content: responseData.content,
-      };
+        const assistantMessage = {
+          id: responseData.assistantMessage?.id || (Date.now() + 1).toString(),
+          role: 'assistant' as const,
+          content: responseData.content,
+        };
 
-      setMessages(prev => [...prev, assistantMessage]);
+        setMessages(prev => [...prev, assistantMessage]);
 
-      if (user && userPlan && userPlan.plan === 'FREE') {
-        setUserPlan(prev => prev ? {
-          ...prev,
-          messagesUsedToday: Math.min(prev.messagesUsedToday + 1, prev.dailyLimit)
-        } : null);
-      }
-
-      if (!user) {
-        setGuestMessageCount(prev => prev + 1);
-      }
-
-    } catch (error) {
+        if (user && userPlanRef.current && userPlanRef.current.plan === 'FREE') {
+          // Refetch user plan to get updated message count
+          refetchUserPlanRef.current();
+        }    } catch (error) {
       console.error('Chat error:', error);
       showToast.error(t('toasts.errorSendingMessage'), error instanceof Error ? error.message : 'Unexpected error');
       setMessages(prev => prev.slice(0, -1));
     } finally {
       setIsLoading(false);
     }
-  }, [user, guestMessageCount, conversationId, userPlan, locale, t, isLoading, messages.length, setShowLoginDialog, setMessages, setInput, setIsLoading, setConversationId, setActiveChatId, setUserPlan, setGuestMessageCount]);
+  }, [user, conversationId, isLoading, locale, t, refetchUserPlan, setActiveChatId, setConversationId, setImagePreviews, setInput, setIsLoading, setMessages, setSelectedImages, setShowLoginDialog, userPlan]); // Add missing dependencies
 
   // Helper function to convert File to base64
   const convertFileToBase64 = (file: File): Promise<string> => {
@@ -296,55 +362,12 @@ const ChatPage = () => {
         
         setUser(currentUser); // Set actual user or null
         
-        // Try to get user role if user is authenticated
-        if (currentUser) {
-          try {
-            const response = await fetch('/api/user/role');
-            if (response.ok) {
-              const data = await response.json();
-              setUserRole(data.role || 'user');
-            } else {
-              console.error(t('toasts.errorFetchingRole'));
-              setUserRole('user'); // Default to user role on error
-            }
-          } catch (error) {
-            console.error(t('toasts.errorFetchingRole'), error);
-            setUserRole('user'); // Default to user role on error
-          }
-
-          // Fetch user plan information
-          try {
-            const planResponse = await fetch('/api/user/plan');
-            if (planResponse.ok) {
-              const planData = await planResponse.json();
-              setUserPlan({
-                plan: planData.plan,
-                messagesUsedToday: planData.messagesUsedToday,
-                dailyLimit: planData.limits.dailyMessages === -1 ? Infinity : planData.limits.dailyMessages,
-              });
-            }
-          } catch (error) {
-            console.error(t('toasts.errorFetchingPlan'), error);
-            // Default to free plan for authenticated users
-            setUserPlan({
-              plan: 'FREE',
-              messagesUsedToday: 0,
-              dailyLimit: 15,
-            });
-          }
-        } else {
-          setUserRole('user'); // Default for non-authenticated users
-          setUserPlan(null); // No plan for guest users
-        }
+        // The optimized hooks will automatically handle user role, plan, and chat history
+        // when user changes, so we don't need to manually fetch them here
         
-        // Only fetch chat history for authenticated users
-        if (currentUser) {
-          await loadChatHistory();
-
-          // Check for chatId in URL and load it
-          if (initialConversationId) {
-            loadChatSession(initialConversationId);
-          }
+        // Only load specific chat session if provided
+        if (currentUser && initialConversationId) {
+          loadChatSession(initialConversationId);
         } else {
           // For guest users, set loading states to false
           setIsLoadingHistory(false);
@@ -358,6 +381,20 @@ const ChatPage = () => {
     fetchInitialData();
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
+
+  // State for mobile keyboard handling
+  const [keyboardHeight, setKeyboardHeight] = reactUseState(0);
+  const [isKeyboardVisible, setIsKeyboardVisible] = reactUseState(false);
+  const [isInputFocused, setIsInputFocused] = reactUseState(false);
+
+  // Handler for input focus/blur events
+  const handleInputFocus = useCallback(() => {
+    setIsInputFocused(true);
+  }, [setIsInputFocused]);
+
+  const handleInputBlur = useCallback(() => {
+    setIsInputFocused(false);
+  }, [setIsInputFocused]);
 
   // Check for mobile viewport and handle responsive behavior
   useEffect(() => {
@@ -382,6 +419,52 @@ const ChatPage = () => {
     return () => window.removeEventListener('resize', checkMobile);
   }, [setIsMobile, setIsSidebarOpen]); // Add dependencies but don't use them in the effect
 
+  // Mobile keyboard detection and handling
+  useEffect(() => {
+    if (!isMobile) return;
+
+    const initialViewportHeight = window.visualViewport?.height || window.innerHeight;
+    const threshold = 150; // Minimum keyboard height to consider visible
+
+    const handleViewportChange = () => {
+      const currentHeight = window.visualViewport?.height || window.innerHeight;
+      const heightDifference = initialViewportHeight - currentHeight;
+      
+      // Only consider keyboard visible if input is focused and height difference is significant
+      if (heightDifference > threshold && isInputFocused) {
+        // Keyboard is visible
+        setIsKeyboardVisible(true);
+        setKeyboardHeight(heightDifference);
+      } else {
+        // Keyboard is hidden
+        setIsKeyboardVisible(false);
+        setKeyboardHeight(0);
+      }
+    };
+
+    // Handle both visual viewport (modern browsers) and window resize (fallback)
+    if (window.visualViewport) {
+      window.visualViewport.addEventListener('resize', handleViewportChange);
+    } else {
+      // Fallback for older browsers
+      const handleResize = () => {
+        setTimeout(handleViewportChange, 300); // Delay to allow keyboard animation
+      };
+      window.addEventListener('resize', handleResize);
+    }
+
+    // Also run when input focus state changes
+    handleViewportChange();
+
+    return () => {
+      if (window.visualViewport) {
+        window.visualViewport.removeEventListener('resize', handleViewportChange);
+      } else {
+        window.removeEventListener('resize', handleViewportChange);
+      }
+    };
+  }, [isMobile, isInputFocused, setIsKeyboardVisible, setKeyboardHeight]);
+
   // Auto-close sidebar on mobile when navigating to a chat
   useEffect(() => {
     if (isMobile && activeChatId) {
@@ -394,6 +477,15 @@ const ChatPage = () => {
       messagesEndRef.current.scrollIntoView({ behavior: 'smooth' });
     }
   }, [messages, autoScroll]);
+
+  // Scroll to bottom when keyboard appears on mobile to keep input visible
+  useEffect(() => {
+    if (isMobile && isKeyboardVisible && isInputFocused && messagesEndRef.current) {
+      setTimeout(() => {
+        messagesEndRef.current?.scrollIntoView({ behavior: 'smooth' });
+      }, 200); // Small delay to allow keyboard animation
+    }
+  }, [isMobile, isKeyboardVisible, isInputFocused]);
 
   // Handle scroll to detect if user is at bottom
   const handleScroll = (e: React.UIEvent<HTMLDivElement>) => {
@@ -459,57 +551,47 @@ const ChatPage = () => {
     }
   }, [isOnline, t]);
 
-  const loadChatHistory = useCallback(async (page = 1, append = false, customLimit?: number) => {
+  const loadMoreChats = useCallback(async () => {
+    // For now, just refetch - the hook could be extended to support pagination
+    setIsLoadingMoreChats(true);
     try {
-      if (!append) {
-        setIsLoadingHistory(true);
-      } else {
-        setIsLoadingMoreChats(true);
-      }
-      
-      const limit = customLimit || 10; // Default to 10 for initial load
-      const response = await fetch(`/api/conversations?page=${page}&limit=${limit}`);
-      if (response.ok) {
-        const data = await response.json();
-        if (append) {
-          setChatHistory(prev => [...prev, ...data.conversations]);
-        } else {
-          setChatHistory(data.conversations);
-        }
-        setHasMoreChats(data.pagination.hasMore);
-        setChatHistoryPage(page);
-      }
-    } catch (error) {
-      handleApiError(error, 'load chat history');
+      await refetchChatHistory();
     } finally {
-      setIsLoadingHistory(false);
       setIsLoadingMoreChats(false);
     }
-  }, [handleApiError, setChatHistory, setIsLoadingHistory, setIsLoadingMoreChats, setHasMoreChats, setChatHistoryPage]);
-
-  const loadMoreChats = useCallback(async () => {
-    const nextPage = chatHistoryPage + 1;
-    await loadChatHistory(nextPage, true, 20); // Fetch 20 more chats on "Load More"
-  }, [chatHistoryPage, loadChatHistory]);
+  }, [refetchChatHistory, setIsLoadingMoreChats]);
 
   const loadChatSession = useCallback(async (chatId: string) => {
     if (activeChatId === chatId && messages.length > 0) return; // Avoid reloading if already active and has messages
 
+    // Clear current messages immediately to show loading state
+    setMessages([]);
     setIsLoadingMessages(true);
     setActiveChatId(chatId);
     setConversationId(chatId); // Ensure conversationId is also set
     
     try {
-      const response = await fetch(`/api/conversations/${chatId}/messages`);
-      if (response.ok) {
-        const data = await response.json();
-        setMessages(data.conversation.messages); // Use setMessages from useChat
+      // Use cache for chat messages to improve performance
+      const data = await cache.getCachedResponse(
+        `chat-messages-${chatId}`,
+        async () => {
+          const response = await fetch(`/api/conversations/${chatId}/messages`);
+          if (!response.ok) {
+            throw new Error(`Failed to load chat: ${response.status} ${response.statusText}`);
+          }
+          return response.json();
+        },
+        60000 // 1 minute cache for messages
+      ) as { conversation?: { messages: Array<{ id: string; role: 'user' | 'assistant'; content: string; imageData?: string | string[]; imageMimeType?: string | string[]; images?: Array<{ data: string; mimeType: string; name?: string; }>; }> } };
+      
+      if (data.conversation && data.conversation.messages) {
+        setMessages(data.conversation.messages);
         // Update URL without full page reload
         router.push(`/${locale}/chat?id=${chatId}`, { scroll: false });
       } else {
-        console.error(t('toasts.errorLoadingSession', { chatId }));
+        console.error('Invalid data structure received for chat:', chatId);
         setActiveChatId(null);
-        setConversationId(null); // Also reset conversationId
+        setConversationId(null);
         router.push(`/${locale}/chat`, { scroll: false }); // Clear URL param
       }
     } catch (error) {
@@ -519,24 +601,27 @@ const ChatPage = () => {
     } finally {
       setIsLoadingMessages(false);
     }
-  }, [activeChatId, messages.length, router, handleApiError, setIsLoadingMessages, setActiveChatId, setConversationId, setMessages, t, locale]);
+  }, [activeChatId, messages.length, router, handleApiError, setIsLoadingMessages, setActiveChatId, setConversationId, setMessages, locale, cache]);
 
   const handleNewChat = useCallback(async () => {
     setActiveChatId(null);
     setConversationId(null); // Also reset conversationId
     setMessages([]); // Use setMessages from useChat
     setInput(''); // Use setInput from useChat
+    // Clear all image states
+    setSelectedImages([]);
+    setImagePreviews([]);
     setSelectedImage(null);
     setImagePreview(null);
     router.push(`/${locale}/chat`, { scroll: false });
-  }, [router, setActiveChatId, setConversationId, setMessages, setInput, setSelectedImage, setImagePreview, locale]);
+  }, [router, setActiveChatId, setConversationId, setMessages, setInput, setSelectedImages, setImagePreviews, setSelectedImage, setImagePreview, locale]);
 
   const handleDeleteChat = useCallback(async (chatId: string, e: React.MouseEvent) => {
     // Prevent the chat from being selected when delete button is clicked
     e.stopPropagation();
     
     // Find the chat to get its title for the confirmation
-    const chatToDelete = chatHistory.find(chat => chat.id === chatId);
+    const chatToDelete = (chatHistory as ChatHistoryItem[]).find((chat) => chat.id === chatId);
     const chatTitle = chatToDelete?.title || `Chat from ${chatToDelete ? new Date(chatToDelete.createdAt).toLocaleDateString() : 'Unknown date'}`;
     
     // Set the chat to delete and open dialog
@@ -554,8 +639,8 @@ const ChatPage = () => {
       });
 
       if (response.ok) {
-        // Remove the chat from local state
-        setChatHistory(prev => prev.filter(chat => chat.id !== chatToDelete.id));
+        // Refresh chat history after deletion
+        await refetchChatHistory();
         
         // If the deleted chat was active, redirect to new chat
         if (activeChatId === chatToDelete.id) {
@@ -577,17 +662,7 @@ const ChatPage = () => {
       setDeleteDialogOpen(false);
       setChatToDelete(null);
     }
-  }, [chatToDelete, activeChatId, router, handleApiError, setChatHistory, setActiveChatId, setConversationId, setMessages, t, locale, setIsDeletingChat, setDeleteDialogOpen, setChatToDelete]);
-
-  const copyMessage = useCallback(async (content: string) => {
-    try {
-      await navigator.clipboard.writeText(content);
-      showToast.success(t('toasts.copySuccessTitle'), t('toasts.copySuccessText'));
-    } catch (error) {
-      console.error('Failed to copy message:', error);
-      showToast.error(t('toasts.copyErrorTitle'), t('toasts.copyErrorText'));
-    }
-  }, [t]);
+  }, [chatToDelete, activeChatId, router, handleApiError, refetchChatHistory, setActiveChatId, setConversationId, setMessages, t, locale, setIsDeletingChat, setDeleteDialogOpen, setChatToDelete]);
 
   const toggleSidebar = useCallback(() => setIsSidebarOpen(!isSidebarOpen), [isSidebarOpen, setIsSidebarOpen]);
 
@@ -599,94 +674,136 @@ const ChatPage = () => {
     }
   }, [handleInputChange]);
 
-  // Image handling functions
+  // Multi-image handling functions
   const handleImageSelect = useCallback((e: React.ChangeEvent<HTMLInputElement>) => {
-    const file = e.target.files?.[0];
-    if (file) {
-      // Check file size (limit to 5MB)
-      if (file.size > 5 * 1024 * 1024) {
+    const files = Array.from(e.target.files || []);
+    if (files.length === 0) return;
+
+    const validFiles: File[] = [];
+    const maxImages = 5; // Limit to 5 images per message
+    const maxFileSize = 5 * 1024 * 1024; // 5MB per image
+
+    // Check if adding these files would exceed the limit
+    if (selectedImages.length + files.length > maxImages) {
+      showToast.error(t('toasts.tooManyImagesTitle'), t('toasts.tooManyImagesText', { max: maxImages }));
+      return;
+    }
+
+    for (const file of files) {
+      // Check file size
+      if (file.size > maxFileSize) {
         showToast.error(t('toasts.fileTooLargeTitle'), t('toasts.fileTooLargeText'));
-        return;
+        continue;
       }
 
       // Check file type
       if (!file.type.startsWith('image/')) {
         showToast.error(t('toasts.invalidFileTypeTitle'), t('toasts.invalidFileTypeText'));
-        return;
+        continue;
       }
 
-      setSelectedImage(file);
-      
-      // Create preview
+      validFiles.push(file);
+    }
+
+    if (validFiles.length === 0) return;
+
+    // Add valid files to the selection
+    setSelectedImages(prev => [...prev, ...validFiles]);
+    
+    // Create previews for new files
+    validFiles.forEach(file => {
       const reader = new FileReader();
       reader.onload = (e) => {
-        setImagePreview(e.target?.result as string);
+        setImagePreviews(prev => [...prev, e.target?.result as string]);
       };
       reader.readAsDataURL(file);
-    }
-  }, [setSelectedImage, setImagePreview, t]);
+    });
+  }, [selectedImages.length, setSelectedImages, setImagePreviews, t]);
 
-  const removeImage = useCallback(() => {
+  const removeImage = useCallback((index: number) => {
+    setSelectedImages(prev => prev.filter((_, i) => i !== index));
+    setImagePreviews(prev => prev.filter((_, i) => i !== index));
+  }, [setSelectedImages, setImagePreviews]);
+
+  const removeAllImages = useCallback(() => {
+    setSelectedImages([]);
+    setImagePreviews([]);
+  }, [setSelectedImages, setImagePreviews]);
+
+  const removeSingleImage = useCallback(() => {
     setSelectedImage(null);
     setImagePreview(null);
   }, [setSelectedImage, setImagePreview]);
 
-  // Handle paste events for image uploads
+  // Handle paste events for multi-image uploads
   const handlePaste = useCallback((e: React.ClipboardEvent<HTMLTextAreaElement>) => {
     const clipboardData = e.clipboardData;
     
     if (clipboardData && clipboardData.files.length > 0) {
-      const file = clipboardData.files[0];
+      const files = Array.from(clipboardData.files);
+      const imageFiles = files.filter(file => file.type.startsWith('image/'));
       
-      // Check if it's an image file
-      if (file.type.startsWith('image/')) {
+      if (imageFiles.length > 0) {
         e.preventDefault(); // Prevent default paste behavior
         
-        // Check file size (limit to 5MB)
-        if (file.size > 5 * 1024 * 1024) {
-          showToast.error(t('toasts.fileTooLargeTitle'), t('toasts.fileTooLargeText'));
+        const maxImages = 5;
+        const maxFileSize = 5 * 1024 * 1024; // 5MB
+        
+        // Check if adding these files would exceed the limit
+        if (selectedImages.length + imageFiles.length > maxImages) {
+          showToast.error(t('toasts.tooManyImagesTitle'), t('toasts.tooManyImagesText', { max: maxImages }));
           return;
         }
         
-        // If there's already an image, ask for confirmation
-        if (selectedImage) {
-          const confirm = window.confirm(t('toasts.confirmImageReplace'));
-          if (!confirm) return;
+        const validFiles: File[] = [];
+        
+        for (const file of imageFiles) {
+          // Check file size
+          if (file.size > maxFileSize) {
+            showToast.error(t('toasts.fileTooLargeTitle'), t('toasts.fileTooLargeText'));
+            continue;
+          }
+          validFiles.push(file);
         }
         
-        setSelectedImage(file);
+        if (validFiles.length === 0) return;
         
-        // Create preview
-        const reader = new FileReader();
-        reader.onload = (e) => {
-          setImagePreview(e.target?.result as string);
-        };
-        reader.readAsDataURL(file);
+        // Add valid files to the selection
+        setSelectedImages(prev => [...prev, ...validFiles]);
         
-        showToast.success(t('toasts.imagePastedTitle'), t('toasts.imagePastedText'));
+        // Create previews for new files
+        validFiles.forEach(file => {
+          const reader = new FileReader();
+          reader.onload = (e) => {
+            setImagePreviews(prev => [...prev, e.target?.result as string]);
+          };
+          reader.readAsDataURL(file);
+        });
+        
+        const message = validFiles.length === 1 
+          ? t('toasts.imagePastedText')
+          : t('toasts.imagesPastedText', { count: validFiles.length });
+        showToast.success(t('toasts.imagePastedTitle'), message);
       }
     }
-  }, [selectedImage, setSelectedImage, setImagePreview, t]);
+  }, [selectedImages.length, setSelectedImages, setImagePreviews, t]);
 
-  // Custom submit handler to use our sendMessage function
+  // Custom submit handler to use our sendMessage function with multi-image support
   const onSubmit = useCallback(async (e: React.FormEvent) => {
     e.preventDefault();
     
-    if ((!input.trim() && !selectedImage) || isLoading) return;
+    const hasImages = selectedImages.length > 0;
+    if ((!input.trim() && !hasImages) || isLoading) return;
 
-    // Check if user is a guest and has reached the message limit (4 messages)
-    if (!user && guestMessageCount >= 4) {
+    // Guest users must login to send messages
+    if (!user) {
       setShowLoginDialog(true);
       return;
     }
 
-    // Send the message using our custom function
-    await sendMessage(input, selectedImage || undefined);
-    
-    // Clear image state after submitting
-    setSelectedImage(null);
-    setImagePreview(null);
-  }, [input, selectedImage, isLoading, user, guestMessageCount, setShowLoginDialog, setSelectedImage, setImagePreview, sendMessage]);
+    // Send the message using our custom function (which will clear images internally)
+    await sendMessage(input, selectedImages.length > 0 ? selectedImages : undefined);
+  }, [input, selectedImages, isLoading, user, setShowLoginDialog, sendMessage]);
 
   // Add keyboard shortcuts support
   useEffect(() => {
@@ -714,7 +831,7 @@ const ChatPage = () => {
     return () => document.removeEventListener('keydown', handleKeyDown);
   }, [user, isMobile, isSidebarOpen, handleNewChat, setIsSidebarOpen]);
 
-  // Add global paste event listener for images
+  // Add global paste event listener for multi-image support
   useEffect(() => {
     const handleGlobalPaste = (e: ClipboardEvent) => {
       // Only handle if not already handled by textarea
@@ -724,34 +841,50 @@ const ChatPage = () => {
       const clipboardData = e.clipboardData;
       
       if (clipboardData && clipboardData.files.length > 0) {
-        const file = clipboardData.files[0];
+        const files = Array.from(clipboardData.files);
+        const imageFiles = files.filter(file => file.type.startsWith('image/'));
         
-        // Check if it's an image file
-        if (file.type.startsWith('image/')) {
+        if (imageFiles.length > 0) {
           e.preventDefault();
           
-          // Check file size (limit to 5MB)
-          if (file.size > 5 * 1024 * 1024) {
-            showToast.error(t('toasts.fileTooLargeTitle'), t('toasts.fileTooLargeText'));
+          const maxImages = 5;
+          const maxFileSize = 5 * 1024 * 1024; // 5MB
+          
+          // Check if adding these files would exceed the limit
+          if (selectedImages.length + imageFiles.length > maxImages) {
+            showToast.error(t('toasts.tooManyImagesTitle'), t('toasts.tooManyImagesText', { max: maxImages }));
             return;
           }
           
-          // If there's already an image, ask for confirmation
-          if (selectedImage) {
-            const confirm = window.confirm(t('toasts.confirmImageReplace'));
-            if (!confirm) return;
+          const validFiles: File[] = [];
+          
+          for (const file of imageFiles) {
+            // Check file size
+            if (file.size > maxFileSize) {
+              showToast.error(t('toasts.fileTooLargeTitle'), t('toasts.fileTooLargeText'));
+              continue;
+            }
+            validFiles.push(file);
           }
           
-          setSelectedImage(file);
+          if (validFiles.length === 0) return;
           
-          // Create preview
-          const reader = new FileReader();
-          reader.onload = (e) => {
-            setImagePreview(e.target?.result as string);
-          };
-          reader.readAsDataURL(file);
+          // Add valid files to the selection
+          setSelectedImages(prev => [...prev, ...validFiles]);
           
-          showToast.success(t('toasts.imagePastedTitle'), t('toasts.imagePastedText'));
+          // Create previews for new files
+          validFiles.forEach(file => {
+            const reader = new FileReader();
+            reader.onload = (e) => {
+              setImagePreviews(prev => [...prev, e.target?.result as string]);
+            };
+            reader.readAsDataURL(file);
+          });
+          
+          const message = validFiles.length === 1 
+            ? t('toasts.imagePastedText')
+            : t('toasts.imagesPastedText', { count: validFiles.length });
+          showToast.success(t('toasts.imagePastedTitle'), message);
           
           // Focus the textarea
           const textarea = document.querySelector('textarea[placeholder*="message"]') as HTMLTextAreaElement;
@@ -762,7 +895,7 @@ const ChatPage = () => {
 
     document.addEventListener('paste', handleGlobalPaste);
     return () => document.removeEventListener('paste', handleGlobalPaste);
-  }, [selectedImage, setSelectedImage, setImagePreview, t]);
+  }, [selectedImages.length, setSelectedImages, setImagePreviews, t]);
 
   // Add mobile sidebar slide gesture support
   useEffect(() => {
@@ -771,12 +904,14 @@ const ChatPage = () => {
     let startX = 0;
     let startY = 0;
     let isDragging = false;
+    let gestureDirection: 'horizontal' | 'vertical' | 'none' = 'none';
 
     const handleTouchStart = (e: Event) => {
       const touchEvent = e as TouchEvent;
       startX = touchEvent.touches[0].clientX;
       startY = touchEvent.touches[0].clientY;
       isDragging = false;
+      gestureDirection = 'none';
     };
 
     const handleTouchMove = (e: Event) => {
@@ -786,15 +921,29 @@ const ChatPage = () => {
       const currentX = touchEvent.touches[0].clientX;
       const currentY = touchEvent.touches[0].clientY;
       const deltaX = currentX - startX;
-      const deltaY = Math.abs(currentY - startY);
+      const deltaY = currentY - startY;
+      const absDeltaX = Math.abs(deltaX);
+      const absDeltaY = Math.abs(deltaY);
       
-      // Only trigger if horizontal swipe is more dominant than vertical
-      if (Math.abs(deltaX) > deltaY && Math.abs(deltaX) > 10) {
-        isDragging = true;
-        
-        // Prevent scrolling when dragging sidebar
-        e.preventDefault();
+      // Determine gesture direction if not already set
+      if (gestureDirection === 'none' && (absDeltaX > 5 || absDeltaY > 5)) {
+        gestureDirection = absDeltaX > absDeltaY ? 'horizontal' : 'vertical';
       }
+      
+      // Only handle horizontal gestures with significant movement
+      if (gestureDirection === 'horizontal' && absDeltaX > 30) {
+        // Additional checks to ensure this is a deliberate sidebar gesture
+        const isValidSidebarGesture = 
+          (deltaX > 0 && !isSidebarOpen && startX < 50) || // Right swipe from left edge to open
+          (deltaX < 0 && isSidebarOpen); // Left swipe to close when open
+        
+        if (isValidSidebarGesture) {
+          isDragging = true;
+          e.preventDefault();
+        }
+      }
+      
+      // For vertical gestures or invalid horizontal gestures, allow normal scrolling
     };
 
     const handleTouchEnd = (e: Event) => {
@@ -815,6 +964,7 @@ const ChatPage = () => {
       }
       
       isDragging = false;
+      gestureDirection = 'none';
     };
 
     const chatArea = document.querySelector('.message-area');
@@ -960,8 +1110,8 @@ const ChatPage = () => {
             
             {/* Subscription Status Section for authenticated users */}
             {user && userPlan && (
-              <div className="pt-3 border-t border-border/30">
-                <div className="space-y-3">
+              <div className="pt-3 border-t border-border/30 mb-4">
+                <div className="space-y-4">
                   {/* Plan Badge */}
                   <div className="flex items-center justify-between px-1">
                     <span className="text-xs font-semibold text-muted-foreground uppercase tracking-wide">{t('sidebar.plan')}</span>
@@ -972,14 +1122,14 @@ const ChatPage = () => {
                   {userPlan.plan === 'FREE' && (
                     <>
                       <MessageLimitIndicator
-                        messagesUsed={userPlan.messagesUsedToday}
-                        dailyLimit={userPlan.dailyLimit}
+                        messagesUsed={userPlan.messagesUsedToday || 0}
+                        dailyLimit={userPlan.dailyLimit || 15}
                         plan={userPlan.plan}
                         className="px-1"
                       />
                       
                       {/* Upgrade Button for Free Users */}
-                      <div className="px-1">
+                      <div className="px-1 pt-2">
                         <UpgradeButton 
                           variant="outline" 
                           size="sm" 
@@ -994,10 +1144,10 @@ const ChatPage = () => {
             )}
             
             {/* Chat History Section for authenticated users or Login prompt for guests */}
-            <div className="flex-1 flex flex-col min-h-0">
+            <div className="flex-1 flex flex-col min-h-0 mt-6">
               {user ? (
                 <>
-                  <h3 className="text-sm font-semibold mb-3 text-foreground px-1 flex items-center">
+                  <h3 className="text-sm font-semibold mb-3 text-foreground px-1 flex items-center mt-4">
                     {t('sidebar.history')}
                     <span className="ml-auto text-xs text-muted-foreground">
                       {t('sidebar.historyCount', { count: chatHistory.length })}
@@ -1014,7 +1164,7 @@ const ChatPage = () => {
                         />
                       </div>
                     ) : chatHistory.length > 0 ? (
-                      chatHistory.map(chat => (
+                      (chatHistory as ChatHistoryItem[]).map(chat => (
                         <div
                           key={chat.id}
                           className={`group flex items-center w-full rounded-xl transition-all duration-300 hover-lift ${
@@ -1120,15 +1270,6 @@ const ChatPage = () => {
                         </Link>
                       </Button>
                     </div>
-                    
-                    <div className="text-center pt-3 border-t border-border/50">
-                      <p className="text-xs text-muted-foreground">
-                        {t('sidebar.messagesRemaining', { count: 4 - guestMessageCount })}
-                        <span className={`ml-1 font-semibold ${guestMessageCount >= 3 ? 'text-orange-500' : 'text-primary'}`}>
-                          {4 - guestMessageCount}
-                        </span>
-                      </p>
-                    </div>
                   </div>
                 </>
               )}
@@ -1177,8 +1318,11 @@ const ChatPage = () => {
         )}
       </div>      {/* Main Chat Area */}
       <div className={`flex-1 flex flex-col bg-background relative min-w-0 ${isMobile && isSidebarOpen ? 'pointer-events-none' : ''}`}>
-        {/* Enhanced Header with Glassmorphism */}
-        <div className="p-3 md:p-4 flex items-center justify-between h-14 md:h-16 flex-shrink-0 glass-header sticky top-0 z-10">
+        {/* Enhanced Header with Glassmorphism - Sticky on Mobile */}
+        <div className={`
+          p-3 md:p-4 flex items-center justify-between h-14 md:h-16 flex-shrink-0 glass-header 
+          ${isMobile ? 'fixed top-0 left-0 right-0 z-30 bg-background/90 backdrop-blur-md border-b border-border/30' : 'sticky top-0 z-10'}
+        `}>
           <div className="flex items-center min-w-0 flex-1">
             <Button
               variant="ghost"
@@ -1192,19 +1336,19 @@ const ChatPage = () => {
             <div className="flex flex-col min-w-0">
               <h1 className="text-lg md:text-xl font-bold text-foreground truncate">
                 {isMobile && activeChatId ? 
-                  (chatHistory.find(chat => chat.id === activeChatId)?.title || 'Chat') 
+                  ((chatHistory as ChatHistoryItem[]).find((chat) => chat.id === activeChatId)?.title || 'Chat') 
                   : 'HypertroQ'
                 }
               </h1>
               {!isMobile && activeChatId && (
                 <p className="text-xs text-muted-foreground truncate">
-                  {chatHistory.find(chat => chat.id === activeChatId)?.title || 'Active Chat'}
+                  {(chatHistory as ChatHistoryItem[]).find((chat) => chat.id === activeChatId)?.title || 'Active Chat'}
                 </p>
               )}
             </div>
           </div>
 
-          {/* Mobile: New Chat Button + User Menu | Desktop: User Menu Only */}
+          {/* Mobile: New Chat Button + Theme Toggle + User Menu | Desktop: User Menu Only */}
           <div className="flex items-center space-x-2">
             {/* Mobile New Chat Button */}
             {isMobile && user && (
@@ -1218,6 +1362,12 @@ const ChatPage = () => {
                 <MessageSquare className="h-5 w-5" />
               </Button>
             )}
+
+            {/* Language Switcher - Always visible next to avatar */}
+            <LanguageSwitcher />
+
+            {/* Theme Toggle - Always visible next to avatar */}
+            <ThemeToggle />
 
             {/* User Avatar Dropdown Menu or Login Button */}
             {user ? (
@@ -1251,7 +1401,7 @@ const ChatPage = () => {
                     <span>{t('userMenu.myProfile')}</span>
                   </Link>
                 </DropdownMenuItem>
-                {userRole === 'admin' && (
+                {user && userRole === 'admin' && (
                   <>
                     <DropdownMenuItem asChild>
                       <Link href={`/${locale}/admin`}>
@@ -1262,13 +1412,6 @@ const ChatPage = () => {
                   </>
                 )}
                 <DropdownMenuSeparator />
-                <div className="px-1 py-1">
-                  <div className="flex items-center justify-between rounded-sm px-2 py-1.5 text-sm hover:bg-muted cursor-default">
-                    <span>{t('userMenu.language')}</span>
-                    <LanguageSwitcher />
-                  </div>
-                </div>
-                <DropdownMenuSeparator />
                 <DropdownMenuItem onClick={async () => { 
                   try {
                     console.log('Logout action triggered');
@@ -1277,14 +1420,17 @@ const ChatPage = () => {
                     
                     // Reset local state immediately for immediate UI update
                     setUser(null);
-                    setUserRole('user');
-                    setChatHistory([]);
                     setMessages([]); // Use setMessages from useChat
                     setActiveChatId(null);
                     setConversationId(null); // Also reset conversationId
-                    setGuestMessageCount(0);
+                    // Clear all image states
+                    setSelectedImages([]);
+                    setImagePreviews([]);
                     setSelectedImage(null);
                     setImagePreview(null);
+                    
+                    // Clear all caches
+                    cache.clear();
                     
                     // Sign out from Supabase
                     await supabase.auth.signOut();
@@ -1315,9 +1461,15 @@ const ChatPage = () => {
           </div>
         </div>
 
-        {/* Enhanced Chat Messages Area */}
+        {/* Enhanced Chat Messages Area - Account for fixed header on mobile */}
         <div 
-          className={`flex-1 overflow-y-auto message-area w-full ${messages.length === 0 ? 'flex items-center justify-center' : 'pb-40'}`}
+          className={`flex-1 overflow-y-auto message-area w-full ${messages.length === 0 ? 'flex items-center justify-center' : ''} ${isMobile ? 'pt-16' : ''}`}
+          style={{
+            paddingBottom: isMobile && isKeyboardVisible && isInputFocused 
+              ? `${keyboardHeight + 80}px` 
+              : messages.length > 0 ? (isMobile ? '120px' : '10rem') : '0',
+            transition: isMobile ? 'padding-bottom 0.2s ease-out' : undefined
+          }}
           onScroll={handleScroll}
         >
           {/* Offline warning banner */}
@@ -1328,20 +1480,6 @@ const ChatPage = () => {
                   <span className="text-orange-600 dark:text-orange-400 font-medium text-sm">
                     {t('main.offlineWarning')}
                   </span>
-                </div>
-              </div>
-            </div>
-          )}
-
-          {/* Guest user warning banner */}
-          {!user && guestMessageCount === 3 && (
-            <div className="bg-gradient-to-r from-orange-50 to-amber-50 dark:from-orange-950/20 dark:to-amber-950/20 border-l-4 border-orange-400 p-3 mx-3 md:mx-6 rounded-r-xl animate-scale-in">
-              <div className="flex items-center">
-                <div className="flex items-center space-x-2">
-                  <div className="w-2 h-2 bg-orange-400 rounded-full animate-pulse"></div>
-                  <p className="text-sm font-medium text-orange-800 dark:text-orange-200">
-                    {t('main.guestMessageWarning')}
-                  </p>
                 </div>
               </div>
             </div>
@@ -1359,20 +1497,20 @@ const ChatPage = () => {
             
             {!isLoadingMessages && messages.length === 0 && (
               <div className="flex flex-col items-center justify-center min-h-[50vh] text-center space-y-6 animate-scale-in px-2 md:px-4">
-                <div className="relative">
-                  <div className="w-16 h-16 md:w-20 md:h-20 bg-gradient-to-br from-blue-500/10 to-purple-600/10 rounded-2xl flex items-center justify-center">
-                    <Image 
-                      src="/logo.png" 
-                      alt="HypertroQ AI" 
-                      width={56}
-                      height={56}
-                      className="w-12 h-12 md:w-14 md:h-14 object-contain"
-                    />
+                  <div className="relative">
+                    <div className="w-16 h-16 md:w-20 md:h-20 bg-gradient-to-br from-blue-500/10 to-purple-600/10 rounded-2xl flex items-center justify-center">
+                      <OptimizedImage 
+                        src="/logo.png" 
+                        alt="HypertroQ AI" 
+                        index={0}
+                        className="w-12 h-12 md:w-14 md:h-14 object-contain"
+                        priority={true}
+                      />
+                    </div>
+                    <div className="absolute -top-1 -right-1 w-5 h-5 md:w-6 md:h-6 bg-gradient-to-br from-blue-500 to-purple-600 rounded-full flex items-center justify-center">
+                      <span className="text-white text-xs font-bold">AI</span>
+                    </div>
                   </div>
-                  <div className="absolute -top-1 -right-1 w-5 h-5 md:w-6 md:h-6 bg-gradient-to-br from-blue-500 to-purple-600 rounded-full flex items-center justify-center">
-                    <span className="text-white text-xs font-bold">AI</span>
-                  </div>
-                </div>
                 <div className="space-y-3 w-full">
                   <h3 className="text-lg md:text-2xl font-semibold text-foreground">{t('main.startNewConversation')}</h3>
                   <p className="text-muted-foreground max-w-sm md:max-w-md leading-relaxed mx-auto">
@@ -1402,78 +1540,15 @@ const ChatPage = () => {
             )}
             
             {messages.map((msg, index) => (
-              <div
+              <OptimizedMessage
                 key={msg.id || `${msg.role}-${index}`}
-                className={`group flex items-start space-x-3 md:space-x-4 animate-fade-in ${msg.role === 'user' ? 'flex-row-reverse space-x-reverse' : ''}`}
-                data-role={msg.role}
-              >
-                {/* Enhanced Mobile-Optimized Avatar */}
-                <div className="flex-shrink-0">
-                  {msg.role === 'user' ? (
-                    <Avatar className="h-8 w-8 md:h-10 md:w-10 shadow-md hover-lift">
-                      <AvatarImage 
-                        src={user?.user_metadata?.avatar_url || user?.user_metadata?.picture || "/placeholder-avatar.png"} 
-                        alt="User Avatar" 
-                      />
-                      <AvatarFallback className="bg-gradient-to-br from-blue-500 to-purple-600 text-white font-semibold text-xs md:text-sm">
-                        {user?.user_metadata?.full_name?.[0]?.toUpperCase() || user?.email?.[0]?.toUpperCase() || 'G'}
-                      </AvatarFallback>
-                    </Avatar>
-                  ) : (
-                    <div className="h-8 w-8 md:h-10 md:w-10 rounded-full bg-gradient-to-br from-slate-100 to-slate-200 dark:from-slate-800 dark:to-slate-700 border-2 border-border/50 flex items-center justify-center overflow-hidden shadow-md hover-lift">
-                      <Image 
-                        src={getLogoSrc()} 
-                        alt="HyperTroQ AI" 
-                        width={28}
-                        height={28}
-                        className="h-5 w-5 md:h-7 md:w-7 object-contain"
-                      />
-                    </div>
-                  )}
-                </div>
-
-                {/* Enhanced Mobile-Optimized Message Content */}
-                <div className={`flex-1 max-w-[85%] md:max-w-[75%] ${msg.role === 'user' ? 'flex justify-end' : ''}`}>
-                  <div className="relative">
-                    {(() => {
-                      // Process message content to extract article links
-                      const { content, articleLinks } = processMessageContent(msg.content);
-                      
-                      return (
-                        <div
-                          className={`px-3 md:px-5 py-2.5 md:py-4 ${
-                            msg.role === 'user'
-                              ? 'chat-bubble-user'
-                              : 'chat-bubble-ai'
-                          } transition-all duration-200 hover:shadow-lg`}
-                        >
-                          <MessageContent 
-                            content={content} 
-                            role={msg.role as 'user' | 'assistant'}
-                            imageData={(msg as unknown as { imageData?: string }).imageData}
-                            imageMimeType={(msg as unknown as { imageMimeType?: string }).imageMimeType}
-                          />
-                          
-                          {/* Article Links at bottom of message bubble */}
-                          {articleLinks && (
-                            <ArticleLinks 
-                              links={articleLinks} 
-                              messageRole={msg.role as 'user' | 'assistant'}
-                            />
-                          )}
-                        </div>
-                      );
-                    })()}
-
-                    {/* Copy button */}
-                    <div className={`absolute top-1/2 -translate-y-1/2 flex items-center space-x-1 opacity-0 group-hover:opacity-100 transition-opacity duration-300 ${msg.role === 'user' ? '-left-10 md:-left-12' : '-right-10 md:-right-12'}`}>
-                      <Button variant="ghost" size="icon" className="h-8 w-8 rounded-full" onClick={() => copyMessage(msg.content)}>
-                        <Copy className="h-4 w-4" />
-                      </Button>
-                    </div>
-                  </div>
-                </div>
-              </div>
+                message={msg}
+                index={index}
+                isLast={index === messages.length - 1}
+                user={user}
+                userRole={userRole}
+                getLogoSrc={getLogoSrc}
+              />
             ))}
             
             {isLoading && (
@@ -1503,22 +1578,75 @@ const ChatPage = () => {
           </div>
         </div>
 
-        {/* Enhanced Chat Input Area */}
-        <div className={`${messages.length === 0 ? 'relative' : 'absolute bottom-0 left-0 right-0'} p-2 md:p-4 ${messages.length > 0 ? 'bg-background/80 backdrop-blur-sm border-t border-border/30' : ''}`}>
+        {/* Enhanced Chat Input Area - Sticky on Mobile */}
+        <div 
+          className={`
+            ${messages.length === 0 ? 'relative' : isMobile ? 'fixed left-0 right-0 z-20' : 'absolute left-0 right-0'} 
+            p-2 md:p-4 
+            ${messages.length > 0 ? 'bg-background/90 backdrop-blur-md border-t border-border/30' : ''}
+            ${isMobile && isKeyboardVisible && isInputFocused ? 'chat-input-mobile' : messages.length > 0 ? (isMobile ? 'bottom-0' : 'bottom-0') : ''}
+          `}
+          style={{
+            bottom: isMobile && isKeyboardVisible && isInputFocused 
+              ? `${Math.max(keyboardHeight - 50, 10)}px` 
+              : undefined,
+            transition: isMobile ? 'bottom 0.2s ease-out' : undefined,
+            zIndex: isMobile && (isKeyboardVisible || messages.length > 0) ? 1001 : undefined
+          }}
+        >
           <div className="w-full max-w-5xl mx-auto">
             <form onSubmit={onSubmit} className="relative">
-              {/* Image Preview */}
-              {imagePreview && (
+              {/* Multi-Image Preview */}
+              {selectedImages.length > 0 && (
+                <div className="absolute bottom-full left-0 mb-2 p-2 bg-muted rounded-xl shadow-lg border border-border/50 animate-scale-in">
+                  <div className="flex flex-wrap gap-2 max-w-md">
+                    {selectedImages.map((file, index) => {
+                      // Ensure we have a valid preview for this image
+                      const previewSrc = imagePreviews[index];
+                      if (!previewSrc || previewSrc.trim() === '') {
+                        return null; // Skip rendering if no valid preview
+                      }
+                      
+                      return (
+                        <OptimizedImage 
+                          key={index}
+                          src={previewSrc} 
+                          alt={`Preview ${index + 1}`} 
+                          index={index}
+                          onRemove={() => removeImage(index)}
+                          className="rounded-lg object-cover w-16 h-16"
+                          priority={false}
+                        />
+                      );
+                    })}
+                  </div>
+                  <div className="flex justify-between items-center mt-2 pt-2 border-t border-border/30">
+                    <span className="text-xs text-muted-foreground">
+                      {selectedImages.length} image{selectedImages.length !== 1 ? 's' : ''} selected
+                    </span>
+                    <Button
+                      variant="ghost"
+                      size="sm"
+                      className="text-xs h-6 px-2 text-destructive hover:text-destructive/80"
+                      onClick={removeAllImages}
+                    >
+                      Clear all
+                    </Button>
+                  </div>
+                </div>
+              )}
+
+              {/* Legacy Single Image Preview (for backward compatibility) */}
+              {selectedImages.length === 0 && imagePreview && imagePreview.trim() !== '' && (
                 <div className="absolute bottom-full left-0 mb-2 p-1.5 bg-muted rounded-xl shadow-lg border border-border/50 animate-scale-in">
-                  <Image src={imagePreview} alt={t('main.imagePreviewAlt')} width={72} height={72} className="rounded-lg" />
-                  <Button
-                    variant="ghost"
-                    size="icon"
-                    className="absolute -top-2 -right-2 h-6 w-6 rounded-full bg-destructive text-destructive-foreground hover:bg-destructive/80 shadow-md"
-                    onClick={removeImage}
-                  >
-                    <X className="h-4 w-4" />
-                  </Button>
+                  <OptimizedImage 
+                    src={imagePreview} 
+                    alt={t('main.imagePreviewAlt')} 
+                    index={0}
+                    onRemove={() => removeSingleImage()}
+                    className="rounded-lg w-[72px] h-[72px]"
+                    priority={false}
+                  />
                 </div>
               )}
               
@@ -1530,6 +1658,8 @@ const ChatPage = () => {
                   value={input}
                   onChange={customHandleInputChange}
                   onPaste={handlePaste}
+                  onFocus={handleInputFocus}
+                  onBlur={handleInputBlur}
                   placeholder={t('main.inputPlaceholder')}
                   className="w-full pr-24 pl-12 py-3 text-base rounded-2xl glass-input resize-none"
                   rows={1}
@@ -1539,10 +1669,22 @@ const ChatPage = () => {
                   <Button type="button" variant="ghost" size="icon" className="h-9 w-9 rounded-xl hover:bg-muted/50" onClick={() => document.getElementById('image-upload')?.click()}>
                     <ImageIcon className="h-5 w-5" />
                   </Button>
-                  <input type="file" id="image-upload" accept="image/*" className="hidden" onChange={handleImageSelect} />
+                  <input 
+                    type="file" 
+                    id="image-upload" 
+                    accept="image/*" 
+                    multiple 
+                    className="hidden" 
+                    onChange={handleImageSelect} 
+                  />
                 </div>
                 <div className="absolute right-3 top-1/2 -translate-y-1/2 flex items-center">
-                  <Button type="submit" size="icon" className="h-9 w-9 rounded-xl gradient-primary text-white shadow-lg hover-lift" disabled={isLoading || (!input.trim() && !selectedImage)}>
+                  <Button 
+                    type="submit" 
+                    size="icon" 
+                    className="h-9 w-9 rounded-xl gradient-primary text-white shadow-lg hover-lift" 
+                    disabled={isLoading || (!input.trim() && selectedImages.length === 0 && !selectedImage)}
+                  >
                     {isLoading ? <Loader2 className="h-5 w-5 animate-spin" /> : <Send className="h-5 w-5" />}
                   </Button>
                 </div>
@@ -1566,7 +1708,7 @@ const ChatPage = () => {
         <LoginPromptDialog 
           open={showLoginDialog} 
           onOpenChange={setShowLoginDialog} 
-          variant={!user && guestMessageCount >= 4 ? 'messageLimit' : 'initial'}
+          variant='initial'
         />
       </Suspense>
 
