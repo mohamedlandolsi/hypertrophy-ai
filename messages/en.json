@@ -209,6 +209,7 @@
       "equivalentTo": "Equivalent to",
       "cancelAnytime": "Cancel anytime",
       "features": [
+        "Smarter responses",
         "Unlimited messages",
         "Persistent conversation memory",
         "Personalized training plans",
@@ -375,6 +376,7 @@
       "equivalentTo": "Equivalent to {price}/month",
       "cancelAnytime": "Cancel anytime",
       "features": {
+        "smarterResponses": "Smarter responses",
         "unlimitedMessages": "Unlimited messages",
         "conversationMemory": "Full conversation memory",
         "progressTracking": "Progress tracking & analysis",

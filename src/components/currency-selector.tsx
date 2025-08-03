@@ -1,6 +1,6 @@
 'use client';
 
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
 import {
@@ -29,6 +29,19 @@ export function CurrencySelector({
 }: CurrencySelectorProps) {
   const [isLoading, setIsLoading] = useState(false);
   const [isOpen, setIsOpen] = useState(false);
+  const [isMobile, setIsMobile] = useState(false);
+
+  // Check if we're on mobile
+  useEffect(() => {
+    const checkIsMobile = () => {
+      setIsMobile(window.innerWidth < 640); // sm breakpoint
+    };
+    
+    checkIsMobile();
+    window.addEventListener('resize', checkIsMobile);
+    
+    return () => window.removeEventListener('resize', checkIsMobile);
+  }, []);
 
   const handleCurrencySelect = async (currency: CurrencyCode) => {
     if (currency === selectedCurrency) {
@@ -65,18 +78,25 @@ export function CurrencySelector({
           </span>
         </Button>
       </PopoverTrigger>
-      <PopoverContent className="w-80 p-0" align="end">
+      <PopoverContent 
+        className="w-80 max-w-[calc(100vw-2rem)] p-0" 
+        align={isMobile ? "center" : "end"}
+        side="bottom"
+        sideOffset={8}
+        avoidCollisions={true}
+        collisionPadding={16}
+      >
         <div className="p-4">
           <h4 className="font-medium text-sm text-gray-900 dark:text-gray-100 mb-3">
             Select Currency
           </h4>
-          <div className="grid gap-1">
+          <div className="grid gap-1 max-h-64 overflow-y-auto">
             {Object.entries(SUPPORTED_CURRENCIES).map(([code, info]) => (
               <button
                 key={code}
                 onClick={() => handleCurrencySelect(code as CurrencyCode)}
                 disabled={isLoading}
-                className={`flex items-center justify-between w-full p-2 text-left rounded-md hover:bg-gray-100 dark:hover:bg-gray-800 transition-colors ${
+                className={`flex items-center justify-between w-full p-3 text-left rounded-md hover:bg-gray-100 dark:hover:bg-gray-800 transition-colors touch-manipulation ${
                   code === selectedCurrency 
                     ? 'bg-blue-50 dark:bg-blue-900/20 text-blue-700 dark:text-blue-300' 
                     : 'text-gray-700 dark:text-gray-300'

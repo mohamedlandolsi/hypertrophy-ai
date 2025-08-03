@@ -52,6 +52,7 @@ export function UpgradeButton({
   const t = useTranslations('UpgradeButton');
   
   const [isLoading, setIsLoading] = useState(false);
+  const [lastClickTime, setLastClickTime] = useState(0);
   const [userId, setUserId] = useState<string | null>(null);
   const [selectedInterval, setSelectedInterval] = useState<'month' | 'year'>(defaultInterval);
   const [selectedCurrency, setSelectedCurrency] = useState<CurrencyCode>(currency || getDefaultCurrencySync());
@@ -122,6 +123,19 @@ export function UpgradeButton({
   }, [selectedCurrency, externalPricingData]);
   
   const handleUpgrade = async (interval: 'month' | 'year' = 'month') => {
+    // Prevent double-clicking (debounce with 2 second window)
+    const now = Date.now();
+    if (now - lastClickTime < 2000) {
+      console.log('Ignoring double-click, too soon after last click');
+      return;
+    }
+    setLastClickTime(now);
+
+    if (isLoading) {
+      console.log('Already loading, ignoring click');
+      return;
+    }
+
     if (!userId) {
       console.error('User not authenticated');
       return;
@@ -187,18 +201,12 @@ export function UpgradeButton({
         }
       }
       
-      // Force top-level navigation to avoid any iframe issues
-      // Always redirect to new tab for better payment security and Stripe compatibility
-      console.log(`[${environment}] Opening checkout in new tab:`, checkoutUrl);
+      // Redirect in same tab for smoother checkout experience
+      // This avoids popup blockers and provides better UX for payment flows
+      console.log(`[${environment}] Redirecting to checkout:`, checkoutUrl);
       
-      // Open in new tab for better security and to avoid any iframe warnings
-      const newTab = window.open(checkoutUrl, '_blank', 'noopener,noreferrer');
-      
-      if (!newTab) {
-        // Fallback to same-tab redirect if popup was blocked
-        console.log(`[${environment}] Popup blocked, redirecting in same tab:`, checkoutUrl);
-        window.location.href = checkoutUrl;
-      }
+      // Use location.assign for better handling (allows back button to work)
+      window.location.assign(checkoutUrl);
     } catch (error) {
       console.error(`[${environment}] Error initiating checkout:`, error);
       
@@ -231,7 +239,9 @@ export function UpgradeButton({
           variant={variant} 
           size={size} 
           className={className}
-          onClick={() => {
+          onClick={(e) => {
+            e.preventDefault();
+            e.stopPropagation();
             console.log('Button clicked - Debug info:');
             console.log('  defaultInterval prop:', defaultInterval);
             console.log('  selectedInterval state:', selectedInterval);
@@ -400,7 +410,11 @@ export function UpgradeButton({
           <Button 
             className="w-full" 
             size="lg"
-            onClick={() => handleUpgrade(selectedInterval)}
+            onClick={(e) => {
+              e.preventDefault();
+              e.stopPropagation();
+              handleUpgrade(selectedInterval);
+            }}
             disabled={isLoading}
           >
             {isLoading ? (
