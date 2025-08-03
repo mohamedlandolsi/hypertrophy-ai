@@ -1,37 +1,65 @@
 // Utility functions for Arabic text handling and formatting
 
+// Cache for expensive regex operations
+const arabicCache = new Map<string, boolean>();
+const directionCache = new Map<string, 'ltr' | 'rtl' | 'auto'>();
+
 /**
- * Detects if text contains Arabic characters
+ * Detects if text contains Arabic characters (optimized with caching)
  */
 export function isArabicText(text: string): boolean {
+  // Use cache for repeated calls with same text
+  if (arabicCache.has(text)) {
+    return arabicCache.get(text)!;
+  }
+  
   const arabicRegex = /[\u0600-\u06FF\u0750-\u077F\u08A0-\u08FF\uFB50-\uFDFF\uFE70-\uFEFF]/g;
   const arabicMatches = text.match(arabicRegex);
   const arabicCharCount = arabicMatches ? arabicMatches.length : 0;
   const totalChars = text.replace(/\s/g, '').length;
   const arabicRatio = totalChars > 0 ? arabicCharCount / totalChars : 0;
-  return arabicRatio > 0.3;
+  const result = arabicRatio > 0.3;
+  
+  // Cache the result to avoid repeated calculations
+  if (arabicCache.size > 100) arabicCache.clear(); // Prevent memory leaks
+  arabicCache.set(text, result);
+  
+  return result;
 }
 
 /**
- * Determines the primary text direction for a message
+ * Determines the primary text direction for a message (optimized with caching)
  */
 export function getTextDirection(text: string): 'ltr' | 'rtl' | 'auto' {
+  // Use cache for repeated calls with same text
+  if (directionCache.has(text)) {
+    return directionCache.get(text)!;
+  }
+  
+  let result: 'ltr' | 'rtl' | 'auto';
+  
   // If it's predominantly Arabic, use RTL
   if (isArabicText(text)) {
-    return 'rtl';
+    result = 'rtl';
+  } else {
+    // Check if it has significant Arabic content mixed with English
+    const arabicRegex = /[\u0600-\u06FF\u0750-\u077F\u08A0-\u08FF\uFB50-\uFDFF\uFE70-\uFEFF]/g;
+    const arabicMatches = text.match(arabicRegex);
+    const arabicCharCount = arabicMatches ? arabicMatches.length : 0;
+    
+    // If there's some Arabic content but not dominant, use auto
+    if (arabicCharCount > 0) {
+      result = 'auto';
+    } else {
+      result = 'ltr';
+    }
   }
   
-  // Check if it has significant Arabic content mixed with English
-  const arabicRegex = /[\u0600-\u06FF\u0750-\u077F\u08A0-\u08FF\uFB50-\uFDFF\uFE70-\uFEFF]/g;
-  const arabicMatches = text.match(arabicRegex);
-  const arabicCharCount = arabicMatches ? arabicMatches.length : 0;
+  // Cache the result to avoid repeated calculations
+  if (directionCache.size > 100) directionCache.clear(); // Prevent memory leaks
+  directionCache.set(text, result);
   
-  // If there's some Arabic content but not dominant, use auto
-  if (arabicCharCount > 0) {
-    return 'auto';
-  }
-  
-  return 'ltr';
+  return result;
 }
 
 /**

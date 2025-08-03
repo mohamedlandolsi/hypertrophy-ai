@@ -18,7 +18,6 @@ import LanguageSwitcher from '@/components/language-switcher';
 import { useTranslations, useLocale } from 'next-intl';
 
 // Performance optimizations
-import { useDebouncedCallback } from '@/hooks/use-debounced-value';
 import { useApiCache } from '@/hooks/use-smart-cache';
 import { useOptimizedChatHistory, useOptimizedUserPlan, useOptimizedUserRole } from '@/hooks/use-optimized-fetch';
 import { OptimizedMessage } from '@/components/optimized-message';
@@ -65,9 +64,7 @@ const ChatPage = () => {
   
   // Performance optimizations
   const cache = useApiCache(30); // 30 items cache
-  const debouncedInputChange = useDebouncedCallback((value: string) => {
-    setInput(value);
-  }, 150);
+  // Removed debouncing for immediate input response - better typing experience
   
   const [isSidebarOpen, setIsSidebarOpen] = reactUseState(false); // Default closed on mobile
   const [isMobile, setIsMobile] = reactUseState(false);
@@ -161,13 +158,13 @@ const ChatPage = () => {
   refetchUserPlanRef.current = refetchUserPlan;
   refetchChatHistoryRef.current = refetchChatHistory;
 
-  // Custom input change handler with debouncing for better performance
+  // Direct input change handler for immediate response - no debouncing for better UX
   const handleInputChange = useCallback((e: React.ChangeEvent<HTMLTextAreaElement>) => {
     const value = e.target.value;
     if (value.length <= 2000) {
-      debouncedInputChange(value);
+      setInput(value); // Direct, immediate update
     }
-  }, [debouncedInputChange]);
+  }, [setInput]);
 
   // Mobile keyboard handling state
   const [isInputFocused, setIsInputFocused] = reactUseState(false);
@@ -176,11 +173,11 @@ const ChatPage = () => {
   // Handle input focus/blur for mobile keyboard management
   const handleInputFocus = useCallback(() => {
     setIsInputFocused(true);
-  }, []);
+  }, [setIsInputFocused]);
 
   const handleInputBlur = useCallback(() => {
     setIsInputFocused(false);
-  }, []);
+  }, [setIsInputFocused]);
 
   // Track viewport height changes for mobile keyboard detection
   useEffect(() => {
@@ -686,13 +683,8 @@ const ChatPage = () => {
 
   const toggleSidebar = useCallback(() => setIsSidebarOpen(!isSidebarOpen), [isSidebarOpen, setIsSidebarOpen]);
 
-  // Custom input change handler with character limit
-  const customHandleInputChange = useCallback((e: React.ChangeEvent<HTMLTextAreaElement>) => {
-    const value = e.target.value;
-    if (value.length <= 2000) {
-      handleInputChange(e); // Use our custom handleInputChange
-    }
-  }, [handleInputChange]);
+  // Use the optimized direct input handler - no separate custom handler needed
+  // This eliminates double handling and improves performance
 
   // Multi-image handling functions
   const handleImageSelect = useCallback((e: React.ChangeEvent<HTMLInputElement>) => {
@@ -1662,7 +1654,7 @@ const ChatPage = () => {
               <div className="relative flex items-center">
                 <ArabicAwareTextarea
                   value={input}
-                  onChange={customHandleInputChange}
+                  onChange={handleInputChange}
                   onPaste={handlePaste}
                   onFocus={handleInputFocus}
                   onBlur={handleInputBlur}

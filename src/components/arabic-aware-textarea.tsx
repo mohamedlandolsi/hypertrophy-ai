@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+import React, { useMemo, useCallback } from 'react';
 import { Textarea } from './ui/textarea';
 import { isArabicText, getTextDirection } from '@/lib/text-formatting';
 
@@ -29,34 +29,39 @@ export const ArabicAwareTextarea: React.FC<ArabicAwareTextareaProps> = ({
   rows = 1,
   maxLength
 }) => {
-  const [direction, setDirection] = useState<'ltr' | 'rtl' | 'auto'>('ltr');
+  // Memoize expensive text direction calculation to avoid recalculation on every render
+  const direction = useMemo(() => getTextDirection(value), [value]);
   
-  useEffect(() => {
-    const textDirection = getTextDirection(value);
-    setDirection(textDirection);
-  }, [value]);
+  // Memoize Arabic text detection to avoid repeated regex operations
+  const hasArabic = useMemo(() => isArabicText(value), [value]);
   
-  const getPlaceholder = () => {
+  // Memoize placeholder to avoid recalculation
+  const placeholderText = useMemo(() => {
     // If user is typing Arabic, show Arabic placeholder
-    if (direction === 'rtl' || isArabicText(value)) {
+    if (direction === 'rtl' || hasArabic) {
       return "اكتب رسالة للمدرب الذكي...";
     }
     return placeholder;
-  };
+  }, [direction, hasArabic, placeholder]);
   
-  // Auto-resize textarea based on content with better mobile handling
-  const autoResize = (textarea: HTMLTextAreaElement) => {
+  // Auto-resize textarea based on content with better mobile handling - optimized with useCallback
+  const autoResize = useCallback((textarea: HTMLTextAreaElement) => {
     textarea.style.height = 'auto';
     const isMobile = window.innerWidth < 768;
     const maxHeight = isMobile ? 150 : 200; // Taller on desktop, shorter on mobile for better UX
     const newHeight = Math.min(textarea.scrollHeight, maxHeight);
     textarea.style.height = `${newHeight}px`;
-  };
+  }, []);
   
-  const handleChange = (e: React.ChangeEvent<HTMLTextAreaElement>) => {
-    autoResize(e.target);
+  // Optimized change handler - immediate response
+  const handleChange = useCallback((e: React.ChangeEvent<HTMLTextAreaElement>) => {
+    // Only auto-resize if needed to avoid unnecessary DOM manipulation
+    const target = e.target;
+    if (target.scrollHeight > target.clientHeight) {
+      autoResize(target);
+    }
     onChange(e);
-  };
+  }, [onChange, autoResize]);
   
   const handleKeyDown = (e: React.KeyboardEvent<HTMLTextAreaElement>) => {
     // Handle Enter key to send message (instead of Ctrl+Enter)
@@ -84,7 +89,7 @@ export const ArabicAwareTextarea: React.FC<ArabicAwareTextareaProps> = ({
   
   return (
     <Textarea
-      placeholder={getPlaceholder()}
+      placeholder={placeholderText}
       className={`${className} ${direction === 'rtl' ? 'text-right' : ''} resize-none overflow-y-auto scrollbar-thin scrollbar-thumb-muted scrollbar-track-transparent chat-textarea`}
       value={value}
       onChange={handleChange}
@@ -94,19 +99,25 @@ export const ArabicAwareTextarea: React.FC<ArabicAwareTextareaProps> = ({
       onFocus={onFocus}
       onBlur={onBlur}
       dir={direction}
-      lang={isArabicText(value) ? 'ar' : 'en'}
+      lang={hasArabic ? 'ar' : 'en'}
       rows={rows}
       maxLength={maxLength}
       style={{
         unicodeBidi: direction === 'auto' ? 'plaintext' : 'normal',
         textAlign: direction === 'rtl' ? 'right' : 'left',
         minHeight: '48px', // Match the h-12 class (3rem = 48px)
-        maxHeight: window?.innerWidth < 768 ? '150px' : '200px', // Responsive max height
+        maxHeight: typeof window !== 'undefined' && window?.innerWidth < 768 ? '150px' : '200px', // Responsive max height
         lineHeight: '1.5',
         wordWrap: 'break-word',
         overflowWrap: 'break-word'
       }}
-      onInput={(e: React.FormEvent<HTMLTextAreaElement>) => autoResize(e.target as HTMLTextAreaElement)}
+      onInput={useCallback((e: React.FormEvent<HTMLTextAreaElement>) => {
+        // Only auto-resize when actually needed to reduce DOM manipulation
+        const target = e.target as HTMLTextAreaElement;
+        if (target.scrollHeight > target.clientHeight) {
+          autoResize(target);
+        }
+      }, [autoResize])}
     />
   );
 };
