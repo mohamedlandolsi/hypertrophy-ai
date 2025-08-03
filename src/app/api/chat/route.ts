@@ -8,7 +8,11 @@ import {
   AuthenticationError,
   logger 
 } from '@/lib/error-handler';
-import { canUserSendMessage, incrementUserMessageCount } from '@/lib/subscription';
+import { canUserSendMessage, incrementUserMessageCount, getUserPlan } from '@/lib/subscription';
+
+// Configure API route to handle large file uploads
+export const maxDuration = 60; // 60 seconds timeout for image processing
+export const runtime = 'nodejs';
 
 export async function POST(request: NextRequest) {
   const context = ApiErrorHandler.createContext(request);
@@ -23,6 +27,24 @@ export async function POST(request: NextRequest) {
     const supabase = await createClient();
     const { data: { user: authUser }, error: authError } = await supabase.auth.getUser();
     user = authUser;
+
+    // Get user plan early for file size validation
+    let currentUserPlan: 'FREE' | 'PRO' = 'FREE';
+    let maxFileSize = 5 * 1024 * 1024; // Default 5MB for guests
+    
+    if (user) {
+      try {
+        const planInfo = await getUserPlan();
+        if (planInfo) {
+          currentUserPlan = planInfo.plan;
+          maxFileSize = planInfo.limits.maxFileSize * 1024 * 1024; // Convert MB to bytes
+          console.log("📋 User plan:", currentUserPlan, "- Max file size:", planInfo.limits.maxFileSize + "MB");
+        }
+      } catch (error) {
+        console.warn("⚠️ Could not get user plan, using FREE defaults:", error);
+        // Fall back to FREE plan defaults
+      }
+    }
 
     // Parse request body - handle both JSON and FormData
     let body: {
@@ -40,30 +62,46 @@ export async function POST(request: NextRequest) {
     if (contentType?.includes('multipart/form-data')) {
       // Handle multipart/form-data for image uploads
       console.log("🧾 Raw Request Body: [multipart]");
-      const formData = await request.formData();
-      body = {
-        conversationId: formData.get('conversationId') as string,
-        message: formData.get('message') as string,
-        isGuest: formData.get('isGuest') === 'true',
-      };
       
-      // Handle multiple images
-      const imageCount = parseInt(formData.get('imageCount') as string || '0');
-      console.log("🖼️ Image count:", imageCount);
-      
-      for (let i = 0; i < imageCount; i++) {
-        const imageFile = formData.get(`image_${i}`) as File;
-        if (imageFile) {
-          // Validate image file
-          ApiErrorHandler.validateFile(imageFile, {
-            maxSize: 5 * 1024 * 1024, // 5MB
-            allowedTypes: ['image/jpeg', 'image/png', 'image/gif', 'image/webp']
-          });
-          
-          imageFiles.push(imageFile);
-          imageBuffers.push(Buffer.from(await imageFile.arrayBuffer()));
-          imageMimeTypes.push(imageFile.type);
+      try {
+        const formData = await request.formData();
+        body = {
+          conversationId: formData.get('conversationId') as string,
+          message: formData.get('message') as string,
+          isGuest: formData.get('isGuest') === 'true',
+        };
+        
+        // Handle multiple images
+        const imageCount = parseInt(formData.get('imageCount') as string || '0');
+        console.log("🖼️ Image count:", imageCount);
+        
+        for (let i = 0; i < imageCount; i++) {
+          const imageFile = formData.get(`image_${i}`) as File;
+          if (imageFile) {
+            console.log(`📷 Processing image ${i + 1}: ${imageFile.name} (${(imageFile.size / 1024 / 1024).toFixed(2)}MB)`);
+            
+            // Validate image file with user's plan-specific limits
+            ApiErrorHandler.validateFile(imageFile, {
+              maxSize: maxFileSize,
+              allowedTypes: ['image/jpeg', 'image/png', 'image/gif', 'image/webp']
+            });
+            
+            imageFiles.push(imageFile);
+            imageBuffers.push(Buffer.from(await imageFile.arrayBuffer()));
+            imageMimeTypes.push(imageFile.type);
+          }
         }
+      } catch (error: unknown) {
+        // Handle specific upload size errors
+        const errorMessage = error instanceof Error ? error.message : String(error);
+        if (errorMessage?.includes('413') || errorMessage?.toLowerCase().includes('too large')) {
+          const maxSizeMB = Math.floor(maxFileSize / 1024 / 1024);
+          throw new ValidationError(
+            `Image file is too large. Maximum allowed size is ${maxSizeMB}MB for your ${currentUserPlan} plan. Consider compressing your image or upgrading your plan.`,
+            'fileSize'
+          );
+        }
+        throw error;
       }
     } else {
       // Handle JSON for text-only messages
@@ -143,7 +181,7 @@ export async function POST(request: NextRequest) {
       select: { plan: true }
     });
     
-    const userPlan = dbUser.plan;
+    const finalUserPlan = dbUser.plan;
 
     let chatId = conversationId;
     let existingMessages: Array<{ role: string; content: string }> = [];
@@ -229,7 +267,7 @@ export async function POST(request: NextRequest) {
 
     // Get AI response from Gemini - NEW RAG SYSTEM WITH CITATIONS (with user's plan)
     // Pass all images to Gemini API (it supports multiple images)
-    const aiResult = await sendToGeminiWithCitations(conversationForGemini, user.id, imageBuffers, imageMimeTypes, userPlan);
+    const aiResult = await sendToGeminiWithCitations(conversationForGemini, user.id, imageBuffers, imageMimeTypes, finalUserPlan);
 
     // Save assistant message to database
     const assistantMessage = await prisma.message.create({
