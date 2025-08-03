@@ -830,7 +830,7 @@ export default function Home() {
               asChild 
               variant="outline" 
               size="lg" 
-              className="text-white border-white hover:bg-white/10 text-lg px-8 py-3 rounded-xl"
+              className="text-primary border-primary hover:bg-primary/10 dark:text-white dark:border-white dark:hover:bg-white/10 text-lg px-8 py-3 rounded-xl"
             >
               <Link href={`/${locale}/pricing`}>{t('finalCta.viewPricing')}</Link>
             </Button>

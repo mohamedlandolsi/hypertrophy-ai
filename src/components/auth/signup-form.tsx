@@ -25,6 +25,7 @@ import Image from "next/image";
 import { toast } from "sonner";
 import { Loader2 } from "lucide-react";
 import { GoogleIcon } from "@/components/ui/google-icon";
+import { getAuthCallbackUrl } from "@/lib/utils/site-url";
 
 export default function SignupForm() {
   const [isLoading, setIsLoading] = useState(false);
@@ -53,7 +54,7 @@ export default function SignupForm() {
         email: data.email,
         password: data.password,
         options: {
-          emailRedirectTo: `${window.location.origin}/auth/callback`,
+          emailRedirectTo: getAuthCallbackUrl(),
         },
       });
 
@@ -82,7 +83,7 @@ export default function SignupForm() {
       const { error } = await supabase.auth.signInWithOAuth({
         provider: "google",
         options: {
-          redirectTo: `${window.location.origin}/auth/callback`,
+          redirectTo: getAuthCallbackUrl(),
         },
       });
 
@@ -98,8 +99,8 @@ export default function SignupForm() {
   };
 
   return (
-    <div className="flex min-h-screen flex-col items-center justify-center bg-background">
-      <div className="flex flex-col items-center mb-8">
+    <div className="flex min-h-screen flex-col items-center justify-start md:justify-center bg-background px-4 py-8 md:py-0">
+      <div className="flex flex-col items-center mb-8 mt-4 md:mt-0">
         <Image 
           src="/logo.png" 
           alt="HypertroQ Logo" 
@@ -113,15 +114,6 @@ export default function SignupForm() {
       </div>
       <Card className="w-full max-w-md">
         <CardHeader>
-          <div className="flex justify-center mb-4">
-            <Image 
-              src="/logo.png" 
-              alt="HypertroQ Logo" 
-              width={64}
-              height={64}
-              className="h-16 w-16 object-contain"
-            />
-          </div>
           <CardTitle className="text-2xl text-center">Create Account</CardTitle>
           <CardDescription className="text-center">
             Create a new account to get started with HypertroQ.

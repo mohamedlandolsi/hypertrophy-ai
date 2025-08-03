@@ -20,6 +20,7 @@ import { createClient } from "@/lib/supabase/client";
 import { useRouter } from "next/navigation";
 import { toast } from "sonner";
 import { Loader2, ArrowLeft } from "lucide-react";
+import { getAuthCallbackUrl } from "@/lib/utils/site-url";
 
 export default function ResetPasswordForm() {
   const [isLoading, setIsLoading] = useState(false);
@@ -43,7 +44,7 @@ export default function ResetPasswordForm() {
       const supabase = createClient();
       
       const { error } = await supabase.auth.resetPasswordForEmail(data.email, {
-        redirectTo: `${window.location.origin}/auth/callback?next=/update-password`,
+        redirectTo: getAuthCallbackUrl('/update-password'),
       });
 
       if (error) {
@@ -68,8 +69,8 @@ export default function ResetPasswordForm() {
 
   if (emailSent) {
     return (
-      <div className="flex min-h-screen flex-col items-center justify-center bg-background">
-        <Card className="w-full max-w-md">
+      <div className="flex min-h-screen flex-col items-center justify-start md:justify-center bg-background px-4 py-8 md:py-0">
+        <Card className="w-full max-w-md mt-16 md:mt-0">
           <CardHeader className="text-center">
             <CardTitle className="text-2xl">Check Your Email</CardTitle>
             <CardDescription>
@@ -107,8 +108,8 @@ export default function ResetPasswordForm() {
   }
 
   return (
-    <div className="flex min-h-screen flex-col items-center justify-center bg-background">
-      <Card className="w-full max-w-md">
+    <div className="flex min-h-screen flex-col items-center justify-start md:justify-center bg-background px-4 py-8 md:py-0">
+      <Card className="w-full max-w-md mt-16 md:mt-0">
         <CardHeader>
           <CardTitle className="text-2xl">Reset Password</CardTitle>
           <CardDescription>

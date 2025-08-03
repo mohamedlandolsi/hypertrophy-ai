@@ -107,8 +107,8 @@ export default function UpdatePasswordForm() {
 
   if (!isValidSession) {
     return (
-      <div className="flex min-h-screen flex-col items-center justify-center bg-background">
-        <Card className="w-full max-w-md">
+      <div className="flex min-h-screen flex-col items-center justify-start md:justify-center bg-background px-4 py-8 md:py-0">
+        <Card className="w-full max-w-md mt-16 md:mt-0">
           <CardContent className="pt-6">
             <div className="flex items-center justify-center">
               <Loader2 className="h-6 w-6 animate-spin" />
@@ -120,8 +120,8 @@ export default function UpdatePasswordForm() {
   }
 
   return (
-    <div className="flex min-h-screen flex-col items-center justify-center bg-background">
-      <Card className="w-full max-w-md">
+    <div className="flex min-h-screen flex-col items-center justify-start md:justify-center bg-background px-4 py-8 md:py-0">
+      <Card className="w-full max-w-md mt-16 md:mt-0">
         <CardHeader>
           <CardTitle className="text-2xl">Update Password</CardTitle>
           <CardDescription>
