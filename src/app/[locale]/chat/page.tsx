@@ -169,6 +169,82 @@ const ChatPage = () => {
     }
   }, [debouncedInputChange]);
 
+  // Mobile keyboard handling state
+  const [isInputFocused, setIsInputFocused] = reactUseState(false);
+  const [viewportHeight, setViewportHeight] = reactUseState(0);
+  
+  // Handle input focus/blur for mobile keyboard management
+  const handleInputFocus = useCallback(() => {
+    setIsInputFocused(true);
+  }, []);
+
+  const handleInputBlur = useCallback(() => {
+    setIsInputFocused(false);
+  }, []);
+
+  // Track viewport height changes for mobile keyboard detection
+  useEffect(() => {
+    if (typeof window === 'undefined') return;
+    
+    const updateViewportHeight = () => {
+      setViewportHeight(window.visualViewport?.height || window.innerHeight);
+    };
+    
+    // Initial height
+    updateViewportHeight();
+    
+    // Listen for viewport changes (mainly for mobile keyboard)
+    window.visualViewport?.addEventListener('resize', updateViewportHeight);
+    window.addEventListener('resize', updateViewportHeight);
+    
+    return () => {
+      window.visualViewport?.removeEventListener('resize', updateViewportHeight);
+      window.removeEventListener('resize', updateViewportHeight);
+    };
+  }, [setViewportHeight]);
+
+  // Calculate if keyboard is visible based on viewport height change
+  const isKeyboardVisible = useMemo(() => {
+    if (!isMobile || viewportHeight === 0) return false;
+    const fullHeight = window.screen.availHeight || window.innerHeight;
+    const heightDifference = fullHeight - viewportHeight;
+    return heightDifference > 150; // Keyboard is likely visible if viewport shrunk by more than 150px
+  }, [isMobile, viewportHeight]);
+
+  // Enhanced mobile keyboard handling with Visual Viewport API
+  useEffect(() => {
+    if (typeof window === 'undefined' || !isMobile) return;
+
+    const handleViewportChange = () => {
+      const viewport = window.visualViewport;
+      if (!viewport) return;
+
+      // Calculate actual keyboard height
+      const fullHeight = window.screen.availHeight || window.innerHeight;
+      const keyboardHeight = Math.max(0, fullHeight - viewport.height);
+      const isKeyboardVisible = keyboardHeight > 150; // Threshold for keyboard detection
+      
+      // Set CSS custom properties for dynamic positioning
+      document.documentElement.style.setProperty('--viewport-height', `${viewport.height}px`);
+      document.documentElement.style.setProperty('--keyboard-height', `${keyboardHeight}px`);
+      document.documentElement.style.setProperty('--keyboard-visible', isKeyboardVisible ? '1' : '0');
+      
+      // For more precise positioning, set the offset from bottom
+      const offsetFromBottom = isKeyboardVisible ? keyboardHeight : 0;
+      document.documentElement.style.setProperty('--keyboard-offset', `${offsetFromBottom}px`);
+    };
+
+    // Initial setup
+    handleViewportChange();
+    
+    if (window.visualViewport) {
+      window.visualViewport.addEventListener('resize', handleViewportChange);
+      return () => {
+        window.visualViewport?.removeEventListener('resize', handleViewportChange);
+      };
+    }
+  }, [isMobile]);
+
   // Custom submit handler - updated for multiple images
   const sendMessage = useCallback(async (messageText: string, imageFiles?: File[]) => {
     const images = imageFiles || selectedImagesRef.current; // Use ref instead of state
@@ -382,19 +458,9 @@ const ChatPage = () => {
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
-  // State for mobile keyboard handling
+  // State for mobile keyboard handling (keeping keyboardHeight for potential future use)
+  // eslint-disable-next-line @typescript-eslint/no-unused-vars
   const [keyboardHeight, setKeyboardHeight] = reactUseState(0);
-  const [isKeyboardVisible, setIsKeyboardVisible] = reactUseState(false);
-  const [isInputFocused, setIsInputFocused] = reactUseState(false);
-
-  // Handler for input focus/blur events
-  const handleInputFocus = useCallback(() => {
-    setIsInputFocused(true);
-  }, [setIsInputFocused]);
-
-  const handleInputBlur = useCallback(() => {
-    setIsInputFocused(false);
-  }, [setIsInputFocused]);
 
   // Check for mobile viewport and handle responsive behavior
   useEffect(() => {
@@ -418,52 +484,6 @@ const ChatPage = () => {
     window.addEventListener('resize', checkMobile);
     return () => window.removeEventListener('resize', checkMobile);
   }, [setIsMobile, setIsSidebarOpen]); // Add dependencies but don't use them in the effect
-
-  // Mobile keyboard detection and handling
-  useEffect(() => {
-    if (!isMobile) return;
-
-    const initialViewportHeight = window.visualViewport?.height || window.innerHeight;
-    const threshold = 150; // Minimum keyboard height to consider visible
-
-    const handleViewportChange = () => {
-      const currentHeight = window.visualViewport?.height || window.innerHeight;
-      const heightDifference = initialViewportHeight - currentHeight;
-      
-      // Only consider keyboard visible if input is focused and height difference is significant
-      if (heightDifference > threshold && isInputFocused) {
-        // Keyboard is visible
-        setIsKeyboardVisible(true);
-        setKeyboardHeight(heightDifference);
-      } else {
-        // Keyboard is hidden
-        setIsKeyboardVisible(false);
-        setKeyboardHeight(0);
-      }
-    };
-
-    // Handle both visual viewport (modern browsers) and window resize (fallback)
-    if (window.visualViewport) {
-      window.visualViewport.addEventListener('resize', handleViewportChange);
-    } else {
-      // Fallback for older browsers
-      const handleResize = () => {
-        setTimeout(handleViewportChange, 300); // Delay to allow keyboard animation
-      };
-      window.addEventListener('resize', handleResize);
-    }
-
-    // Also run when input focus state changes
-    handleViewportChange();
-
-    return () => {
-      if (window.visualViewport) {
-        window.visualViewport.removeEventListener('resize', handleViewportChange);
-      } else {
-        window.removeEventListener('resize', handleViewportChange);
-      }
-    };
-  }, [isMobile, isInputFocused, setIsKeyboardVisible, setKeyboardHeight]);
 
   // Auto-close sidebar on mobile when navigating to a chat
   useEffect(() => {
@@ -1031,7 +1051,7 @@ const ChatPage = () => {
   }
 
   return (
-    <div className="flex h-screen bg-background text-foreground overflow-hidden relative animate-fade-in">
+    <div className={`flex ${isMobile ? 'mobile-chat-container' : 'h-screen'} bg-background text-foreground overflow-hidden relative animate-fade-in`}>
       {/* Mobile Backdrop Overlay */}
       {isMobile && isSidebarOpen && (
         <div 
@@ -1463,13 +1483,7 @@ const ChatPage = () => {
 
         {/* Enhanced Chat Messages Area - Account for fixed header on mobile */}
         <div 
-          className={`flex-1 overflow-y-auto message-area w-full ${messages.length === 0 ? 'flex items-center justify-center' : ''} ${isMobile ? 'pt-16' : ''}`}
-          style={{
-            paddingBottom: isMobile && isKeyboardVisible && isInputFocused 
-              ? `${keyboardHeight + 80}px` 
-              : messages.length > 0 ? (isMobile ? '120px' : '10rem') : '0',
-            transition: isMobile ? 'padding-bottom 0.2s ease-out' : undefined
-          }}
+          className={`flex-1 overflow-y-auto message-area w-full ${messages.length === 0 ? 'flex items-center justify-center' : ''} ${isMobile ? 'pt-16 mobile-message-area' : ''}`}
           onScroll={handleScroll}
         >
           {/* Offline warning banner */}
@@ -1581,18 +1595,10 @@ const ChatPage = () => {
         {/* Enhanced Chat Input Area - Sticky on Mobile */}
         <div 
           className={`
-            ${messages.length === 0 ? 'relative' : isMobile ? 'fixed left-0 right-0 z-20' : 'absolute left-0 right-0'} 
-            p-2 md:p-4 
-            ${messages.length > 0 ? 'bg-background/90 backdrop-blur-md border-t border-border/30' : ''}
-            ${isMobile && isKeyboardVisible && isInputFocused ? 'chat-input-mobile' : messages.length > 0 ? (isMobile ? 'bottom-0' : 'bottom-0') : ''}
+            ${messages.length === 0 ? 'relative' : isMobile ? 'mobile-input-area' : 'absolute left-0 right-0 bottom-0'} 
+            ${isMobile && messages.length > 0 ? 'p-2 pt-2 pb-0' : 'p-2 md:p-4'}
+            ${messages.length > 0 ? 'bg-background/95 backdrop-blur-lg border-t border-border/30' : ''}
           `}
-          style={{
-            bottom: isMobile && isKeyboardVisible && isInputFocused 
-              ? `${Math.max(keyboardHeight - 50, 10)}px` 
-              : undefined,
-            transition: isMobile ? 'bottom 0.2s ease-out' : undefined,
-            zIndex: isMobile && (isKeyboardVisible || messages.length > 0) ? 1001 : undefined
-          }}
         >
           <div className="w-full max-w-5xl mx-auto">
             <form onSubmit={onSubmit} className="relative">

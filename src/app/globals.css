@@ -498,12 +498,47 @@
   
   /* Chat input optimizations for mobile keyboard */
   .chat-input-mobile {
-    /* Ensure input stays visible above keyboard */
-    position: relative;
+    /* Use safe-area-inset and env() for better keyboard handling */
+    bottom: env(keyboard-inset-height, 0px) !important;
+    position: fixed !important;
     z-index: 1000;
     box-shadow: 0 -2px 20px rgba(0, 0, 0, 0.1);
     backdrop-filter: blur(20px);
     -webkit-backdrop-filter: blur(20px);
+  }
+  
+  /* Mobile viewport fix for keyboard - Simple and reliable */
+  .mobile-chat-container {
+    height: 100vh;
+    height: 100dvh; /* Dynamic viewport height automatically adjusts for keyboard */
+    overflow: hidden;
+  }
+  
+  /* Mobile input area positioning - Simplified for keyboard handling */
+  .mobile-input-area {
+    position: fixed;
+    bottom: 0;
+    left: 0;
+    right: 0;
+    z-index: 1000;
+    margin: 0;
+    /* Remove all padding that could cause gaps */
+    padding-bottom: 0;
+    /* Ensure no extra spacing */
+    border-bottom: none;
+    /* Use simple viewport constraint */
+    max-height: 40vh;
+    /* Ensure it sticks to the bottom edge regardless of keyboard */
+    transform: translateZ(0); /* Hardware acceleration for smoother positioning */
+  }
+  
+  /* Message area optimized for mobile keyboard */
+  .mobile-message-area {
+    padding-bottom: 160px; /* Increased padding for better keyboard clearance */
+    height: 100vh;
+    height: 100dvh; /* Dynamic viewport height adjusts automatically for keyboard */
+    overflow-y: auto;
+    overflow-x: hidden;
   }
   
   /* Better mobile chat bubbles */

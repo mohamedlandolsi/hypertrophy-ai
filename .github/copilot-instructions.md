@@ -2,7 +2,7 @@
 
 ## 🏗️ Architecture Overview
 
-**HypertroQ** is a RAG-powered AI fitness coaching platform built with Next.js 15, featuring personalized client memory, multilingual support (Arabic/English), scientific knowledge base integration, and subscription-based access control.
+**HypertroQ** is a RAG-powered AI fitness coaching platform built with Next.js 15, featuring personalized client memory, multilingual support (Arabic/English/French), scientific knowledge base integration, and subscription-based access control.
 
 ### Core Components
 - **RAG System**: Vector embeddings via Gemini + Prisma ORM with chunked knowledge storage
@@ -11,7 +11,10 @@
 - **Authentication**: Supabase Auth with role-based access (user/admin) + onboarding flow
 - **File Processing**: Multi-format support (PDF, DOC, TXT, MD) with semantic chunking
 - **Subscription System**: FREE (15 msgs/day) vs PRO (unlimited) with Lemon Squeezy integration
-- **Arabic Language Support**: Automatic detection with RTL/LTR handling and fitness terminology
+- **Internationalization**: Full i18n support with next-intl for Arabic RTL, French, and English
+- **Performance Optimization**: Comprehensive caching, component optimization, and loading enhancements
+- **Modern UI**: Glassmorphism design with animations, gradients, and responsive mobile UX
+- **Image Processing**: Multi-image upload with base64 storage and Gemini vision integration
 - **Error Handling**: Centralized `ApiErrorHandler` with correlation IDs and structured logging
 
 ### Critical Architecture Decisions
@@ -21,6 +24,10 @@
 - **Chunking Strategy**: 512 chars with 100 char overlap optimized for fitness/scientific content
 - **Embedding Storage**: JSON strings (temporary) until pgvector migration - not efficient for large scale
 - **Subscription Enforcement**: Server-side limits for messages, uploads, and knowledge items
+- **Vercel AI SDK Integration**: Chat implementation uses Vercel AI SDK with custom request/response transformation
+- **Multi-Image Support**: Gallery display with base64 storage and conditional rendering patterns
+- **Performance-First Design**: Comprehensive caching strategy with optimized components and hooks
+- **Mobile-Optimized UX**: Sticky headers, touch gestures, and responsive layouts for mobile-first experience
 
 ## 🚀 Development Workflows
 
@@ -102,6 +109,8 @@ LEMONSQUEEZY_WEBHOOK_SECRET=     # Webhook signature verification
 - **Rich Text**: TipTap React 2.25.0 editor with color, list, and text-align extensions
 - **File Processing**: `mammoth` 1.9.1 (DOC), `pdf-parse` 1.1.1 (PDF), `@tiptap/react` (rich text)
 - **Payments**: Lemon Squeezy webhook integration with React Hot Toast 2.5.2
+- **Internationalization**: next-intl 4.3.4 with comprehensive Arabic RTL support
+- **Performance**: Vercel AI SDK 4.3.16 with streaming and chat optimization
 - **Development**: TypeScript 5, ESLint 9, Prisma Studio for DB management
 
 ## 📋 Project-Specific Patterns
@@ -139,7 +148,32 @@ await getRelevantContext(query, { userId, limit: 10, threshold: 0.7 })
 - Arabic-aware input components: `arabic-aware-input.tsx`, `arabic-aware-textarea.tsx`
 - Mixed content handling with `getTextDirection()` returning 'auto' mode
 
-### 5. File Processing Pipeline (`/src/lib/enhanced-file-processor.ts`)
+### 5. Internationalization System (`next-intl`)
+```typescript
+// Full i18n support with locale routing and translations
+import { useTranslations, useLocale } from 'next-intl';
+const t = useTranslations('ChatPage');
+const locale = useLocale();
+// Link with locale: `/${locale}/path`
+```
+- Language files: `messages/en.json`, `messages/ar.json`, `messages/fr.json`
+- Arabic RTL support with proper text direction
+- Dynamic locale switching with URL preservation
+- Translation coverage: Chat, UI components, navigation
+
+### 6. Performance Optimization System (`/src/hooks/use-*.ts`)
+```typescript
+// Smart caching and optimized data fetching
+import { useOptimizedChatHistory, useOptimizedUserPlan } from '@/hooks/use-optimized-fetch';
+import { useApiCache } from '@/hooks/use-smart-cache';
+import { useDebouncedValue } from '@/hooks/use-debounced-value';
+```
+- Custom hooks for caching API responses (30-item cache)
+- Optimized components: `OptimizedMessage`, `OptimizedImage`, `OptimizedChatHistory`
+- Performance monitoring with memory usage tracking
+- Debounced inputs and smart state management
+
+### 7. File Processing Pipeline (`/src/lib/enhanced-file-processor.ts`)
 ```typescript
 // Process → Chunk → Embed → Store
 await processFileWithEmbeddings(buffer, mimeType, fileName, knowledgeItemId)
@@ -148,7 +182,34 @@ await processFileWithEmbeddings(buffer, mimeType, fileName, knowledgeItemId)
 - Supports PDF, DOC/DOCX, TXT, MD via `mammoth`, `pdf-parse` libraries
 - Fitness-specific chunking with overlap for context preservation
 
-### 6. Subscription System (`/src/lib/subscription.ts`)
+### 8. Modern UI System (`glassmorphism + animations`)
+```css
+.glass-sidebar         // Glassmorphism sidebar effect
+.floating-input        // Floating input container
+.gradient-primary      // Blue-to-purple gradient
+.hover-lift           // Hover lift animation
+.animate-fade-in      // Fade in animation
+```
+- Glassmorphism design with blur effects and transparency
+- Blue-to-purple gradient theme throughout
+- Micro-animations and hover effects for better UX
+- Mobile sticky headers with touch gestures
+- Enhanced scrollbars and responsive design
+
+### 9. Image Processing & Multi-Image Support
+```typescript
+// Multi-image upload with gallery display
+const [selectedImages, setSelectedImages] = useState<File[]>([]);
+// Base64 storage with optimistic UI updates
+// Clipboard paste support (Ctrl+V) for images
+```
+- Multi-image upload capability with gallery display
+- Base64 image storage with `imageMimeType` tracking
+- Conditional rendering to prevent empty Image src issues
+- Gemini vision integration for AI image processing
+- Image validation: 5MB limit, type checking, error handling
+
+### 10. Subscription System (`/src/lib/subscription.ts`)
 ```typescript
 // Two-tier system: FREE (15 msgs/day) vs PRO (unlimited)
 const planInfo = await getUserPlan()
