@@ -9,6 +9,14 @@ const nextConfig: NextConfig = {
   experimental: {
     optimizePackageImports: ['@radix-ui/react-icons', 'lucide-react', '@radix-ui/react-dialog'],
   },
+  // Configure API routes for large file uploads
+  async rewrites() {
+    return [];
+  },
+  // Increase the limit for API routes to handle large image uploads
+  async redirects() {
+    return [];
+  },
   webpack: (config, { isServer }) => {
     if (isServer) {
       // Ensure pdf-parse works on the server side

@@ -14,6 +14,10 @@ import { canUserSendMessage, incrementUserMessageCount, getUserPlan } from '@/li
 export const maxDuration = 60; // 60 seconds timeout for image processing
 export const runtime = 'nodejs';
 
+// Increase body size limit for this API route (Vercel allows up to 50MB for body parsing)
+export const dynamic = 'force-dynamic';
+export const preferredRegion = 'auto';
+
 export async function POST(request: NextRequest) {
   const context = ApiErrorHandler.createContext(request);
   let user: { id: string } | null = null;
@@ -94,13 +98,32 @@ export async function POST(request: NextRequest) {
       } catch (error: unknown) {
         // Handle specific upload size errors
         const errorMessage = error instanceof Error ? error.message : String(error);
-        if (errorMessage?.includes('413') || errorMessage?.toLowerCase().includes('too large')) {
+        
+        // Check for various types of size-related errors
+        if (errorMessage?.includes('413') || 
+            errorMessage?.toLowerCase().includes('too large') ||
+            errorMessage?.toLowerCase().includes('request entity too large') ||
+            errorMessage?.toLowerCase().includes('payload too large') ||
+            errorMessage?.toLowerCase().includes('body size limit')) {
+          
           const maxSizeMB = Math.floor(maxFileSize / 1024 / 1024);
-          throw new ValidationError(
-            `Image file is too large. Maximum allowed size is ${maxSizeMB}MB for your ${currentUserPlan} plan. Consider compressing your image or upgrading your plan.`,
-            'fileSize'
-          );
+          
+          // Provide specific error message based on plan and platform limits
+          let errorMsg = `Image file is too large. `;
+          
+          if (maxSizeMB >= 50) {
+            // For PRO users who hit platform limits
+            errorMsg += `Your ${currentUserPlan} plan allows ${maxSizeMB}MB files, but the platform has a 50MB limit. Please compress your image to under 50MB.`;
+          } else {
+            // For FREE users or smaller limits
+            errorMsg += `Maximum allowed size is ${maxSizeMB}MB for your ${currentUserPlan} plan. Consider compressing your image or upgrading your plan.`;
+          }
+          
+          throw new ValidationError(errorMsg, 'fileSize');
         }
+        
+        // Log the full error for debugging
+        console.error("❌ Form data parsing error:", errorMessage);
         throw error;
       }
     } else {

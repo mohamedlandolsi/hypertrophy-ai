@@ -744,7 +744,20 @@ const ChatPage = () => {
 
     const validFiles: File[] = [];
     const maxImages = 5; // Limit to 5 images per message
-    const maxFileSize = 5 * 1024 * 1024; // 5MB per image
+    
+    // Use plan-specific file size limits
+    let maxFileSize = 5 * 1024 * 1024; // Default 5MB for guests
+    let maxFileSizeMB = 5;
+    
+    if (userPlan) {
+      if (userPlan.plan === 'FREE') {
+        maxFileSize = 10 * 1024 * 1024; // 10MB for FREE users
+        maxFileSizeMB = 10;
+      } else if (userPlan.plan === 'PRO') {
+        maxFileSize = Math.min(50 * 1024 * 1024, 100 * 1024 * 1024); // 50MB (platform limit) for PRO users
+        maxFileSizeMB = 50; // Show 50MB due to platform limitations
+      }
+    }
 
     // Check if adding these files would exceed the limit
     if (selectedImages.length + files.length > maxImages) {
@@ -753,9 +766,14 @@ const ChatPage = () => {
     }
 
     for (const file of files) {
-      // Check file size
+      // Check file size with plan-specific limits
       if (file.size > maxFileSize) {
-        showToast.error(t('toasts.fileTooLargeTitle'), t('toasts.fileTooLargeText'));
+        const fileSizeMB = (file.size / 1024 / 1024).toFixed(1);
+        const planName = userPlan?.plan || 'Guest';
+        showToast.error(
+          t('toasts.fileTooLargeTitle'), 
+          `File "${file.name}" is ${fileSizeMB}MB. Maximum allowed size is ${maxFileSizeMB}MB for ${planName} users.`
+        );
         continue;
       }
 
@@ -781,7 +799,7 @@ const ChatPage = () => {
       };
       reader.readAsDataURL(file);
     });
-  }, [selectedImages.length, setSelectedImages, setImagePreviews, t]);
+  }, [selectedImages.length, setSelectedImages, setImagePreviews, t, userPlan]);
 
   const removeImage = useCallback((index: number) => {
     setSelectedImages(prev => prev.filter((_, i) => i !== index));
