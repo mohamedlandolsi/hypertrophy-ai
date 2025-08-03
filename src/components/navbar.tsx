@@ -161,8 +161,10 @@ const Navbar = () => {
           {isLoadingUser ? (
             <div className="h-9 w-9 rounded-full bg-muted animate-pulse" /> // Placeholder for loading state
           ) : user ? (
-              // Logged-in state: Avatar Dropdown (desktop only)
-              <div className="hidden md:block">
+              // Logged-in state: Language switcher, theme toggle, and avatar dropdown (desktop only)
+              <div className="hidden md:flex items-center space-x-2 rtl:space-x-reverse">
+                <LanguageSwitcher />
+                <ThemeToggle />
                 <DropdownMenu>
                   <DropdownMenuTrigger asChild>
                     <Button variant="ghost" className="relative h-9 w-9 rounded-full">
@@ -196,18 +198,6 @@ const Navbar = () => {
                         </Link>
                       </DropdownMenuItem>
                     )}
-                    <DropdownMenuSeparator />
-                    {/* Language and Theme Settings */}
-                    <div className="px-1 py-1 space-y-1">
-                      <div className="flex items-center justify-between rounded-sm px-2 py-1.5 text-sm hover:bg-muted cursor-default">
-                        <span>{t('language')}</span>
-                        <LanguageSwitcher />
-                      </div>
-                      <div className="flex items-center justify-between rounded-sm px-2 py-1.5 text-sm hover:bg-muted cursor-default">
-                        <span>{t('theme')}</span>
-                        <ThemeToggle />
-                      </div>
-                    </div>
                     <DropdownMenuSeparator />
                     <DropdownMenuItem onClick={handleLogout} className="flex items-center w-full cursor-pointer">
                       <LogOut className="me-2 h-4 w-4" />
@@ -292,6 +282,18 @@ const Navbar = () => {
                         
                         <DropdownMenuSeparator className="my-2"/>
                         
+                        {/* Language and Theme Settings for logged-in users */}
+                        <div className="space-y-3 mb-3">
+                          <div className="flex items-center justify-between px-2 py-2 bg-muted/30 rounded-lg">
+                            <span className="text-sm font-medium">{t('language')}</span>
+                            <LanguageSwitcher />
+                          </div>
+                          <div className="flex items-center justify-between px-2 py-2 bg-muted/30 rounded-lg">
+                            <span className="text-sm font-medium">{t('theme')}</span>
+                            <ThemeToggle />
+                          </div>
+                        </div>
+                        
                         {/* User Menu Items */}
                         <SheetClose asChild>
                           <Button variant="outline" className="w-full justify-start h-12 px-4" asChild>
@@ -319,23 +321,28 @@ const Navbar = () => {
                         </SheetClose>
                       </>
                     ) : (
-                       <SheetClose asChild>
-                          <Button variant="default" className="w-full justify-center h-12 px-4" asChild>
-                            <Link href={`/${locale}/login`}>
-                              {t('getStarted')}
-                            </Link>
-                          </Button>
-                        </SheetClose>
-                    )}                    <div className="pt-4 border-t border-border mb-4 space-y-3">
-                      <div className="flex items-center justify-between">
-                        <span className="text-sm font-medium">{t('language')}</span>
-                        <LanguageSwitcher />
-                      </div>
-                      <div className="flex items-center justify-between">
-                        <span className="text-sm font-medium">{t('theme')}</span>
-                        <ThemeToggle />
-                      </div>
-                    </div>
+                       <>
+                         <SheetClose asChild>
+                            <Button variant="default" className="w-full justify-center h-12 px-4" asChild>
+                              <Link href={`/${locale}/login`}>
+                                {t('getStarted')}
+                              </Link>
+                            </Button>
+                          </SheetClose>
+                          
+                          {/* Language and Theme Settings for logged-out users */}
+                          <div className="pt-4 border-t border-border space-y-3">
+                            <div className="flex items-center justify-between">
+                              <span className="text-sm font-medium">{t('language')}</span>
+                              <LanguageSwitcher />
+                            </div>
+                            <div className="flex items-center justify-between">
+                              <span className="text-sm font-medium">{t('theme')}</span>
+                              <ThemeToggle />
+                            </div>
+                          </div>
+                       </>
+                    )}
                   </div>
                 </nav>
               </SheetContent>
