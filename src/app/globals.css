@@ -336,20 +336,40 @@
 }
 
 .chat-bubble-ai {
-  background: #ffffff;
-  border: 1px solid #e3e5e8;
+  background: linear-gradient(135deg, #ffffff 0%, #f8fafc 100%);
+  border: 1px solid #e1e7ef;
   border-radius: 1.5rem 1.5rem 1.5rem 0.5rem;
   box-shadow: 
-    0 2px 8px rgba(44, 47, 51, 0.08),
-    0 1px 3px rgba(44, 47, 51, 0.05);
+    0 4px 16px rgba(44, 47, 51, 0.06),
+    0 2px 8px rgba(44, 47, 51, 0.04),
+    0 1px 3px rgba(44, 47, 51, 0.02);
+  transition: all 0.2s cubic-bezier(0.4, 0, 0.2, 1);
+  backdrop-filter: blur(8px);
+}
+
+.chat-bubble-ai:hover {
+  box-shadow: 
+    0 6px 20px rgba(44, 47, 51, 0.08),
+    0 3px 12px rgba(44, 47, 51, 0.06),
+    0 2px 6px rgba(44, 47, 51, 0.03);
+  transform: translateY(-1px);
 }
 
 .dark .chat-bubble-ai {
-  background: #292b2f;
-  border: 1px solid #40444b;
+  background: linear-gradient(135deg, #2a2d33 0%, #1e2127 100%);
+  border: 1px solid #404449;
   box-shadow: 
-    0 2px 8px rgba(0, 0, 0, 0.15),
-    0 1px 3px rgba(0, 0, 0, 0.1);
+    0 4px 16px rgba(0, 0, 0, 0.12),
+    0 2px 8px rgba(0, 0, 0, 0.08),
+    0 1px 3px rgba(0, 0, 0, 0.04);
+}
+
+.dark .chat-bubble-ai:hover {
+  box-shadow: 
+    0 6px 20px rgba(0, 0, 0, 0.16),
+    0 3px 12px rgba(0, 0, 0, 0.12),
+    0 2px 6px rgba(0, 0, 0, 0.06);
+  transform: translateY(-1px);
 }
 
 /* Improved hover states */

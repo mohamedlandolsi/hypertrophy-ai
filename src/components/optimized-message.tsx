@@ -1,12 +1,15 @@
 'use client';
 
-import React, { memo, useMemo } from 'react';
+import React, { memo, useMemo, useCallback } from 'react';
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
+import { Button } from '@/components/ui/button';
 import { MessageContent } from '@/components/message-content';
 import { ArticleLinks } from '@/components/article-links';
 import { processMessageContent } from '@/lib/article-links';
+import { showToast } from '@/lib/toast';
 import Image from 'next/image';
-import { User as UserIcon } from 'lucide-react';
+import { User as UserIcon, Copy } from 'lucide-react';
+import { useTranslations } from 'next-intl';
 
 interface OptimizedMessageProps {
   message: {
@@ -47,6 +50,19 @@ export const OptimizedMessage = memo<OptimizedMessageProps>(({
   userRole,
   getLogoSrc
 }) => {
+  const t = useTranslations('main');
+  
+  // Copy message function
+  const copyMessage = useCallback(async () => {
+    try {
+      await navigator.clipboard.writeText(msg.content);
+      showToast.success(t('copySuccessTitle'), t('copySuccessText'));
+    } catch (error) {
+      console.error('Failed to copy message:', error);
+      showToast.error(t('copyErrorTitle'), t('copyErrorText'));
+    }
+  }, [msg.content, t]);
+
   // Memoize processed content to avoid re-computation
   const processedContent = useMemo(() => {
     return processMessageContent(msg.content);
@@ -152,7 +168,7 @@ export const OptimizedMessage = memo<OptimizedMessageProps>(({
           className={`${
             msg.role === 'user'
               ? 'bg-primary text-primary-foreground rounded-2xl rounded-br-sm px-4 py-2 md:py-3 shadow-sm max-w-xs md:max-w-md lg:max-w-lg'
-              : 'bg-transparent max-w-full'
+              : 'chat-bubble-ai px-4 md:px-5 py-3 md:py-4 max-w-xs md:max-w-3xl lg:max-w-4xl'
           }`}
         >
           <MessageContent 
@@ -160,6 +176,21 @@ export const OptimizedMessage = memo<OptimizedMessageProps>(({
             role={msg.role}
           />
         </div>
+
+        {/* Copy button for AI messages */}
+        {msg.role === 'assistant' && (
+          <div className="mt-2 flex justify-start">
+            <Button
+              variant="ghost"
+              size="sm"
+              onClick={copyMessage}
+              className="h-8 w-8 p-0 text-muted-foreground hover:text-foreground hover:bg-muted/50 transition-all duration-200 rounded-lg opacity-0 group-hover:opacity-100"
+              aria-label={t('copy')}
+            >
+              <Copy className="h-3 w-3" />
+            </Button>
+          </div>
+        )}
 
         {/* Article links for AI messages */}
         {msg.role === 'assistant' && processedContent.articleLinks && processedContent.articleLinks.length > 0 && (

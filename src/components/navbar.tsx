@@ -158,6 +158,12 @@ const Navbar = () => {
           ))}
         </nav>        {/* Right section - absolutely positioned right in LTR, left in RTL */}
         <div className="absolute end-0 top-0 h-full flex items-center space-x-2 lg:space-x-3 pe-2 lg:pe-6 rtl:space-x-reverse">
+          {/* Theme and Language switchers - always visible on mobile, desktop for logged-out users */}
+          <div className="flex md:hidden items-center space-x-2 rtl:space-x-reverse">
+            <LanguageSwitcher />
+            <ThemeToggle />
+          </div>
+          
           {isLoadingUser ? (
             <div className="h-9 w-9 rounded-full bg-muted animate-pulse" /> // Placeholder for loading state
           ) : user ? (
@@ -207,12 +213,11 @@ const Navbar = () => {
                 </DropdownMenu>
               </div>
             ) : (
-              // Logged-out state: "Get started" button and ThemeToggle
-              <>
+              // Logged-out state: Language switcher, theme toggle, and "Get started" button (desktop only)
+              <div className="hidden md:flex items-center space-x-2 rtl:space-x-reverse">
                 <LanguageSwitcher />
                 <ThemeToggle />
                 <Button
-                  className="hidden md:inline-flex"
                   variant="default"
                   onClick={() => {
                     if (typeof window !== 'undefined') {
@@ -222,7 +227,7 @@ const Navbar = () => {
                 >
                   {t('getStarted')}
                 </Button>
-              </>
+              </div>
             )}
           {/* Mobile Menu Button and Sheet */}
           <div className="md:hidden">
@@ -282,27 +287,7 @@ const Navbar = () => {
                         
                         <DropdownMenuSeparator className="my-2"/>
                         
-                        {/* Language and Theme Settings for logged-in users */}
-                        <div className="space-y-3 mb-3">
-                          <div className="flex items-center justify-between px-2 py-2 bg-muted/30 rounded-lg">
-                            <span className="text-sm font-medium">{t('language')}</span>
-                            <LanguageSwitcher />
-                          </div>
-                          <div className="flex items-center justify-between px-2 py-2 bg-muted/30 rounded-lg">
-                            <span className="text-sm font-medium">{t('theme')}</span>
-                            <ThemeToggle />
-                          </div>
-                        </div>
-                        
                         {/* User Menu Items */}
-                        <SheetClose asChild>
-                          <Button variant="outline" className="w-full justify-start h-12 px-4" asChild>
-                            <Link href={`/${locale}/profile`}>
-                              <User className="me-2 h-4 w-4" />
-                              {t('profile')}
-                            </Link>
-                          </Button>
-                        </SheetClose>
                         {userRole === 'admin' && (
                           <SheetClose asChild>
                             <Button variant="outline" className="w-full justify-start h-12 px-4" asChild>
@@ -329,18 +314,6 @@ const Navbar = () => {
                               </Link>
                             </Button>
                           </SheetClose>
-                          
-                          {/* Language and Theme Settings for logged-out users */}
-                          <div className="pt-4 border-t border-border space-y-3">
-                            <div className="flex items-center justify-between">
-                              <span className="text-sm font-medium">{t('language')}</span>
-                              <LanguageSwitcher />
-                            </div>
-                            <div className="flex items-center justify-between">
-                              <span className="text-sm font-medium">{t('theme')}</span>
-                              <ThemeToggle />
-                            </div>
-                          </div>
                        </>
                     )}
                   </div>

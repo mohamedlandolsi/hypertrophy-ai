@@ -1357,33 +1357,7 @@ const ChatPage = () => {
             </div>
 
             {/* Enhanced Footer with User Profile */}
-            <div className="mt-6 pt-5 border-t border-border/50 space-y-4">
-              {/* User Profile Section for Mobile */}
-              {user && isMobile && (
-                <Link href={`/${locale}/profile`} className="block hover:opacity-80 transition-all duration-200">
-                  <div className="flex items-center space-x-3 p-3 rounded-xl glass-input border border-border/50 hover-lift">
-                    <Avatar className="h-10 w-10 shadow-md">
-                      <AvatarImage 
-                        src={user.user_metadata?.avatar_url || user.user_metadata?.picture || "/placeholder-avatar.png"} 
-                        alt="User Avatar" 
-                      />
-                      <AvatarFallback className="bg-gradient-to-br from-blue-500 to-purple-600 text-white font-semibold text-sm">
-                        {user.user_metadata?.full_name?.[0]?.toUpperCase() || user.email?.[0]?.toUpperCase() || 'U'}
-                      </AvatarFallback>
-                    </Avatar>
-                    <div className="flex-1 min-w-0">
-                      <p className="text-sm font-medium text-foreground truncate">
-                        {user.user_metadata?.full_name || user.email?.split('@')[0] || 'User'}
-                      </p>
-                      <p className="text-xs text-muted-foreground truncate">
-                        {t('sidebar.viewProfile')}
-                      </p>
-                    </div>
-                    <User className="h-4 w-4 text-muted-foreground" />
-                  </div>
-                </Link>
-              )}
-              
+            <div className="mt-6 pt-5 border-t border-border/50 space-y-4 pb-6">
               <div className="flex justify-center">
                 <ThemeToggle />
               </div>

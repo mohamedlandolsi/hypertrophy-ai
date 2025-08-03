@@ -922,7 +922,7 @@
       "selectedImage": "Image sélectionnée",
       "offlineWarning": "Vous êtes hors ligne. Vous ne pourrez pas envoyer de nouveaux messages jusqu'à ce que la connexion soit rétablie.",
       "guestMessageWarning": "Plus qu'un message restant ! Inscrivez-vous pour continuer.",
-      "aiThinking": "L'IA réfléchit...",
+      "aiThinking": "HypertroQ réfléchit...",
       "imagePreviewAlt": "Aperçu de l'image sélectionnée"
     },
     "keyboardShortcuts": {
