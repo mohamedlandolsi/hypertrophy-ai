@@ -1,6 +1,6 @@
 'use client'
 
-import React, { useState, useRef } from 'react';
+import React, { useState, useRef, useEffect } from 'react';
 import { useTranslations } from 'next-intl';
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { Button } from "@/components/ui/button";
@@ -12,8 +12,10 @@ import {
   CheckCircle, 
   Loader2,
   ImageIcon,
-  Trash2
+  Trash2,
+  AlertTriangle
 } from "lucide-react";
+import Image from 'next/image';
 import { cn } from "@/lib/utils";
 import { showToast } from "@/lib/toast";
 import {
@@ -26,6 +28,14 @@ import {
   AlertDialogHeader,
   AlertDialogTitle,
 } from "@/components/ui/alert-dialog";
+import {
+  Dialog,
+  DialogContent,
+  DialogDescription,
+  DialogFooter,
+  DialogHeader,
+  DialogTitle,
+} from "@/components/ui/dialog";
 import {
   Tooltip,
   TooltipContent,
@@ -52,6 +62,39 @@ const AVATAR_SIZES = {
 const MAX_FILE_SIZE = 5 * 1024 * 1024; // 5MB
 const ALLOWED_TYPES = ['image/jpeg', 'image/png', 'image/webp', 'image/gif'];
 
+// Utility functions for better user experience
+const formatFileSize = (bytes: number): string => {
+  if (bytes === 0) return '0 Bytes';
+  const k = 1024;
+  const sizes = ['Bytes', 'KB', 'MB', 'GB'];
+  const i = Math.floor(Math.log(bytes) / Math.log(k));
+  return parseFloat((bytes / Math.pow(k, i)).toFixed(2)) + ' ' + sizes[i];
+};
+
+const getFileTypeDisplayName = (mimeType: string): string => {
+  const typeMap: Record<string, string> = {
+    'image/jpeg': 'JPEG',
+    'image/jpg': 'JPEG',
+    'image/png': 'PNG',
+    'image/webp': 'WebP',
+    'image/gif': 'GIF',
+    'image/bmp': 'BMP',
+    'image/tiff': 'TIFF',
+  };
+  return typeMap[mimeType] || mimeType.split('/')[1]?.toUpperCase() || 'Unknown';
+};
+
+const getCompressionSuggestion = (fileSize: number): string => {
+  const oversizeRatio = fileSize / MAX_FILE_SIZE;
+  if (oversizeRatio > 3) {
+    return 'Try using image compression tools or reducing image dimensions significantly.';
+  } else if (oversizeRatio > 2) {
+    return 'Consider compressing the image or reducing its quality.';
+  } else {
+    return 'Try compressing the image slightly to reduce file size.';
+  }
+};
+
 export function EnhancedAvatarUpload({ 
   name, 
   imageUrl, 
@@ -69,28 +112,95 @@ export function EnhancedAvatarUpload({
   const [showDeleteDialog, setShowDeleteDialog] = useState(false);
   const [isDeleting, setIsDeleting] = useState(false);
   const [dragActive, setDragActive] = useState(false);
+  const [dragValidation, setDragValidation] = useState<{ isValid: boolean; message?: string } | null>(null);
+  const [previewFile, setPreviewFile] = useState<File | null>(null);
+  const [previewUrl, setPreviewUrl] = useState<string>('');
+  const [showPreviewDialog, setShowPreviewDialog] = useState(false);
   const fileInputRef = useRef<HTMLInputElement>(null);
 
-  const validateFile = (file: File): string | null => {
+  // Cleanup preview URL on unmount
+  useEffect(() => {
+    return () => {
+      if (previewUrl) {
+        URL.revokeObjectURL(previewUrl);
+      }
+    };
+  }, [previewUrl]);
+
+  const validateFile = (file: File): { isValid: boolean; error?: string; suggestion?: string; details?: string } => {
+    // Check file type
     if (!ALLOWED_TYPES.includes(file.type)) {
-      return 'Please select a valid image file (JPEG, PNG, WebP, or GIF)';
+      return {
+        isValid: false,
+        error: `Invalid file type: ${getFileTypeDisplayName(file.type)}`,
+        suggestion: `Please select a valid image file (${ALLOWED_TYPES.map(getFileTypeDisplayName).join(', ')})`,
+        details: `You uploaded a ${getFileTypeDisplayName(file.type)} file, but only image files are allowed.`
+      };
     }
     
+    // Check file size
     if (file.size > MAX_FILE_SIZE) {
-      return 'File size must be less than 5MB';
+      return {
+        isValid: false,
+        error: `File too large: ${formatFileSize(file.size)}`,
+        suggestion: getCompressionSuggestion(file.size),
+        details: `Maximum allowed size is ${formatFileSize(MAX_FILE_SIZE)}, but your file is ${formatFileSize(file.size)} (${Math.round((file.size / MAX_FILE_SIZE - 1) * 100)}% larger).`
+      };
     }
-    
-    return null;
+
+    // Check if file is too small (might be corrupted)
+    if (file.size < 100) {
+      return {
+        isValid: false,
+        error: 'File appears to be corrupted or empty',
+        suggestion: 'Please try selecting a different image file.',
+        details: `The selected file is only ${formatFileSize(file.size)}, which suggests it may be corrupted.`
+      };
+    }
+
+    return { isValid: true };
   };
 
   const handleFileSelect = (file: File) => {
-    const error = validateFile(file);
-    if (error) {
-      showToast.error(tToasts('invalidFileTitle'), error);
+    const validation = validateFile(file);
+    if (!validation.isValid) {
+      // Show detailed error message with suggestion
+      const errorMessage = validation.details || validation.error || 'Invalid file';
+      const suggestionMessage = validation.suggestion ? `\n\n💡 ${validation.suggestion}` : '';
+      
+      showToast.error(
+        validation.error || tToasts('invalidFileTitle'), 
+        errorMessage + suggestionMessage
+      );
       return;
     }
     
-    uploadFile(file);
+    // For files larger than 2MB, show preview dialog for confirmation
+    if (file.size > 2 * 1024 * 1024) {
+      setPreviewFile(file);
+      const url = URL.createObjectURL(file);
+      setPreviewUrl(url);
+      setShowPreviewDialog(true);
+    } else {
+      // Directly upload smaller files
+      uploadFile(file);
+    }
+  };
+
+  const handleConfirmUpload = () => {
+    if (previewFile) {
+      uploadFile(previewFile);
+    }
+    handleClosePreview();
+  };
+
+  const handleClosePreview = () => {
+    if (previewUrl) {
+      URL.revokeObjectURL(previewUrl);
+    }
+    setPreviewFile(null);
+    setPreviewUrl('');
+    setShowPreviewDialog(false);
   };
 
   const handleFileChange = (e: React.ChangeEvent<HTMLInputElement>) => {
@@ -105,6 +215,7 @@ export function EnhancedAvatarUpload({
   const handleDrop = (e: React.DragEvent) => {
     e.preventDefault();
     setDragActive(false);
+    setDragValidation(null);
     
     const file = e.dataTransfer.files?.[0];
     if (file) {
@@ -115,11 +226,35 @@ export function EnhancedAvatarUpload({
   const handleDragOver = (e: React.DragEvent) => {
     e.preventDefault();
     setDragActive(true);
+    
+    // Check if we can validate the file during drag
+    const items = Array.from(e.dataTransfer.items);
+    const imageItem = items.find(item => item.type.startsWith('image/'));
+    
+    if (imageItem) {
+      if (!ALLOWED_TYPES.includes(imageItem.type)) {
+        setDragValidation({
+          isValid: false,
+          message: `${getFileTypeDisplayName(imageItem.type)} not supported`
+        });
+      } else {
+        setDragValidation({
+          isValid: true,
+          message: `${getFileTypeDisplayName(imageItem.type)} - Ready to drop`
+        });
+      }
+    } else {
+      setDragValidation({
+        isValid: false,
+        message: 'Please drop an image file'
+      });
+    }
   };
 
   const handleDragLeave = (e: React.DragEvent) => {
     e.preventDefault();
     setDragActive(false);
+    setDragValidation(null);
   };
 
   const uploadFile = async (file: File) => {
@@ -260,12 +395,31 @@ export function EnhancedAvatarUpload({
             <div className={cn(
               "absolute inset-0 bg-black/60 rounded-full flex flex-col items-center justify-center transition-opacity duration-200",
               "backdrop-blur-sm",
-              (isHovered || dragActive) && !isUploading ? "opacity-100" : "opacity-0"
+              (isHovered || dragActive) && !isUploading ? "opacity-100" : "opacity-0",
+              dragValidation && !dragValidation.isValid && "bg-red-600/70"
             )}>
               {dragActive ? (
                 <>
-                  <Upload className="w-6 h-6 text-white mb-1" />
-                  <span className="text-white text-xs font-medium">{t('dropHere')}</span>
+                  {dragValidation ? (
+                    <>
+                      {dragValidation.isValid ? (
+                        <CheckCircle className="w-6 h-6 text-green-300 mb-1" />
+                      ) : (
+                        <AlertTriangle className="w-6 h-6 text-red-300 mb-1" />
+                      )}
+                      <span className={cn(
+                        "text-xs font-medium text-center px-2",
+                        dragValidation.isValid ? "text-green-200" : "text-red-200"
+                      )}>
+                        {dragValidation.message}
+                      </span>
+                    </>
+                  ) : (
+                    <>
+                      <Upload className="w-6 h-6 text-white mb-1" />
+                      <span className="text-white text-xs font-medium">{t('dropHere')}</span>
+                    </>
+                  )}
                 </>
               ) : (
                 <>
@@ -362,18 +516,117 @@ export function EnhancedAvatarUpload({
             </div>
 
             {/* File Requirements */}
-            <div className="text-center">
-              <p className="text-xs text-muted-foreground">
-                {t('fileRequirements')}
-              </p>
+            <div className="text-center space-y-1">
+              <div className="text-xs text-muted-foreground">
+                <p>Supported: {ALLOWED_TYPES.map(getFileTypeDisplayName).join(', ')}</p>
+                <p>Maximum size: <span className="font-medium text-foreground">{formatFileSize(MAX_FILE_SIZE)}</span></p>
+              </div>
               {allowEdit && (
-                <p className="text-xs text-muted-foreground mt-1">
+                <p className="text-xs text-muted-foreground">
                   {t('dragDropText')}
                 </p>
               )}
             </div>
           </div>
         )}
+
+        {/* File Preview Dialog */}
+        <Dialog open={showPreviewDialog} onOpenChange={setShowPreviewDialog}>
+          <DialogContent className="sm:max-w-md">
+            <DialogHeader>
+              <DialogTitle className="flex items-center gap-2">
+                <ImageIcon className="w-5 h-5" />
+                Upload Preview
+              </DialogTitle>
+              <DialogDescription>
+                Review your image before uploading
+              </DialogDescription>
+            </DialogHeader>
+            
+            {previewFile && (
+              <div className="space-y-4">
+                {/* Image Preview */}
+                <div className="flex justify-center">
+                  <div className="relative">
+                    <Image 
+                      src={previewUrl} 
+                      alt="Upload preview" 
+                      width={300}
+                      height={192}
+                      className="max-w-full max-h-48 rounded-lg object-contain border"
+                    />
+                  </div>
+                </div>
+                
+                {/* File Details */}
+                <div className="bg-muted/30 rounded-lg p-3 space-y-2">
+                  <div className="grid grid-cols-2 gap-2 text-sm">
+                    <div>
+                      <span className="text-muted-foreground">File name:</span>
+                      <p className="font-medium truncate">{previewFile.name}</p>
+                    </div>
+                    <div>
+                      <span className="text-muted-foreground">File type:</span>
+                      <p className="font-medium">{getFileTypeDisplayName(previewFile.type)}</p>
+                    </div>
+                    <div>
+                      <span className="text-muted-foreground">File size:</span>
+                      <p className="font-medium">{formatFileSize(previewFile.size)}</p>
+                    </div>
+                    <div>
+                      <span className="text-muted-foreground">Status:</span>
+                      <p className={cn(
+                        "font-medium flex items-center gap-1",
+                        previewFile.size > 3 * 1024 * 1024 ? "text-orange-600" : "text-green-600"
+                      )}>
+                        {previewFile.size > 3 * 1024 * 1024 ? (
+                          <>
+                            <AlertTriangle className="w-3 h-3" />
+                            Large file
+                          </>
+                        ) : (
+                          <>
+                            <CheckCircle className="w-3 h-3" />
+                            Optimal size
+                          </>
+                        )}
+                      </p>
+                    </div>
+                  </div>
+                  
+                  {/* Size Warning */}
+                  {previewFile.size > 3 * 1024 * 1024 && (
+                    <div className="mt-2 p-2 bg-orange-50 dark:bg-orange-950/20 rounded border border-orange-200 dark:border-orange-800">
+                      <p className="text-sm text-orange-700 dark:text-orange-300">
+                        <AlertTriangle className="w-4 h-4 inline mr-1" />
+                        This file is larger than recommended. Consider compressing it for faster uploads.
+                      </p>
+                    </div>
+                  )}
+                </div>
+              </div>
+            )}
+            
+            <DialogFooter>
+              <Button variant="outline" onClick={handleClosePreview}>
+                Cancel
+              </Button>
+              <Button onClick={handleConfirmUpload} disabled={isUploading}>
+                {isUploading ? (
+                  <>
+                    <Loader2 className="w-4 h-4 mr-2 animate-spin" />
+                    Uploading...
+                  </>
+                ) : (
+                  <>
+                    <Upload className="w-4 h-4 mr-2" />
+                    Upload Image
+                  </>
+                )}
+              </Button>
+            </DialogFooter>
+          </DialogContent>
+        </Dialog>
 
         {/* Delete Confirmation Dialog */}
         <AlertDialog open={showDeleteDialog} onOpenChange={setShowDeleteDialog}>

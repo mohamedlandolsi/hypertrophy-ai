@@ -120,9 +120,9 @@ const ArrayInput = ({
   };
 
   return (
-    <div className="space-y-3">
+    <div className="space-y-1">
       <Label className="text-sm font-medium">{label}</Label>
-      <div className="flex flex-wrap gap-2 mb-3">
+      <div className="flex flex-wrap gap-2 mb-2">
         {value.map((item, index) => (
           <Badge key={index} variant="secondary" className="flex items-center gap-1 px-3 py-1">
             {item}
@@ -344,7 +344,7 @@ export default function EnhancedProfileForm() {
               </CardDescription>
             </CardHeader>
             <CardContent className="space-y-4">
-              <div>
+              <div className="space-y-2">
                 <Label htmlFor="name">{t('sections.personalInfo.name')}</Label>
                 <Input
                   id="name"
@@ -492,7 +492,7 @@ export default function EnhancedProfileForm() {
               options={experienceOptions}
             />
 
-            <div>
+            <div className="space-y-2">
               <Label htmlFor="trainingStructure">{t('sections.goals.trainingStructure')}</Label>
               <Select value={formData.trainingStructureType || ''} onValueChange={(value) => updateField('trainingStructureType', value)}>
                 <SelectTrigger>
@@ -571,7 +571,7 @@ export default function EnhancedProfileForm() {
               {t('sections.health.description')}
             </CardDescription>
           </CardHeader>
-          <CardContent className="space-y-4">
+          <CardContent className="space-y-3">
             <ArrayInput
               label={t('labels.injuries')}
               value={formData.injuries || []}
@@ -637,7 +637,7 @@ export default function EnhancedProfileForm() {
               {t('sections.environment.description')}
             </CardDescription>
           </CardHeader>
-          <CardContent className="space-y-6">
+          <CardContent className="space-y-4">
             <div className="space-y-4">
               <Label>{t('labels.trainingLocation')}</Label>
               <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
@@ -707,7 +707,7 @@ export default function EnhancedProfileForm() {
               {t('sections.lifestyle.description')}
             </CardDescription>
           </CardHeader>
-          <CardContent className="p-6 space-y-6">
+          <CardContent className="p-6 space-y-4">
             <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
               <StepperInput
                 label={t('labels.averageSleepHours')}
