@@ -86,12 +86,21 @@ export async function POST(request: NextRequest) {
 
     logger.info('Received conversationId from frontend:', { conversationId, userId: user?.id, messageLength: message?.length });
 
-    // Validate required fields
+    // Validate required fields - allow empty message if images are present
     if (!message || typeof message !== 'string') {
-      throw new ValidationError('Message is required and must be a non-empty string', 'message');
+      // Check if we have images - if so, allow empty message
+      if (imageBuffers.length === 0) {
+        throw new ValidationError('Message is required and must be a non-empty string', 'message');
+      }
     }
 
-    if (message.length > 2000) {
+    // Trim the message and check if we have content (text or images)
+    const trimmedMessage = message?.trim() || '';
+    if (trimmedMessage.length === 0 && imageBuffers.length === 0) {
+      throw new ValidationError('Either a message or an image is required', 'content');
+    }
+
+    if (message && message.length > 2000) {
       throw new ValidationError('Message is too long (maximum 2000 characters)', 'message');
     }
 
@@ -208,7 +217,7 @@ export async function POST(request: NextRequest) {
     
     const userMessage = await prisma.message.create({
       data: {
-        content: message,
+        content: trimmedMessage || (imageBuffers.length > 0 ? '[Image]' : ''),
         role: 'USER',
         chatId: chatId as string,
         imageData: imageDataToStore,
