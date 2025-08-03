@@ -77,7 +77,7 @@ async function manageUserPlans() {
       console.log('\n🎯 High Usage FREE Users (Upgrade Candidates):');
       console.log('─'.repeat(50));
       highUsageFreeUsers.forEach(user => {
-        console.log(`• ${user.id.slice(-8)} - ${user.messagesUsedToday}/15 messages used`);
+        console.log(`• ${user.id.slice(-8)} - ${user.messagesUsedToday}/5 messages used`);
       });
     }
 

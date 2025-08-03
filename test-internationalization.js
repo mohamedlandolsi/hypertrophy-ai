@@ -110,9 +110,9 @@ function testMessageInterpolation() {
       key: 'Subscription.messagesUsed',
       params: { used: '12', limit: '15' },
       expected: {
-        en: '12 of 15 messages used today',
+        en: '3 of 5 messages used today',
         ar: 'تم استخدام 12 من 15 رسالة اليوم',
-        fr: '12 sur 15 messages utilisés aujourd\'hui'
+        fr: '3 sur 5 messages utilisés aujourd\'hui'
       }
     }
   ];

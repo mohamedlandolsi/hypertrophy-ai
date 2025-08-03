@@ -393,7 +393,7 @@ export default function ProfilePage() {
                       </div>
                       <div className="text-center p-4 bg-gradient-to-br from-green-50 to-green-100 dark:from-green-950 dark:to-green-900 rounded-xl border border-green-200 dark:border-green-800">
                         <div className="text-2xl font-bold text-green-700 dark:text-green-300">
-                          {userPlan?.plan === 'PRO' ? '∞' : Math.max(0, (userPlan?.dailyLimit || 15) - (userPlan?.messagesUsedToday || 0))}
+                          {userPlan?.plan === 'PRO' ? '∞' : Math.max(0, (userPlan?.dailyLimit || 5) - (userPlan?.messagesUsedToday || 0))}
                         </div>
                         <div className="text-sm text-green-600 dark:text-green-400 font-medium">
                           {t('todaysProgress.remaining')}

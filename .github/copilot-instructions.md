@@ -10,7 +10,7 @@
 - **AI Configuration**: Admin-controlled system prompts and model parameters (singleton pattern)
 - **Authentication**: Supabase Auth with role-based access (user/admin) + onboarding flow
 - **File Processing**: Multi-format support (PDF, DOC, TXT, MD) with semantic chunking
-- **Subscription System**: FREE (15 msgs/day) vs PRO (unlimited) with Lemon Squeezy integration
+- **Subscription System**: FREE (5 msgs/day) vs PRO (unlimited) with Lemon Squeezy integration
 - **Internationalization**: Full i18n support with next-intl for Arabic RTL, French, and English
 - **Performance Optimization**: Comprehensive caching, component optimization, and loading enhancements
 - **Modern UI**: Glassmorphism design with animations, gradients, and responsive mobile UX
@@ -211,14 +211,14 @@ const [selectedImages, setSelectedImages] = useState<File[]>([]);
 
 ### 10. Subscription System (`/src/lib/subscription.ts`)
 ```typescript
-// Two-tier system: FREE (15 msgs/day) vs PRO (unlimited)
+// Two-tier system: FREE (5 msgs/day) vs PRO (unlimited)
 const planInfo = await getUserPlan()
 await canUserSendMessage() // Check daily limits
 await incrementUserMessageCount() // Track usage
 await canUserUploadFile(fileSizeInMB) // File size and monthly limits
 await canUserCreateKnowledgeItem() // Knowledge base limits
 ```
-- **FREE tier**: 15 messages/day, 5 uploads/month, 10 knowledge items max, 10MB files
+- **FREE tier**: 5 messages/day, 5 uploads/month, 10 knowledge items max, 10MB files
 - **PRO tier**: Unlimited messages, uploads, knowledge items, 100MB files  
 - **Billing intervals**: Monthly ($9.99/month) and Yearly ($99.99/year, 58% savings)
 - **Daily usage tracking** with automatic reset at midnight

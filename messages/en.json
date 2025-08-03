@@ -143,10 +143,10 @@
     "finalCta": {
       "title": "Ready to Stop Guessing and Start Growing?",
       "subtitle": "Get access to your science-backed fitness coaching platform today",
-      "freeMessages": "15 free messages to try HypertroQ - no credit card required",
+      "freeMessages": "5 free messages to try HypertroQ - no credit card required",
       "viewPricing": "View Pricing",
       "getStartedFree": "Get Started Free",
-      "instantAccess": "Start chatting instantly • No credit card required • 15 free messages"
+      "instantAccess": "Start chatting instantly • No credit card required • 5 free messages"
     }
   },
   "Chat": {
@@ -191,7 +191,7 @@
       "price": "$0",
       "period": "/month",
       "features": [
-        "15 messages per day",
+        "5 messages per day",
         "Basic AI fitness guidance",
         "Access to knowledge base", 
         "Standard response time"
@@ -244,11 +244,11 @@
         },
         {
           "question": "What happens to my data if I downgrade?",
-          "answer": "Your conversation history and progress data are safely stored. You'll just be limited to 15 messages per day on the free plan."
+          "answer": "Your conversation history and progress data are safely stored. You'll just be limited to 5 messages per day on the free plan."
         },
         {
           "question": "Is there a free trial?",
-          "answer": "Every new user starts with our free plan which includes 15 messages per day. You can upgrade to Pro anytime to unlock unlimited access."
+          "answer": "Every new user starts with our free plan which includes 5 messages per day. You can upgrade to Pro anytime to unlock unlimited access."
         }
       ]
     }
@@ -319,7 +319,7 @@
         "unlockUnlimited": "Unlock unlimited messages and advanced features",
         "freePlanIncludes": "Free Plan Includes:",
         "freeFeatures": {
-          "dailyMessages": "15 messages per day",
+          "dailyMessages": "5 messages per day",
           "basicGuidance": "Basic AI guidance",
           "knowledgeAccess": "Access to knowledge base"
         }
@@ -386,7 +386,7 @@
         "freePlan": {
           "title": "Free",
           "current": "Current",
-          "messages": "15 messages/day",
+          "messages": "5 messages/day",
           "noMemory": "No conversation memory",
           "noTracking": "No progress tracking",
           "noAdvanced": "No advanced features"

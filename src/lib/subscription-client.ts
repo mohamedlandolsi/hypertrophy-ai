@@ -13,7 +13,7 @@ export interface UserPlanLimits {
 
 export const PLAN_LIMITS: Record<UserPlan, UserPlanLimits> = {
   FREE: {
-    dailyMessages: 15,
+    dailyMessages: 5,
     hasConversationMemory: false,
     canAccessProFeatures: false,
   },

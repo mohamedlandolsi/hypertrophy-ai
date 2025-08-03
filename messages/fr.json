@@ -143,10 +143,10 @@
     "finalCta": {
       "title": "Prêt à Arrêter de Deviner et Commencer à Grandir ?",
       "subtitle": "Accédez à votre plateforme de coaching fitness soutenue par la science aujourd'hui",
-      "freeMessages": "15 messages gratuits pour essayer HypertroQ - aucune carte de crédit requise",
+      "freeMessages": "5 messages gratuits pour essayer HypertroQ - aucune carte de crédit requise",
       "viewPricing": "Voir les Tarifs",
       "getStartedFree": "Commencer Gratuitement",
-      "instantAccess": "Commencez à chatter instantanément • Aucune carte de crédit requise • 15 messages gratuits"
+      "instantAccess": "Commencez à chatter instantanément • Aucune carte de crédit requise • 5 messages gratuits"
     }
   },
   "Chat": {
@@ -189,7 +189,7 @@
       "price": "0€",
       "period": "/mois",
       "features": [
-        "15 messages par jour",
+        "5 messages par jour",
         "Conseils fitness IA de base",
         "Accès à la base de connaissances",
         "Temps de réponse standard"
@@ -242,11 +242,11 @@
         },
         {
           "question": "Qu'arrive-t-il à mes données si je rétrograde ?",
-          "answer": "Votre historique de conversation et données de progrès sont stockés en sécurité. Vous serez juste limité à 15 messages par jour sur le plan gratuit."
+          "answer": "Votre historique de conversation et données de progrès sont stockés en sécurité. Vous serez juste limité à 5 messages par jour sur le plan gratuit."
         },
         {
           "question": "Y a-t-il un essai gratuit ?",
-          "answer": "Chaque nouvel utilisateur commence avec notre plan gratuit qui inclut 15 messages par jour. Vous pouvez passer à Pro à tout moment pour débloquer l'accès illimité."
+          "answer": "Chaque nouvel utilisateur commence avec notre plan gratuit qui inclut 5 messages par jour. Vous pouvez passer à Pro à tout moment pour débloquer l'accès illimité."
         }
       ]
     }
@@ -317,7 +317,7 @@
         "unlockUnlimited": "Débloquez les messages illimités et les fonctionnalités avancées",
         "freePlanIncludes": "Le Plan Gratuit Inclut :",
         "freeFeatures": {
-          "dailyMessages": "15 messages par jour",
+          "dailyMessages": "5 messages par jour",
           "basicGuidance": "Guidance IA basique",
           "knowledgeAccess": "Accès à la base de connaissances"
         }
@@ -384,7 +384,7 @@
         "freePlan": {
           "title": "Gratuit",
           "current": "Actuel",
-          "messages": "15 messages/jour",
+          "messages": "5 messages/jour",
           "noMemory": "Pas de mémoire de conversation",
           "noTracking": "Pas de suivi de progression",
           "noAdvanced": "Pas de fonctionnalités avancées"

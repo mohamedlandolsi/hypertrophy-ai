@@ -120,7 +120,7 @@ async function testSubscriptionTiers() {
 
     console.log('\n🎉 All subscription tier tests passed!');
     console.log('\n📋 Summary of implemented features:');
-    console.log('   • FREE tier: 15 messages/day, no conversation memory');
+    console.log('   • FREE tier: 5 messages/day, no conversation memory');
     console.log('   • PRO tier: Unlimited messages, full conversation memory');
     console.log('   • Daily message tracking and reset');
     console.log('   • Subscription management with Lemon Squeezy integration');

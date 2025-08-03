@@ -121,7 +121,7 @@ export default function PricingPage() {
     <>
       <Head>
         <title>Pricing Plans - Choose Your Fitness Journey | HypertroQ</title>
-        <meta name="description" content="Transform your fitness goals with HypertroQ's AI-powered coaching. Start free with 15 daily messages or upgrade to Pro for unlimited coaching, conversation memory, and personalized training plans." />
+        <meta name="description" content="Transform your fitness goals with HypertroQ's AI-powered coaching. Start free with 5 daily messages or upgrade to Pro for unlimited coaching, conversation memory, and personalized training plans." />
         <meta name="keywords" content="fitness coaching pricing, AI personal trainer cost, fitness app subscription, personal training plans, workout coaching rates" />
         <link rel="canonical" href="https://hypertroq.com/pricing" />
         <script
@@ -137,7 +137,7 @@ export default function PricingPage() {
                     name: 'Free Plan',
                     price: '0',
                     priceCurrency: 'USD',
-                    description: '15 messages per day, basic AI guidance',
+                    description: '5 messages per day, basic AI guidance',
                   },
                   {
                     '@type': 'Offer',
