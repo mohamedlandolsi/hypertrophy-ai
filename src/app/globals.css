@@ -542,31 +542,49 @@
     overflow: hidden;
   }
   
+  /* Mobile main chat area - ensure proper layout */
+  .mobile-chat-main-area {
+    height: 100vh;
+    height: 100dvh;
+    display: flex;
+    flex-direction: column;
+  }
+  
   /* Mobile input area positioning - Simplified for keyboard handling */
   .mobile-input-area {
     position: fixed;
     bottom: 0;
     left: 0;
     right: 0;
-    z-index: 1000;
+    z-index: 100; /* Reduced z-index to prevent interference */
     margin: 0;
-    /* Remove all padding that could cause gaps */
-    padding-bottom: 0;
-    /* Ensure no extra spacing */
+    /* Set minimum height for the input area */
+    min-height: 100px; /* Reduced minimum height */
+    max-height: 50vh; /* Keep max for image previews */
+    /* Padding for safe area */
+    padding-bottom: env(safe-area-inset-bottom, 8px);
+    /* Border handling */
     border-bottom: none;
-    /* Use simple viewport constraint */
-    max-height: 40vh;
-    /* Ensure it sticks to the bottom edge regardless of keyboard */
-    transform: translateZ(0); /* Hardware acceleration for smoother positioning */
+    /* Smooth positioning */
+    transform: translateZ(0);
+    /* Enhanced background for better visibility */
+    background: rgba(var(--background), 0.98);
+    backdrop-filter: blur(16px);
+    border-top: 1px solid rgba(var(--border), 0.2);
   }
   
   /* Message area optimized for mobile keyboard */
   .mobile-message-area {
-    padding-bottom: 200px; /* Increased padding for better clearance with image previews */
+    /* Use full height and rely on padding instead of calculated heights */
     height: 100vh;
-    height: 100dvh; /* Dynamic viewport height adjusts automatically for keyboard */
+    height: 100dvh;
+    padding-bottom: 140px; /* Space for input area + extra buffer */
+    padding-top: 64px; /* Space for fixed header */
     overflow-y: auto;
     overflow-x: hidden;
+    /* Ensure proper scrolling behavior */
+    scroll-padding-bottom: 40px;
+    /* Remove margin that was blocking scroll */
   }
   
   /* Better mobile chat bubbles */

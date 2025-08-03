@@ -246,18 +246,54 @@ const ChatPage = () => {
   // Auto-scroll to bottom when messages change
   useEffect(() => {
     if (messagesEndRef.current) {
-      // Small delay to ensure the DOM has updated
-      const timeoutId = setTimeout(() => {
+      // Multiple attempts with increasing delays to ensure layout has settled
+      const scrollToBottom = () => {
+        const container = document.querySelector('.mobile-message-area') || messagesEndRef.current?.parentElement;
+        if (container) {
+          container.scrollTop = container.scrollHeight;
+        }
+        // Fallback to scrollIntoView
         messagesEndRef.current?.scrollIntoView({ 
           behavior: 'smooth',
           block: 'end',
           inline: 'nearest'
         });
-      }, 100);
+      };
+      
+      // Immediate scroll
+      scrollToBottom();
+      
+      // Additional scroll attempts to handle layout changes
+      const timeoutId1 = setTimeout(scrollToBottom, 50);
+      const timeoutId2 = setTimeout(scrollToBottom, 150);
+      const timeoutId3 = setTimeout(scrollToBottom, 300);
+      
+      return () => {
+        clearTimeout(timeoutId1);
+        clearTimeout(timeoutId2);
+        clearTimeout(timeoutId3);
+      };
+    }
+  }, [messages, isLoading]);
+
+  // Additional scroll when images change (affects input area height)
+  useEffect(() => {
+    if (messagesEndRef.current && selectedImages.length > 0) {
+      const timeoutId = setTimeout(() => {
+        const container = document.querySelector('.mobile-message-area') || messagesEndRef.current?.parentElement;
+        if (container) {
+          container.scrollTop = container.scrollHeight;
+        }
+        messagesEndRef.current?.scrollIntoView({ 
+          behavior: 'smooth',
+          block: 'end',
+          inline: 'nearest'
+        });
+      }, 200);
       
       return () => clearTimeout(timeoutId);
     }
-  }, [messages, isLoading]);
+  }, [selectedImages.length]);
 
   // Custom submit handler - updated for multiple images
   const sendMessage = useCallback(async (messageText: string, imageFiles?: File[]) => {
@@ -1344,7 +1380,7 @@ const ChatPage = () => {
           </div>
         )}
       </div>      {/* Main Chat Area */}
-      <div className={`flex-1 flex flex-col bg-background relative min-w-0 ${isMobile && isSidebarOpen ? 'pointer-events-none' : ''}`}>
+      <div className={`flex-1 flex flex-col bg-background relative min-w-0 ${isMobile && isSidebarOpen ? 'pointer-events-none' : ''} ${isMobile ? 'mobile-chat-main-area' : ''}`}>
         {/* Enhanced Header with Glassmorphism - Sticky on Mobile */}
         <div className={`
           p-3 md:p-4 flex items-center justify-between h-14 md:h-16 flex-shrink-0 glass-header 
@@ -1490,7 +1526,7 @@ const ChatPage = () => {
 
         {/* Enhanced Chat Messages Area - Account for fixed header on mobile */}
         <div 
-          className={`flex-1 overflow-y-auto message-area w-full ${messages.length === 0 ? 'flex items-center justify-center' : ''} ${isMobile ? 'pt-16 mobile-message-area' : ''}`}
+          className={`flex-1 overflow-y-auto message-area w-full ${messages.length === 0 ? 'flex items-center justify-center' : ''} ${isMobile ? 'mobile-message-area' : ''}`}
           onScroll={handleScroll}
         >
           {/* Offline warning banner */}
@@ -1599,11 +1635,11 @@ const ChatPage = () => {
           </div>
         </div>
 
-        {/* Enhanced Chat Input Area - Sticky on Mobile */}
+        {/* Enhanced Chat Input Area - Flex child for proper layout */}
         <div 
           className={`
-            ${messages.length === 0 ? 'relative' : isMobile ? 'mobile-input-area' : 'absolute left-0 right-0 bottom-0'} 
-            ${isMobile && messages.length > 0 ? 'p-2 pt-2 pb-0' : 'p-2 md:p-4'}
+            flex-shrink-0
+            ${isMobile && messages.length > 0 ? 'mobile-input-area' : 'p-2 md:p-4'}
             ${messages.length > 0 ? 'bg-background/95 backdrop-blur-lg border-t border-border/30' : ''}
           `}
         >

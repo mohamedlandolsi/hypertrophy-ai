@@ -11,7 +11,7 @@ The chat page had a `messagesEndRef` being used in the JSX but wasn't properly d
 
 ## Solution Applied
 
-### 1. Added Auto-Scroll Functionality
+### 1. Enhanced Auto-Scroll Functionality
 **File**: `src/app/[locale]/chat/page.tsx`
 
 - **Added `messagesEndRef` declaration**: Properly declared the ref for the end of messages
@@ -19,51 +19,87 @@ The chat page had a `messagesEndRef` being used in the JSX but wasn't properly d
   const messagesEndRef = useRef<HTMLDivElement>(null);
   ```
 
-- **Implemented auto-scroll useEffect**: Added smooth scrolling when messages or loading state changes
+- **Implemented aggressive auto-scroll**: Multiple scroll attempts to handle layout changes
   ```tsx
   // Auto-scroll to bottom when messages change
   useEffect(() => {
     if (messagesEndRef.current) {
-      // Small delay to ensure the DOM has updated
+      // Multiple attempts with increasing delays to ensure layout has settled
+      const scrollToBottom = () => {
+        messagesEndRef.current?.scrollIntoView({ 
+          behavior: 'smooth',
+          block: 'end',
+          inline: 'nearest'
+        });
+      };
+      
+      // Immediate scroll + delayed attempts
+      scrollToBottom();
+      const timeoutId1 = setTimeout(scrollToBottom, 50);
+      const timeoutId2 = setTimeout(scrollToBottom, 150);
+      const timeoutId3 = setTimeout(scrollToBottom, 300);
+      
+      return () => {
+        clearTimeout(timeoutId1);
+        clearTimeout(timeoutId2);
+        clearTimeout(timeoutId3);
+      };
+    }
+  }, [messages, isLoading]);
+  ```
+
+- **Added image-specific scroll handling**: Scrolls when images are added/removed
+  ```tsx
+  // Additional scroll when images change (affects input area height)
+  useEffect(() => {
+    if (messagesEndRef.current && selectedImages.length > 0) {
       const timeoutId = setTimeout(() => {
         messagesEndRef.current?.scrollIntoView({ 
           behavior: 'smooth',
           block: 'end',
           inline: 'nearest'
         });
-      }, 100);
+      }, 200);
       
       return () => clearTimeout(timeoutId);
     }
-  }, [messages, isLoading]);
+  }, [selectedImages.length]);
   ```
 
-### 2. Improved Mobile Layout Spacing
+### 2. Significantly Improved Mobile Layout
 **File**: `src/app/globals.css`
 
-- **Increased mobile bottom padding**: Extended from 160px to 200px to provide better clearance
+- **Increased mobile input area height**: Extended max-height for better image preview support
+  ```css
+  .mobile-input-area {
+    max-height: 50vh; /* Increased from 40vh */
+    /* ... other properties */
+  }
+  ```
+
+- **Enhanced mobile message area spacing**: Much larger padding with safe area support
   ```css
   .mobile-message-area {
-    padding-bottom: 200px; /* Increased padding for better clearance with image previews */
-    height: 100vh;
-    height: 100dvh; /* Dynamic viewport height adjusts automatically for keyboard */
-    overflow-y: auto;
-    overflow-x: hidden;
+    padding-bottom: max(280px, env(safe-area-inset-bottom, 0px) + 200px);
+    scroll-padding-bottom: 100px; /* Additional scroll padding */
+    /* ... other properties */
   }
   ```
 
 ## Technical Details
 
 ### Auto-Scroll Behavior
-- **Triggers**: Activates when `messages` array or `isLoading` state changes
-- **Timing**: 100ms delay ensures DOM updates are complete before scrolling
+- **Multi-Stage Triggers**: Immediate scroll + delayed attempts at 50ms, 150ms, and 300ms
+- **Layout Adaptation**: Handles dynamic layout changes from image previews
+- **Image-Specific Scrolling**: Additional scroll triggers when images are added/removed
 - **Animation**: Smooth scroll behavior for better user experience
 - **Positioning**: Scrolls to the end with `block: 'end'` for proper alignment
 
 ### Mobile Layout Improvements
-- **Enhanced Clearance**: 200px bottom padding accommodates image previews and keyboard
-- **Dynamic Height**: Uses `100dvh` for better mobile keyboard handling
-- **Overflow Management**: Maintains proper scrolling behavior
+- **Massive Clearance**: 280px minimum padding, with safe area support for modern devices
+- **Dynamic Input Area**: 50vh max-height accommodates large image previews
+- **Scroll Padding**: Additional 100px scroll-padding-bottom prevents content cutoff
+- **Safe Area Support**: Uses `env(safe-area-inset-bottom)` for notched devices
 
 ## Benefits
 1. **Automatic Message Visibility**: New messages always scroll into view
