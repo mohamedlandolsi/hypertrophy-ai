@@ -562,7 +562,7 @@
   
   /* Message area optimized for mobile keyboard */
   .mobile-message-area {
-    padding-bottom: 160px; /* Increased padding for better keyboard clearance */
+    padding-bottom: 200px; /* Increased padding for better clearance with image previews */
     height: 100vh;
     height: 100dvh; /* Dynamic viewport height adjusts automatically for keyboard */
     overflow-y: auto;

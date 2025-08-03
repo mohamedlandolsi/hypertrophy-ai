@@ -57,18 +57,18 @@ export function MessageLimitIndicator({
 
       {/* Warning/Limit Messages */}
       {isAtLimit && (
-        <Alert className="border-red-200 bg-red-50">
-          <AlertTriangle className="h-4 w-4 text-red-600" />
-          <AlertDescription className="text-red-800">
+        <Alert className="border-red-200 bg-red-50 dark:border-red-800 dark:bg-red-950/20">
+          <AlertTriangle className="h-4 w-4 text-red-600 dark:text-red-400" />
+          <AlertDescription className="text-red-800 dark:text-red-200">
             You&apos;ve reached your daily message limit. Upgrade to Pro for unlimited messages.
           </AlertDescription>
         </Alert>
       )}
 
       {isNearLimit && !isAtLimit && (
-        <Alert className="border-amber-200 bg-amber-50">
-          <AlertTriangle className="h-4 w-4 text-amber-600" />
-          <AlertDescription className="text-amber-800">
+        <Alert className="border-amber-200 bg-amber-50 dark:border-amber-800 dark:bg-amber-950/20">
+          <AlertTriangle className="h-4 w-4 text-amber-600 dark:text-amber-400" />
+          <AlertDescription className="text-amber-800 dark:text-amber-200">
             You&apos;re running low on messages. Only {messagesRemaining} left today.
           </AlertDescription>
         </Alert>
@@ -76,9 +76,9 @@ export function MessageLimitIndicator({
 
       {/* Upgrade CTA */}
       {(isAtLimit || isNearLimit) && (
-        <div className="flex flex-col gap-2 p-3 bg-gradient-to-r from-blue-50 to-purple-50 rounded-lg border">
-          <div className="flex items-center gap-2 text-sm font-medium">
-            <Crown className="h-4 w-4 text-yellow-500" />
+        <div className="flex flex-col gap-2 p-3 bg-gradient-to-r from-blue-50 to-purple-50 dark:from-blue-950/20 dark:to-purple-950/20 rounded-lg border border-border">
+          <div className="flex items-center gap-2 text-sm font-medium text-foreground">
+            <Crown className="h-4 w-4 text-yellow-500 dark:text-yellow-400" />
             Unlock unlimited messaging
           </div>
           <div className="text-xs text-muted-foreground mb-2">

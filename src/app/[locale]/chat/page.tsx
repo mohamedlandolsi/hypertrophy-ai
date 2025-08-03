@@ -148,6 +148,7 @@ const ChatPage = () => {
   const userPlanRef = useRef(userPlan);
   const selectedImagesRef = useRef(selectedImages);
   const messagesRef = useRef(messages);
+  const messagesEndRef = useRef<HTMLDivElement>(null);
   const refetchUserPlanRef = useRef(refetchUserPlan);
   const refetchChatHistoryRef = useRef(refetchChatHistory);
 
@@ -241,6 +242,22 @@ const ChatPage = () => {
       };
     }
   }, [isMobile]);
+
+  // Auto-scroll to bottom when messages change
+  useEffect(() => {
+    if (messagesEndRef.current) {
+      // Small delay to ensure the DOM has updated
+      const timeoutId = setTimeout(() => {
+        messagesEndRef.current?.scrollIntoView({ 
+          behavior: 'smooth',
+          block: 'end',
+          inline: 'nearest'
+        });
+      }, 100);
+      
+      return () => clearTimeout(timeoutId);
+    }
+  }, [messages, isLoading]);
 
   // Custom submit handler - updated for multiple images
   const sendMessage = useCallback(async (messageText: string, imageFiles?: File[]) => {
@@ -419,8 +436,6 @@ const ChatPage = () => {
     }
     return theme === 'dark' ? "/logo-dark.png" : "/logo.png";
   };
-
-  const messagesEndRef = useRef<HTMLDivElement | null>(null);
 
   // Mounted effect for theme
   useEffect(() => {

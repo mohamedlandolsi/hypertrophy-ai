@@ -74,7 +74,10 @@ export async function POST(request: NextRequest) {
     
     console.log("✅ Parsed Body:", body);
     
-    const { conversationId, message, isGuest = false } = body;
+    const { conversationId: rawConversationId, message, isGuest = false } = body;
+    
+    // Properly handle empty conversationId (treat empty string as null/undefined)
+    const conversationId = rawConversationId && rawConversationId.trim() !== '' ? rawConversationId : undefined;
 
     console.log("🧠 conversationId:", conversationId);
     console.log("👤 userId:", user?.id);
@@ -139,6 +142,9 @@ export async function POST(request: NextRequest) {
     // If conversationId is provided, fetch existing messages
     if (conversationId) {
       console.log("🔍 Looking for existing chat with ID:", conversationId);
+      console.log("🔍 conversationId type:", typeof conversationId);
+      console.log("🔍 conversationId length:", conversationId.length);
+      
       const existingChat = await prisma.chat.findFirst({
         where: {
           id: conversationId,
@@ -151,10 +157,14 @@ export async function POST(request: NextRequest) {
         }
       });
 
+      console.log("🔍 Query result:", existingChat ? "Found" : "Not found");
+      
       if (!existingChat) {
         console.warn("🚨 Chat not found or does not belong to user", {
           conversationId,
           userId: user.id,
+          conversationIdType: typeof conversationId,
+          conversationIdLength: conversationId?.length
         });
         logger.warn('Invalid conversationId provided by user', { ...context, userId: user.id, conversationId });
         throw new ValidationError(`Chat not found for ID: ${conversationId}. Please refresh the page and try again.`);
