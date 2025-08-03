@@ -63,7 +63,12 @@ interface UserPlanData {
     id: string;
     status: string;
     lemonSqueezyId: string | null;
+    planId: string | null;
+    variantId: string | null;
+    currentPeriodStart: Date | null;
     currentPeriodEnd: Date | null;
+    createdAt: Date;
+    updatedAt: Date;
   };
 }
 
@@ -76,6 +81,7 @@ export default function ProfilePage() {
   const [memorySummary, setMemorySummary] = useState<string>('');
   const [activeTab, setActiveTab] = useState('overview');
   const [userPlan, setUserPlan] = useState<UserPlanData | null>(null);
+  const [showUserId, setShowUserId] = useState(false);
 
   useEffect(() => {
     const fetchUserData = async () => {
@@ -468,12 +474,23 @@ export default function ProfilePage() {
                           </div>
                         </div>
 
-                        <div className="pt-4 border-t">
-                          <Button variant="outline" className="w-full" size="sm">
-                            <CreditCard className="mr-2 h-4 w-4" />
-                            {t('subscription.manageBilling')}
-                          </Button>
-                        </div>
+                        {userPlan.subscription?.currentPeriodEnd && (
+                          <div className="p-3 bg-muted/30 rounded-lg">
+                            <div className="flex items-center gap-2 text-sm">
+                              <Calendar className="h-4 w-4 text-muted-foreground" />
+                              <span className="text-muted-foreground">
+                                {t('subscription.renewsOn')}
+                              </span>
+                            </div>
+                            <div className="text-sm font-medium text-foreground mt-1">
+                              {new Date(userPlan.subscription.currentPeriodEnd).toLocaleDateString(locale, {
+                                year: 'numeric',
+                                month: 'long',
+                                day: 'numeric'
+                              })}
+                            </div>
+                          </div>
+                        )}
                       </div>
                     ) : (
                       <div className="space-y-4">
@@ -566,13 +583,36 @@ export default function ProfilePage() {
                     </div>
                     <div>
                       <label className="text-sm font-medium text-muted-foreground">{t('account.overview.currentPlan')}</label>
-                      <div className="mt-1">
+                      <div className="mt-1 space-y-1">
                         <PlanBadge plan={userPlan?.plan || 'FREE'} />
+                        {userPlan?.plan === 'PRO' && userPlan.subscription?.currentPeriodEnd && (
+                          <p className="text-xs text-muted-foreground">
+                            {t('subscription.renewsOn')} {new Date(userPlan.subscription.currentPeriodEnd).toLocaleDateString(locale, {
+                              year: 'numeric',
+                              month: 'short',
+                              day: 'numeric'
+                            })}
+                          </p>
+                        )}
                       </div>
                     </div>
                     <div>
                       <label className="text-sm font-medium text-muted-foreground">{t('account.overview.userId')}</label>
-                      <p className="text-sm text-muted-foreground font-mono">{user.id}</p>
+                      <div 
+                        className="cursor-pointer"
+                        onClick={() => setShowUserId(!showUserId)}
+                      >
+                        {showUserId ? (
+                          <p className="text-sm text-muted-foreground font-mono select-all">{user.id}</p>
+                        ) : (
+                          <div className="flex items-center gap-2">
+                            <div className="bg-muted text-muted-foreground px-2 py-1 rounded text-xs">
+                              Click to reveal
+                            </div>
+                            <div className="text-xs text-muted-foreground">••••••••</div>
+                          </div>
+                        )}
+                      </div>
                     </div>
                     <div>
                       <label className="text-sm font-medium text-muted-foreground">{t('account.overview.memberSince')}</label>
@@ -635,74 +675,147 @@ export default function ProfilePage() {
                   </CardTitle>
                 </CardHeader>
                 <CardContent className="space-y-6">
-                  {userPlan?.plan === 'PRO' && userPlan.subscription ? (
-                    <div className="space-y-4">
-                      <div className="flex items-center justify-between p-4 bg-green-50 dark:bg-green-900/20 rounded-lg border border-green-200 dark:border-green-800">
-                        <div className="flex items-center gap-3">
-                          <CheckCircle className="h-6 w-6 text-green-600" />
+                  {userPlan?.plan === 'PRO' ? (
+                    userPlan.subscription ? (
+                      /* Active PRO Subscription */
+                      <div className="space-y-4">
+                        <div className="flex items-center justify-between p-4 bg-green-50 dark:bg-green-900/20 rounded-lg border border-green-200 dark:border-green-800">
+                          <div className="flex items-center gap-3">
+                            <CheckCircle className="h-6 w-6 text-green-600" />
+                            <div>
+                              <p className="font-semibold text-green-900 dark:text-green-100">{t('account.subscriptionDetails.proActive')}</p>
+                              <p className="text-sm text-green-700 dark:text-green-300">{t('account.subscriptionDetails.activeSubscription')}</p>
+                            </div>
+                          </div>
+                          <Badge className="bg-green-600">
+                            <Crown className="mr-1 h-3 w-3" />
+                            Pro
+                          </Badge>
+                        </div>
+
+                        <div className="grid md:grid-cols-2 gap-4">
                           <div>
-                            <p className="font-semibold text-green-900 dark:text-green-100">{t('account.subscriptionDetails.proActive')}</p>
-                            <p className="text-sm text-green-700 dark:text-green-300">{t('account.subscriptionDetails.activeSubscription')}</p>
+                            <label className="text-sm font-medium text-muted-foreground">{t('account.subscriptionDetails.status')}</label>
+                            <p className="text-foreground capitalize">{userPlan.subscription.status}</p>
+                          </div>
+                          <div>
+                            <label className="text-sm font-medium text-muted-foreground">{t('account.subscriptionDetails.nextBilling')}</label>
+                            <p className="text-foreground">
+                              {userPlan.subscription.currentPeriodEnd 
+                                ? new Date(userPlan.subscription.currentPeriodEnd).toLocaleDateString(locale, {
+                                    year: 'numeric',
+                                    month: 'long',
+                                    day: 'numeric'
+                                  })
+                                : 'N/A'
+                              }
+                            </p>
+                          </div>
+                          {userPlan.subscription.lemonSqueezyId && (
+                            <div>
+                              <label className="text-sm font-medium text-muted-foreground">Subscription ID</label>
+                              <p className="text-sm text-muted-foreground font-mono">{userPlan.subscription.lemonSqueezyId}</p>
+                            </div>
+                          )}
+                          <div>
+                            <label className="text-sm font-medium text-muted-foreground">Plan Type</label>
+                            <p className="text-foreground">
+                              {userPlan.subscription.variantId?.includes('yearly') ? 'Yearly' : 'Monthly'} Subscription
+                            </p>
                           </div>
                         </div>
-                        <Badge className="bg-green-600">
-                          <Crown className="mr-1 h-3 w-3" />
-                          Pro
+
+                        <div className="space-y-3">
+                          <h4 className="font-medium text-foreground">{t('subscription.proFeaturesActive')}</h4>
+                          <div className="grid md:grid-cols-2 gap-2">
+                            <div className="flex items-center gap-2 text-sm text-muted-foreground">
+                              <CheckCircle className="h-4 w-4 text-green-500" />
+                              {t('subscription.unlimitedMessages')}
+                            </div>
+                            <div className="flex items-center gap-2 text-sm text-muted-foreground">
+                              <CheckCircle className="h-4 w-4 text-green-500" />
+                              {t('subscription.conversationMemory')}
+                            </div>
+                            <div className="flex items-center gap-2 text-sm text-muted-foreground">
+                              <CheckCircle className="h-4 w-4 text-green-500" />
+                              {t('subscription.progressTracking')}
+                            </div>
+                            <div className="flex items-center gap-2 text-sm text-muted-foreground">
+                              <CheckCircle className="h-4 w-4 text-green-500" />
+                              {t('subscription.prioritySupport')}
+                            </div>
+                          </div>
+                        </div>
+
+                        <div className="pt-4 border-t">
+                          <p className="text-sm text-muted-foreground mb-3">
+                            {t('account.subscriptionDetails.managePortal')}
+                          </p>
+                          <Button variant="outline" className="w-full md:w-auto">
+                            <Calendar className="mr-2 h-4 w-4" />
+                            {t('subscription.manageBilling')}
+                          </Button>
+                        </div>
+                      </div>
+                    ) : (
+                      /* PRO Plan without Active Subscription */
+                      <div className="space-y-4">
+                        <div className="flex items-center justify-between p-4 bg-orange-50 dark:bg-orange-900/20 rounded-lg border border-orange-200 dark:border-orange-800">
+                          <div className="flex items-center gap-3">
+                            <AlertTriangle className="h-6 w-6 text-orange-600" />
+                            <div>
+                              <p className="font-semibold text-orange-900 dark:text-orange-100">PRO Plan - No Active Subscription</p>
+                              <p className="text-sm text-orange-700 dark:text-orange-300">Your PRO benefits may be limited</p>
+                            </div>
+                          </div>
+                          <Badge className="bg-orange-600">
+                            <Crown className="mr-1 h-3 w-3" />
+                            Pro
+                          </Badge>
+                        </div>
+                        
+                        <div className="text-center p-6">
+                          <p className="text-muted-foreground mb-4">
+                            You have PRO plan access but no active subscription found. This might be a temporary issue.
+                          </p>
+                          <UpgradeButton 
+                            variant="default" 
+                            size="lg" 
+                            className="bg-orange-600 hover:bg-orange-700"
+                            showDialog={true}
+                          />
+                        </div>
+                      </div>
+                    )
+                  ) : (
+                    /* FREE Plan */
+                    <div className="space-y-4">
+                      <div className="flex items-center justify-between p-4 bg-blue-50 dark:bg-blue-900/20 rounded-lg border border-blue-200 dark:border-blue-800">
+                        <div className="flex items-center gap-3">
+                          <Settings className="h-6 w-6 text-blue-600" />
+                          <div>
+                            <p className="font-semibold text-blue-900 dark:text-blue-100">Free Plan Active</p>
+                            <p className="text-sm text-blue-700 dark:text-blue-300">Limited daily messages and features</p>
+                          </div>
+                        </div>
+                        <Badge variant="secondary">
+                          Free
                         </Badge>
                       </div>
 
                       <div className="grid md:grid-cols-2 gap-4">
                         <div>
-                          <label className="text-sm font-medium text-muted-foreground">{t('account.subscriptionDetails.status')}</label>
-                          <p className="text-foreground capitalize">{userPlan.subscription.status}</p>
+                          <label className="text-sm font-medium text-muted-foreground">Daily Message Limit</label>
+                          <p className="text-foreground">{userPlan?.dailyLimit || 5} messages/day</p>
                         </div>
                         <div>
-                          <label className="text-sm font-medium text-muted-foreground">{t('account.subscriptionDetails.nextBilling')}</label>
-                          <p className="text-foreground">
-                            {userPlan.subscription.currentPeriodEnd 
-                              ? new Date(userPlan.subscription.currentPeriodEnd).toLocaleDateString()
-                              : 'N/A'
-                            }
-                          </p>
+                          <label className="text-sm font-medium text-muted-foreground">Messages Used Today</label>
+                          <p className="text-foreground">{userPlan?.messagesUsedToday || 0} / {userPlan?.dailyLimit || 5}</p>
                         </div>
                       </div>
 
-                      <div className="space-y-3">
-                        <h4 className="font-medium text-foreground">{t('subscription.proFeaturesActive')}</h4>
-                        <div className="grid md:grid-cols-2 gap-2">
-                          <div className="flex items-center gap-2 text-sm text-muted-foreground">
-                            <CheckCircle className="h-4 w-4 text-green-500" />
-                            {t('subscription.unlimitedMessages')}
-                          </div>
-                          <div className="flex items-center gap-2 text-sm text-muted-foreground">
-                            <CheckCircle className="h-4 w-4 text-green-500" />
-                            {t('subscription.conversationMemory')}
-                          </div>
-                          <div className="flex items-center gap-2 text-sm text-muted-foreground">
-                            <CheckCircle className="h-4 w-4 text-green-500" />
-                            {t('subscription.progressTracking')}
-                          </div>
-                          <div className="flex items-center gap-2 text-sm text-muted-foreground">
-                            <CheckCircle className="h-4 w-4 text-green-500" />
-                            {t('subscription.prioritySupport')}
-                          </div>
-                        </div>
-                      </div>
-
-                      <div className="pt-4 border-t">
-                        <p className="text-sm text-muted-foreground mb-3">
-                          {t('account.subscriptionDetails.managePortal')}
-                        </p>
-                        <Button variant="outline" className="w-full md:w-auto">
-                          <Calendar className="mr-2 h-4 w-4" />
-                          {t('subscription.manageBilling')}
-                        </Button>
-                      </div>
-                    </div>
-                  ) : (
-                    <div className="space-y-4">
-                      <div className="text-center p-8 bg-muted/50 rounded-lg border-2 border-dashed border-muted-foreground/20">
-                        <Crown className="h-12 w-12 text-muted-foreground mx-auto mb-4" />
+                      <div className="text-center p-8 bg-gradient-to-br from-blue-50 to-purple-50 dark:from-blue-950 dark:to-purple-950 rounded-lg border-2 border-dashed border-blue-200 dark:border-blue-800">
+                        <Crown className="h-12 w-12 text-blue-500 mx-auto mb-4" />
                         <h3 className="text-lg font-semibold text-foreground mb-2">
                           {t('account.subscriptionDetails.upgradeToPro')}
                         </h3>
@@ -712,7 +825,7 @@ export default function ProfilePage() {
                         <UpgradeButton 
                           variant="default" 
                           size="lg" 
-                          className="bg-blue-600 hover:bg-blue-700"
+                          className="bg-gradient-to-r from-blue-600 to-purple-600 hover:from-blue-700 hover:to-purple-700"
                           showDialog={true}
                         />
                       </div>
