@@ -1490,7 +1490,7 @@ const ChatPage = () => {
             </div>
           )}
 
-          {/* Mobile: New Chat Button + Theme Toggle + User Menu | Desktop: User Menu Only */}
+          {/* Mobile: New Chat Button + User Menu | Desktop: Language + Theme + User Menu */}
           <div className="flex items-center space-x-2">
             {/* Mobile New Chat Button */}
             {isMobile && user && (
@@ -1505,11 +1505,11 @@ const ChatPage = () => {
               </Button>
             )}
 
-            {/* Language Switcher - Always visible next to avatar */}
-            <LanguageSwitcher />
+            {/* Language Switcher - Desktop only */}
+            {!isMobile && <LanguageSwitcher />}
 
-            {/* Theme Toggle - Always visible next to avatar */}
-            <ThemeToggle />
+            {/* Theme Toggle - Desktop only */}
+            {!isMobile && <ThemeToggle />}
 
             {/* User Avatar Dropdown Menu or Login Button */}
             {user ? (
@@ -1537,6 +1537,25 @@ const ChatPage = () => {
                   </div>
                 </DropdownMenuLabel>
                 <DropdownMenuSeparator />
+                
+                {/* Mobile-only settings section */}
+                {isMobile && (
+                  <>
+                    <div className="px-2 py-1">
+                      <p className="text-xs font-semibold text-muted-foreground mb-2">Settings</p>
+                      <div className="flex items-center justify-between mb-2">
+                        <span className="text-sm">Language</span>
+                        <LanguageSwitcher />
+                      </div>
+                      <div className="flex items-center justify-between">
+                        <span className="text-sm">Theme</span>
+                        <ThemeToggle />
+                      </div>
+                    </div>
+                    <DropdownMenuSeparator />
+                  </>
+                )}
+                
                 <DropdownMenuItem asChild>
                   <Link href={`/${locale}/profile`}>
                     <User className="mr-2 h-4 w-4" />
@@ -1672,6 +1691,116 @@ const ChatPage = () => {
                     </Button>
                   ))}
                 </div>
+
+                {/* Chat Input Area - Inline when empty chat */}
+                <div className="w-full max-w-3xl mt-8">
+                  <form onSubmit={onSubmit} className="relative">
+                    {/* Multi-Image Preview */}
+                    {selectedImages.length > 0 && (
+                      <div className="absolute bottom-full left-0 mb-2 p-2 bg-muted rounded-xl shadow-lg border border-border/50 animate-scale-in">
+                        <div className="flex flex-wrap gap-2 max-w-md">
+                          {selectedImages.map((file, index) => {
+                            // Ensure we have a valid preview for this image
+                            const previewSrc = imagePreviews[index];
+                            if (!previewSrc || previewSrc.trim() === '') {
+                              return null; // Skip rendering if no valid preview
+                            }
+                            
+                            return (
+                              <OptimizedImage 
+                                key={index}
+                                src={previewSrc} 
+                                alt={`Preview ${index + 1}`} 
+                                index={index}
+                                onRemove={() => removeImage(index)}
+                                className="rounded-lg object-cover w-16 h-16"
+                                priority={false}
+                              />
+                            );
+                          })}
+                        </div>
+                        <div className="flex justify-between items-center mt-2 pt-2 border-t border-border/30">
+                          <span className="text-xs text-muted-foreground">
+                            {selectedImages.length} image{selectedImages.length !== 1 ? 's' : ''} selected
+                          </span>
+                          <Button
+                            variant="ghost"
+                            size="sm"
+                            className="text-xs h-6 px-2 text-destructive hover:text-destructive/80"
+                            onClick={removeAllImages}
+                          >
+                            Clear all
+                          </Button>
+                        </div>
+                      </div>
+                    )}
+
+                    {/* Legacy Single Image Preview (for backward compatibility) */}
+                    {selectedImages.length === 0 && imagePreview && imagePreview.trim() !== '' && (
+                      <div className="absolute bottom-full left-0 mb-2 p-1.5 bg-muted rounded-xl shadow-lg border border-border/50 animate-scale-in">
+                        <OptimizedImage 
+                          src={imagePreview} 
+                          alt={t('main.imagePreviewAlt')} 
+                          index={0}
+                          onRemove={() => removeSingleImage()}
+                          className="rounded-lg w-[72px] h-[72px]"
+                          priority={false}
+                        />
+                      </div>
+                    )}
+                    
+                    {/* Keyboard Shortcuts Tooltip */}
+                    {showShortcuts && <KeyboardShortcuts />}
+                    
+                    <div className="relative flex items-center">
+                      <ArabicAwareTextarea
+                        value={input}
+                        onChange={handleInputChange}
+                        onPaste={handlePaste}
+                        onFocus={handleInputFocus}
+                        onBlur={handleInputBlur}
+                        placeholder={t('main.inputPlaceholder')}
+                        className="w-full pr-24 pl-12 py-3 text-base rounded-2xl glass-input resize-none"
+                        rows={1}
+                        maxLength={2000}
+                      />
+                      <div className="absolute left-3 top-1/2 -translate-y-1/2 flex items-center">
+                        <Button type="button" variant="ghost" size="icon" className="h-9 w-9 rounded-xl hover:bg-muted/50" onClick={() => document.getElementById('image-upload-empty')?.click()}>
+                          <ImageIcon className="h-5 w-5" />
+                        </Button>
+                        <input 
+                          type="file" 
+                          id="image-upload-empty" 
+                          accept="image/*" 
+                          multiple 
+                          className="hidden" 
+                          onChange={handleImageSelect} 
+                        />
+                      </div>
+                      <div className="absolute right-3 top-1/2 -translate-y-1/2 flex items-center">
+                        <Button 
+                          type="submit" 
+                          size="icon" 
+                          className="h-9 w-9 rounded-xl gradient-primary text-white shadow-lg hover-lift" 
+                          disabled={isLoading || (!input.trim() && selectedImages.length === 0 && !selectedImage)}
+                        >
+                          {isLoading ? <Loader2 className="h-5 w-5 animate-spin" /> : <Send className="h-5 w-5" />}
+                        </Button>
+                      </div>
+                    </div>
+                    <div className="text-xs text-muted-foreground mt-2 flex justify-between items-center px-2">
+                      <button 
+                        type="button" 
+                        className="hover:text-primary transition-colors flex items-center space-x-1"
+                        onMouseEnter={() => setShowShortcuts(true)}
+                        onMouseLeave={() => setShowShortcuts(false)}
+                      >
+                        <span>Enter to send • Shift+Enter for new line</span>
+                      </button>
+                      <span className={`${input.length > 1800 ? 'text-orange-500' : ''}`}>{input.length}/2000</span>
+                    </div>
+                  </form>
+                </div>
               </div>
             )}
             
@@ -1714,123 +1843,125 @@ const ChatPage = () => {
           </div>
         </div>
 
-        {/* Enhanced Chat Input Area - Flex child for proper layout */}
-        <div 
-          className={`
-            flex-shrink-0
-            ${isMobile && messages.length > 0 ? 'mobile-input-area' : 'p-2 md:p-4'}
-            ${messages.length > 0 ? 'bg-background/95 backdrop-blur-lg border-t border-border/30' : ''}
-          `}
-        >
-          <div className="w-full max-w-5xl mx-auto">
-            <form onSubmit={onSubmit} className="relative">
-              {/* Multi-Image Preview */}
-              {selectedImages.length > 0 && (
-                <div className="absolute bottom-full left-0 mb-2 p-2 bg-muted rounded-xl shadow-lg border border-border/50 animate-scale-in">
-                  <div className="flex flex-wrap gap-2 max-w-md">
-                    {selectedImages.map((file, index) => {
-                      // Ensure we have a valid preview for this image
-                      const previewSrc = imagePreviews[index];
-                      if (!previewSrc || previewSrc.trim() === '') {
-                        return null; // Skip rendering if no valid preview
-                      }
-                      
-                      return (
-                        <OptimizedImage 
-                          key={index}
-                          src={previewSrc} 
-                          alt={`Preview ${index + 1}`} 
-                          index={index}
-                          onRemove={() => removeImage(index)}
-                          className="rounded-lg object-cover w-16 h-16"
-                          priority={false}
-                        />
-                      );
-                    })}
+        {/* Enhanced Chat Input Area - Only show when there are messages */}
+        {messages.length > 0 && (
+          <div 
+            className={`
+              flex-shrink-0
+              ${isMobile && messages.length > 0 ? 'mobile-input-area' : 'p-2 md:p-4'}
+              bg-background/95 backdrop-blur-lg border-t border-border/30
+            `}
+          >
+            <div className="w-full max-w-5xl mx-auto">
+              <form onSubmit={onSubmit} className="relative">
+                {/* Multi-Image Preview */}
+                {selectedImages.length > 0 && (
+                  <div className="absolute bottom-full left-0 mb-2 p-2 bg-muted rounded-xl shadow-lg border border-border/50 animate-scale-in">
+                    <div className="flex flex-wrap gap-2 max-w-md">
+                      {selectedImages.map((file, index) => {
+                        // Ensure we have a valid preview for this image
+                        const previewSrc = imagePreviews[index];
+                        if (!previewSrc || previewSrc.trim() === '') {
+                          return null; // Skip rendering if no valid preview
+                        }
+                        
+                        return (
+                          <OptimizedImage 
+                            key={index}
+                            src={previewSrc} 
+                            alt={`Preview ${index + 1}`} 
+                            index={index}
+                            onRemove={() => removeImage(index)}
+                            className="rounded-lg object-cover w-16 h-16"
+                            priority={false}
+                          />
+                        );
+                      })}
+                    </div>
+                    <div className="flex justify-between items-center mt-2 pt-2 border-t border-border/30">
+                      <span className="text-xs text-muted-foreground">
+                        {selectedImages.length} image{selectedImages.length !== 1 ? 's' : ''} selected
+                      </span>
+                      <Button
+                        variant="ghost"
+                        size="sm"
+                        className="text-xs h-6 px-2 text-destructive hover:text-destructive/80"
+                        onClick={removeAllImages}
+                      >
+                        Clear all
+                      </Button>
+                    </div>
                   </div>
-                  <div className="flex justify-between items-center mt-2 pt-2 border-t border-border/30">
-                    <span className="text-xs text-muted-foreground">
-                      {selectedImages.length} image{selectedImages.length !== 1 ? 's' : ''} selected
-                    </span>
-                    <Button
-                      variant="ghost"
-                      size="sm"
-                      className="text-xs h-6 px-2 text-destructive hover:text-destructive/80"
-                      onClick={removeAllImages}
+                )}
+
+                {/* Legacy Single Image Preview (for backward compatibility) */}
+                {selectedImages.length === 0 && imagePreview && imagePreview.trim() !== '' && (
+                  <div className="absolute bottom-full left-0 mb-2 p-1.5 bg-muted rounded-xl shadow-lg border border-border/50 animate-scale-in">
+                    <OptimizedImage 
+                      src={imagePreview} 
+                      alt={t('main.imagePreviewAlt')} 
+                      index={0}
+                      onRemove={() => removeSingleImage()}
+                      className="rounded-lg w-[72px] h-[72px]"
+                      priority={false}
+                    />
+                  </div>
+                )}
+                
+                {/* Keyboard Shortcuts Tooltip */}
+                {showShortcuts && <KeyboardShortcuts />}
+                
+                <div className="relative flex items-center">
+                  <ArabicAwareTextarea
+                    value={input}
+                    onChange={handleInputChange}
+                    onPaste={handlePaste}
+                    onFocus={handleInputFocus}
+                    onBlur={handleInputBlur}
+                    placeholder={t('main.inputPlaceholder')}
+                    className="w-full pr-24 pl-12 py-3 text-base rounded-2xl glass-input resize-none"
+                    rows={1}
+                    maxLength={2000}
+                  />
+                  <div className="absolute left-3 top-1/2 -translate-y-1/2 flex items-center">
+                    <Button type="button" variant="ghost" size="icon" className="h-9 w-9 rounded-xl hover:bg-muted/50" onClick={() => document.getElementById('image-upload')?.click()}>
+                      <ImageIcon className="h-5 w-5" />
+                    </Button>
+                    <input 
+                      type="file" 
+                      id="image-upload" 
+                      accept="image/*" 
+                      multiple 
+                      className="hidden" 
+                      onChange={handleImageSelect} 
+                    />
+                  </div>
+                  <div className="absolute right-3 top-1/2 -translate-y-1/2 flex items-center">
+                    <Button 
+                      type="submit" 
+                      size="icon" 
+                      className="h-9 w-9 rounded-xl gradient-primary text-white shadow-lg hover-lift" 
+                      disabled={isLoading || (!input.trim() && selectedImages.length === 0 && !selectedImage)}
                     >
-                      Clear all
+                      {isLoading ? <Loader2 className="h-5 w-5 animate-spin" /> : <Send className="h-5 w-5" />}
                     </Button>
                   </div>
                 </div>
-              )}
-
-              {/* Legacy Single Image Preview (for backward compatibility) */}
-              {selectedImages.length === 0 && imagePreview && imagePreview.trim() !== '' && (
-                <div className="absolute bottom-full left-0 mb-2 p-1.5 bg-muted rounded-xl shadow-lg border border-border/50 animate-scale-in">
-                  <OptimizedImage 
-                    src={imagePreview} 
-                    alt={t('main.imagePreviewAlt')} 
-                    index={0}
-                    onRemove={() => removeSingleImage()}
-                    className="rounded-lg w-[72px] h-[72px]"
-                    priority={false}
-                  />
-                </div>
-              )}
-              
-              {/* Keyboard Shortcuts Tooltip */}
-              {showShortcuts && <KeyboardShortcuts />}
-              
-              <div className="relative flex items-center">
-                <ArabicAwareTextarea
-                  value={input}
-                  onChange={handleInputChange}
-                  onPaste={handlePaste}
-                  onFocus={handleInputFocus}
-                  onBlur={handleInputBlur}
-                  placeholder={t('main.inputPlaceholder')}
-                  className="w-full pr-24 pl-12 py-3 text-base rounded-2xl glass-input resize-none"
-                  rows={1}
-                  maxLength={2000}
-                />
-                <div className="absolute left-3 top-1/2 -translate-y-1/2 flex items-center">
-                  <Button type="button" variant="ghost" size="icon" className="h-9 w-9 rounded-xl hover:bg-muted/50" onClick={() => document.getElementById('image-upload')?.click()}>
-                    <ImageIcon className="h-5 w-5" />
-                  </Button>
-                  <input 
-                    type="file" 
-                    id="image-upload" 
-                    accept="image/*" 
-                    multiple 
-                    className="hidden" 
-                    onChange={handleImageSelect} 
-                  />
-                </div>
-                <div className="absolute right-3 top-1/2 -translate-y-1/2 flex items-center">
-                  <Button 
-                    type="submit" 
-                    size="icon" 
-                    className="h-9 w-9 rounded-xl gradient-primary text-white shadow-lg hover-lift" 
-                    disabled={isLoading || (!input.trim() && selectedImages.length === 0 && !selectedImage)}
+                <div className="text-xs text-muted-foreground mt-2 flex justify-between items-center px-2">
+                  <button 
+                    type="button" 
+                    className="hover:text-primary transition-colors flex items-center space-x-1"
+                    onMouseEnter={() => setShowShortcuts(true)}
+                    onMouseLeave={() => setShowShortcuts(false)}
                   >
-                    {isLoading ? <Loader2 className="h-5 w-5 animate-spin" /> : <Send className="h-5 w-5" />}
-                  </Button>
+                    <span>Enter to send • Shift+Enter for new line</span>
+                  </button>
+                  <span className={`${input.length > 1800 ? 'text-orange-500' : ''}`}>{input.length}/2000</span>
                 </div>
-              </div>
-              <div className="text-xs text-muted-foreground mt-2 flex justify-between items-center px-2">
-                <button 
-                  type="button" 
-                  className="hover:text-primary transition-colors flex items-center space-x-1"
-                  onMouseEnter={() => setShowShortcuts(true)}
-                  onMouseLeave={() => setShowShortcuts(false)}
-                >
-                  <span>Enter to send • Shift+Enter for new line</span>
-                </button>
-                <span className={`${input.length > 1800 ? 'text-orange-500' : ''}`}>{input.length}/2000</span>
-              </div>
-            </form>
+              </form>
+            </div>
           </div>
-        </div>
+        )}
       </div>
       <Suspense fallback={null}>
         <LoginPromptDialog 

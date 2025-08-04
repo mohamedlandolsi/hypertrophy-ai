@@ -102,7 +102,7 @@ export default function Home() {
           
           {/* Main Title */}
           <motion.h1 
-            className="text-4xl md:text-6xl lg:text-7xl font-bold mb-6"
+            className="text-4xl md:text-6xl lg:text-7xl font-bold mb-6 relative z-10"
             initial={{ opacity: 0, y: 30 }}
             animate={{ opacity: 1, y: 0 }}
             transition={{ duration: 0.8, delay: 0.2 }}
@@ -114,7 +114,7 @@ export default function Home() {
           
           {/* Subtitle */}
           <motion.p 
-            className="text-lg md:text-xl lg:text-2xl text-muted-foreground mb-6 max-w-4xl mx-auto leading-relaxed"
+            className="text-lg md:text-xl lg:text-2xl text-muted-foreground mb-6 max-w-4xl mx-auto leading-relaxed relative z-10"
             initial={{ opacity: 0, y: 20 }}
             animate={{ opacity: 1, y: 0 }}
             transition={{ duration: 0.8, delay: 0.4 }}
@@ -363,12 +363,12 @@ export default function Home() {
             viewport={{ once: true }}
             transition={{ duration: 0.8 }}
           >
-            <h2 className="text-2xl md:text-4xl lg:text-5xl font-bold mb-4">
+            <h2 className="text-2xl md:text-4xl lg:text-5xl font-bold mb-4 relative z-10">
               <LineShadowText shadowColor="rgb(99, 102, 241)" className="text-3xl md:text-4xl lg:text-5xl">
                 {t('science.title')}
               </LineShadowText>
             </h2>
-            <p className="text-lg md:text-xl text-muted-foreground">{t('science.subtitle')}</p>
+            <p className="text-lg md:text-xl text-muted-foreground relative z-10">{t('science.subtitle')}</p>
           </motion.div>
 
           <div className="grid sm:grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6 lg:gap-8">
@@ -794,7 +794,7 @@ export default function Home() {
         
         <div className="max-w-4xl mx-auto text-center relative z-10">
           <motion.h2 
-            className="text-3xl md:text-5xl font-bold mb-6"
+            className="text-3xl md:text-5xl font-bold mb-6 relative z-10"
             initial={{ opacity: 0, y: 30 }}
             whileInView={{ opacity: 1, y: 0 }}
             viewport={{ once: true }}
@@ -803,7 +803,7 @@ export default function Home() {
             {t('finalCta.title')}
           </motion.h2>
           <motion.p 
-            className="text-xl md:text-2xl mb-8 opacity-90"
+            className="text-xl md:text-2xl mb-8 opacity-90 relative z-10"
             initial={{ opacity: 0, y: 20 }}
             whileInView={{ opacity: 1, y: 0 }}
             viewport={{ once: true }}

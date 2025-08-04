@@ -19,7 +19,7 @@ export default function LineShadowText({
   return (
     <Component
       className={cn(
-        "relative inline-block text-transparent bg-clip-text bg-gradient-to-r from-foreground to-foreground",
+        "relative inline-block text-transparent bg-clip-text bg-gradient-to-r from-foreground to-foreground z-10",
         className
       )}
       style={{
@@ -28,7 +28,7 @@ export default function LineShadowText({
       }}
     >
       <span
-        className="absolute inset-0 animate-pulse"
+        className="absolute inset-0 animate-pulse z-0"
         style={{
           background: `linear-gradient(90deg, transparent 0%, ${shadowColor} 50%, transparent 100%)`,
           WebkitBackgroundClip: "text",
@@ -37,7 +37,7 @@ export default function LineShadowText({
       >
         {children}
       </span>
-      <span className="relative z-10 bg-gradient-to-r from-foreground to-foreground bg-clip-text text-transparent">
+      <span className="relative z-20 bg-gradient-to-r from-foreground to-foreground bg-clip-text text-transparent">
         {children}
       </span>
     </Component>
