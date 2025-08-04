@@ -56,7 +56,6 @@ import { useSearchParams, useRouter, useParams } from 'next/navigation';
 import { LoginPromptDialog } from '@/components/login-prompt-dialog';
 import { MessageLimitIndicator } from '@/components/message-limit-indicator';
 import { PlanBadge } from '@/components/plan-badge';
-import { UpgradeButton } from '@/components/upgrade-button';
 import { useOnlineStatus } from '@/hooks/use-online-status';
 import { UpgradeLimitDialog } from '@/components/upgrade-limit-dialog';
 
@@ -489,7 +488,7 @@ const ChatPage = () => {
     } finally {
       setIsLoading(false);
     }
-  }, [user, conversationId, isLoading, locale, t, refetchUserPlan, setActiveChatId, setConversationId, setImagePreviews, setInput, setIsLoading, setMessages, setSelectedImages, setShowLoginDialog, userPlan, selectedModel]); // Add missing dependencies
+  }, [user, conversationId, isLoading, locale, t, refetchUserPlan, setActiveChatId, setConversationId, setImagePreviews, setInput, setIsLoading, setMessages, setSelectedImages, setShowLoginDialog, setShowUpgradeDialog, userPlan, selectedModel]); // Add missing dependencies
 
   // Helper function to convert File to base64
   const convertFileToBase64 = (file: File): Promise<string> => {
@@ -796,7 +795,10 @@ const ChatPage = () => {
 
     // Check if adding these files would exceed the limit
     if (selectedImages.length + files.length > maxImages) {
-      showToast.error(t('toasts.tooManyImagesTitle'), t('toasts.tooManyImagesText', { max: maxImages }));
+      showToast.error(
+        t('toasts.tooManyImagesTitle'), 
+        t('toasts.tooManyImagesText', { max: maxImages })
+      );
       return;
     }
 
@@ -807,14 +809,25 @@ const ChatPage = () => {
         const planName = userPlan?.plan || 'Guest';
         showToast.error(
           t('toasts.fileTooLargeTitle'), 
-          `File "${file.name}" is ${fileSizeMB}MB. Maximum allowed size is ${maxFileSizeMB}MB for ${planName} users.`
+          t('toasts.fileTooLargeText', { 
+            fileName: file.name, 
+            fileSize: fileSizeMB, 
+            maxSize: maxFileSizeMB, 
+            planName: planName 
+          })
         );
         continue;
       }
 
       // Check file type
-      if (!file.type.startsWith('image/')) {
-        showToast.error(t('toasts.invalidFileTypeTitle'), t('toasts.invalidFileTypeText'));
+      const allowedTypes = ['image/jpeg', 'image/png', 'image/gif', 'image/webp'];
+      if (!allowedTypes.includes(file.type)) {
+        showToast.error(
+          t('toasts.invalidFileTypeTitle'), 
+          t('toasts.invalidFileTypeText', { 
+            fileName: file.name 
+          })
+        );
         continue;
       }
 
@@ -1160,12 +1173,12 @@ const ChatPage = () => {
       <div
         className={`flex flex-col transition-all duration-300 ease-in-out z-50 ${
           isMobile 
-            ? `fixed left-0 top-0 h-full w-80 transform ${isSidebarOpen ? 'translate-x-0' : '-translate-x-full'} shadow-2xl glass-sidebar animate-slide-in-left`
-            : `relative ${isSidebarOpen ? 'w-64 md:w-72' : 'w-0'} overflow-hidden glass-sidebar border-r border-border/30`
+            ? `fixed left-0 top-0 h-full w-80 transform ${isSidebarOpen ? 'translate-x-0' : '-translate-x-full'} shadow-2xl glass-sidebar animate-slide-in-left overflow-y-auto`
+            : `relative ${isSidebarOpen ? 'w-64 md:w-72' : 'w-0'} overflow-y-auto glass-sidebar border-r border-border/30`
         }`}
       >
         {(isMobile ? isSidebarOpen : true) && (
-          <div className="p-4 md:p-5 h-full flex flex-col">
+          <div className="p-4 md:p-5 flex flex-col">
             {/* Enhanced Header with Logo */}
             <div className="mb-6">
               <Link href={`/${locale}`} className="block hover:opacity-80 transition-all duration-200 hover-lift">
@@ -1236,24 +1249,12 @@ const ChatPage = () => {
                   
                   {/* Message Limit Indicator for Free Users */}
                   {userPlan.plan === 'FREE' && (
-                    <>
-                      <MessageLimitIndicator
-                        messagesUsed={userPlan.messagesUsedToday || 0}
-                        dailyLimit={userPlan.dailyLimit || 5}
-                        plan={userPlan.plan}
-                        className="px-1"
-                      />
-                      
-                      {/* Upgrade Button for Free Users */}
-                      <div className="px-1 pt-2">
-                        <UpgradeButton 
-                          variant="outline" 
-                          size="sm" 
-                          className="w-full"
-                          showDialog={true}
-                        />
-                      </div>
-                    </>
+                    <MessageLimitIndicator
+                      messagesUsed={userPlan.messagesUsedToday || 0}
+                      dailyLimit={userPlan.dailyLimit || 5}
+                      plan={userPlan.plan}
+                      className="px-1"
+                    />
                   )}
                 </div>
               </div>
