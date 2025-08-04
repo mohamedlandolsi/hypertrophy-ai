@@ -12,16 +12,13 @@ const GA_MEASUREMENT_ID = process.env.NEXT_PUBLIC_GA_MEASUREMENT_ID || 'G-1SDWND
 
 export const GoogleAnalytics = () => {
   useEffect(() => {
-    console.log('Google Analytics: Initializing with ID:', GA_MEASUREMENT_ID);
 
     if (!GA_MEASUREMENT_ID) {
-      console.warn('Google Analytics: GA_MEASUREMENT_ID is not set, using default');
       return;
     }
 
     // Check if already loaded to prevent duplicate loading
     if (typeof window.gtag === 'function') {
-      console.log('Google Analytics: Already loaded, skipping');
       return;
     }
 

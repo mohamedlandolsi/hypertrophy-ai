@@ -47,7 +47,6 @@ export function UpgradeButton({
   currency,
   pricingData: externalPricingData = null
 }: UpgradeButtonProps) {
-  console.log('UpgradeButton rendered with:', { defaultInterval, showDialog });
   
   const t = useTranslations('UpgradeButton');
   
@@ -74,9 +73,7 @@ export function UpgradeButton({
 
   // Sync internal selectedInterval with defaultInterval prop changes
   useEffect(() => {
-    console.log('UpgradeButton: defaultInterval changed to:', defaultInterval);
     setSelectedInterval(defaultInterval);
-    console.log('UpgradeButton: selectedInterval updated to:', defaultInterval);
   }, [defaultInterval]);
 
   useEffect(() => {
@@ -126,13 +123,11 @@ export function UpgradeButton({
     // Prevent double-clicking (debounce with 2 second window)
     const now = Date.now();
     if (now - lastClickTime < 2000) {
-      console.log('Ignoring double-click, too soon after last click');
       return;
     }
     setLastClickTime(now);
 
     if (isLoading) {
-      console.log('Already loading, ignoring click');
       return;
     }
 
@@ -144,13 +139,6 @@ export function UpgradeButton({
     const isProduction = process.env.NODE_ENV === 'production';
     const environment = isProduction ? 'PRODUCTION' : 'DEVELOPMENT';
     
-    console.log(`[${environment}] handleUpgrade called with interval:`, interval);
-    console.log(`[${environment}] selectedInterval state:`, selectedInterval);
-    console.log(`[${environment}] defaultInterval prop:`, defaultInterval);
-    console.log(`[${environment}] Final interval being used:`, interval);
-    console.log(`[${environment}] showDialog:`, showDialog);
-    console.log(`[${environment}] Currency:`, selectedCurrency);
-
     // Track upgrade button click
     trackEvent('upgrade_button_click', 'subscription', `pro_plan_${interval}`);
 
@@ -162,7 +150,6 @@ export function UpgradeButton({
         interval,
         currency: selectedCurrency 
       };
-      console.log(`[${environment}] Sending request body:`, requestBody);
       
       const response = await fetch('/api/checkout/create', {
         method: 'POST',
@@ -179,11 +166,8 @@ export function UpgradeButton({
       }
 
       const responseData = await response.json();
-      console.log(`[${environment}] Checkout API response:`, responseData);
       
       const { checkoutUrl } = responseData;
-      
-      console.log(`[${environment}] Checkout URL:`, checkoutUrl);
       
       // Track checkout initiation
       trackEvent('begin_checkout', 'subscription', `pro_plan_${interval}`, interval === 'year' ? 90 : 9);
@@ -203,7 +187,6 @@ export function UpgradeButton({
       
       // Redirect in same tab for smoother checkout experience
       // This avoids popup blockers and provides better UX for payment flows
-      console.log(`[${environment}] Redirecting to checkout:`, checkoutUrl);
       
       // Use location.assign for better handling (allows back button to work)
       window.location.assign(checkoutUrl);
@@ -242,10 +225,6 @@ export function UpgradeButton({
           onClick={(e) => {
             e.preventDefault();
             e.stopPropagation();
-            console.log('Button clicked - Debug info:');
-            console.log('  defaultInterval prop:', defaultInterval);
-            console.log('  selectedInterval state:', selectedInterval);
-            console.log('  About to call handleUpgrade with:', selectedInterval);
             handleUpgrade(selectedInterval);
           }}
           disabled={isLoading}

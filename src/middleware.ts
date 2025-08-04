@@ -71,14 +71,11 @@ export async function middleware(request: NextRequest) {
 
   // Admin route protection - only check authentication, role check happens in API routes
   if (request.nextUrl.pathname.startsWith('/admin')) {
-    console.log('🔍 Middleware: Admin route accessed');
     
     if (!user) {
-      console.log('❌ Middleware: No user found, redirecting to login');
       return NextResponse.redirect(new URL('/login', request.url))
     }
     
-    console.log(`👤 Middleware: User authenticated, allowing access to admin route`);
     // The actual admin role check will happen in the page/API route
   }
 

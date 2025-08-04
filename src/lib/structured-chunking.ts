@@ -37,17 +37,12 @@ export async function processDocumentWithStructuredChunking(
   _knowledgeItemId: string
 ): Promise<StructuredChunk[]> {
   
-  console.log(`📄 Starting structured document processing: ${fileName}`);
-  const startTime = Date.now();
-  
   try {
     // Step 1: Detect document structure and type
-    const documentStructure = analyzeDocumentStructure(content, fileName);
-    console.log(`🔍 Detected structure type: ${documentStructure.type}`);
+    analyzeDocumentStructure(content, fileName);
     
     // Step 2: Extract structural elements
     const structuralElements = extractStructuralElements(content);
-    console.log(`📚 Extracted ${structuralElements.length} structural elements`);
     
     // Step 3: Create intelligent chunks preserving structure
     const structuredChunks = await createStructuredChunks(
@@ -57,9 +52,6 @@ export async function processDocumentWithStructuredChunking(
     
     // Step 4: Enhance chunks with metadata and context
     const enhancedChunks = await enhanceChunksWithMetadata(structuredChunks, content);
-    
-    const processingTime = Date.now() - startTime;
-    console.log(`✅ Structured chunking completed: ${enhancedChunks.length} chunks in ${processingTime}ms`);
     
     return enhancedChunks;
     

@@ -52,7 +52,6 @@ export interface UserProfileData {
  */
 export async function fetchUserProfile(userId: string): Promise<UserProfileData | null> {
   try {
-    console.log(`👤 Fetching user profile for: ${userId}`);
     
     const clientMemory = await prisma.clientMemory.findUnique({
       where: { userId },
@@ -98,7 +97,6 @@ export async function fetchUserProfile(userId: string): Promise<UserProfileData 
     });
     
     if (!clientMemory) {
-      console.log(`👤 No profile found for user: ${userId}`);
       return null;
     }
     
@@ -136,8 +134,6 @@ export async function fetchUserProfile(userId: string): Promise<UserProfileData 
       currentDeadlift: clientMemory.currentDeadlift || undefined,
       currentOHP: clientMemory.currentOHP || undefined,
     };
-    
-    console.log(`✅ Profile loaded with ${Object.keys(profile).filter(k => profile[k as keyof UserProfileData] != null).length} populated fields`);
     
     return profile;
     

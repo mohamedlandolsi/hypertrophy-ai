@@ -189,7 +189,6 @@ export function LocationSelector() {
 
   const handlePlaceSelected = (place: google.maps.places.PlaceResult) => {
     setSelectedPlace(place);
-    console.log('Selected place:', place);
   };
 
   return (

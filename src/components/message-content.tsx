@@ -56,19 +56,6 @@ export const MessageContent: React.FC<MessageContentProps> = ({ content, imageDa
       image && typeof image.data === 'string' && image.data.trim().length > 0
     );
     
-    // Debug logging to help identify the issue
-    if (rawImages.length > 0) {
-      console.log('🖼️ MessageContent: Processing images', {
-        rawCount: rawImages.length,
-        filteredCount: filtered.length,
-        rawImages: rawImages.map(img => ({
-          hasData: !!img.data,
-          dataLength: img.data?.length || 0,
-          dataPreview: img.data?.substring(0, 50) + '...'
-        }))
-      });
-    }
-    
     return filtered;
   }, [images, imageData]);
 

@@ -47,8 +47,6 @@ export async function generateSubQueries(userQuery: string): Promise<string[]> {
     
     const prompt = subQueryGenerationPrompt.replace('{userQuery}', userQuery);
 
-    console.log('🔍 Generating sub-queries for:', userQuery);
-    
     const result = await model.generateContent(prompt);
     const responseText = result.response.text();
 
@@ -79,8 +77,6 @@ export async function generateSubQueries(userQuery: string): Promise<string[]> {
     
     // Remove duplicates and limit to reasonable number
     const uniqueQueries = [...new Set(allQueries)].slice(0, 5);
-    
-    console.log('✅ Generated sub-queries:', uniqueQueries);
     
     return uniqueQueries;
     

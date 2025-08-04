@@ -74,18 +74,22 @@ export interface ConversationMessage {
 // Function definition for updating client profile
 const updateClientProfileFunction = {
   name: 'update_client_profile',
-  description: 'Update the client\'s profile with new personal information, training details, goals, or any other relevant data they provide. This function should be called whenever the user shares information about themselves.',
+  description: 'Update the client\'s profile with new personal information, training details, goals, health information, or any other relevant data they provide. This function should be called whenever the user shares information about themselves, their training, lifestyle, goals, health conditions, or preferences.',
   parameters: {
     type: SchemaType.OBJECT,
     properties: {
       // Personal Information
       name: {
         type: SchemaType.STRING,
-        description: 'The client\'s name'
+        description: 'The client\'s name or nickname'
       },
       age: {
         type: SchemaType.NUMBER,
         description: 'The client\'s age in years'
+      },
+      gender: {
+        type: SchemaType.STRING,
+        description: 'The client\'s gender: MALE, FEMALE, OTHER, or PREFER_NOT_TO_SAY'
       },
       height: {
         type: SchemaType.NUMBER,
@@ -110,24 +114,39 @@ const updateClientProfileFunction = {
       },
       preferredTrainingStyle: {
         type: SchemaType.STRING,
-        description: 'The client\'s preferred training style'
+        description: 'The client\'s preferred training style (e.g., bodybuilding, powerlifting, calisthenics)'
       },
       availableTime: {
         type: SchemaType.NUMBER,
         description: 'Available time for training sessions in minutes'
+      },
+      activityLevel: {
+        type: SchemaType.STRING,
+        description: 'Overall daily activity level: SEDENTARY, LIGHT, MODERATE, ACTIVE, VERY_ACTIVE'
       },
       // Goals and Motivation
       primaryGoal: {
         type: SchemaType.STRING,
         description: 'The client\'s primary fitness goal: muscle_gain, fat_loss, strength, endurance, general_fitness, or body_recomposition'
       },
+      secondaryGoals: {
+        type: SchemaType.ARRAY,
+        items: { 
+          type: SchemaType.STRING 
+        },
+        description: 'Additional fitness goals as an array of strings'
+      },
       targetWeight: {
         type: SchemaType.NUMBER,
         description: 'Target weight in kilograms'
       },
+      targetBodyFat: {
+        type: SchemaType.NUMBER,
+        description: 'Target body fat percentage'
+      },
       motivation: {
         type: SchemaType.STRING,
-        description: 'What motivates the client to train'
+        description: 'What motivates the client to train or their reasons for pursuing fitness'
       },
       // Health and Limitations
       injuries: {
@@ -143,6 +162,32 @@ const updateClientProfileFunction = {
           type: SchemaType.STRING 
         },
         description: 'Any physical or other limitations as an array of strings'
+      },
+      medications: {
+        type: SchemaType.ARRAY,
+        items: { 
+          type: SchemaType.STRING 
+        },
+        description: 'Current medications being taken as an array of strings'
+      },
+      allergies: {
+        type: SchemaType.ARRAY,
+        items: { 
+          type: SchemaType.STRING 
+        },
+        description: 'Known allergies as an array of strings'
+      },
+      // Lifestyle
+      sleepHours: {
+        type: SchemaType.NUMBER,
+        description: 'Average sleep hours per night'
+      },
+      supplementsUsed: {
+        type: SchemaType.ARRAY,
+        items: { 
+          type: SchemaType.STRING 
+        },
+        description: 'Current supplements being used as an array of strings'
       },
       // Training Environment
       gymAccess: {
@@ -163,20 +208,24 @@ const updateClientProfileFunction = {
       // Progress Tracking
       currentBench: {
         type: SchemaType.NUMBER,
-        description: 'Current bench press 1RM in kg'
+        description: 'Current bench press 1RM or working weight in kg'
       },
       currentSquat: {
         type: SchemaType.NUMBER,
-        description: 'Current squat 1RM in kg'
+        description: 'Current squat 1RM or working weight in kg'
       },
       currentDeadlift: {
         type: SchemaType.NUMBER,
-        description: 'Current deadlift 1RM in kg'
+        description: 'Current deadlift 1RM or working weight in kg'
+      },
+      currentOHP: {
+        type: SchemaType.NUMBER,
+        description: 'Current overhead press 1RM or working weight in kg'
       },
       // Communication Preferences
       preferredLanguage: {
         type: SchemaType.STRING,
-        description: 'Preferred communication language'
+        description: 'Preferred communication language (e.g., en, ar, fr)'
       }
     }
   }
@@ -270,8 +319,6 @@ export async function sendToGeminiWithCitations(
   imageMimeTypes?: string[] | string | null,
   userPlan: 'FREE' | 'PRO' = 'FREE'
 ): Promise<GeminiResponse> {
-  const geminiStartTime = Date.now();
-  console.log(`🚀 Starting sendToGeminiWithCitations (User: ${userId || 'GUEST'}, Plan: ${userPlan})`);
   
   try {
     // Fetch AI configuration with user plan - will throw if not properly configured
@@ -304,25 +351,20 @@ export async function sendToGeminiWithCitations(
     
     // Allow RAG for both authenticated users AND guest users for better performance
     if (aiConfig.useKnowledgeBase) {
-      const ragStart = Date.now();
       try {
         const userQuery = latestUserMessage.content;
-        console.log(`🔍 MULTI-QUERY RAG: Starting retrieval for query: "${userQuery}" (User: ${userId || 'GUEST'})`);
         
         // Temporarily disable multi-query to get core search working first
         const useMultiQuery = false; // shouldUseMultiQuery(userQuery);
-        console.log(`🎯 Multi-query strategy: DISABLED (temporarily for debugging)`);
         
         let allRelevantChunks: KnowledgeContext[] = [];
         
         if (useMultiQuery) {
           // Step 1: Generate sub-queries for comprehensive retrieval
           const subQueries = await generateSubQueries(userQuery);
-          console.log(`📝 Generated ${subQueries.length} sub-queries:`, subQueries);
           
           // Step 2: Process ALL sub-queries in PARALLEL for maximum speed
           const retrievalPromises = subQueries.map(async (query) => {
-            console.log(`🔍 Starting parallel processing for sub-query: "${query}"`);
             
             try {
               const embeddingResult = await genAI.getGenerativeModel({ model: "text-embedding-004" })
@@ -334,7 +376,6 @@ export async function sendToGeminiWithCitations(
                 aiConfig.ragHighRelevanceThreshold
               );
               
-              console.log(`📚 Sub-query "${query}" returned ${chunks.length} chunks`);
               return chunks;
               
             } catch (queryError) {
@@ -344,11 +385,7 @@ export async function sendToGeminiWithCitations(
           });
           
           // Wait for ALL parallel searches to complete simultaneously
-          console.log(`⚡ Running ${subQueries.length} queries in parallel...`);
-          const startTime = Date.now();
           const allChunksNested = await Promise.all(retrievalPromises);
-          const parallelTime = Date.now() - startTime;
-          console.log(`🚀 Parallel retrieval completed in ${parallelTime}ms`);
           
           // Step 3: De-duplicate and combine results efficiently using Map
           const allChunks = new Map<string, KnowledgeContext>(); // Use Map for O(1) lookups
@@ -362,7 +399,6 @@ export async function sendToGeminiWithCitations(
           }
           
           allRelevantChunks = Array.from(allChunks.values());
-          console.log(`🎯 Multi-query retrieval: Combined ${allRelevantChunks.length} unique chunks from ${subQueries.length} queries in ${parallelTime}ms`);
           
         } else {
           // Step 1: Single-query retrieval (original logic)
@@ -375,8 +411,6 @@ export async function sendToGeminiWithCitations(
             aiConfig.ragMaxChunks,
             aiConfig.ragHighRelevanceThreshold
           );
-          
-          console.log(`🔍 Single-query retrieval returned ${allRelevantChunks.length} chunks`);
         }
         
         // Step 3: Process and format the retrieved knowledge
@@ -419,17 +453,12 @@ export async function sendToGeminiWithCitations(
           // Store citations for potential return to API consumer
           referencedSources = uniqueCitations;
           knowledgeContext = contextParts.join('\n\n---\n\n');
-          console.log(`📚 ${useMultiQuery ? 'MULTI-QUERY' : 'SINGLE-QUERY'} RAG: Generated context from ${Object.keys(groupedChunks).length} knowledge items (${knowledgeContext.length} chars)`);
         } else {
-          console.log('📚 RAG: No relevant chunks found');
+          // No relevant chunks found
         }
         
-        const ragTime = Date.now() - ragStart;
-        console.log(`🔍 RAG processing completed in ${ragTime}ms`);
       } catch (error) {
-        const ragTime = Date.now() - ragStart;
         console.error('❌ MULTI-QUERY RAG ERROR:', error);
-        console.log(`🔍 RAG processing failed after ${ragTime}ms`);
         // Continue without knowledge context on error
       }
     }
@@ -454,6 +483,33 @@ export async function sendToGeminiWithCitations(
 ${languageInstruction}
 
 ${clientMemoryContext}
+
+${userId ? `
+---
+## IMPORTANT: Client Profile Management
+You have access to a function called "update_client_profile" that MUST be used whenever the user shares personal information. This is critical for providing personalized coaching.
+
+**ALWAYS use the update_client_profile function when the user mentions ANY of the following:**
+- Personal details: name, age, gender, height, weight, body fat percentage
+- Training information: experience level, training days/schedule, preferred style, available time, activity level
+- Goals: primary/secondary goals, target weight/body fat, motivation
+- Health: injuries, limitations, medications, allergies
+- Lifestyle: sleep hours, supplements, diet preferences
+- Environment: gym access, home gym, available equipment
+- Progress: current lift numbers (bench, squat, deadlift, OHP)
+- Preferences: language, communication style
+
+**Examples of when to call the function:**
+- "I'm 25 years old" → Update age
+- "I train 4 times a week" → Update weeklyTrainingDays
+- "I want to build muscle" → Update primaryGoal to "muscle_gain"
+- "I have knee problems" → Add "knee" to injuries array
+- "I sleep 7 hours" → Update sleepHours
+- "I bench 80kg" → Update currentBench
+
+**CRITICAL:** Extract and save information even if mentioned casually in conversation. This builds a comprehensive client profile over time.
+---
+` : ''}
 
 ${knowledgeContext ? 
 `---
@@ -578,7 +634,6 @@ ${aiConfig.toolEnforcementMode === 'STRICT' ?
 
     // Send the current message with performance monitoring
     console.log(`🤖 Sending message to Gemini API (${aiConfig.modelName})...`);
-    const geminiStart = Date.now();
     
     // Create a timeout promise - shorter timeout for flash models
     const timeoutDuration = aiConfig.modelName.includes('pro') ? 30000 : 20000; // 30s for PRO, 20s for others
@@ -594,29 +649,45 @@ ${aiConfig.toolEnforcementMode === 'STRICT' ?
         timeoutPromise
       ]) as { response: { text: () => string; functionCalls?: () => Array<{ name: string; args: unknown }> } };
       
-      const firstCallTime = Date.now() - geminiStart;
-      console.log(`🚀 First Gemini API call completed in ${firstCallTime}ms`);
     
       // Handle function calls if present
       const functionCalls = result.response.functionCalls?.();
       if (functionCalls && functionCalls.length > 0) {
-        console.log('Function calls detected:', functionCalls);
         
         for (const functionCall of functionCalls) {
           if (functionCall.name === 'update_client_profile' && userId) {
             try {
               const args = functionCall.args as MemoryUpdate;
-              console.log('Updating client profile with:', args);
+              
+              // Update the client memory
               await updateClientMemory(userId, args);
+              
+              // Add a detailed coaching note about the new information
+              const infoItems = Object.entries(args)
+                .filter(([, value]) => value !== undefined && value !== null)
+                .map(([key, value]) => {
+                  if (Array.isArray(value)) {
+                    return `${key}: ${value.join(', ')}`;
+                  }
+                  return `${key}: ${value}`;
+                })
+                .join('; ');
+              
+              if (infoItems) {
+                await addCoachingNote(
+                  userId, 
+                  `Client profile updated: ${infoItems}`, 
+                  'profile_updates'
+                );
+              }
             } catch (error) {
-              console.error('Error updating client profile:', error);
+              console.error('❌ Error updating client profile:', error);
+              // Still continue with response even if memory update fails
             }
           }
         }
 
         // Get the final response after function calls
-        console.log(`🤖 Sending follow-up message to Gemini API...`);
-        const followUpStart = Date.now();
         
         const followUpTimeoutPromise = new Promise((_, reject) =>
           setTimeout(() => reject(new Error('Follow-up Gemini API timeout after 30 seconds')), 30000)
@@ -627,18 +698,10 @@ ${aiConfig.toolEnforcementMode === 'STRICT' ?
           followUpTimeoutPromise
         ]) as { response: { text: () => string } };
         
-        const followUpTime = Date.now() - followUpStart;
-        console.log(`🚀 Follow-up Gemini API call completed in ${followUpTime}ms`);
-        
-        const textStart = Date.now();
         const aiResponse = followUpResult.response.text();
-        const textTime = Date.now() - textStart;
-        console.log(`📄 Follow-up text extraction completed in ${textTime}ms`);
 
         // Log conversation for future context (ONLY for authenticated users)
         if (userId) {
-          console.log(`💾 Logging follow-up conversation for user: ${userId}`);
-          const loggingStart = Date.now();
           try {
             const userQuestion = latestUserMessage.content;
             
@@ -659,33 +722,20 @@ ${aiConfig.toolEnforcementMode === 'STRICT' ?
               );
             }
             
-            const loggingTime = Date.now() - loggingStart;
-            console.log(`💾 Follow-up conversation logging completed in ${loggingTime}ms`);
           } catch (error) {
             console.error('Error in conversation processing:', error);
           }
-        } else {
-          console.log(`👤 Guest user - skipping follow-up conversation logging`);
         }
-        
-        const totalGeminiTime = Date.now() - geminiStartTime;
-        console.log(`✅ sendToGeminiWithCitations (function call path) completed in ${totalGeminiTime}ms (User: ${userId || 'GUEST'})`);
         
         return {
           content: aiResponse,
           citations: referencedSources
         };
       } else {
-        console.log(`📄 No function calls needed, extracting direct response...`);
-        const textStart = Date.now();
         const aiResponse = result.response.text();
-        const textTime = Date.now() - textStart;
-        console.log(`📄 Text extraction completed in ${textTime}ms`);
 
         // Log conversation for future context (ONLY for authenticated users)
         if (userId) {
-          console.log(`💾 Logging conversation for user: ${userId}`);
-          const loggingStart = Date.now();
           try {
             const userQuestion = latestUserMessage.content;
             
@@ -706,17 +756,10 @@ ${aiConfig.toolEnforcementMode === 'STRICT' ?
               );
             }
             
-            const loggingTime = Date.now() - loggingStart;
-            console.log(`💾 Conversation logging completed in ${loggingTime}ms`);
           } catch (error) {
             console.error('Error in conversation processing:', error);
           }
-        } else {
-          console.log(`👤 Guest user - skipping conversation logging`);
         }
-        
-        const totalGeminiTime = Date.now() - geminiStartTime;
-        console.log(`✅ sendToGeminiWithCitations completed in ${totalGeminiTime}ms (User: ${userId || 'GUEST'})`);
         
         return {
           content: aiResponse,

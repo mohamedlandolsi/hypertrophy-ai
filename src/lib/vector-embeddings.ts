@@ -93,14 +93,10 @@ export async function generateEmbeddingsBatch(
   const results: EmbeddingResult[] = [];
   const failedIndices: number[] = [];
   
-  console.log(`🧠 Generating embeddings for ${texts.length} texts in batches of ${batchSize}`);
-  
   // Process in batches to avoid rate limits
   for (let i = 0; i < texts.length; i += batchSize) {
     const batch = texts.slice(i, i + batchSize);
     const batchMetadata = metadata ? metadata.slice(i, i + batchSize) : undefined;
-    
-    console.log(`Processing batch ${Math.floor(i / batchSize) + 1}/${Math.ceil(texts.length / batchSize)}`);
     
     // Process batch with exponential backoff retry
     let batchAttempts = 0;
@@ -138,7 +134,6 @@ export async function generateEmbeddingsBatch(
         if (batchAttempts < maxBatchAttempts) {
           // Exponential backoff: 1s, 2s, 4s
           const delay = Math.pow(2, batchAttempts - 1) * 1000;
-          console.log(`Retrying batch in ${delay}ms...`);
           await new Promise(resolve => setTimeout(resolve, delay));
         } else {
           // Mark all items in this batch as failed
@@ -157,7 +152,6 @@ export async function generateEmbeddingsBatch(
   
   // Retry failed items individually with more aggressive retry logic
   if (failedIndices.length > 0) {
-    console.log(`🔄 Retrying ${failedIndices.length} failed embeddings individually...`);
     
     for (const index of failedIndices) {
       let attempts = 0;
@@ -196,9 +190,6 @@ export async function generateEmbeddingsBatch(
       }
     }
   }
-  
-  const successCount = results.filter(r => !r.metadata?.error).length;
-  console.log(`✅ Successfully generated ${successCount}/${texts.length} embeddings`);
   
   return results;
 }

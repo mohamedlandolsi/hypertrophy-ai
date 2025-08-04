@@ -43,8 +43,6 @@ export async function optimizedJsonSimilaritySearch(
   highRelevanceThreshold?: number
 ): Promise<KnowledgeContext[]> {
   try {
-    console.log(`🚀 Starting optimized similarity search for top ${topK} chunks`);
-    const searchStart = Date.now();
     
     // Process chunks in smaller batches for better performance
     const batchSize = 50; // Process 50 chunks at a time
@@ -109,7 +107,6 @@ export async function optimizedJsonSimilaritySearch(
       candidateSimilarities = allSimilarities.filter(
         item => item.similarity >= highRelevanceThreshold
       );
-      console.log(`🔍 High relevance filtering: ${allSimilarities.length} total → ${candidateSimilarities.length} above threshold ${highRelevanceThreshold}`);
     }
     
     // Take top results with source diversification
@@ -130,9 +127,6 @@ export async function optimizedJsonSimilaritySearch(
         });
       }
     }
-    
-    const searchTime = Date.now() - searchStart;
-    console.log(`✅ Optimized search completed in ${searchTime}ms: ${results.length} results from ${allSimilarities.length} processed chunks`);
     
     return results;
   } catch (error) {

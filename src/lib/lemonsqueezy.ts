@@ -111,9 +111,6 @@ class LemonSqueezyService {
       throw new Error(`Product not found for productId: ${options.productId}, variantId: ${options.variantId}`);
     }
 
-    console.log(`Selected product: ${product.name} (${product.interval}) with variant ID: ${product.variantId}`);
-    console.log(`Environment check - Store ID: ${this.storeId}, API Key: ${this.apiKey ? 'SET' : 'NOT SET'}`);
-
     // Validate that the product and variant IDs are properly configured
     if (!product.id || product.id === '') {
       throw new Error(`Product ID is not configured for ${product.name}`);
@@ -164,14 +161,10 @@ class LemonSqueezyService {
       },
     };
 
-    console.log('Creating checkout with data:', JSON.stringify(checkoutData, null, 2));
-
     const response = await this.makeRequest('/checkouts', {
       method: 'POST',
       body: JSON.stringify(checkoutData),
     });
-
-    console.log('LemonSqueezy API Response:', JSON.stringify(response, null, 2));
 
     if (!response.data || !response.data.attributes || !response.data.attributes.url) {
       throw new Error('Invalid response from LemonSqueezy API: missing checkout URL');
@@ -185,10 +178,6 @@ class LemonSqueezyService {
       const separator = checkoutUrl.includes('?') ? '&' : '?';
       checkoutUrl = `${checkoutUrl}${separator}enabled=${product.variantId}`;
     }
-    
-    console.log(`Generated checkout URL: ${checkoutUrl}`);
-    console.log(`URL should contain variant: ${product.variantId}`);
-    console.log(`Product interval: ${product.interval}`);
     
     return checkoutUrl;
   }
@@ -270,17 +259,9 @@ export async function createProCheckoutUrl(
   interval: 'month' | 'year' = 'month'
 ): Promise<string> {
   try {
-    console.log(`createProCheckoutUrl called with interval: ${interval}`);
     
     // Use pre-created checkout URLs instead of dynamic API creation
     const product = interval === 'year' ? LEMONSQUEEZY_PRODUCTS.PRO_YEARLY : LEMONSQUEEZY_PRODUCTS.PRO_MONTHLY;
-    
-    console.log(`Selected product for ${interval}:`, {
-      name: product.name,
-      id: product.id,
-      variantId: product.variantId,
-      checkoutUrl: product.checkoutUrl
-    });
     
     if (!product.checkoutUrl) {
       throw new Error(`No checkout URL configured for ${interval} plan`);
@@ -304,9 +285,6 @@ export async function createProCheckoutUrl(
       const separator = checkoutUrl.includes('?') ? '&' : '?';
       checkoutUrl = `${checkoutUrl}${separator}${params.toString()}`;
     }
-    
-    console.log(`Generated checkout URL: ${checkoutUrl}`);
-    console.log(`URL contains correct variant: ${checkoutUrl.includes(product.variantId)}`);
     
     return checkoutUrl;
     
