@@ -8,7 +8,7 @@
 - **RAG System**: Hybrid vector similarity + keyword search using Gemini embeddings with optimized chunking
 - **Client Memory**: Auto-extracting user profiling system with 50+ structured fields and AI function calling
 - **AI Configuration**: Admin-controlled singleton pattern for system prompts, model selection, and RAG parameters
-- **Authentication**: Supabase SSR with role-based access, onboarding flow, and guest mode support
+- **Authentication**: Supabase SSR with role-based access, onboarding flow, and login-required chat
 - **File Processing**: Multi-format pipeline (PDF, DOC, TXT, MD) with semantic chunking and embedding generation
 - **Subscription System**: Two-tier (FREE/PRO) with daily limits, LemonSqueezy integration, and usage tracking
 - **Internationalization**: Full i18n with next-intl supporting Arabic RTL, French, and English
@@ -20,7 +20,7 @@
 - **Admin-Required Setup**: All AI operations require admin configuration through singleton `AIConfiguration` table
 - **Hybrid RAG Search**: Combines vector similarity + keyword matching with configurable thresholds and muscle-specific priority
 - **Function-Calling Memory**: AI automatically extracts user information via Gemini function calling instead of regex patterns
-- **Guest Mode Architecture**: Chat API handles unauthenticated users with no DB persistence
+- **Login-Required Chat**: Unauthenticated users must login to send messages (no guest messaging)
 - **JSON Vector Storage**: Temporary embedding storage as JSON strings until pgvector migration
 - **Server-Side Limits**: Subscription enforcement with daily message tracking and monthly upload quotas
 - **Multi-Image Base64**: Gallery display with base64 storage and conditional rendering patterns
@@ -50,14 +50,15 @@ GEMINI_API_KEY=                  # Google Gemini API for AI/embeddings
 DATABASE_URL=                    # PostgreSQL connection string
 DIRECT_URL=                      # Direct DB connection (for migrations)
 
-# Subscription System (LemonSqueezy)
+# Subscription System (LemonSqueezy) - Current Pricing: $9/month, $90/year
 LEMONSQUEEZY_API_KEY=            # API key for payment processing
 LEMONSQUEEZY_STORE_ID=           # Store ID for product management
 LEMONSQUEEZY_PRO_MONTHLY_PRODUCT_ID=  # Monthly subscription product
 LEMONSQUEEZY_PRO_MONTHLY_VARIANT_ID=  # Monthly subscription variant
-LEMONSQUEEZY_PRO_YEARLY_PRODUCT_ID=   # Yearly subscription product
-LEMONSQUEEZY_PRO_YEARLY_VARIANT_ID=   # Yearly subscription variant
+LEMONSQUEEZY_PRO_YEARLY_PRODUCT_ID=   # Yearly subscription product (same as monthly)
+LEMONSQUEEZY_PRO_YEARLY_VARIANT_ID=   # Yearly subscription variant (different from monthly)
 LEMONSQUEEZY_WEBHOOK_SECRET=     # Webhook signature verification
+NEXT_PUBLIC_SITE_URL=            # Site URL for checkout success/cancel redirects
 ```
 
 ### Debug Scripts (Run from project root)
@@ -126,9 +127,16 @@ export async function POST(request: NextRequest) {
   const context = ApiErrorHandler.createContext(request);
   
   try {
-    // Auth (optional for guest endpoints)
+    // Auth required for chat operations (no guest mode)
     const supabase = await createClient();
     const { data: { user } } = await supabase.auth.getUser();
+    
+    if (!user) {
+      return NextResponse.json(
+        { error: 'Authentication required', message: 'Please log in to send messages' },
+        { status: 401 }
+      );
+    }
     
     // Handle both JSON and FormData
     const contentType = request.headers.get('content-type');
@@ -153,7 +161,7 @@ export async function POST(request: NextRequest) {
 - Handle both JSON and FormData (for image uploads) in POST routes
 - User authentication via `createClient()` from `@/lib/supabase/server`
 - Structure: validate → authenticate → process → return with error handling
-- **Guest Mode**: Check `isGuest` parameter and skip DB operations for guest users
+- **Authentication Required**: Return 401 for unauthenticated users (no guest mode)
 - **Content-Type Detection**: Use `request.headers.get('content-type')` to handle multipart vs JSON
 
 ### 7. Internationalization & Arabic Support
@@ -209,6 +217,27 @@ await processFileWithEmbeddings(buffer, mimeType, fileName, knowledgeItemId)
 - Title prefixing: `${title}\n\n${content}` for better embedding context
 - Automatic embedding generation with Gemini text-embedding-004 model
 
+### 10. Chat System Architecture (`/src/app/[locale]/chat/page.tsx`)
+```typescript
+// Uses Vercel AI SDK useChat hook for robust state management
+const { messages, input, handleInputChange, handleSubmit, isLoading, error } = useChat({
+  api: '/api/chat',
+  body: { conversationId, isGuest: !user },
+  onFinish: (message) => {
+    // Handle conversation ID from response headers
+    if (serverData?.conversationId) {
+      setConversationId(serverData.conversationId);
+      window.history.replaceState(null, '', `/${locale}/chat?id=${serverData.conversationId}`);
+    }
+  }
+});
+```
+- **State Management**: Uses AI SDK's built-in state instead of custom React state
+- **Conversation Flow**: New chats get ID from first response, URL updates automatically
+- **Image Support**: FormData handling for multipart uploads with multiple images
+- **Error Handling**: Structured error responses with toast notifications
+- **Authentication Gate**: Users must login before sending any messages
+
 ## 🔧 Key Integration Points
 
 ### Supabase Auth Middleware (`/src/middleware.ts`)
@@ -228,7 +257,7 @@ await processFileWithEmbeddings(buffer, mimeType, fileName, knowledgeItemId)
 - User authentication via `createClient()` from `@/lib/supabase/server`
 - Structure: validate → authenticate → process → return with error handling
 - Use try-catch with structured error responses
-- **Guest Mode**: Check `isGuest` parameter and skip DB operations for guest users
+- **Authentication Required**: All chat operations require login (no guest mode)
 - **Content-Type Detection**: Use `request.headers.get('content-type')` to handle multipart vs JSON
 
 ### API Route Example Pattern
@@ -237,9 +266,16 @@ export async function POST(request: NextRequest) {
   const context = ApiErrorHandler.createContext(request);
   
   try {
-    // Auth (optional for guest endpoints)
+    // Authentication required for all chat operations
     const supabase = await createClient();
     const { data: { user } } = await supabase.auth.getUser();
+    
+    if (!user) {
+      return NextResponse.json(
+        { error: 'Authentication required', message: 'Please log in to send messages' },
+        { status: 401 }
+      );
+    }
     
     // Handle both JSON and FormData
     const contentType = request.headers.get('content-type');
@@ -301,7 +337,8 @@ export async function POST(request: NextRequest) {
 - **Authentication**: Supabase SSR with role-based access control
 - **UI**: Tailwind CSS + shadcn/ui components with `next-themes` dark mode
 - **File Processing**: `mammoth` (DOC), `pdf-parse` (PDF), `@tiptap/react` (rich text)
-- **Payments**: Lemon Squeezy webhook integration
+- **Payments**: Lemon Squeezy webhook integration with same-tab checkout flow
+- **Chat**: Vercel AI SDK `useChat` hook for state management
 - **Development**: TypeScript, ESLint, Prisma Studio for DB management
 
 ## 🎯 Testing & Debugging
@@ -340,6 +377,8 @@ const { functionName } = require('./src/lib/module-name');
 - **Checkout URL generation fails** → Check product/variant IDs in `check-lemonsqueezy-config.js`
 - **Currency conversion errors** → Multi-currency support handles rate limiting gracefully
 - **Message limit not enforcing** → Check daily reset logic and database `messagesUsedToday`
+- **Guest user trying to chat** → Returns 401, login dialog should appear immediately
+- **Chat not creating new conversation ID** → Check API response headers and `onFinish` handler
 
 ## 📝 File Naming Conventions
 
@@ -351,5 +390,26 @@ const { functionName } = require('./src/lib/module-name');
 - `check-*.js` - Validation and verification scripts
 
 - **Navigation Tips**: Admin features (`/src/app/admin/`), Core AI logic (`/src/lib/gemini.ts`), Vector operations (`/src/lib/vector-search.ts`), Subscription system (`/src/lib/subscription.ts`, `/src/lib/lemonsqueezy.ts`, `/src/components/plan-badge.tsx`, `/src/components/upgrade-button.tsx`), Arabic support (`/src/components/arabic-aware-*.tsx`, `/src/lib/text-formatting.ts`), Error handling (`/src/lib/error-handler.ts` with `ApiErrorHandler` class), Client memory (`/src/lib/client-memory.ts` for automatic user profile extraction), Multi-currency support (`/src/lib/currency.ts`), Webhook processing (`/src/app/api/webhooks/lemon-squeezy/route.ts`)
+
+## 💳 Subscription System Details
+
+### Current Pricing Structure (USD)
+- **FREE Plan**: 15 messages/day, 5 uploads/month, max 10MB files, 10 knowledge items
+- **PRO Plan Monthly**: $9/month - Unlimited messages, unlimited uploads, max 100MB files, unlimited knowledge items  
+- **PRO Plan Yearly**: $90/year (10 months pricing) - Same features as monthly
+
+### LemonSqueezy Integration
+- **Same Product ID**: Both monthly and yearly use the same product ID but different variant IDs
+- **Pre-created Checkout URLs**: Uses direct checkout URLs instead of dynamic API creation
+- **Same-Tab Checkout**: Redirects in same tab to avoid popup blocker issues
+- **Webhook Events**: Handles `subscription_created`, `subscription_updated`, `subscription_cancelled`, `subscription_payment_success`
+- **Custom Data**: Passes user ID through checkout custom data for webhook processing
+- **Success Flow**: Redirects to `/checkout/success` after payment completion
+
+### Subscription Enforcement
+- **Server-Side Validation**: All limits enforced in API routes with HTTP 429 responses
+- **Daily Reset**: Message counts reset at midnight via `lastMessageReset` field
+- **Monthly Reset**: Upload counts reset monthly via `lastUploadReset` field
+- **Plan Checking**: Use `getUserPlan()` and `canUserSendMessage()` functions
 
 ````

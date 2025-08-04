@@ -58,6 +58,7 @@ import { MessageLimitIndicator } from '@/components/message-limit-indicator';
 import { PlanBadge } from '@/components/plan-badge';
 import { UpgradeButton } from '@/components/upgrade-button';
 import { useOnlineStatus } from '@/hooks/use-online-status';
+import { UpgradeLimitDialog } from '@/components/upgrade-limit-dialog';
 
 const ChatPage = () => {
   const t = useTranslations('ChatPage');
@@ -76,10 +77,10 @@ const ChatPage = () => {
   const [isSidebarOpen, setIsSidebarOpen] = reactUseState(false); // Default closed on mobile
   const [isMobile, setIsMobile] = reactUseState(false);
   const [user, setUser] = reactUseState<SupabaseUser | null>(null); // Using reactUseState
-  const [isLoadingHistory, setIsLoadingHistory] = reactUseState(true);
   const [isLoadingMessages, setIsLoadingMessages] = reactUseState(false);
   const [autoScroll, setAutoScroll] = reactUseState(true);
   const [showLoginDialog, setShowLoginDialog] = reactUseState(false);
+  const [showUpgradeDialog, setShowUpgradeDialog] = reactUseState(false);
   const [isInitializing, setIsInitializing] = reactUseState(true);
 
   // Use optimized hooks for user data - these will cache and reduce API calls
@@ -94,6 +95,7 @@ const ChatPage = () => {
   
   const { 
     data: chatHistoryData,
+    isLoading: isChatHistoryLoading,
     refetch: refetchChatHistory
   } = useOptimizedChatHistory(1, 10, !!user);
 
@@ -440,7 +442,7 @@ const ChatPage = () => {
             // Refetch to get updated limit status
             refetchUserPlan();
           }
-          showToast.error(t('toasts.limitReachedTitle'), t('toasts.limitReachedText'));
+          setShowUpgradeDialog(true);
           return;
         }
 
@@ -526,10 +528,9 @@ const ChatPage = () => {
         // Only load specific chat session if provided
         if (currentUser && initialConversationId) {
           loadChatSession(initialConversationId);
-        } else {
-          // For guest users, set loading states to false
-          setIsLoadingHistory(false);
         }
+        
+        // The useOptimizedChatHistory hook will handle its own loading state
       } catch (error) {
         console.error('Error during initialization:', error);
       } finally {
@@ -1271,7 +1272,7 @@ const ChatPage = () => {
                   
                   {/* Chat History List */}
                   <div className="flex-1 overflow-y-auto chat-history-scroll -mr-2 pr-2 space-y-1">
-                    {isLoadingHistory ? (
+                    {isChatHistoryLoading ? (
                       <div className="flex items-center justify-center py-8">
                         <InlineLoading 
                           variant="dots"
@@ -1837,6 +1838,12 @@ const ChatPage = () => {
           variant='initial'
         />
       </Suspense>
+
+      <UpgradeLimitDialog
+        open={showUpgradeDialog}
+        onOpenChange={setShowUpgradeDialog}
+        dailyLimit={userPlan?.dailyLimit || 5}
+      />
 
       {/* Delete Chat Confirmation Dialog */}
       <Dialog open={deleteDialogOpen} onOpenChange={setDeleteDialogOpen}>

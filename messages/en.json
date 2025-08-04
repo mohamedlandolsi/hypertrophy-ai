@@ -946,6 +946,19 @@
       "supplementRecommendations": "Supplement recommendations?"
     },
     "dialogs": {
+      "upgradeLimitReached": {
+        "title": "Message Limit Reached",
+        "description": "You've reached your daily message limit of {limit} messages.",
+        "benefits": {
+          "title": "Upgrade to Pro and get:",
+          "unlimited": "Unlimited daily messages",
+          "files": "Upload larger files (up to 100MB)",
+          "knowledge": "Unlimited knowledge base items",
+          "support": "Priority support"
+        },
+        "upgradeNow": "Upgrade to Pro",
+        "later": "Maybe Later"
+      },
       "deleteChat": {
         "title": "Delete Chat",
         "description": "Are you sure you want to delete this conversation? This action cannot be undone.",

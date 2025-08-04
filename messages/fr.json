@@ -971,6 +971,19 @@
       "supplementRecommendations": "Recommandations de suppléments?"
     },
     "dialogs": {
+      "upgradeLimitReached": {
+        "title": "Limite de Messages Atteinte",
+        "description": "Vous avez atteint votre limite quotidienne de {limit} messages.",
+        "benefits": {
+          "title": "Passez à Pro et obtenez :",
+          "unlimited": "Messages quotidiens illimités",
+          "files": "Téléchargez des fichiers plus volumineux (jusqu'à 100 Mo)",
+          "knowledge": "Éléments de base de connaissances illimités",
+          "support": "Support prioritaire"
+        },
+        "upgradeNow": "Passer à Pro",
+        "later": "Peut-être Plus Tard"
+      },
       "deleteChat": {
         "title": "Supprimer la Discussion",
         "description": "Êtes-vous sûr de vouloir supprimer cette conversation ? Cette action ne peut pas être annulée.",

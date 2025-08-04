@@ -1,4 +1,4 @@
-import React, { useMemo, useCallback } from 'react';
+import React, { useMemo, useCallback, useEffect, useRef } from 'react';
 import { Textarea } from './ui/textarea';
 import { isArabicText, getTextDirection } from '@/lib/text-formatting';
 
@@ -29,6 +29,9 @@ export const ArabicAwareTextarea: React.FC<ArabicAwareTextareaProps> = ({
   rows = 1,
   maxLength
 }) => {
+  // Ref to store textarea element for auto-resize
+  const textareaRef = useRef<HTMLTextAreaElement>(null);
+
   // Memoize expensive text direction calculation to avoid recalculation on every render
   const direction = useMemo(() => getTextDirection(value), [value]);
   
@@ -52,14 +55,19 @@ export const ArabicAwareTextarea: React.FC<ArabicAwareTextareaProps> = ({
     const newHeight = Math.min(textarea.scrollHeight, maxHeight);
     textarea.style.height = `${newHeight}px`;
   }, []);
+
+  // Effect to handle value changes from outside the component (e.g., clearing input after send)
+  useEffect(() => {
+    if (textareaRef.current) {
+      autoResize(textareaRef.current);
+    }
+  }, [value, autoResize]);
   
   // Optimized change handler - immediate response
   const handleChange = useCallback((e: React.ChangeEvent<HTMLTextAreaElement>) => {
-    // Only auto-resize if needed to avoid unnecessary DOM manipulation
+    // Always auto-resize to handle both growth and shrinkage
     const target = e.target;
-    if (target.scrollHeight > target.clientHeight) {
-      autoResize(target);
-    }
+    autoResize(target);
     onChange(e);
   }, [onChange, autoResize]);
   
@@ -89,6 +97,7 @@ export const ArabicAwareTextarea: React.FC<ArabicAwareTextareaProps> = ({
   
   return (
     <Textarea
+      ref={textareaRef}
       placeholder={placeholderText}
       className={`${className} ${direction === 'rtl' ? 'text-right' : ''} resize-none overflow-y-auto scrollbar-thin scrollbar-thumb-muted scrollbar-track-transparent chat-textarea`}
       value={value}
@@ -112,11 +121,9 @@ export const ArabicAwareTextarea: React.FC<ArabicAwareTextareaProps> = ({
         overflowWrap: 'break-word'
       }}
       onInput={useCallback((e: React.FormEvent<HTMLTextAreaElement>) => {
-        // Only auto-resize when actually needed to reduce DOM manipulation
+        // Always auto-resize to handle both text growth and shrinkage
         const target = e.target as HTMLTextAreaElement;
-        if (target.scrollHeight > target.clientHeight) {
-          autoResize(target);
-        }
+        autoResize(target);
       }, [autoResize])}
     />
   );
