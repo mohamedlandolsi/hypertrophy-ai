@@ -958,6 +958,10 @@
         "deleting": "Deleting..."
       }
     },
+    "modelSelection": {
+      "proRequired": "Pro Model Required",
+      "upgradeMessage": "HypertroQ Pro is available for Pro users only. Upgrade to unlock enhanced reasoning and multimodal understanding."
+    },
     "common": {
       "cancel": "Cancel",
       "delete": "Delete",

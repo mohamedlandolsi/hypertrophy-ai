@@ -10,7 +10,6 @@ import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Textarea } from '@/components/ui/textarea';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
-import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 
 interface AIConfiguration {
   id: string;
@@ -30,103 +29,6 @@ interface AIConfiguration {
   createdAt: string;
   updatedAt: string;
 }
-
-// Available AI models from Google AI and OpenAI documentation
-const AI_MODELS = [
-  // Gemini Models
-  {
-    value: 'gemini-2.5-pro',
-    label: 'Gemini 2.5 Pro',
-    description: 'Most powerful thinking model with maximum response accuracy',
-    provider: 'Google'
-  },
-  {
-    value: 'gemini-2.5-flash',
-    label: 'Gemini 2.5 Flash',
-    description: 'Best price-performance with adaptive thinking',
-    provider: 'Google'
-  },
-  {
-    value: 'gemini-2.5-flash-lite-preview-06-17',
-    label: 'Gemini 2.5 Flash-Lite Preview',
-    description: 'Most cost-efficient model for high throughput',
-    provider: 'Google'
-  },
-  {
-    value: 'gemini-2.0-flash',
-    label: 'Gemini 2.0 Flash',
-    description: 'Next generation features, speed, and realtime streaming',
-    provider: 'Google'
-  },
-  {
-    value: 'gemini-2.0-flash-lite',
-    label: 'Gemini 2.0 Flash-Lite',
-    description: 'Cost efficiency and low latency',
-    provider: 'Google'
-  },
-  {
-    value: 'gemini-1.5-flash',
-    label: 'Gemini 1.5 Flash',
-    description: 'Fast and versatile performance across diverse tasks',
-    provider: 'Google'
-  },
-  {
-    value: 'gemini-1.5-flash-8b',
-    label: 'Gemini 1.5 Flash-8B',
-    description: 'High volume and lower intelligence tasks',
-    provider: 'Google'
-  },
-  {
-    value: 'gemini-1.5-pro',
-    label: 'Gemini 1.5 Pro',
-    description: 'Complex reasoning tasks requiring more intelligence',
-    provider: 'Google'
-  },
-  
-  // OpenAI Models
-  {
-    value: 'gpt-4o',
-    label: 'GPT-4o',
-    description: 'Most advanced multimodal model, faster and cheaper than GPT-4 Turbo',
-    provider: 'OpenAI'
-  },
-  {
-    value: 'gpt-4o-mini',
-    label: 'GPT-4o Mini',
-    description: 'Affordable and intelligent small model for fast, lightweight tasks',
-    provider: 'OpenAI'
-  },
-  {
-    value: 'gpt-4-turbo',
-    label: 'GPT-4 Turbo',
-    description: 'Latest GPT-4 model with improved instruction following',
-    provider: 'OpenAI'
-  },
-  {
-    value: 'gpt-4',
-    label: 'GPT-4',
-    description: 'Large multimodal model for complex, multi-step tasks',
-    provider: 'OpenAI'
-  },
-  {
-    value: 'gpt-3.5-turbo',
-    label: 'GPT-3.5 Turbo',
-    description: 'Fast, inexpensive model for simple tasks',
-    provider: 'OpenAI'
-  },
-  {
-    value: 'o1-preview',
-    label: 'o1 Preview',
-    description: 'Reasoning model designed to solve hard problems across domains',
-    provider: 'OpenAI'
-  },
-  {
-    value: 'o1-mini',
-    label: 'o1 Mini',
-    description: 'Faster and cheaper reasoning model particularly good at coding, math, and science',
-    provider: 'OpenAI'
-  }
-];
 
 export default function AdminSettingsPage() {
   const [config, setConfig] = useState<AIConfiguration | null>(null);
@@ -313,77 +215,8 @@ export default function AdminSettingsPage() {
                 </p>
               </div>
 
-              {/* Model Configuration */}
-              <div className="space-y-4">
-                <h3 className="text-lg font-medium">Model Configuration</h3>
-                <p className="text-sm text-gray-600">Configure AI models for different user tiers</p>
-                
-                <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-                  <div className="space-y-2">
-                    <Label htmlFor="freeModelName">Free Tier Model</Label>
-                    <Select
-                      value={config.freeModelName}
-                      onValueChange={(value) => updateConfig('freeModelName', value)}
-                    >
-                      <SelectTrigger>
-                        <SelectValue placeholder="Select model for free users" />
-                      </SelectTrigger>
-                      <SelectContent>
-                        {AI_MODELS.map((model) => (
-                          <SelectItem key={model.value} value={model.value}>
-                            <div className="flex flex-col">
-                              <div className="flex items-center gap-2">
-                                <span className="font-medium">{model.label}</span>
-                                <span className="text-xs px-1.5 py-0.5 bg-muted rounded-md">
-                                  {model.provider}
-                                </span>
-                              </div>
-                              <span className="text-xs text-muted-foreground">
-                                {model.description}
-                              </span>
-                            </div>
-                          </SelectItem>
-                        ))}
-                      </SelectContent>
-                    </Select>
-                    <p className="text-xs text-gray-500">
-                      AI model for free tier users
-                    </p>
-                  </div>
-
-                  <div className="space-y-2">
-                    <Label htmlFor="proModelName">Pro Tier Model</Label>
-                    <Select
-                      value={config.proModelName}
-                      onValueChange={(value) => updateConfig('proModelName', value)}
-                    >
-                      <SelectTrigger>
-                        <SelectValue placeholder="Select model for pro users" />
-                      </SelectTrigger>
-                      <SelectContent>
-                        {AI_MODELS.map((model) => (
-                          <SelectItem key={model.value} value={model.value}>
-                            <div className="flex flex-col">
-                              <div className="flex items-center gap-2">
-                                <span className="font-medium">{model.label}</span>
-                                <span className="text-xs px-1.5 py-0.5 bg-muted rounded-md">
-                                  {model.provider}
-                                </span>
-                              </div>
-                              <span className="text-xs text-muted-foreground">
-                                {model.description}
-                              </span>
-                            </div>
-                          </SelectItem>
-                        ))}
-                      </SelectContent>
-                    </Select>
-                    <p className="text-xs text-gray-500">
-                      AI model for pro tier users
-                    </p>
-                  </div>
-                </div>
-              </div>
+              {/* Model Configuration - Moved to Chat Interface */}
+              {/* Model selection is now available in the chat header for users */}
 
               <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                 <div className="space-y-2">

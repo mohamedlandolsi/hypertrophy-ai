@@ -4,7 +4,7 @@ import React from 'react';
 import { createClient } from '@/lib/supabase/client';
 import { useEffect, useState as reactUseState, useRef, useCallback, useMemo } from 'react';
 import { Button } from '@/components/ui/button';
-import { Settings, MessageSquare, Send, ChevronLeft, Menu, User, LogOut, Database, Trash2, Loader2, Image as ImageIcon } from 'lucide-react';
+import { Settings, MessageSquare, Send, ChevronLeft, Menu, User, LogOut, Database, Trash2, Loader2, Image as ImageIcon, Crown } from 'lucide-react';
 import Link from 'next/link';
 import Image from 'next/image';
 import { ThemeToggle } from '@/components/theme-toggle';
@@ -23,7 +23,7 @@ import { useOptimizedChatHistory, useOptimizedUserPlan, useOptimizedUserRole } f
 import { OptimizedMessage } from '@/components/optimized-message';
 import { OptimizedImage } from '@/components/optimized-image';
 
-// Imports for DropdownMenu and Avatar
+// Imports for DropdownMenu, Avatar, and Select
 import {
   DropdownMenu,
   DropdownMenuContent,
@@ -37,6 +37,13 @@ import {
   AvatarFallback,
   AvatarImage,
 } from "@/components/ui/avatar";
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from "@/components/ui/select";
 import {
   Dialog,
   DialogContent,
@@ -120,6 +127,25 @@ const ChatPage = () => {
   // Backward compatibility - keep old single image state for gradual migration
   const [selectedImage, setSelectedImage] = reactUseState<File | null>(null);
   const [imagePreview, setImagePreview] = reactUseState<string | null>(null);
+
+  // Model selection state - defaults to Flash (faster)
+  const [selectedModel, setSelectedModel] = reactUseState<'flash' | 'pro'>('flash');
+
+  // Available models configuration
+  const modelOptions = [
+    {
+      value: 'flash' as const,
+      label: 'HypertroQ Flash',
+      description: 'Adaptive thinking, faster responses',
+      isPro: false,
+    },
+    {
+      value: 'pro' as const,
+      label: 'HypertroQ Pro',
+      description: 'Enhanced thinking and reasoning, multimodal understanding',
+      isPro: true,
+    },
+  ];
 
   // Add connection status tracking
   const { isOnline } = useOnlineStatus();
@@ -362,6 +388,7 @@ const ChatPage = () => {
         formData.append('message', messageText);
         formData.append('conversationId', tempConversationId || '');
         formData.append('isGuest', (!user).toString());
+        formData.append('selectedModel', selectedModel);
         
         // Append multiple images
         images.forEach((file, index) => {
@@ -374,6 +401,7 @@ const ChatPage = () => {
           message: messageText,
           conversationId: tempConversationId || '',
           isGuest: !user,
+          selectedModel,
           imageCount: images.length
         });
       } else {
@@ -381,9 +409,15 @@ const ChatPage = () => {
           message: messageText,
           conversationId: tempConversationId || '',
           isGuest: !user,
+          selectedModel,
         });
         contentType = 'application/json';
-        console.log("📤 Request Body (JSON):", body);
+        console.log("📤 Request Body (JSON):", {
+          message: messageText,
+          conversationId: tempConversationId || '',
+          isGuest: !user,
+          selectedModel,
+        });
       }
 
       const response = await fetch('/api/chat', {
@@ -453,7 +487,7 @@ const ChatPage = () => {
     } finally {
       setIsLoading(false);
     }
-  }, [user, conversationId, isLoading, locale, t, refetchUserPlan, setActiveChatId, setConversationId, setImagePreviews, setInput, setIsLoading, setMessages, setSelectedImages, setShowLoginDialog, userPlan]); // Add missing dependencies
+  }, [user, conversationId, isLoading, locale, t, refetchUserPlan, setActiveChatId, setConversationId, setImagePreviews, setInput, setIsLoading, setMessages, setSelectedImages, setShowLoginDialog, userPlan, selectedModel]); // Add missing dependencies
 
   // Helper function to convert File to base64
   const convertFileToBase64 = (file: File): Promise<string> => {
@@ -1402,6 +1436,57 @@ const ChatPage = () => {
               )}
             </div>
           </div>
+
+          {/* Model Selector - Center */}
+          {user && (
+            <div className="flex-shrink-0 mx-2 md:mx-4">
+              <Select
+                value={selectedModel}
+                onValueChange={(value: 'flash' | 'pro') => {
+                  // Only allow pro if user has pro plan
+                  if (value === 'pro' && userPlan?.plan !== 'PRO') {
+                    showToast.error(t('modelSelection.proRequired'), t('modelSelection.upgradeMessage'));
+                    return;
+                  }
+                  setSelectedModel(value);
+                }}
+              >
+                <SelectTrigger className="w-32 md:w-48 h-9 text-sm">
+                  <SelectValue>
+                    <div className="flex items-center gap-2">
+                      <span className="font-medium">
+                        {modelOptions.find(m => m.value === selectedModel)?.label}
+                      </span>
+                      {modelOptions.find(m => m.value === selectedModel)?.isPro && (
+                        <Crown className="h-3 w-3 text-yellow-500" />
+                      )}
+                    </div>
+                  </SelectValue>
+                </SelectTrigger>
+                <SelectContent>
+                  {modelOptions.map((model) => (
+                    <SelectItem 
+                      key={model.value} 
+                      value={model.value}
+                      disabled={model.isPro && userPlan?.plan !== 'PRO'}
+                    >
+                      <div className="flex items-center justify-between w-full">
+                        <div className="flex flex-col">
+                          <div className="flex items-center gap-2">
+                            <span className="font-medium">{model.label}</span>
+                            {model.isPro && <Crown className="h-3 w-3 text-yellow-500" />}
+                          </div>
+                          <span className="text-xs text-muted-foreground hidden md:block">
+                            {model.description}
+                          </span>
+                        </div>
+                      </div>
+                    </SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+            </div>
+          )}
 
           {/* Mobile: New Chat Button + Theme Toggle + User Menu | Desktop: User Menu Only */}
           <div className="flex items-center space-x-2">
