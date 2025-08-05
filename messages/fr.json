@@ -887,7 +887,8 @@
     "loading": {
       "pageTitle": "Préparation de votre coach fitness IA...",
       "pageDescription": "Chargement de votre assistant personnalisé pour l'entraînement et la nutrition",
-      "history": "Chargement de l'historique des discussions..."
+      "history": "Chargement de l'historique des discussions...",
+      "messages": "Chargement des messages..."
     },
     "sidebar": {
       "header": "HypertroQ",
@@ -926,7 +927,11 @@
       "offlineWarning": "Vous êtes hors ligne. Vous ne pourrez pas envoyer de nouveaux messages jusqu'à ce que la connexion soit rétablie.",
       "guestMessageWarning": "Plus qu'un message restant ! Inscrivez-vous pour continuer.",
       "aiThinking": "HypertroQ réfléchit...",
-      "imagePreviewAlt": "Aperçu de l'image sélectionnée"
+      "imagePreviewAlt": "Aperçu de l'image sélectionnée",
+      "copySuccessTitle": "Copié dans le presse-papiers",
+      "copySuccessText": "Le contenu du message a été copié.",
+      "copyErrorTitle": "Échec de la copie",
+      "copyErrorText": "Impossible de copier le message dans le presse-papiers."
     },
     "keyboardShortcuts": {
       "title": "Raccourcis Clavier",
@@ -944,6 +949,10 @@
       "login": "Se Connecter",
       "signOut": "Se Déconnecter",
       "signOutConfirm": "Êtes-vous sûr de vouloir vous déconnecter ?"
+    },
+    "toasts": {
+      "logoutSuccessTitle": "Déconnexion Réussie",
+      "logoutSuccessText": "Vous avez été déconnecté avec succès de votre compte."
     },
     "connectionStatus": {
       "offline": "Vous êtes hors ligne. Veuillez vérifier votre connexion.",

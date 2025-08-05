@@ -861,7 +861,8 @@
     "loading": {
       "pageTitle": "جاري تحضير مدرب اللياقة البدنية الذكي الخاص بك...",
       "pageDescription": "جاري تحميل مساعدك الشخصي للتمرين والتغذية",
-      "history": "جاري تحميل سجل الدردشة..."
+      "history": "جاري تحميل سجل الدردشة...",
+      "messages": "جاري تحميل الرسائل..."
     },
     "sidebar": {
       "header": "HypertroQ",
@@ -900,7 +901,11 @@
       "offlineWarning": "أنت غير متصل. لن تتمكن من إرسال رسائل جديدة حتى يتم استعادة الاتصال.",
       "guestMessageWarning": "رسالة واحدة فقط متبقية! سجل للمتابعة.",
       "aiThinking": "هايبرتروق يفكر...",
-      "imagePreviewAlt": "معاينة الصورة المحددة"
+      "imagePreviewAlt": "معاينة الصورة المحددة",
+      "copySuccessTitle": "تم النسخ إلى الحافظة",
+      "copySuccessText": "تم نسخ محتوى الرسالة.",
+      "copyErrorTitle": "فشل النسخ",
+      "copyErrorText": "تعذر نسخ الرسالة إلى الحافظة."
     },
     "keyboardShortcuts": {
       "title": "اختصارات لوحة المفاتيح",
@@ -918,6 +923,10 @@
       "login": "تسجيل الدخول",
       "signOut": "تسجيل الخروج",
       "signOutConfirm": "هل أنت متأكد أنك تريد تسجيل الخروج؟"
+    },
+    "toasts": {
+      "logoutSuccessTitle": "تم تسجيل الخروج بنجاح",
+      "logoutSuccessText": "لقد تم تسجيل خروجك من حسابك بنجاح."
     },
     "connectionStatus": {
       "offline": "أنت غير متصل. يرجى التحقق من اتصالك.",
