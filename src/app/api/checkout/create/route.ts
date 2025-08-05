@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { createClient } from '@/lib/supabase/server';
 import { createProCheckoutUrl } from '@/lib/lemonsqueezy';
+import { prisma } from '@/lib/prisma';
 import { 
   ApiErrorHandler, 
   ValidationError, 
@@ -8,24 +9,33 @@ import {
   logger 
 } from '@/lib/error-handler';
 
+// Rate limiting for checkout creation (simple in-memory store)
+const checkoutRateLimit = new Map<string, { count: number; resetTime: number }>();
+const CHECKOUT_RATE_LIMIT = 5; // Max 5 checkout requests per hour per user
+const RATE_LIMIT_WINDOW = 60 * 60 * 1000; // 1 hour
+
+// Check rate limit for checkout creation
+function checkCheckoutRateLimit(userId: string): boolean {
+  const now = Date.now();
+  const userLimitData = checkoutRateLimit.get(userId);
+  
+  if (!userLimitData || now > userLimitData.resetTime) {
+    checkoutRateLimit.set(userId, { count: 1, resetTime: now + RATE_LIMIT_WINDOW });
+    return true;
+  }
+  
+  if (userLimitData.count >= CHECKOUT_RATE_LIMIT) {
+    return false;
+  }
+  
+  userLimitData.count++;
+  return true;
+}
+
 export async function POST(request: NextRequest) {
   const context = ApiErrorHandler.createContext(request);
   
   try {
-    // Aggressive logging for production debugging
-    const lsKey = process.env.LEMONSQUEEZY_API_KEY || 'NOT_SET';
-    logger.info('LemonSqueezy Production Environment Check', {
-      ...context,
-      storeId: process.env.LEMONSQUEEZY_STORE_ID,
-      apiKeyFirst5: lsKey.substring(0, 5),
-      apiKeyLast5: lsKey.substring(lsKey.length - 5),
-      apiKeyLength: lsKey.length,
-      monthlyProductId: process.env.LEMONSQUEEZY_PRO_MONTHLY_PRODUCT_ID,
-      monthlyVariantId: process.env.LEMONSQUEEZY_PRO_MONTHLY_VARIANT_ID,
-      yearlyProductId: process.env.LEMONSQUEEZY_PRO_YEARLY_PRODUCT_ID,
-      yearlyVariantId: process.env.LEMONSQUEEZY_PRO_YEARLY_VARIANT_ID,
-    });
-
     logger.info('Checkout URL generation requested', context);
     
     // Get the authenticated user
@@ -36,12 +46,21 @@ export async function POST(request: NextRequest) {
       throw new AuthenticationError('User must be authenticated to create checkout');
     }
     
+    // Apply rate limiting
+    if (!checkCheckoutRateLimit(user.id)) {
+      logger.warn('Checkout rate limit exceeded', { ...context, userId: user.id });
+      return NextResponse.json(
+        { 
+          error: 'Rate limit exceeded. Please wait before creating another checkout.',
+          retryAfter: 3600 // 1 hour in seconds
+        }, 
+        { status: 429 }
+      );
+    }
+    
     // Parse request body
     const body = await request.json();
     const { interval = 'month' } = body;
-    
-    console.log('Checkout API received body:', body);
-    console.log('Parsed interval:', interval);
     
     // Validate interval
     if (!['month', 'year'].includes(interval)) {
@@ -55,9 +74,21 @@ export async function POST(request: NextRequest) {
       interval 
     });
     
-    console.log('Checkout API: Creating checkout URL with interval:', interval);
-    console.log('Checkout API: User ID:', user.id);
-    console.log('Checkout API: User email:', user.email);
+    // Security: Validate user doesn't already have an active subscription
+    const existingSubscription = await prisma.subscription.findUnique({
+      where: { userId: user.id },
+      select: { status: true, currentPeriodEnd: true }
+    });
+    
+    if (existingSubscription && 
+        existingSubscription.status === 'active' && 
+        existingSubscription.currentPeriodEnd && 
+        existingSubscription.currentPeriodEnd > new Date()) {
+      return NextResponse.json({
+        error: 'User already has an active subscription',
+        hasActiveSubscription: true
+      }, { status: 400 });
+    }
     
     // Create checkout URL
     const checkoutUrl = await createProCheckoutUrl(
@@ -66,18 +97,11 @@ export async function POST(request: NextRequest) {
       interval as 'month' | 'year'
     );
     
-    console.log('Checkout API: Generated checkout URL:', checkoutUrl);
-    console.log('Checkout API: URL contains interval-specific variant?', 
-      interval === 'month' ? 
-        checkoutUrl.includes('898912') : 
-        checkoutUrl.includes('896458')
-    );
-    
     logger.info('Checkout URL created successfully', { 
       ...context, 
       userId: user.id,
       interval,
-      checkoutUrl
+      checkoutUrl: 'REDACTED'
     });
     
     return NextResponse.json({

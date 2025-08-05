@@ -5,7 +5,13 @@ import {
   ValidationError,
   logger 
 } from '@/lib/error-handler';
+import { prisma } from '@/lib/prisma';
 import crypto from 'crypto';
+
+// Rate limiting for webhooks (simple in-memory store)
+const webhookRateLimit = new Map<string, { count: number; resetTime: number }>();
+const WEBHOOK_RATE_LIMIT = 10; // Max 10 requests per minute per IP
+const RATE_LIMIT_WINDOW = 60 * 1000; // 1 minute
 
 // Verify Lemon Squeezy webhook signature
 function verifyLemonSqueezySignature(payload: string, signature: string | null): boolean {
@@ -35,36 +41,137 @@ function verifyLemonSqueezySignature(payload: string, signature: string | null):
   }
 }
 
+// Rate limiting check
+function checkRateLimit(ip: string): boolean {
+  const now = Date.now();
+  const clientData = webhookRateLimit.get(ip);
+  
+  if (!clientData || now > clientData.resetTime) {
+    webhookRateLimit.set(ip, { count: 1, resetTime: now + RATE_LIMIT_WINDOW });
+    return true;
+  }
+  
+  if (clientData.count >= WEBHOOK_RATE_LIMIT) {
+    return false;
+  }
+  
+  clientData.count++;
+  return true;
+}
+
+// Validate payment data
+function validatePaymentData(data: Record<string, unknown>, eventType: string): void {
+  const requiredFields = ['id', 'attributes'];
+  const requiredAttributes = ['status'];
+  
+  for (const field of requiredFields) {
+    if (!data[field]) {
+      throw new ValidationError(`Missing required field: ${field}`);
+    }
+  }
+  
+  const attributes = data.attributes as Record<string, unknown>;
+  if (!attributes) {
+    throw new ValidationError('Missing attributes object');
+  }
+  
+  for (const attr of requiredAttributes) {
+    if (!attributes[attr]) {
+      throw new ValidationError(`Missing required attribute: ${attr}`);
+    }
+  }
+  
+  // Validate subscription-specific fields
+  if (eventType.includes('subscription')) {
+    const subscriptionRequiredFields = ['product_id', 'variant_id'];
+    for (const field of subscriptionRequiredFields) {
+      if (!attributes[field]) {
+        throw new ValidationError(`Missing subscription field: ${field}`);
+      }
+    }
+    
+    // Validate product and variant IDs against our configuration
+    const validProductIds = [
+      process.env.LEMONSQUEEZY_PRO_MONTHLY_PRODUCT_ID,
+      process.env.LEMONSQUEEZY_PRO_YEARLY_PRODUCT_ID
+    ];
+    const validVariantIds = [
+      process.env.LEMONSQUEEZY_PRO_MONTHLY_VARIANT_ID,
+      process.env.LEMONSQUEEZY_PRO_YEARLY_VARIANT_ID
+    ];
+    
+    if (!validProductIds.includes(attributes.product_id as string)) {
+      throw new ValidationError(`Invalid product ID: ${attributes.product_id}`);
+    }
+    
+    if (!validVariantIds.includes(attributes.variant_id as string)) {
+      throw new ValidationError(`Invalid variant ID: ${attributes.variant_id}`);
+    }
+  }
+}
+
+// Audit trail function
+async function createAuditTrail(eventType: string, userId: string, data: Record<string, unknown>): Promise<void> {
+  try {
+    const attributes = data.attributes as Record<string, unknown> || {};
+    // Note: You might want to create a separate AuditLog table for this
+    logger.info('Payment audit trail', {
+      eventType,
+      userId,
+      timestamp: new Date().toISOString(),
+      subscriptionId: data.id,
+      status: attributes.status,
+      productId: attributes.product_id,
+      variantId: attributes.variant_id,
+      userAgent: 'webhook',
+      ip: 'unknown'
+    });
+  } catch (error) {
+    logger.error('Failed to create audit trail', error as Error);
+  }
+}
+
 // This will be called by Lemon Squeezy webhooks
 export async function POST(request: NextRequest) {
   const context = ApiErrorHandler.createContext(request);
   
   try {
-    logger.info('Lemon Squeezy webhook received', context);
+    // Get client IP for rate limiting
+    const clientIP = request.headers.get('x-forwarded-for') || 
+                    request.headers.get('x-real-ip') || 
+                    context.ip || 'unknown';
+    
+    // Apply rate limiting
+    if (!checkRateLimit(clientIP)) {
+      logger.warn('Webhook rate limit exceeded', { ...context, clientIP });
+      return NextResponse.json(
+        { error: 'Rate limit exceeded' }, 
+        { status: 429 }
+      );
+    }
+    
+    logger.info('Lemon Squeezy webhook received', { ...context, clientIP });
     
     const bodyText = await request.text();
-    console.log('Webhook body:', bodyText); // Debug log
-    
     const body = JSON.parse(bodyText);
-    console.log('Parsed webhook body:', JSON.stringify(body, null, 2)); // Debug log
     
-    // Verify webhook signature
+    // Verify webhook signature BEFORE processing
     const signature = request.headers.get('x-signature');
-    console.log('Webhook signature:', signature); // Debug log
     
     if (!verifyLemonSqueezySignature(bodyText, signature)) {
-      console.error('Webhook signature verification failed'); // Debug log
+      logger.error(`Webhook signature verification failed - Client: ${clientIP}, Signature: ${signature ? 'present' : 'missing'}`);
       throw new ValidationError('Invalid webhook signature');
     }
     
-    console.log('Webhook signature verified successfully'); // Debug log
-
     const { meta, data } = body;
     const eventType = meta?.event_name;
     
     if (!eventType || !data) {
       throw new ValidationError('Invalid webhook payload');
     }
+
+    // Validate payment data structure and values
+    validatePaymentData(data, eventType);
 
     logger.info('Processing webhook event', { ...context, eventType });
 
@@ -112,9 +219,6 @@ async function handleSubscriptionActivated(subscriptionData: {
   webhook_id: string;
   custom_data?: Record<string, unknown>;
 }) {
-  console.log('handleSubscriptionActivated called with:', JSON.stringify(subscriptionData, null, 2)); // Debug log
-  console.log('Meta data:', JSON.stringify(meta, null, 2)); // Debug log
-  
   const {
     id: lemonSqueezyId,
     attributes: {
@@ -126,21 +230,31 @@ async function handleSubscriptionActivated(subscriptionData: {
     }
   } = subscriptionData;
 
-  console.log('Extracted data:', { lemonSqueezyId, status, product_id, variant_id }); // Debug log
-
   // Get user ID from meta.custom_data
   const userId = meta.custom_data?.user_id as string;
   
-  console.log('User ID from custom_data:', userId); // Debug log
-  
   if (!userId || typeof userId !== 'string') {
-    console.error('User ID validation failed:', { userId, type: typeof userId }); // Debug log
+    logger.error(`User ID validation failed in subscription activation - UserID: ${userId}, Type: ${typeof userId}`);
     throw new ValidationError('User ID not found in subscription data');
   }
 
+  // Validate user exists in database
+  const user = await prisma.user.findUnique({
+    where: { id: userId },
+    select: { id: true, plan: true }
+  });
+
+  if (!user) {
+    logger.error(`User not found in database during subscription activation - UserID: ${userId}`);
+    throw new ValidationError('User not found in database');
+  }
+
+  // Create audit trail
+  await createAuditTrail('subscription_activated', userId, subscriptionData);
+
   // Activate for active subscriptions or trial subscriptions
   if (status === 'active' || status === 'on_trial') {
-    console.log(`Subscription is ${status}, upgrading user to Pro...`); // Debug log
+    logger.info('Upgrading user to Pro', { userId, lemonSqueezyId, status });
     
     await upgradeUserToPro(userId, {
       lemonSqueezyId: lemonSqueezyId.toString(),
@@ -150,10 +264,9 @@ async function handleSubscriptionActivated(subscriptionData: {
       currentPeriodEnd: new Date(renews_at),
     });
     
-    console.log('User successfully upgraded to Pro:', { userId, lemonSqueezyId }); // Debug log
-    logger.info('User upgraded to Pro', { userId, lemonSqueezyId, status });
+    logger.info('User successfully upgraded to Pro', { userId, lemonSqueezyId, status });
   } else {
-    console.log('Subscription status does not qualify for Pro access:', status); // Debug log
+    logger.warn('Subscription status does not qualify for Pro access', { status, userId });
   }
 }
 
@@ -168,15 +281,27 @@ async function handleSubscriptionDeactivated(subscriptionData: {
   webhook_id: string;
   custom_data?: Record<string, unknown>;
 }) {
-  console.log('handleSubscriptionDeactivated called with:', JSON.stringify(subscriptionData, null, 2)); // Debug log
-  console.log('Meta data:', JSON.stringify(meta, null, 2)); // Debug log
-
   // Get user ID from meta.custom_data
   const userId = meta.custom_data?.user_id as string;
   
   if (!userId || typeof userId !== 'string') {
+    logger.error(`User ID validation failed in subscription deactivation - UserID: ${userId}, Type: ${typeof userId}`);
     throw new ValidationError('User ID not found in subscription data');
   }
+
+  // Validate user exists in database
+  const user = await prisma.user.findUnique({
+    where: { id: userId },
+    select: { id: true, plan: true }
+  });
+
+  if (!user) {
+    logger.error(`User not found in database during subscription deactivation - UserID: ${userId}`);
+    throw new ValidationError('User not found in database');
+  }
+
+  // Create audit trail
+  await createAuditTrail('subscription_deactivated', userId, subscriptionData);
 
   await downgradeUserToFree(userId);
   
@@ -201,48 +326,86 @@ async function handleSubscriptionPaymentSuccess(invoiceData: {
   webhook_id: string;
   custom_data?: Record<string, unknown>;
 }) {
-  console.log('handleSubscriptionPaymentSuccess called with:', JSON.stringify(invoiceData, null, 2)); // Debug log
-  console.log('Meta data:', JSON.stringify(meta, null, 2)); // Debug log
-  
   const {
     attributes: {
       status,
       billing_reason,
-      user_email,
-      subscription_id
+      subscription_id,
+      total,
+      currency
     }
   } = invoiceData;
-
-  console.log('Extracted invoice data:', { status, billing_reason, user_email, subscription_id }); // Debug log
 
   // Get user ID from custom_data
   const userId = meta.custom_data?.user_id as string;
   
-  console.log('User ID from custom_data:', userId); // Debug log
-  
   if (!userId || typeof userId !== 'string') {
-    console.error('User ID validation failed:', { userId, type: typeof userId }); // Debug log
+    logger.error(`User ID validation failed in payment success - UserID: ${userId}, Type: ${typeof userId}`);
     throw new ValidationError('User ID not found in payment success data');
   }
 
+  // Validate user exists in database
+  const user = await prisma.user.findUnique({
+    where: { id: userId },
+    select: { id: true, plan: true }
+  });
+
+  if (!user) {
+    logger.error(`User not found in database during payment success - UserID: ${userId}`);
+    throw new ValidationError('User not found in database');
+  }
+
+  // Validate payment amount and currency
+  const expectedAmounts = [9, 90]; // $9 monthly, $90 yearly
+  const expectedCurrency = 'USD';
+  
+  if (currency !== expectedCurrency) {
+    logger.error(`Invalid payment currency - Currency: ${currency}, Expected: ${expectedCurrency}, UserID: ${userId}`);
+    throw new ValidationError(`Invalid payment currency: ${currency}`);
+  }
+  
+  if (!expectedAmounts.includes(total)) {
+    logger.error(`Invalid payment amount - Amount: ${total}, Expected: ${expectedAmounts.join(' or ')}, UserID: ${userId}`);
+    throw new ValidationError(`Invalid payment amount: ${total}`);
+  }
+
+  // Create audit trail
+  await createAuditTrail('payment_success', userId, invoiceData);
+
   // Only upgrade for successful payments
   if (status === 'paid') {
-    console.log('Payment is successful, upgrading user to Pro...'); // Debug log
+    logger.info('Payment successful, processing upgrade', { userId, total, currency });
     
     // For subscription payments, especially initial payments, upgrade to Pro
     if (billing_reason === 'initial' || billing_reason === 'renewal') {
+      // Determine subscription period based on amount
+      const isYearly = total === 90;
+      const currentPeriodEnd = new Date();
+      if (isYearly) {
+        currentPeriodEnd.setFullYear(currentPeriodEnd.getFullYear() + 1);
+      } else {
+        currentPeriodEnd.setMonth(currentPeriodEnd.getMonth() + 1);
+      }
+      
       await upgradeUserToPro(userId, {
         lemonSqueezyId: subscription_id.toString(),
-        planId: 'pro', // You might want to get this from your product configuration
-        variantId: process.env.LEMONSQUEEZY_VARIANT_ID || 'unknown',
+        planId: isYearly ? 'pro_yearly' : 'pro_monthly',
+        variantId: isYearly ? 
+          process.env.LEMONSQUEEZY_PRO_YEARLY_VARIANT_ID || 'unknown' :
+          process.env.LEMONSQUEEZY_PRO_MONTHLY_VARIANT_ID || 'unknown',
         currentPeriodStart: new Date(),
-        currentPeriodEnd: new Date(Date.now() + 30 * 24 * 60 * 60 * 1000), // 30 days from now
+        currentPeriodEnd,
       });
       
-      console.log('User successfully upgraded to Pro:', { userId, subscription_id }); // Debug log
-      logger.info('User upgraded to Pro via payment success', { userId, subscription_id, billing_reason });
+      logger.info('User successfully upgraded to Pro via payment', { 
+        userId, 
+        subscription_id, 
+        billing_reason,
+        amount: total,
+        period: isYearly ? 'yearly' : 'monthly'
+      });
     }
   } else {
-    console.log('Payment status is not paid:', status); // Debug log
+    logger.warn('Payment status is not paid', { status, userId });
   }
 }

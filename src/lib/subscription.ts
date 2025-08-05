@@ -35,6 +35,7 @@ export const PLAN_LIMITS: Record<UserPlan, UserPlanLimits> = {
 
 /**
  * Get the user's current plan and subscription details
+ * Includes automatic expiry checking and plan validation
  */
 export async function getUserPlan(): Promise<{
   plan: UserPlan;
@@ -71,11 +72,44 @@ export async function getUserPlan(): Promise<{
       return null;
     }
 
+    // SECURITY: Check subscription validity and automatically downgrade if expired
+    let userPlan = userData.plan;
+    if (userData.subscription && userData.plan === 'PRO') {
+      const subscription = userData.subscription;
+      const now = new Date();
+      
+      // Check if subscription is expired or inactive
+      const isExpired = subscription.currentPeriodEnd && subscription.currentPeriodEnd < now;
+      const isInactive = !['active', 'on_trial'].includes(subscription.status);
+      
+      if (isExpired || isInactive) {
+        console.log('Auto-downgrading expired/inactive subscription', {
+          userId: user.id,
+          subscriptionId: subscription.id,
+          status: subscription.status,
+          currentPeriodEnd: subscription.currentPeriodEnd,
+          isExpired,
+          isInactive
+        });
+        
+        // Automatically downgrade to free
+        await downgradeUserToFree(user.id);
+        userPlan = 'FREE';
+        
+        // Update the subscription status
+        await prisma.subscription.update({
+          where: { id: subscription.id },
+          data: { status: 'expired' }
+        });
+      }
+    }
+
     // Reset daily message count if it's a new day
     const today = new Date();
     const lastReset = new Date(userData.lastMessageReset);
     const isNewDay = today.toDateString() !== lastReset.toDateString();
 
+    let messagesUsedToday = userData.messagesUsedToday;
     if (isNewDay && userData.messagesUsedToday > 0) {
       await prisma.user.update({
         where: { id: user.id },
@@ -84,13 +118,13 @@ export async function getUserPlan(): Promise<{
           lastMessageReset: today,
         },
       });
-      userData.messagesUsedToday = 0;
+      messagesUsedToday = 0;
     }
 
     return {
-      plan: userData.plan,
-      limits: PLAN_LIMITS[userData.plan],
-      messagesUsedToday: userData.messagesUsedToday,
+      plan: userPlan,
+      limits: PLAN_LIMITS[userPlan],
+      messagesUsedToday,
       subscription: userData.subscription || undefined,
     };
   } catch (error) {
@@ -388,4 +422,161 @@ export async function canUserCreateKnowledgeItem(): Promise<{
     canCreate: true,
     itemsRemaining
   };
+}
+
+/**
+ * Validate subscription security and integrity
+ * This should be called periodically to ensure subscription data integrity
+ */
+export async function validateSubscriptionSecurity(): Promise<{
+  expiredActiveSubscriptions: number;
+  proUsersWithoutValidSubscriptions: number;
+  freeUsersWithActiveSubscriptions: number;
+  actionsPerformed: string[];
+}> {
+  const actionsPerformed: string[] = [];
+  
+  try {
+    // Find and fix expired active subscriptions
+    const expiredActiveSubscriptions = await prisma.subscription.findMany({
+      where: {
+        status: 'active',
+        currentPeriodEnd: {
+          lt: new Date()
+        }
+      },
+      include: {
+        user: true
+      }
+    });
+
+    for (const subscription of expiredActiveSubscriptions) {
+      // Update subscription status to expired
+      await prisma.subscription.update({
+        where: { id: subscription.id },
+        data: { status: 'expired' }
+      });
+
+      // Downgrade user to free if they're still on PRO
+      if (subscription.user.plan === 'PRO') {
+        await downgradeUserToFree(subscription.userId);
+        actionsPerformed.push(`Downgraded user ${subscription.userId} from expired subscription`);
+      }
+    }
+
+    // Find PRO users without valid subscriptions
+    const proUsersWithoutValidSubs = await prisma.user.findMany({
+      where: {
+        plan: 'PRO',
+        OR: [
+          { subscription: null },
+          {
+            subscription: {
+              OR: [
+                { status: { notIn: ['active', 'on_trial'] } },
+                { currentPeriodEnd: { lt: new Date() } }
+              ]
+            }
+          }
+        ]
+      }
+    });
+
+    // Downgrade PRO users without valid subscriptions
+    for (const user of proUsersWithoutValidSubs) {
+      await downgradeUserToFree(user.id);
+      actionsPerformed.push(`Downgraded PRO user ${user.id} without valid subscription`);
+    }
+
+    // Find FREE users with active subscriptions (shouldn't happen but let's check)
+    const freeUsersWithActiveSubs = await prisma.user.findMany({
+      where: {
+        plan: 'FREE',
+        subscription: {
+          status: 'active',
+          currentPeriodEnd: { gt: new Date() }
+        }
+      },
+      include: {
+        subscription: true
+      }
+    });
+
+    // Upgrade FREE users with active subscriptions
+    for (const user of freeUsersWithActiveSubs) {
+      if (user.subscription) {
+        await upgradeUserToPro(user.id, {
+          lemonSqueezyId: user.subscription.lemonSqueezyId || '',
+          planId: user.subscription.planId || 'pro',
+          variantId: user.subscription.variantId || '',
+          currentPeriodStart: user.subscription.currentPeriodStart || new Date(),
+          currentPeriodEnd: user.subscription.currentPeriodEnd || new Date(),
+        });
+        actionsPerformed.push(`Upgraded FREE user ${user.id} with active subscription`);
+      }
+    }
+
+    return {
+      expiredActiveSubscriptions: expiredActiveSubscriptions.length,
+      proUsersWithoutValidSubscriptions: proUsersWithoutValidSubs.length,
+      freeUsersWithActiveSubscriptions: freeUsersWithActiveSubs.length,
+      actionsPerformed
+    };
+
+  } catch (error) {
+    console.error('Error validating subscription security:', error);
+    throw error;
+  }
+}
+
+/**
+ * Security function to validate user has valid PRO access
+ * This should be called before granting access to PRO features
+ */
+export async function validateProAccess(userId: string): Promise<boolean> {
+  try {
+    const userData = await prisma.user.findUnique({
+      where: { id: userId },
+      include: {
+        subscription: true,
+      },
+    });
+
+    if (!userData) {
+      return false;
+    }
+
+    // If user is not PRO, they don't have access
+    if (userData.plan !== 'PRO') {
+      return false;
+    }
+
+    // If user has no subscription, downgrade them and deny access
+    if (!userData.subscription) {
+      await downgradeUserToFree(userId);
+      return false;
+    }
+
+    const subscription = userData.subscription;
+    const now = new Date();
+    
+    // Check if subscription is expired or inactive
+    const isExpired = subscription.currentPeriodEnd && subscription.currentPeriodEnd < now;
+    const isInactive = !['active', 'on_trial'].includes(subscription.status);
+    
+    if (isExpired || isInactive) {
+      // Auto-downgrade expired/inactive subscription
+      await downgradeUserToFree(userId);
+      await prisma.subscription.update({
+        where: { id: subscription.id },
+        data: { status: 'expired' }
+      });
+      return false;
+    }
+
+    return true;
+  } catch (error) {
+    console.error('Error validating PRO access:', error);
+    return false;
+  }
 }
