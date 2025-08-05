@@ -143,14 +143,14 @@ const ChatPage = () => {
   const modelOptions = [
     {
       value: 'flash' as const,
-      label: 'HypertroQ Flash',
-      description: 'Adaptive thinking, faster responses',
+      label: t('modelSelection.flash.name'),
+      description: t('modelSelection.flash.description'),
       isPro: false,
     },
     {
       value: 'pro' as const,
-      label: 'HypertroQ Pro',
-      description: 'Enhanced thinking and reasoning, multimodal understanding',
+      label: t('modelSelection.pro.name'),
+      description: t('modelSelection.pro.description'),
       isPro: true,
     },
   ];
@@ -1325,7 +1325,7 @@ const ChatPage = () => {
                                 {chat.title || `Chat ${chat.id.slice(-6)}`}
                               </p>
                               <p className="text-xs text-muted-foreground truncate">
-                                {new Date(chat.createdAt).toLocaleDateString('en-US', { 
+                                {new Date(chat.createdAt).toLocaleDateString(locale, { 
                                   month: 'short', 
                                   day: 'numeric',
                                   hour: '2-digit',
@@ -1819,7 +1819,7 @@ const ChatPage = () => {
                         onMouseEnter={() => setShowShortcuts(true)}
                         onMouseLeave={() => setShowShortcuts(false)}
                       >
-                        <span>Enter to send • Shift+Enter for new line</span>
+                        <span>{t('common.keyboardShortcuts')}</span>
                       </button>
                       <span className={`${input.length > 1800 ? 'text-orange-500' : ''}`}>{input.length}/2000</span>
                     </div>
@@ -1978,7 +1978,7 @@ const ChatPage = () => {
                     onMouseEnter={() => setShowShortcuts(true)}
                     onMouseLeave={() => setShowShortcuts(false)}
                   >
-                    <span>Enter to send • Shift+Enter for new line</span>
+                    <span>{t('common.keyboardShortcuts')}</span>
                   </button>
                   <span className={`${input.length > 1800 ? 'text-orange-500' : ''}`}>{input.length}/2000</span>
                 </div>

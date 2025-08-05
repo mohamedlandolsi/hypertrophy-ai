@@ -8,6 +8,7 @@ import { Label } from '@/components/ui/label';
 import { Checkbox } from '@/components/ui/checkbox';
 import { Badge } from '@/components/ui/badge';
 import { Home, X, Plus } from 'lucide-react';
+import { useTranslations } from 'next-intl';
 
 interface Step4Data {
   gymAccess?: boolean;
@@ -23,21 +24,22 @@ interface Step4Props {
 }
 
 const EQUIPMENT_SUGGESTIONS = [
-  'Dumbbells',
-  'Barbell',
-  'Resistance bands',
-  'Pull-up bar',
-  'Bench',
-  'Squat rack',
-  'Kettlebells',
-  'Cable machine',
-  'Smith machine',
-  'Leg press',
-  'Lat pulldown',
-  'Cardio machines'
+  'dumbbells',
+  'barbell',
+  'resistanceBands',
+  'pullUpBar',
+  'bench',
+  'squatRack',
+  'kettlebells',
+  'cableMachine',
+  'smithMachine',
+  'legPress',
+  'latPulldown',
+  'cardioMachines'
 ];
 
 export function Step4TrainingEnvironment({ onNext, onBack, initialData = {} }: Step4Props) {
+  const t = useTranslations('Onboarding.step4');
   const [formData, setFormData] = useState<Step4Data>({
     equipmentAvailable: [],
     ...initialData
@@ -71,16 +73,16 @@ export function Step4TrainingEnvironment({ onNext, onBack, initialData = {} }: S
       <CardHeader>
         <CardTitle className="flex items-center">
           <Home className="mr-2 h-5 w-5" />
-          Training Environment
+          {t('title')}
         </CardTitle>
         <CardDescription>
-          Tell us about your training setup so we can create workouts that fit your environment
+          {t('description')}
         </CardDescription>
       </CardHeader>
       <CardContent>
         <form onSubmit={handleSubmit} className="space-y-6">
           <div className="space-y-4">
-            <Label>Training Location</Label>
+            <Label>{t('fields.trainingLocation')}</Label>
             <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
               <div className="flex items-center space-x-2">
                 <Checkbox
@@ -88,7 +90,7 @@ export function Step4TrainingEnvironment({ onNext, onBack, initialData = {} }: S
                   checked={formData.gymAccess || false}
                   onCheckedChange={(checked: boolean) => updateField('gymAccess', checked)}
                 />
-                <Label htmlFor="gymAccess">I have gym access</Label>
+                <Label htmlFor="gymAccess">{t('fields.gymAccess')}</Label>
               </div>
               <div className="flex items-center space-x-2">
                 <Checkbox
@@ -96,13 +98,13 @@ export function Step4TrainingEnvironment({ onNext, onBack, initialData = {} }: S
                   checked={formData.homeGym || false}
                   onCheckedChange={(checked: boolean) => updateField('homeGym', checked)}
                 />
-                <Label htmlFor="homeGym">I have a home gym setup</Label>
+                <Label htmlFor="homeGym">{t('fields.homeGym')}</Label>
               </div>
             </div>
           </div>
 
           <div>
-            <Label>Available Equipment (optional)</Label>
+            <Label>{t('fields.availableEquipment')}</Label>
             <div className="space-y-3">
               {/* Current equipment */}
               <div className="flex flex-wrap gap-2">
@@ -123,7 +125,7 @@ export function Step4TrainingEnvironment({ onNext, onBack, initialData = {} }: S
                 <Input
                   value={newEquipment}
                   onChange={(e) => setNewEquipment(e.target.value)}
-                  placeholder="Add equipment"
+                  placeholder={t('fields.addEquipment')}
                   onKeyPress={(e) => {
                     if (e.key === 'Enter') {
                       e.preventDefault();
@@ -143,7 +145,7 @@ export function Step4TrainingEnvironment({ onNext, onBack, initialData = {} }: S
 
               {/* Equipment suggestions */}
               <div className="space-y-2">
-                <Label className="text-sm text-muted-foreground">Quick add:</Label>
+                <Label className="text-sm text-muted-foreground">{t('fields.quickAdd')}</Label>
                 <div className="flex flex-wrap gap-1">
                   {EQUIPMENT_SUGGESTIONS.map((suggestion) => (
                     <Button
@@ -152,10 +154,10 @@ export function Step4TrainingEnvironment({ onNext, onBack, initialData = {} }: S
                       variant="outline"
                       size="sm"
                       className="text-xs h-7"
-                      onClick={() => addEquipment(suggestion)}
-                      disabled={(formData.equipmentAvailable || []).includes(suggestion)}
+                      onClick={() => addEquipment(t(`equipmentOptions.${suggestion}`))}
+                      disabled={(formData.equipmentAvailable || []).includes(t(`equipmentOptions.${suggestion}`))}
                     >
-                      {suggestion}
+                      {t(`equipmentOptions.${suggestion}`)}
                     </Button>
                   ))}
                 </div>
@@ -165,7 +167,7 @@ export function Step4TrainingEnvironment({ onNext, onBack, initialData = {} }: S
 
           {formData.gymAccess && (
             <div>
-              <Label htmlFor="gymBudget">Monthly Gym/Equipment Budget (optional)</Label>
+              <Label htmlFor="gymBudget">{t('fields.gymBudget')}</Label>
               <Input
                 id="gymBudget"
                 type="number"
@@ -173,17 +175,17 @@ export function Step4TrainingEnvironment({ onNext, onBack, initialData = {} }: S
                 step="1"
                 value={formData.gymBudget || ''}
                 onChange={(e) => updateField('gymBudget', e.target.value ? parseFloat(e.target.value) : undefined)}
-                placeholder="e.g., 50"
+                placeholder={t('fields.gymBudgetPlaceholder')}
               />
             </div>
           )}
 
           <div className="flex justify-between pt-4">
             <Button type="button" variant="outline" onClick={onBack}>
-              Back
+              {t('back')}
             </Button>
             <Button type="submit">
-              Complete Setup
+              {t('completeSetup')}
             </Button>
           </div>
         </form>

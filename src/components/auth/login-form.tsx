@@ -17,7 +17,7 @@ import {
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { PasswordInput } from "@/components/ui/password-input";
-import { loginSchema, type LoginFormData } from "@/lib/validations/auth";
+import { createAuthSchemas, type LoginFormData } from "@/lib/validations/auth";
 import { createClient } from "@/lib/supabase/client";
 import { useRouter, useSearchParams } from "next/navigation";
 import Image from "next/image";
@@ -25,13 +25,20 @@ import { toast } from "sonner";
 import { Loader2 } from "lucide-react";
 import { GoogleIcon } from "@/components/ui/google-icon";
 import { getAuthCallbackUrl } from "@/lib/utils/site-url";
+import { useTranslations, useLocale } from 'next-intl';
 
 export default function LoginForm() {
+  const t = useTranslations('LoginPage');
+  const tValidation = useTranslations('PasswordValidation');
+  const locale = useLocale();
   const [isLoading, setIsLoading] = useState(false);
   const [isGoogleLoading, setIsGoogleLoading] = useState(false);
   const router = useRouter();
   const searchParams = useSearchParams();
   const message = searchParams.get("message");
+
+  // Create translation-aware validation schema
+  const { loginSchema } = createAuthSchemas((key: string) => tValidation(key));
 
   const {
     register,
@@ -55,21 +62,21 @@ export default function LoginForm() {
 
       if (error) {
         if (error.message.includes("Invalid login credentials")) {
-          toast.error("Invalid email or password. Please check your credentials and try again.");
+          toast.error(t('invalidCredentials'));
         } else if (error.message.includes("Email not confirmed")) {
-          toast.error("Please check your email and click the confirmation link before signing in.");
+          toast.error(t('emailNotConfirmed'));
         } else {
           toast.error(error.message);
         }
         return;
       }
 
-      toast.success("Welcome back!");
-      router.push("/chat");
+      toast.success(t('welcomeBack'));
+      router.push(`/${locale}/chat`);
       
     } catch (err) {
       console.error("Login error:", err);
-      toast.error("An unexpected error occurred. Please try again.");
+      toast.error(t('unexpectedError'));
     } finally {
       setIsLoading(false);
     }
@@ -89,11 +96,11 @@ export default function LoginForm() {
       });
 
       if (error) {
-        toast.error("Could not authenticate with Google");
+        toast.error(t('googleAuthError'));
       }
     } catch (err) {
       console.error("Google sign-in error:", err);
-      toast.error("An unexpected error occurred with Google authentication");
+      toast.error(t('googleAuthUnexpectedError'));
     } finally {
       setIsGoogleLoading(false);
     }
@@ -126,20 +133,20 @@ export default function LoginForm() {
       </div>
       <Card className="w-full max-w-md">
         <CardHeader>
-          <CardTitle className="text-2xl text-center">Welcome Back</CardTitle>
+          <CardTitle className="text-2xl text-center">{t('title')}</CardTitle>
           <CardDescription className="text-center">
-            Enter your credentials to access your account.
+            {t('subtitle')}
           </CardDescription>
         </CardHeader>
         <form onSubmit={handleSubmit(onSubmit)}>
           <CardContent className="grid gap-4">
             {/* Email Field */}
             <div className="grid gap-2">
-              <Label htmlFor="email">Email</Label>
+              <Label htmlFor="email">{t('email')}</Label>
               <Input
                 id="email"
                 type="email"
-                placeholder="m@example.com"
+                placeholder={t('emailPlaceholder')}
                 {...register("email")}
                 className={errors.email ? "border-red-500" : ""}
                 autoComplete="email"
@@ -152,17 +159,17 @@ export default function LoginForm() {
             {/* Password Field */}
             <div className="grid gap-2">
               <div className="flex items-center justify-between">
-                <Label htmlFor="password">Password</Label>
+                <Label htmlFor="password">{t('password')}</Label>
                 <Link 
-                  href="/reset-password" 
+                  href={`/${locale}/reset-password`}
                   className="text-sm text-muted-foreground hover:text-primary underline"
                 >
-                  Forgot password?
+                  {t('forgotPassword')}
                 </Link>
               </div>
               <PasswordInput
                 id="password"
-                placeholder="Enter your password"
+                placeholder={t('passwordPlaceholder')}
                 {...register("password")}
                 className={errors.password ? "border-red-500" : ""}
                 autoComplete="current-password"
@@ -180,7 +187,7 @@ export default function LoginForm() {
               disabled={isLoading || isGoogleLoading}
             >
               {isLoading && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
-              Sign In
+              {t('signIn')}
             </Button>
             
             <Button
@@ -195,13 +202,13 @@ export default function LoginForm() {
               ) : (
                 <GoogleIcon className="mr-2" size={16} />
               )}
-              Sign In with Google
+              {t('signInWithGoogle')}
             </Button>
             
             <div className="text-center text-sm">
-              Don&apos;t have an account?{" "}
-              <Link href="/signup" className="underline hover:text-primary">
-                Sign Up
+              {t('noAccount')}{" "}
+              <Link href={`/${locale}/signup`} className="underline hover:text-primary">
+                {t('signUp')}
               </Link>
             </div>
           </CardFooter>

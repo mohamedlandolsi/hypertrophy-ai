@@ -18,7 +18,7 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { PasswordInput } from "@/components/ui/password-input";
 import { PasswordStrength } from "@/components/ui/password-strength";
-import { signupSchema, type SignupFormData } from "@/lib/validations/auth";
+import { createAuthSchemas, type SignupFormData } from "@/lib/validations/auth";
 import { createClient } from "@/lib/supabase/client";
 import { useRouter } from "next/navigation";
 import Image from "next/image";
@@ -26,11 +26,18 @@ import { toast } from "sonner";
 import { Loader2 } from "lucide-react";
 import { GoogleIcon } from "@/components/ui/google-icon";
 import { getAuthCallbackUrl } from "@/lib/utils/site-url";
+import { useTranslations, useLocale } from "next-intl";
 
 export default function SignupForm() {
   const [isLoading, setIsLoading] = useState(false);
   const [isGoogleLoading, setIsGoogleLoading] = useState(false);
   const router = useRouter();
+  const t = useTranslations("SignupPage");
+  const tValidation = useTranslations("PasswordValidation");
+  const locale = useLocale();
+
+  // Create translation-aware validation schema
+  const { signupSchema } = createAuthSchemas((key: string) => tValidation(key));
 
   const {
     register,
@@ -59,16 +66,24 @@ export default function SignupForm() {
       });
 
       if (error) {
-        toast.error(error.message);
+        if (error.message.includes("User already registered")) {
+          toast.error(t("userAlreadyExists"));
+        } else if (error.message.includes("email not confirmed")) {
+          toast.error(t("emailNotConfirmed"));
+        } else if (error.message.includes("password")) {
+          toast.error(t("passwordTooShort"));
+        } else {
+          toast.error(t("unexpectedError"));
+        }
         return;
       }
 
-      toast.success("Check your email to continue the sign-up process");
-      router.push("/login?message=Check your email to continue sign up process");
+      toast.success(t("emailNotConfirmed"));
+      router.push(`/${locale}/login?message=Check your email to continue sign up process`);
       
     } catch (err) {
       console.error("Signup error:", err);
-      toast.error("An unexpected error occurred. Please try again.");
+      toast.error(t("unexpectedError"));
     } finally {
       setIsLoading(false);
     }
@@ -88,11 +103,11 @@ export default function SignupForm() {
       });
 
       if (error) {
-        toast.error("Could not authenticate with Google");
+        toast.error(t("googleAuthError"));
       }
     } catch (err) {
       console.error("Google signup error:", err);
-      toast.error("An unexpected error occurred with Google authentication");
+      toast.error(t("googleAuthUnexpectedError"));
     } finally {
       setIsGoogleLoading(false);
     }
@@ -114,20 +129,20 @@ export default function SignupForm() {
       </div>
       <Card className="w-full max-w-md">
         <CardHeader>
-          <CardTitle className="text-2xl text-center">Create Account</CardTitle>
+          <CardTitle className="text-2xl text-center">{t("title")}</CardTitle>
           <CardDescription className="text-center">
-            Create a new account to get started with HypertroQ.
+            {t("subtitle")}
           </CardDescription>
         </CardHeader>
         <form onSubmit={handleSubmit(onSubmit)}>
           <CardContent className="grid gap-4">
             {/* Email Field */}
             <div className="grid gap-2">
-              <Label htmlFor="email">Email</Label>
+              <Label htmlFor="email">{t("email")}</Label>
               <Input
                 id="email"
                 type="email"
-                placeholder="m@example.com"
+                placeholder={t("emailPlaceholder")}
                 {...register("email")}
                 className={errors.email ? "border-red-500" : ""}
               />
@@ -138,10 +153,10 @@ export default function SignupForm() {
 
             {/* Password Field */}
             <div className="grid gap-2">
-              <Label htmlFor="password">Password</Label>
+              <Label htmlFor="password">{t("password")}</Label>
               <PasswordInput
                 id="password"
-                placeholder="Enter your password"
+                placeholder={t("passwordPlaceholder")}
                 {...register("password")}
                 className={errors.password ? "border-red-500" : ""}
               />
@@ -155,10 +170,10 @@ export default function SignupForm() {
 
             {/* Confirm Password Field */}
             <div className="grid gap-2">
-              <Label htmlFor="confirmPassword">Confirm Password</Label>
+              <Label htmlFor="confirmPassword">{t("confirmPassword")}</Label>
               <PasswordInput
                 id="confirmPassword"
-                placeholder="Confirm your password"
+                placeholder={t("confirmPasswordPlaceholder")}
                 {...register("confirmPassword")}
                 className={errors.confirmPassword ? "border-red-500" : ""}
               />
@@ -177,7 +192,7 @@ export default function SignupForm() {
               disabled={isLoading || isGoogleLoading}
             >
               {isLoading && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
-              Create Account
+              {isLoading ? t("signingUp") : t("signUp")}
             </Button>
             
             <Button
@@ -192,13 +207,13 @@ export default function SignupForm() {
               ) : (
                 <GoogleIcon className="mr-2" size={16} />
               )}
-              Sign Up with Google
+              {t("orContinueWith")} Google
             </Button>
             
             <div className="text-center text-sm">
-              Already have an account?{" "}
-              <Link href="/login" className="underline hover:text-primary">
-                Sign In
+              {t("alreadyHaveAccount")}{" "}
+              <Link href={`/${locale}/login`} className="underline hover:text-primary">
+                {t("signInHere")}
               </Link>
             </div>
           </CardFooter>

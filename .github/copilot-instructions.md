@@ -25,6 +25,7 @@
 - **Server-Side Limits**: Subscription enforcement with daily message tracking and monthly upload quotas
 - **Multi-Image Base64**: Gallery display with base64 storage and conditional rendering patterns
 - **Windows Development**: PowerShell-optimized debug scripts and file path handling
+- **Batched Vector Processing**: Optimized JSON similarity search with batching (100-chunk batches) for performance
 
 ## 🚀 Development Workflows
 
@@ -48,6 +49,18 @@ NEXT_PUBLIC_SUPABASE_ANON_KEY=   # Public key for client-side
 SUPABASE_SERVICE_ROLE_KEY=       # Server-side admin operations
 GEMINI_API_KEY=                  # Google Gemini API for AI/embeddings
 DATABASE_URL=                    # PostgreSQL connection string
+DIRECT_URL=                      # Direct DB connection (for migrations)
+
+# Subscription System (LemonSqueezy) - Current Pricing: $9/month, $90/year
+LEMONSQUEEZY_API_KEY=            # API key for payment processing
+LEMONSQUEEZY_STORE_ID=           # Store ID for product management
+LEMONSQUEEZY_PRO_MONTHLY_PRODUCT_ID=  # Monthly subscription product
+LEMONSQUEEZY_PRO_MONTHLY_VARIANT_ID=  # Monthly subscription variant
+LEMONSQUEEZY_PRO_YEARLY_PRODUCT_ID=   # Yearly subscription product (same as monthly)
+LEMONSQUEEZY_PRO_YEARLY_VARIANT_ID=   # Yearly subscription variant (different from monthly)
+LEMONSQUEEZY_WEBHOOK_SECRET=     # Webhook signature verification
+NEXT_PUBLIC_SITE_URL=            # Site URL for checkout success/cancel redirects
+```
 DIRECT_URL=                      # Direct DB connection (for migrations)
 
 # Subscription System (LemonSqueezy) - Current Pricing: $9/month, $90/year
@@ -345,6 +358,8 @@ export async function POST(request: NextRequest) {
 - **Chat**: Vercel AI SDK `useChat` hook for state management
 - **Development**: TypeScript, ESLint, Prisma Studio for DB management
 - **Internationalization**: next-intl with Arabic RTL support and dynamic locale detection
+- **Animation**: Framer Motion for glassmorphism UI and smooth transitions
+- **Analytics**: Vercel Analytics for performance tracking
 
 ## 🎯 Testing & Debugging
 
@@ -379,11 +394,14 @@ const { functionName } = require('./src/lib/module-name');
 - **Subscription plan issues** → Use `check-user-plan.js` to verify billing status
 - **PDF processing failures** → Check `check-pdf-items.js` for chunking issues
 - **Lemon Squeezy webhook errors** → Verify environment variables and webhook URL configuration
-- **Checkout URL generation fails** → Check product/variant IDs in `check-lemonsqueezy-config.js`
+- **Checkout URL generation fails** → Check product/variant IDs in `debug-lemonsqueezy-checkout.js`
 - **Currency conversion errors** → Multi-currency support handles rate limiting gracefully
 - **Message limit not enforcing** → Check daily reset logic and database `messagesUsedToday`
 - **Guest user trying to chat** → Returns 401, login dialog should appear immediately
 - **Chat not creating new conversation ID** → Check API response headers and `onFinish` handler
+- **Vector search performance issues** → Verify batch processing (100-chunk batches) is working
+- **Middleware conflicts** → Ensure Supabase auth and next-intl middleware are properly chained
+- **Build failures** → Run `npm run postinstall` to regenerate Prisma client
 
 ## 📝 File Naming Conventions
 
@@ -394,7 +412,39 @@ const { functionName } = require('./src/lib/module-name');
 - `*-test.js` - Manual testing scripts
 - `check-*.js` - Validation and verification scripts
 
-- **Navigation Tips**: Admin features (`/src/app/admin/`), Core AI logic (`/src/lib/gemini.ts`), Vector operations (`/src/lib/vector-search.ts`), Subscription system (`/src/lib/subscription.ts`, `/src/lib/lemonsqueezy.ts`, `/src/components/plan-badge.tsx`, `/src/components/upgrade-button.tsx`), Arabic support (`/src/components/arabic-aware-*.tsx`, `/src/lib/text-formatting.ts`), Error handling (`/src/lib/error-handler.ts` with `ApiErrorHandler` class), Client memory (`/src/lib/client-memory.ts` for automatic user profile extraction), Multi-currency support (`/src/lib/currency.ts`), Webhook processing (`/src/app/api/webhooks/lemon-squeezy/route.ts`)
+### 🗂️ Key Directory Structure
+```
+src/
+├── app/
+│   ├── [locale]/               # Internationalized routes
+│   │   ├── chat/              # Main chat interface
+│   │   ├── knowledge/         # Knowledge base management
+│   │   ├── admin/             # Admin configuration panel
+│   │   └── onboarding/        # User onboarding flow
+│   └── api/                   # Next.js API routes
+│       ├── chat/              # Chat processing endpoint
+│       ├── knowledge/         # Knowledge CRUD operations
+│       ├── auth/              # Authentication routes
+│       └── webhooks/          # External service webhooks
+├── components/
+│   ├── ui/                    # shadcn/ui base components
+│   ├── arabic-aware-*.tsx     # RTL-aware input components
+│   ├── chat/                  # Chat-specific UI components
+│   ├── knowledge/             # Knowledge management UI
+│   └── plan-badge.tsx         # Subscription plan indicators
+├── lib/
+│   ├── gemini.ts              # Core AI integration
+│   ├── vector-search.ts       # RAG system implementation
+│   ├── client-memory.ts       # User profiling system
+│   ├── subscription.ts        # Plan management logic
+│   ├── error-handler.ts       # Centralized error handling
+│   ├── supabase/             # Authentication utilities
+│   └── utils/                # Helper functions
+└── prisma/
+    └── schema.prisma          # Database schema definition
+```
+
+**Navigation Tips**: Admin features (`/src/app/admin/`), Core AI logic (`/src/lib/gemini.ts`), Vector operations (`/src/lib/vector-search.ts`), Subscription system (`/src/lib/subscription.ts`, `/src/lib/lemonsqueezy.ts`, `/src/components/plan-badge.tsx`, `/src/components/upgrade-button.tsx`), Arabic support (`/src/components/arabic-aware-*.tsx`, `/src/lib/text-formatting.ts`), Error handling (`/src/lib/error-handler.ts` with `ApiErrorHandler` class), Client memory (`/src/lib/client-memory.ts` for automatic user profile extraction), Multi-currency support (`/src/lib/currency.ts`), Webhook processing (`/src/app/api/webhooks/lemon-squeezy/route.ts`)
 
 ## 💳 Subscription System Details
 

@@ -54,6 +54,7 @@
       "title": "لماذا هايبرتروكيو مقابل الذكاء الاصطناعي العام؟",
       "subtitle": "الفرق في العلم، وليس في الضجيج.",
       "genericAI": "الذكاء الاصطناعي العام (ChatGPT، Gemini)",
+      "questionLabel": "السؤال",
       "question": "كم عدد التكرارات لنمو العضلات؟",
       "genericResponse": "مدى جيد للتكرارات لبناء العضلات عادة ما يكون 8-12 تكرار. تحتاج إلى 'الشعور بالحرق' حقاً وتنويع التمارين غالباً لـ'إرباك العضلة'. تأكد أيضاً من القيام بالكثير من تمارين العزل.",
       "hypertroqResponse": "للضخامة العضلية، المدى الأمثل عادة ما يكون 5-10 تكرارات مع 0-2 RIR (تكرارات في الاحتياط). هذا يزيد من التوتر الميكانيكي، وهو المحرك الأساسي لنمو العضلات. بناءً على ملفك الشخصي، أنصح بالحركات المركبة مع التحميل التدريجي.",
@@ -148,6 +149,94 @@
       "getStartedFree": "ابدأ مجاناً",
       "instantAccess": "ابدأ المحادثة فوراً • لا حاجة لبطاقة ائتمان • 5 رسائل مجانية"
     }
+  },
+  "LoginPage": {
+    "title": "مرحباً بك مرة أخرى",
+    "subtitle": "أدخل بياناتك للوصول إلى حسابك",
+    "email": "البريد الإلكتروني",
+    "emailPlaceholder": "m@example.com",
+    "password": "كلمة المرور",
+    "passwordPlaceholder": "أدخل كلمة المرور",
+    "forgotPassword": "نسيت كلمة المرور؟",
+    "signIn": "تسجيل الدخول",
+    "signInWithGoogle": "تسجيل الدخول باستخدام Google",
+    "noAccount": "لا تملك حساباً؟",
+    "signUp": "إنشاء حساب",
+    "welcomeBack": "مرحباً بك مرة أخرى!",
+    "invalidCredentials": "بريد إلكتروني أو كلمة مرور غير صحيحة. يرجى التحقق من بياناتك والمحاولة مرة أخرى.",
+    "emailNotConfirmed": "يرجى التحقق من بريدك الإلكتروني والنقر على رابط التأكيد قبل تسجيل الدخول.",
+    "unexpectedError": "حدث خطأ غير متوقع. يرجى المحاولة مرة أخرى.",
+    "googleAuthError": "لا يمكن المصادقة باستخدام Google",
+    "googleAuthUnexpectedError": "حدث خطأ غير متوقع مع مصادقة Google"
+  },
+  "SignupPage": {
+    "title": "إنشاء حسابك",
+    "subtitle": "مرحباً بك في HypertroQ",
+    "email": "البريد الإلكتروني",
+    "emailPlaceholder": "أدخل بريدك الإلكتروني",
+    "password": "كلمة المرور",
+    "passwordPlaceholder": "أدخل كلمة المرور",
+    "confirmPassword": "تأكيد كلمة المرور",
+    "confirmPasswordPlaceholder": "أكد كلمة المرور",
+    "signUp": "إنشاء حساب",
+    "signingUp": "جاري إنشاء الحساب...",
+    "alreadyHaveAccount": "هل لديك حساب بالفعل؟",
+    "signInHere": "سجل دخولك هنا",
+    "orContinueWith": "أو تابع باستخدام",
+    "passwordsDontMatch": "كلمات المرور غير متطابقة",
+    "weakPassword": "يجب أن تكون كلمة المرور 6 أحرف على الأقل",
+    "userAlreadyExists": "يوجد مستخدم بهذا البريد الإلكتروني بالفعل. يرجى تسجيل الدخول بدلاً من ذلك.",
+    "emailNotConfirmed": "يرجى التحقق من بريدك الإلكتروني والنقر على رابط التأكيد للتحقق من حسابك.",
+    "unexpectedError": "حدث خطأ غير متوقع. يرجى المحاولة مرة أخرى.",
+    "passwordTooShort": "يجب أن تكون كلمة المرور 6 أحرف على الأقل",
+    "googleAuthError": "لا يمكن المصادقة مع Google",
+    "googleAuthUnexpectedError": "حدث خطأ غير متوقع في المصادقة مع Google"
+  },
+  "ResetPasswordPage": {
+    "title": "إعادة تعيين كلمة المرور",
+    "subtitle": "أدخل عنوان بريدك الإلكتروني وسنرسل لك رابطاً لإعادة تعيين كلمة المرور.",
+    "email": "البريد الإلكتروني",
+    "emailPlaceholder": "m@example.com",
+    "sendResetLink": "إرسال رابط الإعادة",
+    "sendingLink": "جاري الإرسال...",
+    "backToSignIn": "العودة إلى تسجيل الدخول",
+    "checkEmailTitle": "تحقق من بريدك الإلكتروني",
+    "checkEmailSubtitle": "لقد أرسلنا رابط إعادة تعيين كلمة المرور إلى",
+    "linkExpiresInfo": "انقر على الرابط في البريد الإلكتروني لإعادة تعيين كلمة المرور. سينتهي صلاحية الرابط خلال ساعة واحدة.",
+    "tryAnotherEmail": "جرب بريد إلكتروني آخر",
+    "noAccountFound": "لم يتم العثور على حساب بهذا البريد الإلكتروني.",
+    "resetLinkSent": "تحقق من بريدك الإلكتروني للحصول على رابط إعادة تعيين كلمة المرور!",
+    "unexpectedError": "حدث خطأ غير متوقع. يرجى المحاولة مرة أخرى."
+  },
+  "UpdatePasswordPage": {
+    "invalidExpiredLink": "رابط غير صالح أو منتهي الصلاحية. يرجى طلب رابط جديد.",
+    "passwordUpdatedSuccessfully": "تم تحديث كلمة المرور بنجاح!",
+    "unexpectedError": "حدث خطأ غير متوقع. يرجى المحاولة مرة أخرى.",
+    "redirectMessage": "تم تحديث كلمة المرور بنجاح. يرجى تسجيل الدخول بكلمة المرور الجديدة."
+  },
+  "PasswordValidation": {
+    "passwordStrength": "قوة كلمة المرور",
+    "veryWeak": "ضعيفة جداً",
+    "weak": "ضعيفة",
+    "good": "جيدة",
+    "strong": "قوية",
+    "uppercase": "أحرف كبيرة",
+    "lowercase": "أحرف صغيرة",
+    "number": "رقم",
+    "specialChar": "رمز خاص",
+    "eightChars": "8+ أحرف",
+    "emailRequired": "البريد الإلكتروني مطلوب",
+    "validEmail": "يرجى إدخال عنوان بريد إلكتروني صحيح",
+    "passwordRequired": "كلمة المرور مطلوبة",
+    "passwordMinLength": "يجب أن تكون كلمة المرور 8 أحرف على الأقل",
+    "passwordUppercase": "يجب أن تحتوي كلمة المرور على حرف كبير واحد على الأقل",
+    "passwordLowercase": "يجب أن تحتوي كلمة المرور على حرف صغير واحد على الأقل",
+    "passwordNumber": "يجب أن تحتوي كلمة المرور على رقم واحد على الأقل",
+    "passwordSpecialChar": "يجب أن تحتوي كلمة المرور على رمز خاص واحد على الأقل",
+    "confirmPasswordRequired": "يرجى تأكيد كلمة المرور",
+    "passwordsDoNotMatch": "كلمات المرور غير متطابقة",
+    "currentPasswordRequired": "كلمة المرور الحالية مطلوبة",
+    "confirmNewPasswordRequired": "يرجى تأكيد كلمة المرور الجديدة"
   },
   "Chat": {
     "placeholder": "اكتب رسالة للمدرب الذكي...",
@@ -288,6 +377,7 @@
         "trainingFrequency": "تكرار التدريب",
         "name": "الاسم",
         "daysPerWeek": "{days} أيام/الأسبوع",
+        "daysWeekLabel": "أيام/الأسبوع",
         "ageYears": "العمر (سنة)",
         "currentLifts": "الرفعات الحالية",
         "getStarted": {
@@ -337,6 +427,7 @@
           "email": "البريد الإلكتروني",
           "currentPlan": "الخطة الحالية",
           "userId": "معرف المستخدم",
+          "clickToReveal": "انقر للكشف",
           "memberSince": "عضو منذ",
           "lastSignIn": "آخر تسجيل دخول"
         },
@@ -350,6 +441,12 @@
           "title": "تفاصيل الاشتراك",
           "proActive": "هايبرتروكيو محترف",
           "activeSubscription": "اشتراك نشط",
+          "freePlanActive": "الخطة المجانية نشطة",
+          "limitedDailyMessages": "رسائل يومية محدودة وميزات",
+          "dailyMessageLimit": "حد الرسائل اليومية",
+          "messagesUsedToday": "الرسائل المُستخدمة اليوم",
+          "messagesPerDay": "رسائل/اليوم",
+          "freeLabel": "مجاني",
           "status": "الحالة",
           "nextBilling": "الفوترة التالية",
           "managePortal": "إدارة اشتراكك من خلال بوابة العملاء:",
@@ -410,6 +507,8 @@
       "removePicture": "إزالة الصورة",
       "fileRequirements": "JPEG، PNG، WebP، أو GIF حتى 5 ميجابايت",
       "dragDropText": "انقر أو اسحب وأفلت للرفع",
+      "supportedFormats": "مدعوم:",
+      "maximumSize": "الحد الأقصى للحجم:",
       "dropHere": "أفلت هنا",
       "upload": "رفع",
       "removing": "جار الإزالة...",
@@ -740,6 +839,177 @@
     "users": "المستخدمين",
     "knowledge": "قاعدة المعرفة"
   },
+  "Onboarding": {
+    "welcome": {
+      "title": "أهلاً بك في هايبرتروكيو",
+      "subtitle": "دعنا نقوم بإعداد ملفك الشخصي لتخصيص رحلة لياقتك البدنية"
+    },
+    "progress": {
+      "stepOf": "الخطوة {current} من {total}",
+      "skipForNow": "تخطي الآن"
+    },
+    "stepTitles": {
+      "personalInfo": "المعلومات الشخصية",
+      "trainingBackground": "خلفية التدريب",
+      "goalsMotivation": "الأهداف والتحفيز",
+      "trainingEnvironment": "بيئة التدريب"
+    },
+    "footer": {
+      "updateLater": "يمكنك دائماً تحديث هذه المعلومات لاحقاً في إعدادات الملف الشخصي"
+    },
+    "step1": {
+      "title": "المعلومات الشخصية",
+      "description": "ساعدنا في فهم ملفك الأساسي لتخصيص تجربتك",
+      "fields": {
+        "name": "الاسم",
+        "namePlaceholder": "اسمك",
+        "age": "العمر",
+        "agePlaceholder": "عمرك",
+        "gender": "الجنس",
+        "genderPlaceholder": "اختر الجنس",
+        "height": "الطول (سم)",
+        "heightPlaceholder": "الطول بالسنتيمتر",
+        "weight": "الوزن (كيلو)",
+        "weightPlaceholder": "الوزن بالكيلوغرام",
+        "bodyFat": "نسبة الدهون في الجسم % (اختياري)",
+        "bodyFatPlaceholder": "نسبة الدهون %"
+      },
+      "genderOptions": {
+        "male": "ذكر",
+        "female": "أنثى",
+        "other": "آخر",
+        "preferNotToSay": "أفضل عدم الإفصاح"
+      },
+      "continue": "متابعة"
+    },
+    "step2": {
+      "title": "معلومات التدريب",
+      "description": "أخبرنا عن خلفيتك التدريبية وتفضيلاتك",
+      "fields": {
+        "experience": "خبرة التدريب",
+        "experiencePlaceholder": "اختر مستوى خبرتك",
+        "weeklyDays": "أيام التدريب في الأسبوع",
+        "weeklyDaysPlaceholder": "كم يوماً؟",
+        "trainingStyle": "أسلوب التدريب المفضل",
+        "trainingStylePlaceholder": "ما هو أسلوبك المفضل؟",
+        "trainingSchedule": "وقت التدريب المفضل",
+        "trainingSchedulePlaceholder": "متى تفضل التدريب؟",
+        "availableTime": "الوقت المتاح لكل جلسة (دقيقة)",
+        "availableTimePlaceholder": "مثال: 60",
+        "activityLevel": "مستوى النشاط",
+        "activityLevelPlaceholder": "مستوى نشاطك العام"
+      },
+      "experienceOptions": {
+        "beginner": "مبتدئ (0-1 سنة)",
+        "intermediate": "متوسط (1-3 سنوات)",
+        "advanced": "متقدم (3+ سنوات)"
+      },
+      "daysOptions": {
+        "2days": "يومان",
+        "3days": "3 أيام",
+        "4days": "4 أيام",
+        "5days": "5 أيام",
+        "6days": "6 أيام",
+        "7days": "7 أيام"
+      },
+      "trainingStyleOptions": {
+        "hypertrophy": "الضخامة/بناء العضلات",
+        "strength": "تدريب القوة",
+        "powerlifting": "رفع الأثقال",
+        "bodybuilding": "كمال الأجسام",
+        "general": "اللياقة العامة"
+      },
+      "scheduleOptions": {
+        "morning": "الصباح",
+        "afternoon": "بعد الظهر",
+        "evening": "المساء",
+        "flexible": "مرن"
+      },
+      "activityLevelOptions": {
+        "sedentary": "خامل (قليل أو لا توجد تمارين)",
+        "light": "خفيف (تمارين خفيفة 1-3 أيام/الأسبوع)",
+        "moderate": "متوسط (تمارين متوسطة 3-5 أيام/الأسبوع)",
+        "active": "نشط (تمارين صعبة 6-7 أيام/الأسبوع)",
+        "veryActive": "نشط جداً (تمارين صعبة جداً وعمل بدني)"
+      },
+      "back": "رجوع",
+      "continue": "متابعة"
+    },
+    "step3": {
+      "title": "الأهداف والتحفيز",
+      "description": "ماذا تريد أن تحقق؟ هذا يساعدنا في تخصيص رحلتك",
+      "fields": {
+        "primaryGoal": "الهدف الأساسي",
+        "primaryGoalPlaceholder": "ما هو هدفك الرئيسي؟",
+        "secondaryGoals": "الأهداف الثانوية (اختياري)",
+        "targetWeight": "الوزن المستهدف (كيلو) - اختياري",
+        "targetWeightPlaceholder": "الوزن المطلوب",
+        "targetBodyFat": "نسبة الدهون المستهدفة % - اختياري",
+        "targetBodyFatPlaceholder": "نسبة الدهون المطلوبة %",
+        "goalDeadline": "موعد تحقيق الهدف - اختياري",
+        "motivation": "ما الذي يحفزك؟ (اختياري)",
+        "motivationPlaceholder": "أخبرنا ما الذي يدفعك لتحقيق أهدافك في اللياقة البدنية..."
+      },
+      "primaryGoalOptions": {
+        "muscleGain": "بناء العضلات",
+        "fatLoss": "فقدان الدهون",
+        "strength": "زيادة القوة",
+        "generalFitness": "اللياقة العامة",
+        "athleticPerformance": "الأداء الرياضي",
+        "bodyRecomposition": "إعادة تشكيل الجسم"
+      },
+      "secondaryGoalOptions": {
+        "increaseStrength": "زيادة القوة",
+        "improveEndurance": "تحسين القدرة على التحمل",
+        "betterSleep": "جودة نوم أفضل",
+        "reduceStress": "تقليل التوتر",
+        "betterPosture": "وضعية أفضل",
+        "increaseEnergy": "زيادة الطاقة",
+        "sportPerformance": "الأداء الرياضي",
+        "injuryPrevention": "الوقاية من الإصابات"
+      },
+      "back": "رجوع",
+      "continue": "متابعة"
+    },
+    "step4": {
+      "title": "بيئة التدريب",
+      "description": "أخبرنا عن إعداد التدريب الخاص بك حتى نتمكن من إنشاء تمارين تناسب بيئتك",
+      "fields": {
+        "trainingLocation": "مكان التدريب",
+        "gymAccess": "لدي إمكانية الوصول إلى الصالة الرياضية",
+        "homeGym": "لدي صالة رياضية منزلية",
+        "availableEquipment": "المعدات المتاحة (اختياري)",
+        "addEquipment": "إضافة معدات",
+        "quickAdd": "إضافة سريعة:",
+        "gymBudget": "ميزانية الصالة الرياضية/المعدات الشهرية (اختياري)",
+        "gymBudgetPlaceholder": "مثال: 50"
+      },
+      "equipmentOptions": {
+        "dumbbells": "الدمبل",
+        "barbell": "البار",
+        "resistanceBands": "أشرطة المقاومة",
+        "pullUpBar": "بار العقلة",
+        "bench": "المقعد",
+        "squatRack": "رف السكوات",
+        "kettlebells": "الكيتل بيل",
+        "cableMachine": "آلة الكابل",
+        "smithMachine": "آلة سميث",
+        "legPress": "آلة ضغط الساق",
+        "latPulldown": "آلة سحب العضلة العريضة",
+        "cardioMachines": "آلات الكارديو"
+      },
+      "back": "رجوع",
+      "completeSetup": "إكمال الإعداد"
+    },
+    "toasts": {
+      "welcomeTitle": "أهلاً بك في هايبرتروكيو!",
+      "welcomeSkipDescription": "يمكنك إكمال ملفك الشخصي في أي وقت من صفحة الملف الشخصي.",
+      "welcomeCompleteDescription": "تم إعداد ملفك الشخصي بنجاح.",
+      "errorTitle": "خطأ",
+      "errorSkipDescription": "فشل في تخطي الإعداد الأولي. يرجى المحاولة مرة أخرى.",
+      "errorSaveDescription": "فشل في حفظ ملفك الشخصي. يرجى المحاولة مرة أخرى."
+    }
+  },
   "Common": {
     "loading": "جاري التحميل...",
     "error": "خطأ",
@@ -855,6 +1125,21 @@
     "processingKnowledgeItemsTitle": "معالجة عناصر المعرفة",
     "processingKnowledgeItemsText": "{operation} ما يصل إلى {limit} عنصرًا..."
   },
+  "messageLimitIndicator": {
+    "title": "الرسائل اليومية",
+    "messagesRemaining": "{count} رسائل متبقية اليوم",
+    "limitReached": "تم الوصول إلى الحد اليومي",
+    "limitReachedMessage": "لقد وصلت إلى الحد اليومي للرسائل. قم بالترقية إلى Pro للحصول على رسائل غير محدودة.",
+    "runningLowMessage": "رسائلك على وشك النفاد. لم يتبق سوى {count} رسائل اليوم.",
+    "unlockUnlimited": "افتح المراسلة غير المحدودة",
+    "proFeatures": "احصل على رسائل غير محدودة وذاكرة المحادثة وميزات التدريب المتقدمة.",
+    "upgradePrompt": "قم بالترقية إلى Pro للحصول على رسائل غير محدودة."
+  },
+  "planBadge": {
+    "free": "مجاني",
+    "pro": "✨ PRO",
+    "unknown": "غير معروف"
+  },
   "ChatPage": {
     "title": "دردشة",
     "pageDescription": "تحدث مع HypertroQ، مدرب اللياقة البدنية الشخصي الخاص بك.",
@@ -941,11 +1226,6 @@
       "createAccount": "إنشاء حساب مجاني",
       "later": "ربما لاحقًا"
     },
-    "messageLimitIndicator": {
-      "title": "رسائل اليوم",
-      "limitReached": "تم الوصول إلى الحد اليومي",
-      "upgradePrompt": "قم بالترقية إلى Pro للحصول على رسائل غير محدودة."
-    },
     "upgradeButton": {
       "title": "الترقية إلى PRO",
       "subtitle": "افتح القوة الكاملة",
@@ -983,6 +1263,14 @@
       }
     },
     "modelSelection": {
+      "flash": {
+        "name": "هايبرتروق فلاش",
+        "description": "تفكير تكيفي، استجابات أسرع"
+      },
+      "pro": {
+        "name": "هايبرتروق برو",
+        "description": "تفكير واستدلال محسن، فهم متعدد الوسائط"
+      },
       "proRequired": "مطلوب نموذج احترافي",
       "upgradeMessage": "هايبرتروق برو متاح للمستخدمين المحترفين فقط. قم بالترقية لإلغاء قفل التفكير المحسن والفهم متعدد الوسائط."
     },
@@ -994,7 +1282,8 @@
       "close": "إغلاق",
       "back": "رجوع",
       "continue": "متابعة",
-      "confirm": "تأكيد"
+      "confirm": "تأكيد",
+      "keyboardShortcuts": "Enter للإرسال • Shift+Enter لسطر جديد"
     }
   }
 }

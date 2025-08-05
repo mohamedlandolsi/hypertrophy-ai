@@ -54,6 +54,7 @@
       "title": "Why HypertroQ vs Generic AI?",
       "subtitle": "The difference is in the science, not the hype.",
       "genericAI": "Generic AI (ChatGPT, Gemini)",
+      "questionLabel": "Question",
       "question": "How many reps for muscle growth?",
       "genericResponse": "A good rep range for building muscle is typically 8-12 reps. You need to really 'feel the burn' and switch up your exercises often to 'confuse the muscle'. Also, make sure to do lots of isolation work.",
       "hypertroqResponse": "For hypertrophy, the optimal range is typically 5-10 reps taken to 0-2 RIR (Reps in Reserve). This maximizes mechanical tension, which is the primary driver of muscle growth. Based on your profile, I'd recommend compound movements with progressive overload.",
@@ -148,6 +149,94 @@
       "getStartedFree": "Get Started Free",
       "instantAccess": "Start chatting instantly • No credit card required • 5 free messages"
     }
+  },
+  "LoginPage": {
+    "title": "Welcome Back",
+    "subtitle": "Enter your credentials to access your account",
+    "email": "Email",
+    "emailPlaceholder": "m@example.com",
+    "password": "Password",
+    "passwordPlaceholder": "Enter your password",
+    "forgotPassword": "Forgot password?",
+    "signIn": "Sign In",
+    "signInWithGoogle": "Sign In with Google",
+    "noAccount": "Don't have an account?",
+    "signUp": "Sign Up",
+    "welcomeBack": "Welcome back!",
+    "invalidCredentials": "Invalid email or password. Please check your credentials and try again.",
+    "emailNotConfirmed": "Please check your email and click the confirmation link before signing in.",
+    "unexpectedError": "An unexpected error occurred. Please try again.",
+    "googleAuthError": "Could not authenticate with Google",
+    "googleAuthUnexpectedError": "An unexpected error occurred with Google authentication"
+  },
+  "SignupPage": {
+    "title": "Create your account",
+    "subtitle": "Welcome to HypertroQ",
+    "email": "Email",
+    "emailPlaceholder": "Enter your email",
+    "password": "Password",
+    "passwordPlaceholder": "Enter your password",
+    "confirmPassword": "Confirm Password",
+    "confirmPasswordPlaceholder": "Confirm your password",
+    "signUp": "Sign Up",
+    "signingUp": "Signing up...",
+    "alreadyHaveAccount": "Already have an account?",
+    "signInHere": "Sign in here",
+    "orContinueWith": "Or continue with",
+    "passwordsDontMatch": "Passwords don't match",
+    "weakPassword": "Password should be at least 6 characters",
+    "userAlreadyExists": "A user with this email already exists. Please sign in instead.",
+    "emailNotConfirmed": "Please check your email and click the confirmation link to verify your account.",
+    "unexpectedError": "An unexpected error occurred. Please try again.",
+    "passwordTooShort": "Password must be at least 6 characters long",
+    "googleAuthError": "Could not authenticate with Google",
+    "googleAuthUnexpectedError": "An unexpected error occurred with Google authentication"
+  },
+  "ResetPasswordPage": {
+    "title": "Reset Password",
+    "subtitle": "Enter your email address and we'll send you a link to reset your password.",
+    "email": "Email",
+    "emailPlaceholder": "m@example.com",
+    "sendResetLink": "Send Reset Link",
+    "sendingLink": "Sending...",
+    "backToSignIn": "Back to Sign In",
+    "checkEmailTitle": "Check Your Email",
+    "checkEmailSubtitle": "We've sent a password reset link to",
+    "linkExpiresInfo": "Click the link in the email to reset your password. The link will expire in 1 hour.",
+    "tryAnotherEmail": "Try another email",
+    "noAccountFound": "No account found with this email address.",
+    "resetLinkSent": "Check your email for a password reset link!",
+    "unexpectedError": "An unexpected error occurred. Please try again."
+  },
+  "UpdatePasswordPage": {
+    "invalidExpiredLink": "Invalid or expired reset link. Please request a new one.",
+    "passwordUpdatedSuccessfully": "Password updated successfully!",
+    "unexpectedError": "An unexpected error occurred. Please try again.",
+    "redirectMessage": "Password updated successfully. Please sign in with your new password."
+  },
+  "PasswordValidation": {
+    "passwordStrength": "Password strength",
+    "veryWeak": "Very weak",
+    "weak": "Weak", 
+    "good": "Good",
+    "strong": "Strong",
+    "uppercase": "Uppercase",
+    "lowercase": "Lowercase",
+    "number": "Number",
+    "specialChar": "Special char",
+    "eightChars": "8+ chars",
+    "emailRequired": "Email is required",
+    "validEmail": "Please enter a valid email address",
+    "passwordRequired": "Password is required",
+    "passwordMinLength": "Password must be at least 8 characters",
+    "passwordUppercase": "Password must contain at least one uppercase letter",
+    "passwordLowercase": "Password must contain at least one lowercase letter", 
+    "passwordNumber": "Password must contain at least one number",
+    "passwordSpecialChar": "Password must contain at least one special character",
+    "confirmPasswordRequired": "Please confirm your password",
+    "passwordsDoNotMatch": "Passwords do not match",
+    "currentPasswordRequired": "Current password is required",
+    "confirmNewPasswordRequired": "Please confirm your new password"
   },
   "Chat": {
     "placeholder": "Message HypertroQ...",
@@ -289,6 +378,7 @@
         "trainingFrequency": "Training Frequency",
         "name": "Name",
         "daysPerWeek": "{days} days/week",
+        "daysWeekLabel": "Days/Week",
         "ageYears": "Age (years)",
         "currentLifts": "Current Lifts",
         "getStarted": {
@@ -338,6 +428,7 @@
           "email": "Email",
           "currentPlan": "Current Plan",
           "userId": "User ID",
+          "clickToReveal": "Click to reveal",
           "memberSince": "Member Since",
           "lastSignIn": "Last Sign In"
         },
@@ -351,6 +442,12 @@
           "title": "Subscription Details",
           "proActive": "HypertroQ Pro",
           "activeSubscription": "Active subscription",
+          "freePlanActive": "Free Plan Active",
+          "limitedDailyMessages": "Limited daily messages and features",
+          "dailyMessageLimit": "Daily Message Limit",
+          "messagesUsedToday": "Messages Used Today",
+          "messagesPerDay": "messages/day",
+          "freeLabel": "Free",
           "status": "Status",
           "nextBilling": "Next Billing",
           "managePortal": "Manage your subscription through the customer portal:",
@@ -412,6 +509,8 @@
       "removePicture": "Remove Picture",
       "fileRequirements": "JPEG, PNG, WebP, or GIF up to 5MB",
       "dragDropText": "Click or drag & drop to upload",
+      "supportedFormats": "Supported:",
+      "maximumSize": "Maximum size:",
       "dropHere": "Drop here",
       "upload": "Upload",
       "removing": "Removing...",
@@ -742,6 +841,177 @@
     "users": "Users",
     "knowledge": "Knowledge Base"
   },
+  "Onboarding": {
+    "welcome": {
+      "title": "Welcome to HypertroQ",
+      "subtitle": "Let's set up your profile to personalize your fitness journey"
+    },
+    "progress": {
+      "stepOf": "Step {current} of {total}",
+      "skipForNow": "Skip for now"
+    },
+    "stepTitles": {
+      "personalInfo": "Personal Information",
+      "trainingBackground": "Training Background", 
+      "goalsMotivation": "Goals & Motivation",
+      "trainingEnvironment": "Training Environment"
+    },
+    "footer": {
+      "updateLater": "You can always update this information later in your profile settings"
+    },
+    "step1": {
+      "title": "Personal Information",
+      "description": "Help us understand your basic profile to personalize your experience",
+      "fields": {
+        "name": "Name",
+        "namePlaceholder": "Your name",
+        "age": "Age",
+        "agePlaceholder": "Your age",
+        "gender": "Gender",
+        "genderPlaceholder": "Select gender",
+        "height": "Height (cm)",
+        "heightPlaceholder": "Height in cm",
+        "weight": "Weight (kg)", 
+        "weightPlaceholder": "Weight in kg",
+        "bodyFat": "Body Fat % (optional)",
+        "bodyFatPlaceholder": "Body fat %"
+      },
+      "genderOptions": {
+        "male": "Male",
+        "female": "Female",
+        "other": "Other",
+        "preferNotToSay": "Prefer not to say"
+      },
+      "continue": "Continue"
+    },
+    "step2": {
+      "title": "Training Information",
+      "description": "Tell us about your training background and preferences",
+      "fields": {
+        "experience": "Training Experience",
+        "experiencePlaceholder": "Select your experience level",
+        "weeklyDays": "Training Days per Week",
+        "weeklyDaysPlaceholder": "How many days?",
+        "trainingStyle": "Preferred Training Style",
+        "trainingStylePlaceholder": "What's your preferred style?",
+        "trainingSchedule": "Preferred Training Time",
+        "trainingSchedulePlaceholder": "When do you prefer to train?",
+        "availableTime": "Available Time per Session (minutes)",
+        "availableTimePlaceholder": "e.g., 60",
+        "activityLevel": "Activity Level",
+        "activityLevelPlaceholder": "Your general activity level"
+      },
+      "experienceOptions": {
+        "beginner": "Beginner (0-1 years)",
+        "intermediate": "Intermediate (1-3 years)",
+        "advanced": "Advanced (3+ years)"
+      },
+      "daysOptions": {
+        "2days": "2 days",
+        "3days": "3 days", 
+        "4days": "4 days",
+        "5days": "5 days",
+        "6days": "6 days",
+        "7days": "7 days"
+      },
+      "trainingStyleOptions": {
+        "hypertrophy": "Hypertrophy/Muscle Building",
+        "strength": "Strength Training",
+        "powerlifting": "Powerlifting",
+        "bodybuilding": "Bodybuilding",
+        "general": "General Fitness"
+      },
+      "scheduleOptions": {
+        "morning": "Morning",
+        "afternoon": "Afternoon",
+        "evening": "Evening",
+        "flexible": "Flexible"
+      },
+      "activityLevelOptions": {
+        "sedentary": "Sedentary (little to no exercise)",
+        "light": "Light (light exercise 1-3 days/week)",
+        "moderate": "Moderate (moderate exercise 3-5 days/week)",
+        "active": "Active (hard exercise 6-7 days/week)",
+        "veryActive": "Very Active (very hard exercise & physical job)"
+      },
+      "back": "Back",
+      "continue": "Continue"
+    },
+    "step3": {
+      "title": "Goals and Motivation",
+      "description": "What do you want to achieve? This helps us personalize your journey",
+      "fields": {
+        "primaryGoal": "Primary Goal",
+        "primaryGoalPlaceholder": "What's your main goal?",
+        "secondaryGoals": "Secondary Goals (optional)",
+        "targetWeight": "Target Weight (kg) - optional",
+        "targetWeightPlaceholder": "Goal weight",
+        "targetBodyFat": "Target Body Fat % - optional",
+        "targetBodyFatPlaceholder": "Goal body fat %",
+        "goalDeadline": "Goal Deadline - optional",
+        "motivation": "What motivates you? (optional)",
+        "motivationPlaceholder": "Tell us what drives you to reach your fitness goals..."
+      },
+      "primaryGoalOptions": {
+        "muscleGain": "Build Muscle",
+        "fatLoss": "Lose Fat",
+        "strength": "Get Stronger",
+        "generalFitness": "General Fitness",
+        "athleticPerformance": "Athletic Performance",
+        "bodyRecomposition": "Body Recomposition"
+      },
+      "secondaryGoalOptions": {
+        "increaseStrength": "Increase strength",
+        "improveEndurance": "Improve endurance",
+        "betterSleep": "Better sleep quality",
+        "reduceStress": "Reduce stress",
+        "betterPosture": "Better posture",
+        "increaseEnergy": "Increase energy",
+        "sportPerformance": "Sport performance",
+        "injuryPrevention": "Injury prevention"
+      },
+      "back": "Back",
+      "continue": "Continue"
+    },
+    "step4": {
+      "title": "Training Environment",
+      "description": "Tell us about your training setup so we can create workouts that fit your environment",
+      "fields": {
+        "trainingLocation": "Training Location",
+        "gymAccess": "I have gym access",
+        "homeGym": "I have a home gym setup",
+        "availableEquipment": "Available Equipment (optional)",
+        "addEquipment": "Add equipment",
+        "quickAdd": "Quick add:",
+        "gymBudget": "Monthly Gym/Equipment Budget (optional)",
+        "gymBudgetPlaceholder": "e.g., 50"
+      },
+      "equipmentOptions": {
+        "dumbbells": "Dumbbells",
+        "barbell": "Barbell",
+        "resistanceBands": "Resistance bands",
+        "pullUpBar": "Pull-up bar",
+        "bench": "Bench",
+        "squatRack": "Squat rack",
+        "kettlebells": "Kettlebells",
+        "cableMachine": "Cable machine",
+        "smithMachine": "Smith machine",
+        "legPress": "Leg press",
+        "latPulldown": "Lat pulldown",
+        "cardioMachines": "Cardio machines"
+      },
+      "back": "Back",
+      "completeSetup": "Complete Setup"
+    },
+    "toasts": {
+      "welcomeTitle": "Welcome to HypertroQ!",
+      "welcomeSkipDescription": "You can complete your profile anytime from the Profile page.",
+      "welcomeCompleteDescription": "Your profile has been set up successfully.",
+      "errorTitle": "Error",
+      "errorSkipDescription": "Failed to skip onboarding. Please try again.",
+      "errorSaveDescription": "Failed to save your profile. Please try again."
+    }
+  },
   "Common": {
     "loading": "Loading...",
     "error": "Error",
@@ -857,6 +1127,21 @@
     "processingKnowledgeItemsTitle": "Processing knowledge items",
     "processingKnowledgeItemsText": "{operation} up to {limit} items..."
   },
+  "messageLimitIndicator": {
+    "title": "Daily Messages",
+    "messagesRemaining": "{count} messages remaining today",
+    "limitReached": "Daily Limit Reached",
+    "limitReachedMessage": "You've reached your daily message limit. Upgrade to Pro for unlimited messages.",
+    "runningLowMessage": "You're running low on messages. Only {count} left today.",
+    "unlockUnlimited": "Unlock unlimited messaging",
+    "proFeatures": "Get unlimited messages, conversation memory, and advanced coaching features.",
+    "upgradePrompt": "Upgrade to Pro for unlimited messages."
+  },
+  "planBadge": {
+    "free": "Free",
+    "pro": "✨ PRO",
+    "unknown": "Unknown"
+  },
   "ChatPage": {
     "title": "Chat",
     "pageDescription": "Chat with HypertroQ, your personal AI fitness coach.",
@@ -943,11 +1228,6 @@
       "createAccount": "Create Free Account",
       "later": "Maybe later"
     },
-    "messageLimitIndicator": {
-      "title": "Messages Today",
-      "limitReached": "Daily Limit Reached",
-      "upgradePrompt": "Upgrade to Pro for unlimited messages."
-    },
     "upgradeButton": {
       "title": "Upgrade to PRO",
       "subtitle": "Unlock Unlimited Power",
@@ -985,6 +1265,14 @@
       }
     },
     "modelSelection": {
+      "flash": {
+        "name": "HypertroQ Flash",
+        "description": "Adaptive thinking, faster responses"
+      },
+      "pro": {
+        "name": "HypertroQ Pro",
+        "description": "Enhanced thinking and reasoning, multimodal understanding"
+      },
       "proRequired": "Pro Model Required",
       "upgradeMessage": "HypertroQ Pro is available for Pro users only. Upgrade to unlock enhanced reasoning and multimodal understanding."
     },
@@ -996,7 +1284,8 @@
       "close": "Close",
       "back": "Back",
       "continue": "Continue",
-      "confirm": "Confirm"
+      "confirm": "Confirm",
+      "keyboardShortcuts": "Enter to send • Shift+Enter for new line"
     }
   }
 }

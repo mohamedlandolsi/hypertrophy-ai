@@ -518,8 +518,8 @@ export function EnhancedAvatarUpload({
             {/* File Requirements */}
             <div className="text-center space-y-1">
               <div className="text-xs text-muted-foreground">
-                <p>Supported: {ALLOWED_TYPES.map(getFileTypeDisplayName).join(', ')}</p>
-                <p>Maximum size: <span className="font-medium text-foreground">{formatFileSize(MAX_FILE_SIZE)}</span></p>
+                <p>{t('supportedFormats')} {ALLOWED_TYPES.map(getFileTypeDisplayName).join(', ')}</p>
+                <p>{t('maximumSize')} <span className="font-medium text-foreground">{formatFileSize(MAX_FILE_SIZE)}</span></p>
               </div>
               {allowEdit && (
                 <p className="text-xs text-muted-foreground">

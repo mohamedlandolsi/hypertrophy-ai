@@ -7,6 +7,7 @@ import { Progress } from '@/components/ui/progress';
 import { completeOnboarding, saveOnboardingData } from './actions';
 import { useRouter } from 'next/navigation';
 import { toast } from '@/hooks/use-toast';
+import { useTranslations } from 'next-intl';
 
 // Import step components
 import { Step1PersonalInfo } from './_components/step1-personal';
@@ -51,6 +52,7 @@ export default function OnboardingPage() {
   const [formData, setFormData] = useState<OnboardingData>({});
   const [isSubmitting, setIsSubmitting] = useState(false);
   const router = useRouter();
+  const t = useTranslations('Onboarding');
 
   const totalSteps = 4;
 
@@ -62,8 +64,8 @@ export default function OnboardingPage() {
       if (result.success) {
         // Show success message briefly before redirect
         toast({
-          title: 'Welcome to HypertroQ!',
-          description: 'You can complete your profile anytime from the Profile page.',
+          title: t('toasts.welcomeTitle'),
+          description: t('toasts.welcomeSkipDescription'),
         });
         
         // Redirect to chat
@@ -72,8 +74,8 @@ export default function OnboardingPage() {
     } catch (error) {
       console.error('Error skipping onboarding:', error);
       toast({
-        title: 'Error',
-        description: 'Failed to skip onboarding. Please try again.',
+        title: t('toasts.errorTitle'),
+        description: t('toasts.errorSkipDescription'),
         variant: 'destructive',
       });
       setIsSubmitting(false);
@@ -112,8 +114,8 @@ export default function OnboardingPage() {
       
       if (result.success) {
         toast({
-          title: 'Welcome to HypertroQ!',
-          description: 'Your profile has been set up successfully.',
+          title: t('toasts.welcomeTitle'),
+          description: t('toasts.welcomeCompleteDescription'),
         });
         
         // Redirect to chat
@@ -122,8 +124,8 @@ export default function OnboardingPage() {
     } catch (error) {
       console.error('Error saving onboarding data:', error);
       toast({
-        title: 'Error',
-        description: 'Failed to save your profile. Please try again.',
+        title: t('toasts.errorTitle'),
+        description: t('toasts.errorSaveDescription'),
         variant: 'destructive',
       });
       setIsSubmitting(false);
@@ -138,10 +140,10 @@ export default function OnboardingPage() {
         {/* Header */}
         <div className="text-center mb-8">
           <h1 className="text-3xl font-bold text-foreground mb-2">
-            Welcome to HypertroQ
+            {t('welcome.title')}
           </h1>
           <p className="text-muted-foreground">
-            Let&apos;s set up your profile to personalize your fitness journey
+            {t('welcome.subtitle')}
           </p>
         </div>
 
@@ -151,13 +153,13 @@ export default function OnboardingPage() {
             <div className="flex justify-between items-center">
               <div>
                 <CardTitle className="text-lg">
-                  Step {step} of {totalSteps}
+                  {t('progress.stepOf', { current: step, total: totalSteps })}
                 </CardTitle>
                 <CardDescription>
-                  {step === 1 && 'Personal Information'}
-                  {step === 2 && 'Training Background'}
-                  {step === 3 && 'Goals & Motivation'}
-                  {step === 4 && 'Training Environment'}
+                  {step === 1 && t('stepTitles.personalInfo')}
+                  {step === 2 && t('stepTitles.trainingBackground')}
+                  {step === 3 && t('stepTitles.goalsMotivation')}
+                  {step === 4 && t('stepTitles.trainingEnvironment')}
                 </CardDescription>
               </div>
               <Button 
@@ -165,7 +167,7 @@ export default function OnboardingPage() {
                 onClick={handleSkip}
                 disabled={isSubmitting}
               >
-                Skip for now
+                {t('progress.skipForNow')}
               </Button>
             </div>
           </CardHeader>
@@ -210,7 +212,7 @@ export default function OnboardingPage() {
 
         {/* Footer */}
         <div className="text-center mt-8 text-sm text-muted-foreground">
-          You can always update this information later in your profile settings
+          {t('footer.updateLater')}
         </div>
       </div>
     </div>

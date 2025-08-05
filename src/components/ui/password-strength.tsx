@@ -3,6 +3,7 @@
 import React from "react";
 import { Check, X } from "lucide-react";
 import { cn } from "@/lib/utils";
+import { useTranslations } from "next-intl";
 
 interface PasswordStrengthProps {
   password: string;
@@ -10,53 +11,56 @@ interface PasswordStrengthProps {
 }
 
 interface PasswordRequirement {
-  label: string;
+  labelKey: string;
   test: (password: string) => boolean;
 }
 
-const passwordRequirements: PasswordRequirement[] = [
+const getPasswordRequirements = (): PasswordRequirement[] => [
   {
-    label: "Uppercase",
+    labelKey: "uppercase",
     test: (password: string) => /[A-Z]/.test(password),
   },
   {
-    label: "Lowercase", 
+    labelKey: "lowercase", 
     test: (password: string) => /[a-z]/.test(password),
   },
   {
-    label: "Number",
+    labelKey: "number",
     test: (password: string) => /\d/.test(password),
   },
   {
-    label: "Special char",
+    labelKey: "specialChar",
     test: (password: string) => /[!@#$%^&*(),.?":{}|<>]/.test(password),
   },
   {
-    label: "8+ chars",
+    labelKey: "eightChars",
     test: (password: string) => password.length >= 8,
   },
 ];
 
-const getPasswordStrength = (password: string): { score: number; label: string; color: string } => {
+const getPasswordStrength = (password: string, t: (key: string) => string): { score: number; label: string; color: string } => {
   if (password.length === 0) {
     return { score: 0, label: "", color: "" };
   }
 
-  const metRequirements = passwordRequirements.filter(req => req.test(password)).length;
+  const requirements = getPasswordRequirements();
+  const metRequirements = requirements.filter(req => req.test(password)).length;
   
   if (metRequirements <= 2) {
-    return { score: 25, label: "Very weak", color: "bg-red-500" };
+    return { score: 25, label: t("veryWeak"), color: "bg-red-500" };
   } else if (metRequirements === 3) {
-    return { score: 50, label: "Weak", color: "bg-orange-500" };
+    return { score: 50, label: t("weak"), color: "bg-orange-500" };
   } else if (metRequirements === 4) {
-    return { score: 75, label: "Good", color: "bg-yellow-500" };
+    return { score: 75, label: t("good"), color: "bg-yellow-500" };
   } else {
-    return { score: 100, label: "Strong", color: "bg-green-500" };
+    return { score: 100, label: t("strong"), color: "bg-green-500" };
   }
 };
 
 export function PasswordStrength({ password, className }: PasswordStrengthProps) {
-  const strength = getPasswordStrength(password);
+  const t = useTranslations("PasswordValidation");
+  const strength = getPasswordStrength(password, t);
+  const passwordRequirements = getPasswordRequirements();
 
   if (password.length === 0) {
     return null;
@@ -67,7 +71,7 @@ export function PasswordStrength({ password, className }: PasswordStrengthProps)
       {/* Password strength bar */}
       <div className="space-y-1">
         <div className="flex justify-between text-xs">
-          <span className="text-muted-foreground">Password strength</span>
+          <span className="text-muted-foreground">{t("passwordStrength")}</span>
           <span className={cn(
             "font-medium",
             strength.score <= 25 ? "text-red-600" :
@@ -101,7 +105,7 @@ export function PasswordStrength({ password, className }: PasswordStrengthProps)
                 "text-xs",
                 isMet ? "text-green-600" : "text-red-600"
               )}>
-                {requirement.label}
+                {t(requirement.labelKey)}
               </span>
             </div>
           );

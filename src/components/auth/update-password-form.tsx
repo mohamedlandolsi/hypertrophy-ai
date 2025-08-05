@@ -21,6 +21,7 @@ import { useRouter } from "next/navigation";
 import { toast } from "sonner";
 import { Loader2 } from "lucide-react";
 import { z } from "zod";
+import { useTranslations } from "next-intl";
 
 // Validation schema for updating password
 const updatePasswordSchema = z
@@ -48,6 +49,7 @@ export default function UpdatePasswordForm() {
   const [isLoading, setIsLoading] = useState(false);
   const [isValidSession, setIsValidSession] = useState(false);
   const router = useRouter();
+  const t = useTranslations('UpdatePasswordPage');
 
   const {
     register,
@@ -68,7 +70,7 @@ export default function UpdatePasswordForm() {
       const { data: { session } } = await supabase.auth.getSession();
       
       if (!session) {
-        toast.error("Invalid or expired reset link. Please request a new one.");
+        toast.error(t("invalidExpiredLink"));
         router.push("/reset-password");
         return;
       }
@@ -77,7 +79,7 @@ export default function UpdatePasswordForm() {
     };
 
     checkSession();
-  }, [router]);
+  }, [router, t]);
 
   const onSubmit = async (data: UpdatePasswordFormData) => {
     setIsLoading(true);
@@ -94,12 +96,12 @@ export default function UpdatePasswordForm() {
         return;
       }
 
-      toast.success("Password updated successfully!");
-      router.push("/login?message=Password updated successfully. Please sign in with your new password.");
+      toast.success(t("passwordUpdatedSuccessfully"));
+      router.push(`/login?message=${encodeURIComponent(t("redirectMessage"))}`);
       
     } catch (err) {
       console.error("Update password error:", err);
-      toast.error("An unexpected error occurred. Please try again.");
+      toast.error(t("unexpectedError"));
     } finally {
       setIsLoading(false);
     }

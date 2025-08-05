@@ -1,12 +1,76 @@
 import { z } from "zod";
 
-// Base email validation
+// Translation-aware validation schemas
+export const createAuthSchemas = (t: (key: string) => string) => {
+  // Base email validation
+  const emailSchema = z
+    .string()
+    .min(1, t("emailRequired"))
+    .email(t("validEmail"));
+
+  // Password validation with strength requirements
+  const passwordSchema = z
+    .string()
+    .min(8, t("passwordMinLength"))
+    .regex(/[A-Z]/, t("passwordUppercase"))
+    .regex(/[a-z]/, t("passwordLowercase"))
+    .regex(/\d/, t("passwordNumber"))
+    .regex(
+      /[!@#$%^&*(),.?":{}|<>]/,
+      t("passwordSpecialChar")
+    );
+
+  // Login form validation
+  const loginSchema = z.object({
+    email: emailSchema,
+    password: z.string().min(1, t("passwordRequired")),
+  });
+
+  // Signup form validation
+  const signupSchema = z
+    .object({
+      email: emailSchema,
+      password: passwordSchema,
+      confirmPassword: z.string().min(1, t("confirmPasswordRequired")),
+    })
+    .refine((data) => data.password === data.confirmPassword, {
+      message: t("passwordsDoNotMatch"),
+      path: ["confirmPassword"],
+    });
+
+  // Password reset validation
+  const resetPasswordSchema = z.object({
+    email: emailSchema,
+  });
+
+  // Change password validation
+  const changePasswordSchema = z
+    .object({
+      currentPassword: z.string().min(1, t("currentPasswordRequired")),
+      newPassword: passwordSchema,
+      confirmPassword: z.string().min(1, t("confirmNewPasswordRequired")),
+    })
+    .refine((data) => data.newPassword === data.confirmPassword, {
+      message: t("passwordsDoNotMatch"),
+      path: ["confirmPassword"],
+    });
+
+  return {
+    emailSchema,
+    passwordSchema,
+    loginSchema,
+    signupSchema,
+    resetPasswordSchema,
+    changePasswordSchema,
+  };
+};
+
+// Default schemas with English messages (for backward compatibility)
 const emailSchema = z
   .string()
   .min(1, "Email is required")
   .email("Please enter a valid email address");
 
-// Password validation with strength requirements
 const passwordSchema = z
   .string()
   .min(8, "Password must be at least 8 characters")
@@ -18,13 +82,13 @@ const passwordSchema = z
     "Password must contain at least one special character"
   );
 
-// Login form validation
+// Default login form validation
 export const loginSchema = z.object({
   email: emailSchema,
   password: z.string().min(1, "Password is required"),
 });
 
-// Signup form validation
+// Default signup form validation
 export const signupSchema = z
   .object({
     email: emailSchema,
@@ -36,12 +100,12 @@ export const signupSchema = z
     path: ["confirmPassword"],
   });
 
-// Password reset validation
+// Default password reset validation
 export const resetPasswordSchema = z.object({
   email: emailSchema,
 });
 
-// Change password validation
+// Default change password validation
 export const changePasswordSchema = z
   .object({
     currentPassword: z.string().min(1, "Current password is required"),

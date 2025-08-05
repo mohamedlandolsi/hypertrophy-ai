@@ -7,6 +7,7 @@ import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { Activity } from 'lucide-react';
+import { useTranslations } from 'next-intl';
 
 interface Step2Data {
   trainingExperience?: string;
@@ -25,6 +26,7 @@ interface Step2Props {
 
 export function Step2TrainingInfo({ onNext, onBack, initialData = {} }: Step2Props) {
   const [formData, setFormData] = useState<Step2Data>(initialData);
+  const t = useTranslations('Onboarding.step2');
 
   const updateField = (field: keyof Step2Data, value: string | number | undefined) => {
     setFormData(prev => ({ ...prev, [field]: value }));
@@ -40,44 +42,44 @@ export function Step2TrainingInfo({ onNext, onBack, initialData = {} }: Step2Pro
       <CardHeader>
         <CardTitle className="flex items-center">
           <Activity className="mr-2 h-5 w-5" />
-          Training Information
+          {t('title')}
         </CardTitle>
         <CardDescription>
-          Tell us about your training background and preferences
+          {t('description')}
         </CardDescription>
       </CardHeader>
       <CardContent>
         <form onSubmit={handleSubmit} className="space-y-4">
           <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
             <div>
-              <Label htmlFor="experience">Training Experience</Label>
+              <Label htmlFor="experience">{t('fields.experience')}</Label>
               <Select value={formData.trainingExperience || ''} onValueChange={(value) => updateField('trainingExperience', value)}>
                 <SelectTrigger>
-                  <SelectValue placeholder="Select your experience level" />
+                  <SelectValue placeholder={t('fields.experiencePlaceholder')} />
                 </SelectTrigger>
                 <SelectContent>
-                  <SelectItem value="beginner">Beginner (0-1 years)</SelectItem>
-                  <SelectItem value="intermediate">Intermediate (1-3 years)</SelectItem>
-                  <SelectItem value="advanced">Advanced (3+ years)</SelectItem>
+                  <SelectItem value="beginner">{t('experienceOptions.beginner')}</SelectItem>
+                  <SelectItem value="intermediate">{t('experienceOptions.intermediate')}</SelectItem>
+                  <SelectItem value="advanced">{t('experienceOptions.advanced')}</SelectItem>
                 </SelectContent>
               </Select>
             </div>
             <div>
-              <Label htmlFor="weeklyDays">Training Days per Week</Label>
+              <Label htmlFor="weeklyDays">{t('fields.weeklyDays')}</Label>
               <Select 
                 value={formData.weeklyTrainingDays?.toString() || ''} 
                 onValueChange={(value) => updateField('weeklyTrainingDays', parseInt(value))}
               >
                 <SelectTrigger>
-                  <SelectValue placeholder="How many days?" />
+                  <SelectValue placeholder={t('fields.weeklyDaysPlaceholder')} />
                 </SelectTrigger>
                 <SelectContent>
-                  <SelectItem value="2">2 days</SelectItem>
-                  <SelectItem value="3">3 days</SelectItem>
-                  <SelectItem value="4">4 days</SelectItem>
-                  <SelectItem value="5">5 days</SelectItem>
-                  <SelectItem value="6">6 days</SelectItem>
-                  <SelectItem value="7">7 days</SelectItem>
+                  <SelectItem value="2">{t('daysOptions.2days')}</SelectItem>
+                  <SelectItem value="3">{t('daysOptions.3days')}</SelectItem>
+                  <SelectItem value="4">{t('daysOptions.4days')}</SelectItem>
+                  <SelectItem value="5">{t('daysOptions.5days')}</SelectItem>
+                  <SelectItem value="6">{t('daysOptions.6days')}</SelectItem>
+                  <SelectItem value="7">{t('daysOptions.7days')}</SelectItem>
                 </SelectContent>
               </Select>
             </div>
@@ -85,31 +87,31 @@ export function Step2TrainingInfo({ onNext, onBack, initialData = {} }: Step2Pro
 
           <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
             <div>
-              <Label htmlFor="trainingStyle">Preferred Training Style</Label>
+              <Label htmlFor="trainingStyle">{t('fields.trainingStyle')}</Label>
               <Select value={formData.preferredTrainingStyle || ''} onValueChange={(value) => updateField('preferredTrainingStyle', value)}>
                 <SelectTrigger>
-                  <SelectValue placeholder="What's your preferred style?" />
+                  <SelectValue placeholder={t('fields.trainingStylePlaceholder')} />
                 </SelectTrigger>
                 <SelectContent>
-                  <SelectItem value="hypertrophy">Hypertrophy/Muscle Building</SelectItem>
-                  <SelectItem value="strength">Strength Training</SelectItem>
-                  <SelectItem value="powerlifting">Powerlifting</SelectItem>
-                  <SelectItem value="bodybuilding">Bodybuilding</SelectItem>
-                  <SelectItem value="general">General Fitness</SelectItem>
+                  <SelectItem value="hypertrophy">{t('trainingStyleOptions.hypertrophy')}</SelectItem>
+                  <SelectItem value="strength">{t('trainingStyleOptions.strength')}</SelectItem>
+                  <SelectItem value="powerlifting">{t('trainingStyleOptions.powerlifting')}</SelectItem>
+                  <SelectItem value="bodybuilding">{t('trainingStyleOptions.bodybuilding')}</SelectItem>
+                  <SelectItem value="general">{t('trainingStyleOptions.general')}</SelectItem>
                 </SelectContent>
               </Select>
             </div>
             <div>
-              <Label htmlFor="trainingSchedule">Preferred Training Time</Label>
+              <Label htmlFor="trainingSchedule">{t('fields.trainingSchedule')}</Label>
               <Select value={formData.trainingSchedule || ''} onValueChange={(value) => updateField('trainingSchedule', value)}>
                 <SelectTrigger>
-                  <SelectValue placeholder="When do you prefer to train?" />
+                  <SelectValue placeholder={t('fields.trainingSchedulePlaceholder')} />
                 </SelectTrigger>
                 <SelectContent>
-                  <SelectItem value="morning">Morning</SelectItem>
-                  <SelectItem value="afternoon">Afternoon</SelectItem>
-                  <SelectItem value="evening">Evening</SelectItem>
-                  <SelectItem value="flexible">Flexible</SelectItem>
+                  <SelectItem value="morning">{t('scheduleOptions.morning')}</SelectItem>
+                  <SelectItem value="afternoon">{t('scheduleOptions.afternoon')}</SelectItem>
+                  <SelectItem value="evening">{t('scheduleOptions.evening')}</SelectItem>
+                  <SelectItem value="flexible">{t('scheduleOptions.flexible')}</SelectItem>
                 </SelectContent>
               </Select>
             </div>
@@ -117,7 +119,7 @@ export function Step2TrainingInfo({ onNext, onBack, initialData = {} }: Step2Pro
 
           <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
             <div>
-              <Label htmlFor="availableTime">Available Time per Session (minutes)</Label>
+              <Label htmlFor="availableTime">{t('fields.availableTime')}</Label>
               <Input
                 id="availableTime"
                 type="number"
@@ -125,21 +127,21 @@ export function Step2TrainingInfo({ onNext, onBack, initialData = {} }: Step2Pro
                 max="180"
                 value={formData.availableTime || ''}
                 onChange={(e) => updateField('availableTime', e.target.value ? parseInt(e.target.value) : undefined)}
-                placeholder="e.g., 60"
+                placeholder={t('fields.availableTimePlaceholder')}
               />
             </div>
             <div>
-              <Label htmlFor="activityLevel">Activity Level</Label>
+              <Label htmlFor="activityLevel">{t('fields.activityLevel')}</Label>
               <Select value={formData.activityLevel || ''} onValueChange={(value) => updateField('activityLevel', value)}>
                 <SelectTrigger>
-                  <SelectValue placeholder="Your general activity level" />
+                  <SelectValue placeholder={t('fields.activityLevelPlaceholder')} />
                 </SelectTrigger>
                 <SelectContent>
-                  <SelectItem value="SEDENTARY">Sedentary (little to no exercise)</SelectItem>
-                  <SelectItem value="LIGHT">Light (light exercise 1-3 days/week)</SelectItem>
-                  <SelectItem value="MODERATE">Moderate (moderate exercise 3-5 days/week)</SelectItem>
-                  <SelectItem value="ACTIVE">Active (hard exercise 6-7 days/week)</SelectItem>
-                  <SelectItem value="VERY_ACTIVE">Very Active (very hard exercise & physical job)</SelectItem>
+                  <SelectItem value="SEDENTARY">{t('activityLevelOptions.sedentary')}</SelectItem>
+                  <SelectItem value="LIGHT">{t('activityLevelOptions.light')}</SelectItem>
+                  <SelectItem value="MODERATE">{t('activityLevelOptions.moderate')}</SelectItem>
+                  <SelectItem value="ACTIVE">{t('activityLevelOptions.active')}</SelectItem>
+                  <SelectItem value="VERY_ACTIVE">{t('activityLevelOptions.veryActive')}</SelectItem>
                 </SelectContent>
               </Select>
             </div>
@@ -147,10 +149,10 @@ export function Step2TrainingInfo({ onNext, onBack, initialData = {} }: Step2Pro
 
           <div className="flex justify-between pt-4">
             <Button type="button" variant="outline" onClick={onBack}>
-              Back
+              {t('back')}
             </Button>
             <Button type="submit">
-              Continue
+              {t('continue')}
             </Button>
           </div>
         </form>

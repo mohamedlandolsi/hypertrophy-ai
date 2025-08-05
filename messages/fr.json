@@ -54,6 +54,7 @@
       "title": "Pourquoi HypertroQ vs IA Générique ?",
       "subtitle": "La différence est dans la science, pas dans le battage médiatique.",
       "genericAI": "IA Générique (ChatGPT, Gemini)",
+      "questionLabel": "Question",
       "question": "Combien de répétitions pour la croissance musculaire ?",
       "genericResponse": "Une bonne plage de répétitions pour développer les muscles est généralement de 8-12 répétitions. Vous devez vraiment 'sentir la brûlure' et changer d'exercices souvent pour 'confondre le muscle'. Assurez-vous aussi de faire beaucoup de travail d'isolation.",
       "hypertroqResponse": "Pour l'hypertrophie, la plage optimale est généralement de 5-10 répétitions prises à 0-2 RIR (Répétitions en Réserve). Cela maximise la tension mécanique, qui est le principal moteur de la croissance musculaire. Basé sur votre profil, je recommanderais des mouvements composés avec une surcharge progressive.",
@@ -149,6 +150,94 @@
       "instantAccess": "Commencez à chatter instantanément • Aucune carte de crédit requise • 5 messages gratuits"
     }
   },
+  "LoginPage": {
+    "title": "Bon Retour",
+    "subtitle": "Entrez vos identifiants pour accéder à votre compte",
+    "email": "Email",
+    "emailPlaceholder": "m@example.com",
+    "password": "Mot de passe",
+    "passwordPlaceholder": "Entrez votre mot de passe",
+    "forgotPassword": "Mot de passe oublié ?",
+    "signIn": "Se Connecter",
+    "signInWithGoogle": "Se Connecter avec Google",
+    "noAccount": "Vous n'avez pas de compte ?",
+    "signUp": "S'inscrire",
+    "welcomeBack": "Bon retour !",
+    "invalidCredentials": "Email ou mot de passe invalide. Veuillez vérifier vos identifiants et réessayer.",
+    "emailNotConfirmed": "Veuillez vérifier votre email et cliquer sur le lien de confirmation avant de vous connecter.",
+    "unexpectedError": "Une erreur inattendue s'est produite. Veuillez réessayer.",
+    "googleAuthError": "Impossible de s'authentifier avec Google",
+    "googleAuthUnexpectedError": "Une erreur inattendue s'est produite avec l'authentification Google"
+  },
+  "SignupPage": {
+    "title": "Créez votre compte",
+    "subtitle": "Bienvenue sur HypertroQ",
+    "email": "Email",
+    "emailPlaceholder": "Entrez votre email",
+    "password": "Mot de passe",
+    "passwordPlaceholder": "Entrez votre mot de passe",
+    "confirmPassword": "Confirmer le mot de passe",
+    "confirmPasswordPlaceholder": "Confirmez votre mot de passe",
+    "signUp": "S'inscrire",
+    "signingUp": "Inscription en cours...",
+    "alreadyHaveAccount": "Vous avez déjà un compte ?",
+    "signInHere": "Connectez-vous ici",
+    "orContinueWith": "Ou continuez avec",
+    "passwordsDontMatch": "Les mots de passe ne correspondent pas",
+    "weakPassword": "Le mot de passe doit contenir au moins 6 caractères",
+    "userAlreadyExists": "Un utilisateur avec cet email existe déjà. Veuillez vous connecter à la place.",
+    "emailNotConfirmed": "Veuillez vérifier votre email et cliquer sur le lien de confirmation pour vérifier votre compte.",
+    "unexpectedError": "Une erreur inattendue s'est produite. Veuillez réessayer.",
+    "passwordTooShort": "Le mot de passe doit contenir au moins 6 caractères",
+    "googleAuthError": "Impossible de s'authentifier avec Google",
+    "googleAuthUnexpectedError": "Une erreur inattendue s'est produite avec l'authentification Google"
+  },
+  "ResetPasswordPage": {
+    "title": "Réinitialiser le mot de passe",
+    "subtitle": "Entrez votre adresse email et nous vous enverrons un lien pour réinitialiser votre mot de passe.",
+    "email": "Email",
+    "emailPlaceholder": "m@example.com",
+    "sendResetLink": "Envoyer le lien de réinitialisation",
+    "sendingLink": "Envoi en cours...",
+    "backToSignIn": "Retour à la connexion",
+    "checkEmailTitle": "Vérifiez votre email",
+    "checkEmailSubtitle": "Nous avons envoyé un lien de réinitialisation du mot de passe à",
+    "linkExpiresInfo": "Cliquez sur le lien dans l'email pour réinitialiser votre mot de passe. Le lien expirera dans 1 heure.",
+    "tryAnotherEmail": "Essayer un autre email",
+    "noAccountFound": "Aucun compte trouvé avec cette adresse email.",
+    "resetLinkSent": "Vérifiez votre email pour un lien de réinitialisation du mot de passe !",
+    "unexpectedError": "Une erreur inattendue s'est produite. Veuillez réessayer."
+  },
+  "UpdatePasswordPage": {
+    "invalidExpiredLink": "Lien invalide ou expiré. Veuillez en demander un nouveau.",
+    "passwordUpdatedSuccessfully": "Mot de passe mis à jour avec succès !",
+    "unexpectedError": "Une erreur inattendue s'est produite. Veuillez réessayer.",
+    "redirectMessage": "Mot de passe mis à jour avec succès. Veuillez vous connecter avec votre nouveau mot de passe."
+  },
+  "PasswordValidation": {
+    "passwordStrength": "Force du mot de passe",
+    "veryWeak": "Très faible",
+    "weak": "Faible",
+    "good": "Bon",
+    "strong": "Fort",
+    "uppercase": "Majuscule",
+    "lowercase": "Minuscule",
+    "number": "Chiffre",
+    "specialChar": "Caractère spécial",
+    "eightChars": "8+ caractères",
+    "emailRequired": "L'email est requis",
+    "validEmail": "Veuillez saisir une adresse email valide",
+    "passwordRequired": "Le mot de passe est requis",
+    "passwordMinLength": "Le mot de passe doit contenir au moins 8 caractères",
+    "passwordUppercase": "Le mot de passe doit contenir au moins une lettre majuscule",
+    "passwordLowercase": "Le mot de passe doit contenir au moins une lettre minuscule",
+    "passwordNumber": "Le mot de passe doit contenir au moins un chiffre",
+    "passwordSpecialChar": "Le mot de passe doit contenir au moins un caractère spécial",
+    "confirmPasswordRequired": "Veuillez confirmer votre mot de passe",
+    "passwordsDoNotMatch": "Les mots de passe ne correspondent pas",
+    "currentPasswordRequired": "Le mot de passe actuel est requis",
+    "confirmNewPasswordRequired": "Veuillez confirmer votre nouveau mot de passe"
+  },
   "Chat": {
     "placeholder": "Écrivez à HypertroQ...",
     "send": "Envoyer",
@@ -157,7 +246,9 @@
     "deleteChat": "Supprimer le Chat",
     "confirmDelete": "Êtes-vous sûr de vouloir supprimer ce chat?",
     "cancel": "Annuler",
-    "delete": "Supprimer"
+    "delete": "Supprimer",
+    "imageUpload": "Télécharger une Image",
+    "removeImage": "Supprimer l'Image"
   },
   "Pricing": {
     "title": "Choisissez Votre Plan",
@@ -286,6 +377,7 @@
         "trainingFrequency": "Fréquence d'Entraînement",
         "name": "Nom",
         "daysPerWeek": "{days} jours/semaine",
+        "daysWeekLabel": "Jours/Semaine",
         "ageYears": "Âge (ans)",
         "currentLifts": "Charges Actuelles",
         "getStarted": {
@@ -335,6 +427,7 @@
           "email": "Email",
           "currentPlan": "Plan Actuel",
           "userId": "ID Utilisateur",
+          "clickToReveal": "Cliquer pour révéler",
           "memberSince": "Membre Depuis",
           "lastSignIn": "Dernière Connexion"
         },
@@ -348,6 +441,12 @@
           "title": "Détails de l'Abonnement",
           "proActive": "HypertroQ Pro",
           "activeSubscription": "Abonnement actif",
+          "freePlanActive": "Plan Gratuit Actif",
+          "limitedDailyMessages": "Messages quotidiens limités et fonctionnalités",
+          "dailyMessageLimit": "Limite de Messages Quotidiens",
+          "messagesUsedToday": "Messages Utilisés Aujourd'hui",
+          "messagesPerDay": "messages/jour",
+          "freeLabel": "Gratuit",
           "status": "Statut",
           "nextBilling": "Prochaine Facturation",
           "managePortal": "Gérez votre abonnement via le portail client :",
@@ -409,6 +508,8 @@
       "removePicture": "Supprimer la photo",
       "fileRequirements": "JPEG, PNG, WebP, ou GIF jusqu'à 5MB",
       "dragDropText": "Cliquez ou glissez-déposez pour télécharger",
+      "supportedFormats": "Pris en charge :",
+      "maximumSize": "Taille maximale :",
       "dropHere": "Déposez ici",
       "upload": "Télécharger",
       "removing": "Suppression...",
@@ -768,6 +869,177 @@
     "upgradePrompt": "Passez à Pro pour un accès illimité",
     "limitReached": "Limite quotidienne de messages atteinte"
   },
+  "Onboarding": {
+    "welcome": {
+      "title": "Bienvenue sur HypertroQ",
+      "subtitle": "Configurons votre profil pour personnaliser votre parcours fitness"
+    },
+    "progress": {
+      "stepOf": "Étape {current} sur {total}",
+      "skipForNow": "Passer pour l'instant"
+    },
+    "stepTitles": {
+      "personalInfo": "Informations Personnelles",
+      "trainingBackground": "Expérience d'Entraînement",
+      "goalsMotivation": "Objectifs et Motivation",
+      "trainingEnvironment": "Environnement d'Entraînement"
+    },
+    "footer": {
+      "updateLater": "Vous pouvez toujours mettre à jour ces informations plus tard dans les paramètres de votre profil"
+    },
+    "step1": {
+      "title": "Informations Personnelles",
+      "description": "Aidez-nous à comprendre votre profil de base pour personnaliser votre expérience",
+      "fields": {
+        "name": "Nom",
+        "namePlaceholder": "Votre nom",
+        "age": "Âge",
+        "agePlaceholder": "Votre âge",
+        "gender": "Genre",
+        "genderPlaceholder": "Sélectionner le genre",
+        "height": "Taille (cm)",
+        "heightPlaceholder": "Taille en cm",
+        "weight": "Poids (kg)",
+        "weightPlaceholder": "Poids en kg",
+        "bodyFat": "Taux de Graisse Corporelle % (optionnel)",
+        "bodyFatPlaceholder": "Taux de graisse %"
+      },
+      "genderOptions": {
+        "male": "Homme",
+        "female": "Femme",
+        "other": "Autre",
+        "preferNotToSay": "Préfère ne pas dire"
+      },
+      "continue": "Continuer"
+    },
+    "step2": {
+      "title": "Informations d'Entraînement",
+      "description": "Parlez-nous de votre expérience d'entraînement et de vos préférences",
+      "fields": {
+        "experience": "Expérience d'Entraînement",
+        "experiencePlaceholder": "Sélectionnez votre niveau d'expérience",
+        "weeklyDays": "Jours d'Entraînement par Semaine",
+        "weeklyDaysPlaceholder": "Combien de jours ?",
+        "trainingStyle": "Style d'Entraînement Préféré",
+        "trainingStylePlaceholder": "Quel est votre style préféré ?",
+        "trainingSchedule": "Heure d'Entraînement Préférée",
+        "trainingSchedulePlaceholder": "Quand préférez-vous vous entraîner ?",
+        "availableTime": "Temps Disponible par Session (minutes)",
+        "availableTimePlaceholder": "ex: 60",
+        "activityLevel": "Niveau d'Activité",
+        "activityLevelPlaceholder": "Votre niveau d'activité général"
+      },
+      "experienceOptions": {
+        "beginner": "Débutant (0-1 an)",
+        "intermediate": "Intermédiaire (1-3 ans)",
+        "advanced": "Avancé (3+ ans)"
+      },
+      "daysOptions": {
+        "2days": "2 jours",
+        "3days": "3 jours",
+        "4days": "4 jours",
+        "5days": "5 jours",
+        "6days": "6 jours",
+        "7days": "7 jours"
+      },
+      "trainingStyleOptions": {
+        "hypertrophy": "Hypertrophie/Construction Musculaire",
+        "strength": "Entraînement de Force",
+        "powerlifting": "Powerlifting",
+        "bodybuilding": "Bodybuilding",
+        "general": "Fitness Général"
+      },
+      "scheduleOptions": {
+        "morning": "Matin",
+        "afternoon": "Après-midi",
+        "evening": "Soir",
+        "flexible": "Flexible"
+      },
+      "activityLevelOptions": {
+        "sedentary": "Sédentaire (peu ou pas d'exercice)",
+        "light": "Léger (exercice léger 1-3 jours/semaine)",
+        "moderate": "Modéré (exercice modéré 3-5 jours/semaine)",
+        "active": "Actif (exercice intense 6-7 jours/semaine)",
+        "veryActive": "Très Actif (exercice très intense et travail physique)"
+      },
+      "back": "Retour",
+      "continue": "Continuer"
+    },
+    "step3": {
+      "title": "Objectifs et Motivation",
+      "description": "Que voulez-vous accomplir ? Cela nous aide à personnaliser votre parcours",
+      "fields": {
+        "primaryGoal": "Objectif Principal",
+        "primaryGoalPlaceholder": "Quel est votre objectif principal ?",
+        "secondaryGoals": "Objectifs Secondaires (optionnel)",
+        "targetWeight": "Poids Cible (kg) - optionnel",
+        "targetWeightPlaceholder": "Poids objectif",
+        "targetBodyFat": "Taux de Graisse Cible % - optionnel",
+        "targetBodyFatPlaceholder": "Taux de graisse objectif %",
+        "goalDeadline": "Échéance de l'Objectif - optionnel",
+        "motivation": "Qu'est-ce qui vous motive ? (optionnel)",
+        "motivationPlaceholder": "Dites-nous ce qui vous pousse à atteindre vos objectifs fitness..."
+      },
+      "primaryGoalOptions": {
+        "muscleGain": "Développer les Muscles",
+        "fatLoss": "Perdre de la Graisse",
+        "strength": "Devenir Plus Fort",
+        "generalFitness": "Fitness Général",
+        "athleticPerformance": "Performance Athlétique",
+        "bodyRecomposition": "Recomposition Corporelle"
+      },
+      "secondaryGoalOptions": {
+        "increaseStrength": "Augmenter la force",
+        "improveEndurance": "Améliorer l'endurance",
+        "betterSleep": "Meilleure qualité de sommeil",
+        "reduceStress": "Réduire le stress",
+        "betterPosture": "Meilleure posture",
+        "increaseEnergy": "Augmenter l'énergie",
+        "sportPerformance": "Performance sportive",
+        "injuryPrevention": "Prévention des blessures"
+      },
+      "back": "Retour",
+      "continue": "Continuer"
+    },
+    "step4": {
+      "title": "Environnement d'Entraînement",
+      "description": "Parlez-nous de votre configuration d'entraînement pour que nous puissions créer des séances adaptées à votre environnement",
+      "fields": {
+        "trainingLocation": "Lieu d'Entraînement",
+        "gymAccess": "J'ai accès à une salle de sport",
+        "homeGym": "J'ai une salle de sport à domicile",
+        "availableEquipment": "Équipement Disponible (optionnel)",
+        "addEquipment": "Ajouter équipement",
+        "quickAdd": "Ajout rapide :",
+        "gymBudget": "Budget Mensuel Salle/Équipement (optionnel)",
+        "gymBudgetPlaceholder": "ex: 50"
+      },
+      "equipmentOptions": {
+        "dumbbells": "Haltères",
+        "barbell": "Barre",
+        "resistanceBands": "Bandes de résistance",
+        "pullUpBar": "Barre de traction",
+        "bench": "Banc",
+        "squatRack": "Rack à squat",
+        "kettlebells": "Kettlebells",
+        "cableMachine": "Machine à câbles",
+        "smithMachine": "Machine Smith",
+        "legPress": "Presse à cuisses",
+        "latPulldown": "Tirage vertical",
+        "cardioMachines": "Machines cardio"
+      },
+      "back": "Retour",
+      "completeSetup": "Terminer la Configuration"
+    },
+    "toasts": {
+      "welcomeTitle": "Bienvenue sur HypertroQ !",
+      "welcomeSkipDescription": "Vous pouvez compléter votre profil à tout moment depuis la page Profil.",
+      "welcomeCompleteDescription": "Votre profil a été configuré avec succès.",
+      "errorTitle": "Erreur",
+      "errorSkipDescription": "Échec du passage de l'intégration. Veuillez réessayer.",
+      "errorSaveDescription": "Échec de la sauvegarde de votre profil. Veuillez réessayer."
+    }
+  },
   "Common": {
     "loading": "Chargement...",
     "error": "Erreur",
@@ -881,6 +1153,21 @@
     "processingKnowledgeItemsTitle": "Traitement des éléments de connaissance",
     "processingKnowledgeItemsText": "{operation} jusqu'à {limit} éléments..."
   },
+  "messageLimitIndicator": {
+    "title": "Messages Quotidiens",
+    "messagesRemaining": "{count} messages restants aujourd'hui",
+    "limitReached": "Limite Quotidienne Atteinte",
+    "limitReachedMessage": "Vous avez atteint votre limite quotidienne de messages. Passez à Pro pour des messages illimités.",
+    "runningLowMessage": "Vous manquez de messages. Il ne vous reste que {count} messages aujourd'hui.",
+    "unlockUnlimited": "Débloquer la messagerie illimitée",
+    "proFeatures": "Obtenez des messages illimités, la mémoire de conversation et des fonctionnalités d'entraînement avancées.",
+    "upgradePrompt": "Passez à Pro pour des messages illimités."
+  },
+  "planBadge": {
+    "free": "Gratuit",
+    "pro": "✨ PRO",
+    "unknown": "Inconnu"
+  },
   "ChatPage": {
     "title": "Chat",
     "pageDescription": "Discutez avec HypertroQ, votre coach fitness personnel IA.",
@@ -967,11 +1254,6 @@
       "createAccount": "Créer un Compte Gratuit",
       "later": "Peut-être plus tard"
     },
-    "messageLimitIndicator": {
-      "title": "Messages Aujourd'hui",
-      "limitReached": "Limite Quotidienne Atteinte",
-      "upgradePrompt": "Passez à Pro pour des messages illimités."
-    },
     "upgradeButton": {
       "title": "Passer à PRO",
       "subtitle": "Débloquez une Puissance Illimitée",
@@ -1009,6 +1291,14 @@
       }
     },
     "modelSelection": {
+      "flash": {
+        "name": "HypertroQ Flash",
+        "description": "Pensée adaptative, réponses plus rapides"
+      },
+      "pro": {
+        "name": "HypertroQ Pro",
+        "description": "Pensée et raisonnement améliorés, compréhension multimodale"
+      },
       "proRequired": "Modèle Pro Requis",
       "upgradeMessage": "HypertroQ Pro est disponible pour les utilisateurs Pro uniquement. Mettez à niveau pour débloquer un raisonnement amélioré et une compréhension multimodale."
     },
@@ -1020,7 +1310,8 @@
       "close": "Fermer",
       "back": "Retour",
       "continue": "Continuer",
-      "confirm": "Confirmer"
+      "confirm": "Confirmer",
+      "keyboardShortcuts": "Entrée pour envoyer • Shift+Entrée pour nouvelle ligne"
     }
   }
 }

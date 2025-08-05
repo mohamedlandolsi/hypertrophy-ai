@@ -15,17 +15,24 @@ import {
 } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
-import { resetPasswordSchema, type ResetPasswordFormData } from "@/lib/validations/auth";
+import { createAuthSchemas, type ResetPasswordFormData } from "@/lib/validations/auth";
 import { createClient } from "@/lib/supabase/client";
 import { useRouter } from "next/navigation";
 import { toast } from "sonner";
 import { Loader2, ArrowLeft } from "lucide-react";
 import { getAuthCallbackUrl } from "@/lib/utils/site-url";
+import { useTranslations, useLocale } from "next-intl";
 
 export default function ResetPasswordForm() {
   const [isLoading, setIsLoading] = useState(false);
   const [emailSent, setEmailSent] = useState(false);
   const router = useRouter();
+  const t = useTranslations("ResetPasswordPage");
+  const tValidation = useTranslations("PasswordValidation");
+  const locale = useLocale();
+
+  // Create translation-aware validation schema
+  const { resetPasswordSchema } = createAuthSchemas((key: string) => tValidation(key));
 
   const {
     register,
@@ -49,19 +56,19 @@ export default function ResetPasswordForm() {
 
       if (error) {
         if (error.message.includes("User not found")) {
-          toast.error("No account found with this email address.");
+          toast.error(t("noAccountFound"));
         } else {
-          toast.error(error.message);
+          toast.error(t("unexpectedError"));
         }
         return;
       }
 
       setEmailSent(true);
-      toast.success("Check your email for a password reset link!");
+      toast.success(t("resetLinkSent"));
       
     } catch (err) {
       console.error("Reset password error:", err);
-      toast.error("An unexpected error occurred. Please try again.");
+      toast.error(t("unexpectedError"));
     } finally {
       setIsLoading(false);
     }
@@ -72,15 +79,15 @@ export default function ResetPasswordForm() {
       <div className="flex min-h-screen flex-col items-center justify-start md:justify-center bg-background px-4 py-8 md:py-0">
         <Card className="w-full max-w-md mt-16 md:mt-0">
           <CardHeader className="text-center">
-            <CardTitle className="text-2xl">Check Your Email</CardTitle>
+            <CardTitle className="text-2xl">{t("checkEmailTitle")}</CardTitle>
             <CardDescription>
-              We&apos;ve sent a password reset link to{" "}
+              {t("checkEmailSubtitle")}{" "}
               <span className="font-medium">{getValues("email")}</span>
             </CardDescription>
           </CardHeader>
           <CardContent className="text-center">
             <p className="text-sm text-muted-foreground">
-              Click the link in the email to reset your password. The link will expire in 1 hour.
+              {t("linkExpiresInfo")}
             </p>
           </CardContent>
           <CardFooter className="flex flex-col gap-4">
@@ -88,10 +95,10 @@ export default function ResetPasswordForm() {
               type="button"
               variant="outline"
               className="w-full"
-              onClick={() => router.push("/login")}
+              onClick={() => router.push(`/${locale}/login`)}
             >
               <ArrowLeft className="mr-2 h-4 w-4" />
-              Back to Sign In
+              {t("backToSignIn")}
             </Button>
             <Button
               type="button"
@@ -99,7 +106,7 @@ export default function ResetPasswordForm() {
               className="w-full"
               onClick={() => setEmailSent(false)}
             >
-              Try another email
+              {t("tryAnotherEmail")}
             </Button>
           </CardFooter>
         </Card>
@@ -111,20 +118,20 @@ export default function ResetPasswordForm() {
     <div className="flex min-h-screen flex-col items-center justify-start md:justify-center bg-background px-4 py-8 md:py-0">
       <Card className="w-full max-w-md mt-16 md:mt-0">
         <CardHeader>
-          <CardTitle className="text-2xl">Reset Password</CardTitle>
+          <CardTitle className="text-2xl">{t("title")}</CardTitle>
           <CardDescription>
-            Enter your email address and we&apos;ll send you a link to reset your password.
+            {t("subtitle")}
           </CardDescription>
         </CardHeader>
         <form onSubmit={handleSubmit(onSubmit)}>
           <CardContent className="grid gap-4">
             {/* Email Field */}
             <div className="grid gap-2">
-              <Label htmlFor="email">Email</Label>
+              <Label htmlFor="email">{t("email")}</Label>
               <Input
                 id="email"
                 type="email"
-                placeholder="m@example.com"
+                placeholder={t("emailPlaceholder")}
                 {...register("email")}
                 className={errors.email ? "border-red-500" : ""}
                 autoComplete="email"
@@ -143,17 +150,17 @@ export default function ResetPasswordForm() {
               disabled={isLoading}
             >
               {isLoading && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
-              Send Reset Link
+              {isLoading ? t("sendingLink") : t("sendResetLink")}
             </Button>
             
             <Button
               type="button"
               variant="outline"
               className="w-full"
-              onClick={() => router.push("/login")}
+              onClick={() => router.push(`/${locale}/login`)}
             >
               <ArrowLeft className="mr-2 h-4 w-4" />
-              Back to Sign In
+              {t("backToSignIn")}
             </Button>
           </CardFooter>
         </form>

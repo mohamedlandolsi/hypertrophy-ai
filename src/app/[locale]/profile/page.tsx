@@ -303,7 +303,7 @@ export default function ProfilePage() {
                             {clientMemory.weeklyTrainingDays && (
                               <div className="text-center p-3 bg-muted/30 rounded-lg">
                                 <div className="text-xl font-bold text-foreground">{clientMemory.weeklyTrainingDays}</div>
-                                <div className="text-xs text-muted-foreground">Days/Week</div>
+                                <div className="text-xs text-muted-foreground">{t('coachSummary.daysWeekLabel')}</div>
                               </div>
                             )}
                           </div>
@@ -607,7 +607,7 @@ export default function ProfilePage() {
                         ) : (
                           <div className="flex items-center gap-2">
                             <div className="bg-muted text-muted-foreground px-2 py-1 rounded text-xs">
-                              Click to reveal
+                              {t('account.overview.clickToReveal')}
                             </div>
                             <div className="text-xs text-muted-foreground">••••••••</div>
                           </div>
@@ -794,22 +794,22 @@ export default function ProfilePage() {
                         <div className="flex items-center gap-3">
                           <Settings className="h-6 w-6 text-blue-600" />
                           <div>
-                            <p className="font-semibold text-blue-900 dark:text-blue-100">Free Plan Active</p>
-                            <p className="text-sm text-blue-700 dark:text-blue-300">Limited daily messages and features</p>
+                            <p className="font-semibold text-blue-900 dark:text-blue-100">{t('account.subscriptionDetails.freePlanActive')}</p>
+                            <p className="text-sm text-blue-700 dark:text-blue-300">{t('account.subscriptionDetails.limitedDailyMessages')}</p>
                           </div>
                         </div>
                         <Badge variant="secondary">
-                          Free
+                          {t('account.subscriptionDetails.freeLabel')}
                         </Badge>
                       </div>
 
                       <div className="grid md:grid-cols-2 gap-4">
                         <div>
-                          <label className="text-sm font-medium text-muted-foreground">Daily Message Limit</label>
-                          <p className="text-foreground">{userPlan?.dailyLimit || 5} messages/day</p>
+                          <label className="text-sm font-medium text-muted-foreground">{t('account.subscriptionDetails.dailyMessageLimit')}</label>
+                          <p className="text-foreground">{userPlan?.dailyLimit || 5} {t('account.subscriptionDetails.messagesPerDay')}</p>
                         </div>
                         <div>
-                          <label className="text-sm font-medium text-muted-foreground">Messages Used Today</label>
+                          <label className="text-sm font-medium text-muted-foreground">{t('account.subscriptionDetails.messagesUsedToday')}</label>
                           <p className="text-foreground">{userPlan?.messagesUsedToday || 0} / {userPlan?.dailyLimit || 5}</p>
                         </div>
                       </div>

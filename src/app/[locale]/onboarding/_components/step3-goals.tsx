@@ -9,6 +9,7 @@ import { Textarea } from '@/components/ui/textarea';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { Checkbox } from '@/components/ui/checkbox';
 import { Target } from 'lucide-react';
+import { useTranslations } from 'next-intl';
 
 interface Step3Data {
   primaryGoal?: string;
@@ -26,17 +27,18 @@ interface Step3Props {
 }
 
 const SECONDARY_GOAL_OPTIONS = [
-  'Increase strength',
-  'Improve endurance',
-  'Better sleep quality',
-  'Reduce stress',
-  'Better posture',
-  'Increase energy',
-  'Sport performance',
-  'Injury prevention'
+  'increaseStrength',
+  'improveEndurance',
+  'betterSleep',
+  'reduceStress',
+  'betterPosture',
+  'increaseEnergy',
+  'sportPerformance',
+  'injuryPrevention'
 ];
 
 export function Step3GoalsMotivation({ onNext, onBack, initialData = {} }: Step3Props) {
+  const t = useTranslations('Onboarding.step3');
   const [formData, setFormData] = useState<Step3Data>({
     secondaryGoals: [],
     ...initialData
@@ -65,33 +67,33 @@ export function Step3GoalsMotivation({ onNext, onBack, initialData = {} }: Step3
       <CardHeader>
         <CardTitle className="flex items-center">
           <Target className="mr-2 h-5 w-5" />
-          Goals and Motivation
+          {t('title')}
         </CardTitle>
         <CardDescription>
-          What do you want to achieve? This helps us personalize your journey
+          {t('description')}
         </CardDescription>
       </CardHeader>
       <CardContent>
         <form onSubmit={handleSubmit} className="space-y-6">
           <div>
-            <Label htmlFor="primaryGoal">Primary Goal</Label>
+            <Label htmlFor="primaryGoal">{t('fields.primaryGoal')}</Label>
             <Select value={formData.primaryGoal || ''} onValueChange={(value) => updateField('primaryGoal', value)}>
               <SelectTrigger>
-                <SelectValue placeholder="What's your main goal?" />
+                <SelectValue placeholder={t('fields.primaryGoalPlaceholder')} />
               </SelectTrigger>
               <SelectContent>
-                <SelectItem value="muscle_gain">Build Muscle</SelectItem>
-                <SelectItem value="fat_loss">Lose Fat</SelectItem>
-                <SelectItem value="strength">Get Stronger</SelectItem>
-                <SelectItem value="general_fitness">General Fitness</SelectItem>
-                <SelectItem value="athletic_performance">Athletic Performance</SelectItem>
-                <SelectItem value="body_recomposition">Body Recomposition</SelectItem>
+                <SelectItem value="muscle_gain">{t('primaryGoalOptions.muscleGain')}</SelectItem>
+                <SelectItem value="fat_loss">{t('primaryGoalOptions.fatLoss')}</SelectItem>
+                <SelectItem value="strength">{t('primaryGoalOptions.strength')}</SelectItem>
+                <SelectItem value="general_fitness">{t('primaryGoalOptions.generalFitness')}</SelectItem>
+                <SelectItem value="athletic_performance">{t('primaryGoalOptions.athleticPerformance')}</SelectItem>
+                <SelectItem value="body_recomposition">{t('primaryGoalOptions.bodyRecomposition')}</SelectItem>
               </SelectContent>
             </Select>
           </div>
 
           <div>
-            <Label>Secondary Goals (optional)</Label>
+            <Label>{t('fields.secondaryGoals')}</Label>
             <div className="grid grid-cols-2 gap-2 mt-2">
               {SECONDARY_GOAL_OPTIONS.map((goal) => (
                 <div key={goal} className="flex items-center space-x-2">
@@ -100,7 +102,7 @@ export function Step3GoalsMotivation({ onNext, onBack, initialData = {} }: Step3
                     checked={(formData.secondaryGoals || []).includes(goal)}
                     onCheckedChange={() => toggleSecondaryGoal(goal)}
                   />
-                  <Label htmlFor={goal} className="text-sm">{goal}</Label>
+                  <Label htmlFor={goal} className="text-sm">{t(`secondaryGoalOptions.${goal}`)}</Label>
                 </div>
               ))}
             </div>
@@ -108,7 +110,7 @@ export function Step3GoalsMotivation({ onNext, onBack, initialData = {} }: Step3
 
           <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
             <div>
-              <Label htmlFor="targetWeight">Target Weight (kg) - optional</Label>
+              <Label htmlFor="targetWeight">{t('fields.targetWeight')}</Label>
               <Input
                 id="targetWeight"
                 type="number"
@@ -117,11 +119,11 @@ export function Step3GoalsMotivation({ onNext, onBack, initialData = {} }: Step3
                 step="0.1"
                 value={formData.targetWeight || ''}
                 onChange={(e) => updateField('targetWeight', e.target.value ? parseFloat(e.target.value) : undefined)}
-                placeholder="Goal weight"
+                placeholder={t('fields.targetWeightPlaceholder')}
               />
             </div>
             <div>
-              <Label htmlFor="targetBodyFat">Target Body Fat % - optional</Label>
+              <Label htmlFor="targetBodyFat">{t('fields.targetBodyFat')}</Label>
               <Input
                 id="targetBodyFat"
                 type="number"
@@ -130,11 +132,11 @@ export function Step3GoalsMotivation({ onNext, onBack, initialData = {} }: Step3
                 step="0.1"
                 value={formData.targetBodyFat || ''}
                 onChange={(e) => updateField('targetBodyFat', e.target.value ? parseFloat(e.target.value) : undefined)}
-                placeholder="Goal body fat %"
+                placeholder={t('fields.targetBodyFatPlaceholder')}
               />
             </div>
             <div>
-              <Label htmlFor="goalDeadline">Goal Deadline - optional</Label>
+              <Label htmlFor="goalDeadline">{t('fields.goalDeadline')}</Label>
               <Input
                 id="goalDeadline"
                 type="date"
@@ -146,22 +148,22 @@ export function Step3GoalsMotivation({ onNext, onBack, initialData = {} }: Step3
           </div>
 
           <div>
-            <Label htmlFor="motivation">What motivates you? (optional)</Label>
+            <Label htmlFor="motivation">{t('fields.motivation')}</Label>
             <Textarea
               id="motivation"
               value={formData.motivation || ''}
               onChange={(e) => updateField('motivation', e.target.value)}
-              placeholder="Tell us what drives you to reach your fitness goals..."
+              placeholder={t('fields.motivationPlaceholder')}
               rows={3}
             />
           </div>
 
           <div className="flex justify-between pt-4">
             <Button type="button" variant="outline" onClick={onBack}>
-              Back
+              {t('back')}
             </Button>
             <Button type="submit">
-              Continue
+              {t('continue')}
             </Button>
           </div>
         </form>

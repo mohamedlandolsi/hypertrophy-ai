@@ -2,6 +2,7 @@
 
 import { Badge } from '@/components/ui/badge';
 import { UserPlan } from '@prisma/client';
+import { useTranslations } from 'next-intl';
 
 interface PlanBadgeProps {
   plan: UserPlan;
@@ -9,7 +10,8 @@ interface PlanBadgeProps {
 }
 
 export function PlanBadge({ plan, className = '' }: PlanBadgeProps) {
-  const displayInfo = getPlanDisplayInfo(plan);
+  const t = useTranslations('planBadge');
+  const displayInfo = getPlanDisplayInfo(plan, t);
 
   return (
     <Badge 
@@ -22,11 +24,11 @@ export function PlanBadge({ plan, className = '' }: PlanBadgeProps) {
 }
 
 // Inline the function to avoid any import issues
-function getPlanDisplayInfo(plan: UserPlan) {
+function getPlanDisplayInfo(plan: UserPlan, t: (key: string) => string) {
   switch (plan) {
     case 'FREE':
       return {
-        name: 'Free',
+        name: t('free'),
         price: '$0',
         period: '',
         color: 'text-gray-600',
@@ -35,7 +37,7 @@ function getPlanDisplayInfo(plan: UserPlan) {
       };
     case 'PRO':
       return {
-        name: '✨ PRO',
+        name: t('pro'),
         price: '$9',
         period: '/month',
         color: 'text-blue-600',
@@ -44,7 +46,7 @@ function getPlanDisplayInfo(plan: UserPlan) {
       };
     default:
       return {
-        name: 'Unknown',
+        name: t('unknown'),
         price: '$0',
         period: '',
         color: 'text-gray-600',

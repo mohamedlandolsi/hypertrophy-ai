@@ -7,6 +7,7 @@ import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { User } from 'lucide-react';
+import { useTranslations } from 'next-intl';
 
 interface Step1Data {
   name?: string;
@@ -24,6 +25,7 @@ interface Step1Props {
 
 export function Step1PersonalInfo({ onNext, initialData = {} }: Step1Props) {
   const [formData, setFormData] = useState<Step1Data>(initialData);
+  const t = useTranslations('Onboarding.step1');
 
   const updateField = (field: keyof Step1Data, value: string | number | undefined) => {
     setFormData(prev => ({ ...prev, [field]: value }));
@@ -39,27 +41,27 @@ export function Step1PersonalInfo({ onNext, initialData = {} }: Step1Props) {
       <CardHeader>
         <CardTitle className="flex items-center">
           <User className="mr-2 h-5 w-5" />
-          Personal Information
+          {t('title')}
         </CardTitle>
         <CardDescription>
-          Help us understand your basic profile to personalize your experience
+          {t('description')}
         </CardDescription>
       </CardHeader>
       <CardContent>
         <form onSubmit={handleSubmit} className="space-y-4">
           <div>
-            <Label htmlFor="name">Name</Label>
+            <Label htmlFor="name">{t('fields.name')}</Label>
             <Input
               id="name"
               value={formData.name || ''}
               onChange={(e) => updateField('name', e.target.value)}
-              placeholder="Your name"
+              placeholder={t('fields.namePlaceholder')}
             />
           </div>
 
           <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
             <div>
-              <Label htmlFor="age">Age</Label>
+              <Label htmlFor="age">{t('fields.age')}</Label>
               <Input
                 id="age"
                 type="number"
@@ -67,20 +69,20 @@ export function Step1PersonalInfo({ onNext, initialData = {} }: Step1Props) {
                 max="100"
                 value={formData.age || ''}
                 onChange={(e) => updateField('age', e.target.value ? parseInt(e.target.value) : undefined)}
-                placeholder="Your age"
+                placeholder={t('fields.agePlaceholder')}
               />
             </div>
             <div>
-              <Label htmlFor="gender">Gender</Label>
+              <Label htmlFor="gender">{t('fields.gender')}</Label>
               <Select value={formData.gender || ''} onValueChange={(value) => updateField('gender', value)}>
                 <SelectTrigger>
-                  <SelectValue placeholder="Select gender" />
+                  <SelectValue placeholder={t('fields.genderPlaceholder')} />
                 </SelectTrigger>
                 <SelectContent>
-                  <SelectItem value="MALE">Male</SelectItem>
-                  <SelectItem value="FEMALE">Female</SelectItem>
-                  <SelectItem value="OTHER">Other</SelectItem>
-                  <SelectItem value="PREFER_NOT_TO_SAY">Prefer not to say</SelectItem>
+                  <SelectItem value="MALE">{t('genderOptions.male')}</SelectItem>
+                  <SelectItem value="FEMALE">{t('genderOptions.female')}</SelectItem>
+                  <SelectItem value="OTHER">{t('genderOptions.other')}</SelectItem>
+                  <SelectItem value="PREFER_NOT_TO_SAY">{t('genderOptions.preferNotToSay')}</SelectItem>
                 </SelectContent>
               </Select>
             </div>
@@ -88,7 +90,7 @@ export function Step1PersonalInfo({ onNext, initialData = {} }: Step1Props) {
 
           <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
             <div>
-              <Label htmlFor="height">Height (cm)</Label>
+              <Label htmlFor="height">{t('fields.height')}</Label>
               <Input
                 id="height"
                 type="number"
@@ -97,11 +99,11 @@ export function Step1PersonalInfo({ onNext, initialData = {} }: Step1Props) {
                 step="0.1"
                 value={formData.height || ''}
                 onChange={(e) => updateField('height', e.target.value ? parseFloat(e.target.value) : undefined)}
-                placeholder="Height in cm"
+                placeholder={t('fields.heightPlaceholder')}
               />
             </div>
             <div>
-              <Label htmlFor="weight">Weight (kg)</Label>
+              <Label htmlFor="weight">{t('fields.weight')}</Label>
               <Input
                 id="weight"
                 type="number"
@@ -110,11 +112,11 @@ export function Step1PersonalInfo({ onNext, initialData = {} }: Step1Props) {
                 step="0.1"
                 value={formData.weight || ''}
                 onChange={(e) => updateField('weight', e.target.value ? parseFloat(e.target.value) : undefined)}
-                placeholder="Weight in kg"
+                placeholder={t('fields.weightPlaceholder')}
               />
             </div>
             <div>
-              <Label htmlFor="bodyFat">Body Fat % (optional)</Label>
+              <Label htmlFor="bodyFat">{t('fields.bodyFat')}</Label>
               <Input
                 id="bodyFat"
                 type="number"
@@ -123,14 +125,14 @@ export function Step1PersonalInfo({ onNext, initialData = {} }: Step1Props) {
                 step="0.1"
                 value={formData.bodyFatPercentage || ''}
                 onChange={(e) => updateField('bodyFatPercentage', e.target.value ? parseFloat(e.target.value) : undefined)}
-                placeholder="Body fat %"
+                placeholder={t('fields.bodyFatPlaceholder')}
               />
             </div>
           </div>
 
           <div className="flex justify-end pt-4">
             <Button type="submit" className="w-full md:w-auto">
-              Continue
+              {t('continue')}
             </Button>
           </div>
         </form>

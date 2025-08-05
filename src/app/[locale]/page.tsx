@@ -261,7 +261,7 @@ export default function Home() {
               
               <div className="mb-6">
                 <div className="bg-white dark:bg-gray-800/50 rounded-lg p-3 md:p-4 mb-4">
-                  <p className="font-semibold text-sm md:text-base text-slate-600 dark:text-gray-300">Question: &quot;{t('comparison.question')}&quot;</p>
+                  <p className="font-semibold text-sm md:text-base text-slate-600 dark:text-gray-300">{t('comparison.questionLabel')}: &quot;{t('comparison.question')}&quot;</p>
                 </div>
                 <div className="bg-red-100 dark:bg-red-950/30 rounded-lg p-3 md:p-4 min-h-[120px] md:min-h-[140px]">
                   {showGenericAnswer && (
@@ -314,7 +314,7 @@ export default function Home() {
               
               <div className="mb-6">
                 <div className="bg-white dark:bg-gray-800/50 rounded-lg p-3 md:p-4 mb-4">
-                  <p className="font-semibold text-sm md:text-base text-slate-600 dark:text-gray-300">Question: &quot;{t('comparison.question')}&quot;</p>
+                  <p className="font-semibold text-sm md:text-base text-slate-600 dark:text-gray-300">{t('comparison.questionLabel')}: &quot;{t('comparison.question')}&quot;</p>
                 </div>
                 <div className="bg-green-100 dark:bg-green-950/30 rounded-lg p-3 md:p-4 min-h-[120px] md:min-h-[140px]">
                   {showHypertroQAnswer && (
