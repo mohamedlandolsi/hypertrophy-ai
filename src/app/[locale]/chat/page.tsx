@@ -129,8 +129,15 @@ const ChatPage = () => {
   const [selectedImage, setSelectedImage] = reactUseState<File | null>(null);
   const [imagePreview, setImagePreview] = reactUseState<string | null>(null);
 
-  // Model selection state - defaults to Flash (faster)
-  const [selectedModel, setSelectedModel] = reactUseState<'flash' | 'pro'>('flash');
+  // Model selection state - use localStorage for persistence
+  const [selectedModel, setSelectedModel] = reactUseState<'flash' | 'pro'>(() => {
+    // Initialize from localStorage if available, otherwise default to 'flash'
+    if (typeof window !== 'undefined') {
+      const savedModel = localStorage.getItem('selectedModel') as 'flash' | 'pro' | null;
+      return savedModel && ['flash', 'pro'].includes(savedModel) ? savedModel : 'flash';
+    }
+    return 'flash';
+  });
 
   // Available models configuration
   const modelOptions = [
@@ -539,6 +546,19 @@ const ChatPage = () => {
     fetchInitialData();
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
+
+  // Validate model selection against user plan - ensure PRO model is only available for PRO users
+  useEffect(() => {
+    // Only validate if we have user plan data and user is logged in
+    if (userPlan && user && selectedModel === 'pro' && userPlan.plan !== 'PRO') {
+      // User has 'pro' model selected but doesn't have PRO plan - fallback to 'flash'
+      setSelectedModel('flash');
+      if (typeof window !== 'undefined') {
+        localStorage.setItem('selectedModel', 'flash');
+      }
+      console.log('🔄 Automatically switched to Flash model (user does not have PRO plan)');
+    }
+  }, [userPlan, user, selectedModel, setSelectedModel]);
 
   // State for mobile keyboard handling (keeping keyboardHeight for potential future use)
   // eslint-disable-next-line @typescript-eslint/no-unused-vars
@@ -1450,7 +1470,11 @@ const ChatPage = () => {
                     showToast.error(t('modelSelection.proRequired'), t('modelSelection.upgradeMessage'));
                     return;
                   }
+                  // Update state and persist to localStorage
                   setSelectedModel(value);
+                  if (typeof window !== 'undefined') {
+                    localStorage.setItem('selectedModel', value);
+                  }
                 }}
               >
                 <SelectTrigger className="w-32 md:w-48 h-9 text-sm">
