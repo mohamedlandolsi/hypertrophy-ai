@@ -86,6 +86,7 @@ NEXT_PUBLIC_SITE_URL=            # Site URL for checkout success/cancel redirect
 - Debug scripts are Node.js files, run with `node script-name.js`
 - File paths use backslashes in Windows but forward slashes work in most contexts
 - All debug scripts use CommonJS (require/module.exports) pattern
+- Environment variables must be accessible from project root for debug scripts
 
 ## 📋 Project-Specific Patterns
 
@@ -241,9 +242,11 @@ const { messages, input, handleInputChange, handleSubmit, isLoading, error } = u
 ## 🔧 Key Integration Points
 
 ### Supabase Auth Middleware (`/src/middleware.ts`)
-- Automatic session refresh for all protected routes
-- Cookie-based authentication state management
+- Automatic session refresh for all protected routes using createServerClient
+- Cookie-based authentication state management with SSR support
 - Handles auth state without blocking user navigation
+- Admin route protection: redirects unauthenticated users to login
+- Integrates with next-intl for internationalized route handling
 
 ### Error Handling (`/src/lib/error-handler.ts`)
 - Centralized `ApiErrorHandler` with request context tracking
@@ -304,6 +307,7 @@ export async function POST(request: NextRequest) {
 - **Theme support**: All components support dark/light mode via `next-themes`
 - **Text Direction**: Use `getTextDirection()` from `@/lib/text-formatting` for mixed Arabic/English content
 - **Client-Only Wrapping**: Use `ClientOnly` wrapper for components with hydration issues
+- **Authentication State**: Use `createClient()` from `@/lib/supabase/client` for client-side auth
 
 ### Error Handling Integration
 - Import `AppError`, `ValidationError`, `AuthenticationError` from `@/lib/error-handler`
@@ -340,6 +344,7 @@ export async function POST(request: NextRequest) {
 - **Payments**: Lemon Squeezy webhook integration with same-tab checkout flow
 - **Chat**: Vercel AI SDK `useChat` hook for state management
 - **Development**: TypeScript, ESLint, Prisma Studio for DB management
+- **Internationalization**: next-intl with Arabic RTL support and dynamic locale detection
 
 ## 🎯 Testing & Debugging
 

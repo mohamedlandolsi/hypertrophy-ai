@@ -34,8 +34,8 @@ export async function fetchRelevantKnowledge(
 }
 
 /**
- * Optimized JSON similarity search with batching and caching
- * Only processes chunks in batches to reduce memory usage and improve speed
+ * Optimized JSON similarity search with batching and early stopping
+ * Only processes chunks in batches for better performance and memory efficiency
  */
 export async function optimizedJsonSimilaritySearch(
   queryEmbedding: number[],
@@ -44,12 +44,14 @@ export async function optimizedJsonSimilaritySearch(
 ): Promise<KnowledgeContext[]> {
   try {
     
-    // Process chunks in smaller batches for better performance
-    const batchSize = 50; // Process 50 chunks at a time
+    // Process chunks in optimized batches for better performance
+    const batchSize = 100; // Increased batch size for efficiency
     // eslint-disable-next-line @typescript-eslint/no-explicit-any
     const allSimilarities: Array<{chunk: any, similarity: number}> = [];
     let offset = 0;
     let hasMore = true;
+    let consecutiveLowBatches = 0;
+    const maxConsecutiveLowBatches = 3; // Early stopping if similarity is consistently low
     
     while (hasMore) {
       const chunks = await prisma.knowledgeChunk.findMany({
@@ -59,7 +61,11 @@ export async function optimizedJsonSimilaritySearch(
             status: 'READY'
           }
         },
-        include: {
+        select: {
+          id: true,
+          content: true,
+          embeddingData: true,
+          chunkIndex: true,
           knowledgeItem: {
             select: {
               id: true,
@@ -67,9 +73,10 @@ export async function optimizedJsonSimilaritySearch(
             }
           }
         },
-        orderBy: {
-          createdAt: 'asc'
-        },
+        orderBy: [
+          { createdAt: 'desc' }, // More recent content first
+          { chunkIndex: 'asc' }
+        ],
         take: batchSize,
         skip: offset
       });
@@ -91,11 +98,29 @@ export async function optimizedJsonSimilaritySearch(
         }
       });
       
+      // Check if this batch has low relevance scores for early stopping
+      const batchMaxSimilarity = Math.max(...batchSimilarities.map(s => s.similarity));
+      const relevanceThreshold = highRelevanceThreshold || 0.3; // Lower threshold for early stopping
+      
+      if (batchMaxSimilarity < relevanceThreshold * 0.5) {
+        consecutiveLowBatches++;
+        if (consecutiveLowBatches >= maxConsecutiveLowBatches && allSimilarities.length >= topK * 2) {
+          // Stop early if we have enough results and consecutive batches are low relevance
+          console.log(`⚡ Early stopping after ${offset + chunks.length} chunks (${consecutiveLowBatches} low batches)`);
+          break;
+        }
+      } else {
+        consecutiveLowBatches = 0; // Reset counter if we find relevant content
+      }
+      
       allSimilarities.push(...batchSimilarities);
       offset += batchSize;
       
-      // Process all chunks to ensure we find the most relevant content
-      // (Removed early stopping to prevent missing high-relevance chunks)
+      // Limit total chunks processed for performance
+      if (offset >= 1000) {
+        console.log(`⚡ Stopping at 1000 chunks for performance`);
+        break;
+      }
     }
     
     // Sort all results by similarity

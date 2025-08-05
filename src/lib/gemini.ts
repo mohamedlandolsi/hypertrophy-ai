@@ -18,11 +18,67 @@ interface GeminiResponse {
   citations?: Array<{ id: string; title: string }>;
 }
 
+interface ProcessedAIConfig {
+  systemPrompt: string;
+  modelName: string;
+  freeModelName: string;
+  proModelName: string;
+  temperature: number;
+  maxTokens: number;
+  topK: number;
+  topP: number;
+  useKnowledgeBase: boolean;
+  useClientMemory: boolean;
+  enableWebSearch: boolean;
+  ragSimilarityThreshold: number;
+  ragMaxChunks: number;
+  ragHighRelevanceThreshold: number;
+  toolEnforcementMode: string;
+}
+
+// Simple in-memory cache for AI configuration to avoid repeated DB queries
+let configCache: {
+  data: ProcessedAIConfig;
+  timestamp: number;
+  ttl: number;
+} | null = null;
+
+const CONFIG_CACHE_TTL = 5 * 60 * 1000; // 5 minutes cache
+
 // Function to get AI configuration - REQUIRES admin configuration
-export async function getAIConfiguration(userPlan: 'FREE' | 'PRO' = 'FREE') {
+export async function getAIConfiguration(userPlan: 'FREE' | 'PRO' = 'FREE'): Promise<ProcessedAIConfig> {
   try {
+    // Check cache first
+    const now = Date.now();
+    if (configCache && (now - configCache.timestamp) < configCache.ttl) {
+      const cachedConfig = configCache.data;
+      // Select model based on user plan from cached config
+      const modelName = userPlan === 'PRO' ? cachedConfig.proModelName : cachedConfig.freeModelName;
+      
+      return {
+        ...cachedConfig,
+        modelName: modelName
+      };
+    }
+
     const config = await prisma.aIConfiguration.findUnique({
-      where: { id: 'singleton' }
+      where: { id: 'singleton' },
+      select: {
+        systemPrompt: true,
+        freeModelName: true,
+        proModelName: true,
+        temperature: true,
+        maxTokens: true,
+        topK: true,
+        topP: true,
+        useKnowledgeBase: true,
+        useClientMemory: true,
+        enableWebSearch: true,
+        ragSimilarityThreshold: true,
+        ragMaxChunks: true,
+        ragHighRelevanceThreshold: true,
+        toolEnforcementMode: true
+      }
     });
 
     if (!config) {
@@ -41,9 +97,11 @@ export async function getAIConfiguration(userPlan: 'FREE' | 'PRO' = 'FREE') {
       throw new Error(`AI model for ${userPlan} tier is not configured. Please select an AI model through the Admin Settings page.`);
     }
 
-    return {
+    const processedConfig = {
       systemPrompt: config.systemPrompt,
       modelName: modelName,
+      freeModelName: config.freeModelName,
+      proModelName: config.proModelName,
       temperature: config.temperature ?? 0.7,
       maxTokens: config.maxTokens || 3000,
       topK: config.topK || 45,
@@ -58,6 +116,15 @@ export async function getAIConfiguration(userPlan: 'FREE' | 'PRO' = 'FREE') {
       // Tool enforcement mode
       toolEnforcementMode: config.toolEnforcementMode ?? 'AUTO'
     };
+
+    // Update cache
+    configCache = {
+      data: processedConfig,
+      timestamp: now,
+      ttl: CONFIG_CACHE_TTL
+    };
+
+    return processedConfig;
   } catch (error) {
     console.error('Error fetching AI configuration:', error);
     throw error; // Re-throw to prevent AI usage without proper configuration

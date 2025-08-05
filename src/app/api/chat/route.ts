@@ -32,22 +32,35 @@ export async function POST(request: NextRequest) {
     const { data: { user: authUser }, error: authError } = await supabase.auth.getUser();
     user = authUser;
 
-    // Get user plan early for file size validation
+    // Early validation for guest users to avoid unnecessary processing
+    if (!user) {
+      logger.info('Guest user attempted to send message - redirecting to login', { ...context, isGuest: true });
+      return NextResponse.json(
+        { error: 'Authentication required', message: 'Please log in to send messages' },
+        { status: 401 }
+      );
+    }
+
+    // Get user plan early for file size validation - fetch both user data and plan info in parallel
     let currentUserPlan: 'FREE' | 'PRO' = 'FREE';
     let maxFileSize = 5 * 1024 * 1024; // Default 5MB for guests
     
-    if (user) {
-      try {
-        const planInfo = await getUserPlan();
-        if (planInfo) {
-          currentUserPlan = planInfo.plan;
-          maxFileSize = planInfo.limits.maxFileSize * 1024 * 1024; // Convert MB to bytes
-          console.log("📋 User plan:", currentUserPlan, "- Max file size:", planInfo.limits.maxFileSize + "MB");
-        }
-      } catch (error) {
+    const [planInfo, messageCheck] = await Promise.all([
+      getUserPlan().catch(error => {
         console.warn("⚠️ Could not get user plan, using FREE defaults:", error);
-        // Fall back to FREE plan defaults
-      }
+        return null;
+      }),
+      canUserSendMessage().catch(() => ({ 
+        canSend: false, 
+        reason: 'Error checking message limits',
+        messagesRemaining: 0
+      }))
+    ]);
+
+    if (planInfo) {
+      currentUserPlan = planInfo.plan;
+      maxFileSize = planInfo.limits.maxFileSize * 1024 * 1024; // Convert MB to bytes
+      console.log("📋 User plan:", currentUserPlan, "- Max file size:", planInfo.limits.maxFileSize + "MB");
     }
 
     // Parse request body - handle both JSON and FormData
@@ -179,14 +192,9 @@ export async function POST(request: NextRequest) {
       throw new AuthenticationError('Authentication error');
     }
 
-    if (!user) {
-      throw new AuthenticationError('User not authenticated');
-    }
-
     logger.info('Processing authenticated user chat request', { ...context, userId: user.id });
 
-    // Check message limits for authenticated users
-    const messageCheck = await canUserSendMessage();
+    // Check message limits for authenticated users (already checked in parallel above)
     if (!messageCheck.canSend) {
       return NextResponse.json({
         error: 'MESSAGE_LIMIT_REACHED',
@@ -196,15 +204,15 @@ export async function POST(request: NextRequest) {
       }, { status: 429 });
     }
 
-    // Ensure user exists in our database and get their plan
-    const dbUser = await prisma.user.upsert({
+    // Ensure user exists in our database and get their plan - run in parallel with chat lookup if needed
+    const dbUserPromise = prisma.user.upsert({
       where: { id: user.id },
       update: {},
       create: { id: user.id },
       select: { plan: true }
     });
     
-    const finalUserPlan = dbUser.plan;
+    const finalUserPlan = (await dbUserPromise).plan;
 
     let chatId = conversationId;
     let existingMessages: Array<{ role: string; content: string }> = [];
@@ -222,7 +230,13 @@ export async function POST(request: NextRequest) {
         },
         include: {
           messages: {
-            orderBy: { createdAt: 'asc' }
+            orderBy: { createdAt: 'asc' },
+            select: {
+              role: true,
+              content: true,
+              imageData: true,
+              imageMimeType: true
+            }
           }
         }
       });
@@ -255,7 +269,7 @@ export async function POST(request: NextRequest) {
       chatId = newChat.id;
     }
 
-    // Add user message to database
+    // Prepare image data for storage
     let imageDataToStore: string | null = null;
     let imageMimeTypeToStore: string | null = null;
     
@@ -275,34 +289,40 @@ export async function POST(request: NextRequest) {
         imageMimeTypeToStore = 'application/json'; // Indicates multiple images stored as JSON
       }
     }
-    
-    const userMessage = await prisma.message.create({
-      data: {
-        content: trimmedMessage || (imageBuffers.length > 0 ? '[Image]' : ''),
-        role: 'USER',
-        chatId: chatId as string,
-        imageData: imageDataToStore,
-        imageMimeType: imageMimeTypeToStore,
-      }
-    });    // Prepare conversation history for Gemini
-    const allMessages = [...existingMessages, userMessage];
+
+    // Prepare conversation history for Gemini and save user message in parallel
+    const allMessages = [...existingMessages, { role: 'USER', content: trimmedMessage || (imageBuffers.length > 0 ? '[Image]' : '') }];
     const conversationForGemini = formatConversationForGemini(allMessages);
 
-    // Get AI response from Gemini - NEW RAG SYSTEM WITH CITATIONS (with user's plan)
-    // Pass all images to Gemini API (it supports multiple images)
-    const aiResult = await sendToGeminiWithCitations(conversationForGemini, user.id, imageBuffers, imageMimeTypes, finalUserPlan);
+    // Save user message and get AI response in parallel for better performance
+    const [userMessage, aiResult] = await Promise.all([
+      // Save user message to database
+      prisma.message.create({
+        data: {
+          content: trimmedMessage || (imageBuffers.length > 0 ? '[Image]' : ''),
+          role: 'USER',
+          chatId: chatId as string,
+          imageData: imageDataToStore,
+          imageMimeType: imageMimeTypeToStore,
+        }
+      }),
+      // Get AI response from Gemini - NEW RAG SYSTEM WITH CITATIONS (with user's plan)
+      // Pass all images to Gemini API (it supports multiple images)
+      sendToGeminiWithCitations(conversationForGemini, user.id, imageBuffers, imageMimeTypes, finalUserPlan)
+    ]);
 
-    // Save assistant message to database
-    const assistantMessage = await prisma.message.create({
-      data: {
-        content: aiResult.content,
-        role: 'ASSISTANT',
-        chatId: chatId as string,
-      }
-    });
-
-    // Increment user's daily message count (for subscription tracking)
-    await incrementUserMessageCount();
+    // Save assistant message and increment message count in parallel
+    const [assistantMessage] = await Promise.all([
+      prisma.message.create({
+        data: {
+          content: aiResult.content,
+          role: 'ASSISTANT',
+          chatId: chatId as string,
+        }
+      }),
+      // Increment user's daily message count (for subscription tracking)
+      incrementUserMessageCount()
+    ]);
 
     logger.info('Chat API request completed successfully', { 
       ...context, 

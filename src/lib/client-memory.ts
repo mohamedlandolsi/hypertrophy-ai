@@ -64,11 +64,60 @@ export interface MemoryUpdate {
 }
 
 /**
- * Get or create client memory for a user
+ * Get or create client memory for a user (optimized with select)
  */
 export async function getClientMemory(userId: string) {
   const memory = await prisma.clientMemory.findUnique({
-    where: { userId }
+    where: { userId },
+    select: {
+      id: true,
+      userId: true,
+      name: true,
+      age: true,
+      gender: true,
+      height: true,
+      weight: true,
+      bodyFatPercentage: true,
+      trainingExperience: true,
+      weeklyTrainingDays: true,
+      preferredTrainingStyle: true,
+      trainingSchedule: true,
+      availableTime: true,
+      activityLevel: true,
+      primaryGoal: true,
+      secondaryGoals: true,
+      targetWeight: true,
+      targetBodyFat: true,
+      goalDeadline: true,
+      motivation: true,
+      injuries: true,
+      limitations: true,
+      medications: true,
+      allergies: true,
+      dietaryPreferences: true,
+      foodDislikes: true,
+      supplementsUsed: true,
+      sleepHours: true,
+      stressLevel: true,
+      workSchedule: true,
+      gymAccess: true,
+      homeGym: true,
+      equipmentAvailable: true,
+      gymBudget: true,
+      currentBench: true,
+      currentSquat: true,
+      currentDeadlift: true,
+      currentOHP: true,
+      preferredLanguage: true,
+      communicationStyle: true,
+      coachingNotes: true,
+      lastInteraction: true,
+      trainingStructureType: true,
+      trainingCycle: true,
+      customCyclePattern: true,
+      createdAt: true,
+      updatedAt: true
+    }
   });
   
   if (!memory) {
