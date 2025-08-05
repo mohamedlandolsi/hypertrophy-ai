@@ -1648,7 +1648,7 @@ const ChatPage = () => {
 
         {/* Enhanced Chat Messages Area - Account for fixed header on mobile */}
         <div 
-          className={`flex-1 overflow-y-auto message-area w-full ${messages.length === 0 ? 'flex items-center justify-center' : ''} ${isMobile ? 'mobile-message-area' : ''}`}
+          className={`flex-1 overflow-y-auto message-area w-full ${messages.length === 0 ? 'flex md:items-center md:justify-center' : ''} ${isMobile ? 'mobile-message-area' : ''}`}
           onScroll={handleScroll}
         >
           {/* Offline warning banner */}
@@ -1675,7 +1675,7 @@ const ChatPage = () => {
             )}
             
             {!isLoadingMessages && messages.length === 0 && (
-              <div className="flex flex-col items-center justify-center min-h-[50vh] text-center space-y-6 animate-scale-in px-2 md:px-4">
+              <div className="flex flex-col items-center justify-center md:min-h-[50vh] text-center space-y-6 animate-scale-in px-2 md:px-4 pt-8 md:pt-0">
                   <div className="relative">
                     <div className="w-16 h-16 md:w-20 md:h-20 bg-gradient-to-br from-blue-500/10 to-purple-600/10 rounded-2xl flex items-center justify-center">
                       <OptimizedImage 
