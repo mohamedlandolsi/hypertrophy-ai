@@ -45,7 +45,7 @@ export const LEMONSQUEEZY_PRODUCTS: Record<string, LemonSqueezyProduct> = {
     price: BASE_PRICES_USD.MONTHLY, // $9 USD
     variantId: process.env.LEMONSQUEEZY_PRO_MONTHLY_VARIANT_ID || '',
     interval: 'month',
-    checkoutUrl: 'https://hypertroq.lemonsqueezy.com/buy/3670ca61-2fe7-4fbf-a0ba-01f9f0313099'
+    checkoutUrl: 'https://hypertroq.lemonsqueezy.com/buy/c8bcefd4-0e6d-43ad-bdab-34ff31794ab8?enabled=938715'
   },
   PRO_YEARLY: {
     id: process.env.LEMONSQUEEZY_PRO_YEARLY_PRODUCT_ID || '',
@@ -53,7 +53,7 @@ export const LEMONSQUEEZY_PRODUCTS: Record<string, LemonSqueezyProduct> = {
     price: BASE_PRICES_USD.YEARLY, // $90 USD (10 months pricing)
     variantId: process.env.LEMONSQUEEZY_PRO_YEARLY_VARIANT_ID || '',
     interval: 'year',
-    checkoutUrl: 'https://hypertroq.lemonsqueezy.com/buy/9c872ed8-6ef8-47b2-a2dd-00a832697ebb'
+    checkoutUrl: 'https://hypertroq.lemonsqueezy.com/buy/e45ed46d-c70e-4893-88d1-7403109051cf?enabled=938720'
   }
 };
 
