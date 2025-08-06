@@ -51,6 +51,17 @@ export default function SignupForm() {
 
   const password = watch("password", "");
 
+  // Mobile keyboard handling - scroll input into view on focus
+  const handleInputFocus = (event: React.FocusEvent<HTMLInputElement>) => {
+    // A short delay ensures the keyboard is fully visible before scrolling
+    setTimeout(() => {
+      event.target.scrollIntoView({
+        behavior: 'smooth',
+        block: 'center',
+      });
+    }, 300);
+  };
+
   const onSubmit = async (data: SignupFormData) => {
     setIsLoading(true);
     
@@ -145,6 +156,7 @@ export default function SignupForm() {
                 placeholder={t("emailPlaceholder")}
                 {...register("email")}
                 className={errors.email ? "border-red-500" : ""}
+                onFocus={handleInputFocus}
               />
               {errors.email && (
                 <p className="text-sm text-red-600">{errors.email.message}</p>
@@ -159,6 +171,7 @@ export default function SignupForm() {
                 placeholder={t("passwordPlaceholder")}
                 {...register("password")}
                 className={errors.password ? "border-red-500" : ""}
+                onFocus={handleInputFocus}
               />
               {errors.password && (
                 <p className="text-sm text-red-600">{errors.password.message}</p>
@@ -176,6 +189,7 @@ export default function SignupForm() {
                 placeholder={t("confirmPasswordPlaceholder")}
                 {...register("confirmPassword")}
                 className={errors.confirmPassword ? "border-red-500" : ""}
+                onFocus={handleInputFocus}
               />
               {errors.confirmPassword && (
                 <p className="text-sm text-red-600">

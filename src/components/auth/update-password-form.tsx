@@ -63,6 +63,17 @@ export default function UpdatePasswordForm() {
 
   const password = watch("password", "");
 
+  // Mobile keyboard handling - scroll input into view on focus
+  const handleInputFocus = (event: React.FocusEvent<HTMLInputElement>) => {
+    // A short delay ensures the keyboard is fully visible before scrolling
+    setTimeout(() => {
+      event.target.scrollIntoView({
+        behavior: 'smooth',
+        block: 'center',
+      });
+    }, 300);
+  };
+
   // Check if user has a valid session for password update
   useEffect(() => {
     const checkSession = async () => {
@@ -141,6 +152,7 @@ export default function UpdatePasswordForm() {
                 {...register("password")}
                 className={errors.password ? "border-red-500" : ""}
                 autoComplete="new-password"
+                onFocus={handleInputFocus}
               />
               {errors.password && (
                 <p className="text-sm text-red-600">{errors.password.message}</p>
@@ -159,6 +171,7 @@ export default function UpdatePasswordForm() {
                 {...register("confirmPassword")}
                 className={errors.confirmPassword ? "border-red-500" : ""}
                 autoComplete="new-password"
+                onFocus={handleInputFocus}
               />
               {errors.confirmPassword && (
                 <p className="text-sm text-red-600">

@@ -44,6 +44,28 @@ export function Step3GoalsMotivation({ onNext, onBack, initialData = {} }: Step3
     ...initialData
   });
 
+  // Mobile keyboard handling - scroll input into view on focus
+  const handleInputFocus = (event: React.FocusEvent<HTMLInputElement>) => {
+    // A short delay ensures the keyboard is fully visible before scrolling
+    setTimeout(() => {
+      event.target.scrollIntoView({
+        behavior: 'smooth',
+        block: 'center',
+      });
+    }, 300);
+  };
+
+  // Mobile keyboard handling for textarea
+  const handleTextareaFocus = (event: React.FocusEvent<HTMLTextAreaElement>) => {
+    // A short delay ensures the keyboard is fully visible before scrolling
+    setTimeout(() => {
+      event.target.scrollIntoView({
+        behavior: 'smooth',
+        block: 'center',
+      });
+    }, 300);
+  };
+
   const updateField = (field: keyof Step3Data, value: string | number | string[] | Date | undefined) => {
     setFormData(prev => ({ ...prev, [field]: value }));
   };
@@ -120,6 +142,7 @@ export function Step3GoalsMotivation({ onNext, onBack, initialData = {} }: Step3
                 value={formData.targetWeight || ''}
                 onChange={(e) => updateField('targetWeight', e.target.value ? parseFloat(e.target.value) : undefined)}
                 placeholder={t('fields.targetWeightPlaceholder')}
+                onFocus={handleInputFocus}
               />
             </div>
             <div>
@@ -133,6 +156,7 @@ export function Step3GoalsMotivation({ onNext, onBack, initialData = {} }: Step3
                 value={formData.targetBodyFat || ''}
                 onChange={(e) => updateField('targetBodyFat', e.target.value ? parseFloat(e.target.value) : undefined)}
                 placeholder={t('fields.targetBodyFatPlaceholder')}
+                onFocus={handleInputFocus}
               />
             </div>
             <div>
@@ -143,6 +167,7 @@ export function Step3GoalsMotivation({ onNext, onBack, initialData = {} }: Step3
                 value={formData.goalDeadline || ''}
                 onChange={(e) => updateField('goalDeadline', e.target.value || undefined)}
                 min={new Date().toISOString().split('T')[0]}
+                onFocus={handleInputFocus}
               />
             </div>
           </div>
@@ -155,6 +180,7 @@ export function Step3GoalsMotivation({ onNext, onBack, initialData = {} }: Step3
               onChange={(e) => updateField('motivation', e.target.value)}
               placeholder={t('fields.motivationPlaceholder')}
               rows={3}
+              onFocus={handleTextareaFocus}
             />
           </div>
 

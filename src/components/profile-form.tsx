@@ -86,6 +86,17 @@ const ArrayInput = ({
 }) => {
   const [inputValue, setInputValue] = useState('');
 
+  // Mobile keyboard handling - scroll input into view on focus
+  const handleInputFocus = (event: React.FocusEvent<HTMLInputElement>) => {
+    // A short delay ensures the keyboard is fully visible before scrolling
+    setTimeout(() => {
+      event.target.scrollIntoView({
+        behavior: 'smooth',
+        block: 'center',
+      });
+    }, 300);
+  };
+
   const addItem = (item: string) => {
     if (item.trim() && !value.includes(item.trim())) {
       onChange([...value, item.trim()]);
@@ -123,6 +134,7 @@ const ArrayInput = ({
               addItem(inputValue);
             }
           }}
+          onFocus={handleInputFocus}
         />
         <Button 
           type="button" 
@@ -159,6 +171,27 @@ export default function ProfileForm() {
   const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState(false);
   const { toast } = useToast();
+
+  // Mobile keyboard handling - scroll input into view on focus
+  const handleInputFocus = (event: React.FocusEvent<HTMLInputElement>) => {
+    // A short delay ensures the keyboard is fully visible before scrolling
+    setTimeout(() => {
+      event.target.scrollIntoView({
+        behavior: 'smooth',
+        block: 'center',
+      });
+    }, 300);
+  };
+
+  const handleTextareaFocus = (event: React.FocusEvent<HTMLTextAreaElement>) => {
+    // A short delay ensures the keyboard is fully visible before scrolling
+    setTimeout(() => {
+      event.target.scrollIntoView({
+        behavior: 'smooth',
+        block: 'center',
+      });
+    }, 300);
+  };
 
   useEffect(() => {
     const fetchProfile = async () => {
@@ -255,6 +288,7 @@ export default function ProfileForm() {
               value={formData.name || ''}
               onChange={(e) => updateField('name', e.target.value)}
               placeholder="Your name"
+              onFocus={handleInputFocus}
             />
           </div>
           <div>
@@ -267,6 +301,7 @@ export default function ProfileForm() {
               value={formData.age || ''}
               onChange={(e) => updateField('age', e.target.value ? parseInt(e.target.value) : undefined)}
               placeholder="Your age"
+              onFocus={handleInputFocus}
             />
           </div>
           <div>
@@ -293,6 +328,7 @@ export default function ProfileForm() {
               value={formData.height || ''}
               onChange={(e) => updateField('height', e.target.value ? parseFloat(e.target.value) : undefined)}
               placeholder="Height in centimeters"
+              onFocus={handleInputFocus}
             />
           </div>
           <div>
@@ -306,6 +342,7 @@ export default function ProfileForm() {
               value={formData.weight || ''}
               onChange={(e) => updateField('weight', e.target.value ? parseFloat(e.target.value) : undefined)}
               placeholder="Weight in kilograms"
+              onFocus={handleInputFocus}
             />
           </div>
           <div>
@@ -319,6 +356,7 @@ export default function ProfileForm() {
               value={formData.bodyFatPercentage || ''}
               onChange={(e) => updateField('bodyFatPercentage', e.target.value ? parseFloat(e.target.value) : undefined)}
               placeholder="Optional"
+              onFocus={handleInputFocus}
             />
           </div>
         </CardContent>
@@ -372,6 +410,7 @@ export default function ProfileForm() {
                 value={formData.weeklyTrainingDays || ''}
                 onChange={(e) => updateField('weeklyTrainingDays', e.target.value ? parseInt(e.target.value) : undefined)}
                 placeholder="How many days per week?"
+                onFocus={handleInputFocus}
               />
             </div>
           )}
@@ -401,6 +440,7 @@ export default function ProfileForm() {
                     value={formData.customCyclePattern || ''}
                     onChange={(e) => updateField('customCyclePattern', e.target.value)}
                     placeholder="Describe your custom training cycle (e.g., '4 days on, 3 days off')"
+                    onFocus={handleInputFocus}
                   />
                 </div>
               )}
@@ -459,6 +499,7 @@ export default function ProfileForm() {
               value={formData.availableTime || ''}
               onChange={(e) => updateField('availableTime', e.target.value ? parseInt(e.target.value) : undefined)}
               placeholder="e.g., 60"
+              onFocus={handleInputFocus}
             />
           </div>
         </CardContent>
@@ -499,6 +540,7 @@ export default function ProfileForm() {
                 type="date"
                 value={formData.goalDeadline || ''}
                 onChange={(e) => updateField('goalDeadline', e.target.value)}
+                onFocus={handleInputFocus}
               />
             </div>
             <div>
@@ -512,6 +554,7 @@ export default function ProfileForm() {
                 value={formData.targetWeight || ''}
                 onChange={(e) => updateField('targetWeight', e.target.value ? parseFloat(e.target.value) : undefined)}
                 placeholder="Optional"
+                onFocus={handleInputFocus}
               />
             </div>
             <div>
@@ -525,6 +568,7 @@ export default function ProfileForm() {
                 value={formData.targetBodyFat || ''}
                 onChange={(e) => updateField('targetBodyFat', e.target.value ? parseFloat(e.target.value) : undefined)}
                 placeholder="Optional"
+                onFocus={handleInputFocus}
               />
             </div>
           </div>
@@ -543,6 +587,7 @@ export default function ProfileForm() {
               onChange={(e) => updateField('motivation', e.target.value)}
               placeholder="Tell me what drives you to pursue fitness..."
               className="min-h-[80px]"
+              onFocus={handleTextareaFocus}
             />
           </div>
         </CardContent>
@@ -614,6 +659,7 @@ export default function ProfileForm() {
                 value={formData.sleepHours || ''}
                 onChange={(e) => updateField('sleepHours', e.target.value ? parseFloat(e.target.value) : undefined)}
                 placeholder="e.g., 7.5"
+                onFocus={handleInputFocus}
               />
             </div>
             <div>
@@ -706,6 +752,7 @@ export default function ProfileForm() {
               value={formData.currentBench || ''}
               onChange={(e) => updateField('currentBench', e.target.value ? parseFloat(e.target.value) : undefined)}
               placeholder="Optional"
+              onFocus={handleInputFocus}
             />
           </div>
           <div>
@@ -718,6 +765,7 @@ export default function ProfileForm() {
               value={formData.currentSquat || ''}
               onChange={(e) => updateField('currentSquat', e.target.value ? parseFloat(e.target.value) : undefined)}
               placeholder="Optional"
+              onFocus={handleInputFocus}
             />
           </div>
           <div>
@@ -730,6 +778,7 @@ export default function ProfileForm() {
               value={formData.currentDeadlift || ''}
               onChange={(e) => updateField('currentDeadlift', e.target.value ? parseFloat(e.target.value) : undefined)}
               placeholder="Optional"
+              onFocus={handleInputFocus}
             />
           </div>
           <div>
@@ -742,6 +791,7 @@ export default function ProfileForm() {
               value={formData.currentOHP || ''}
               onChange={(e) => updateField('currentOHP', e.target.value ? parseFloat(e.target.value) : undefined)}
               placeholder="Optional"
+              onFocus={handleInputFocus}
             />
           </div>
         </CardContent>

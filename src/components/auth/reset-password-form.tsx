@@ -44,6 +44,17 @@ export default function ResetPasswordForm() {
     mode: "onChange",
   });
 
+  // Mobile keyboard handling - scroll input into view on focus
+  const handleInputFocus = (event: React.FocusEvent<HTMLInputElement>) => {
+    // A short delay ensures the keyboard is fully visible before scrolling
+    setTimeout(() => {
+      event.target.scrollIntoView({
+        behavior: 'smooth',
+        block: 'center',
+      });
+    }, 300);
+  };
+
   const onSubmit = async (data: ResetPasswordFormData) => {
     setIsLoading(true);
     
@@ -136,6 +147,7 @@ export default function ResetPasswordForm() {
                 className={errors.email ? "border-red-500" : ""}
                 autoComplete="email"
                 autoFocus
+                onFocus={handleInputFocus}
               />
               {errors.email && (
                 <p className="text-sm text-red-600">{errors.email.message}</p>

@@ -108,6 +108,17 @@ const ArrayInput = ({
 }) => {
   const [inputValue, setInputValue] = useState('');
 
+  // Mobile keyboard handling - scroll input into view on focus
+  const handleInputFocus = (event: React.FocusEvent<HTMLInputElement>) => {
+    // A short delay ensures the keyboard is fully visible before scrolling
+    setTimeout(() => {
+      event.target.scrollIntoView({
+        behavior: 'smooth',
+        block: 'center',
+      });
+    }, 300);
+  };
+
   const addItem = (item: string) => {
     if (item.trim() && !value.includes(item.trim())) {
       onChange([...value, item.trim()]);
@@ -145,6 +156,7 @@ const ArrayInput = ({
               addItem(inputValue);
             }
           }}
+          onFocus={handleInputFocus}
           className="flex-1"
         />
         <Button 
@@ -186,6 +198,17 @@ export default function EnhancedProfileForm() {
   const [isSaving, setIsSaving] = useState(false);
   const [user, setUser] = useState<SupabaseUser | null>(null);
   const [avatarUrl, setAvatarUrl] = useState<string>('');
+
+  // Mobile keyboard handling - scroll input into view on focus
+  const handleInputFocus = (event: React.FocusEvent<HTMLInputElement>) => {
+    // A short delay ensures the keyboard is fully visible before scrolling
+    setTimeout(() => {
+      event.target.scrollIntoView({
+        behavior: 'smooth',
+        block: 'center',
+      });
+    }, 300);
+  };
 
   // Load existing profile data and user info
   useEffect(() => {
@@ -351,6 +374,7 @@ export default function EnhancedProfileForm() {
                   value={formData.name || ''}
                   onChange={(e) => updateField('name', e.target.value)}
                   placeholder={t('placeholders.enterName')}
+                  onFocus={handleInputFocus}
                 />
               </div>
               
@@ -539,6 +563,7 @@ export default function EnhancedProfileForm() {
                       value={formData.customCyclePattern || ''}
                       onChange={(e) => updateField('customCyclePattern', e.target.value)}
                       placeholder={t('placeholders.describeCustomCycle')}
+                      onFocus={handleInputFocus}
                     />
                   </div>
                 )}

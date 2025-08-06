@@ -27,6 +27,17 @@ export function Step1PersonalInfo({ onNext, initialData = {} }: Step1Props) {
   const [formData, setFormData] = useState<Step1Data>(initialData);
   const t = useTranslations('Onboarding.step1');
 
+  // Mobile keyboard handling - scroll input into view on focus
+  const handleInputFocus = (event: React.FocusEvent<HTMLInputElement>) => {
+    // A short delay ensures the keyboard is fully visible before scrolling
+    setTimeout(() => {
+      event.target.scrollIntoView({
+        behavior: 'smooth',
+        block: 'center',
+      });
+    }, 300);
+  };
+
   const updateField = (field: keyof Step1Data, value: string | number | undefined) => {
     setFormData(prev => ({ ...prev, [field]: value }));
   };
@@ -56,6 +67,7 @@ export function Step1PersonalInfo({ onNext, initialData = {} }: Step1Props) {
               value={formData.name || ''}
               onChange={(e) => updateField('name', e.target.value)}
               placeholder={t('fields.namePlaceholder')}
+              onFocus={handleInputFocus}
             />
           </div>
 
@@ -70,6 +82,7 @@ export function Step1PersonalInfo({ onNext, initialData = {} }: Step1Props) {
                 value={formData.age || ''}
                 onChange={(e) => updateField('age', e.target.value ? parseInt(e.target.value) : undefined)}
                 placeholder={t('fields.agePlaceholder')}
+                onFocus={handleInputFocus}
               />
             </div>
             <div>
@@ -100,6 +113,7 @@ export function Step1PersonalInfo({ onNext, initialData = {} }: Step1Props) {
                 value={formData.height || ''}
                 onChange={(e) => updateField('height', e.target.value ? parseFloat(e.target.value) : undefined)}
                 placeholder={t('fields.heightPlaceholder')}
+                onFocus={handleInputFocus}
               />
             </div>
             <div>
@@ -113,6 +127,7 @@ export function Step1PersonalInfo({ onNext, initialData = {} }: Step1Props) {
                 value={formData.weight || ''}
                 onChange={(e) => updateField('weight', e.target.value ? parseFloat(e.target.value) : undefined)}
                 placeholder={t('fields.weightPlaceholder')}
+                onFocus={handleInputFocus}
               />
             </div>
             <div>
@@ -126,6 +141,7 @@ export function Step1PersonalInfo({ onNext, initialData = {} }: Step1Props) {
                 value={formData.bodyFatPercentage || ''}
                 onChange={(e) => updateField('bodyFatPercentage', e.target.value ? parseFloat(e.target.value) : undefined)}
                 placeholder={t('fields.bodyFatPlaceholder')}
+                onFocus={handleInputFocus}
               />
             </div>
           </div>

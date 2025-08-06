@@ -34,6 +34,18 @@ export function StepperInput({
   const [inputValue, setInputValue] = useState<string>('');
   const [isFocused, setIsFocused] = useState(false);
 
+  // Mobile keyboard handling - scroll input into view on focus
+  const handleInputFocus = (event: React.FocusEvent<HTMLInputElement>) => {
+    // A short delay ensures the keyboard is fully visible before scrolling
+    setTimeout(() => {
+      event.target.scrollIntoView({
+        behavior: 'smooth',
+        block: 'center',
+      });
+    }, 300);
+    setIsFocused(true);
+  };
+
   // Update input value when external value changes (but only when not focused)
   useEffect(() => {
     if (!isFocused) {
@@ -68,10 +80,6 @@ export function StepperInput({
     }
   };
 
-  const handleFocus = () => {
-    setIsFocused(true);
-  };
-
   const handleBlur = () => {
     setIsFocused(false);
     // On blur, ensure the input shows the current value
@@ -97,7 +105,7 @@ export function StepperInput({
             type="number"
             value={inputValue}
             onChange={handleInputChange}
-            onFocus={handleFocus}
+            onFocus={handleInputFocus}
             onBlur={handleBlur}
             placeholder={placeholder}
             step={step}

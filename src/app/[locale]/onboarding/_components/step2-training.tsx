@@ -28,6 +28,17 @@ export function Step2TrainingInfo({ onNext, onBack, initialData = {} }: Step2Pro
   const [formData, setFormData] = useState<Step2Data>(initialData);
   const t = useTranslations('Onboarding.step2');
 
+  // Mobile keyboard handling - scroll input into view on focus
+  const handleInputFocus = (event: React.FocusEvent<HTMLInputElement>) => {
+    // A short delay ensures the keyboard is fully visible before scrolling
+    setTimeout(() => {
+      event.target.scrollIntoView({
+        behavior: 'smooth',
+        block: 'center',
+      });
+    }, 300);
+  };
+
   const updateField = (field: keyof Step2Data, value: string | number | undefined) => {
     setFormData(prev => ({ ...prev, [field]: value }));
   };
@@ -128,6 +139,7 @@ export function Step2TrainingInfo({ onNext, onBack, initialData = {} }: Step2Pro
                 value={formData.availableTime || ''}
                 onChange={(e) => updateField('availableTime', e.target.value ? parseInt(e.target.value) : undefined)}
                 placeholder={t('fields.availableTimePlaceholder')}
+                onFocus={handleInputFocus}
               />
             </div>
             <div>

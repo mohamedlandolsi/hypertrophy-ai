@@ -228,3 +228,26 @@ Found 0 PRO users without valid subscriptions
 Total expired subscriptions processed: 0
 Total PRO users downgraded: 0
 Total actions: 0
+🔒 STARTING SUBSCRIPTION SECURITY CHECK
+==========================================
+Timestamp: 2025-08-06T15:00:02.384Z
+[dotenv@17.2.1] injecting env (21) from .env -- tip: 📡 version env with Radar: https://dotenvx.com/radar
+📊 Checking subscription security...
+🚀 SUBSCRIPTION SECURITY JOB STARTED
+=====================================
+
+✅ Database connection: OK
+✅ Environment variables: OK
+[dotenv@17.2.1] injecting env (0) from .env -- tip: 📡 auto-backup env with Radar: https://dotenvx.com/radar
+📊 Checking subscription security...
+Found 0 expired active subscriptions
+Found 0 PRO users without valid subscriptions
+
+✅ No security issues found - all subscriptions are valid
+
+✅ Subscription security check completed successfully
+
+📈 FINAL SUMMARY:
+Total expired subscriptions processed: 0
+Total PRO users downgraded: 0
+Total actions: 0
