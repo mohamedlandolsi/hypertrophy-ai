@@ -1215,6 +1215,7 @@
       "guestMessageWarning": "Plus qu'un message restant ! Inscrivez-vous pour continuer.",
       "aiThinking": "HypertroQ réfléchit...",
       "imagePreviewAlt": "Aperçu de l'image sélectionnée",
+      "copy": "Copier le message",
       "copySuccessTitle": "Copié dans le presse-papiers",
       "copySuccessText": "Le contenu du message a été copié.",
       "copyErrorTitle": "Échec de la copie",

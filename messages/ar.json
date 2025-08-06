@@ -1187,6 +1187,7 @@
       "guestMessageWarning": "رسالة واحدة فقط متبقية! سجل للمتابعة.",
       "aiThinking": "هايبرتروق يفكر...",
       "imagePreviewAlt": "معاينة الصورة المحددة",
+      "copy": "نسخ الرسالة",
       "copySuccessTitle": "تم النسخ إلى الحافظة",
       "copySuccessText": "تم نسخ محتوى الرسالة.",
       "copyErrorTitle": "فشل النسخ",

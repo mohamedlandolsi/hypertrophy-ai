@@ -1189,6 +1189,7 @@
       "guestMessageWarning": "Only 1 message left! Sign up to continue.",
       "aiThinking": "HypertroQ is thinking...",
       "imagePreviewAlt": "Selected image preview",
+      "copy": "Copy message",
       "copySuccessTitle": "Copied to clipboard",
       "copySuccessText": "Message content has been copied.",
       "copyErrorTitle": "Failed to copy",

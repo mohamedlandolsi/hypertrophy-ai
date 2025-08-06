@@ -1,4 +1,4 @@
-import React, { useMemo, useCallback, useEffect, useRef } from 'react';
+import React, { useMemo, useCallback, useEffect, useRef, forwardRef } from 'react';
 import { Textarea } from './ui/textarea';
 import { isArabicText, getTextDirection } from '@/lib/text-formatting';
 
@@ -16,7 +16,7 @@ interface ArabicAwareTextareaProps {
   maxLength?: number;
 }
 
-export const ArabicAwareTextarea: React.FC<ArabicAwareTextareaProps> = ({
+export const ArabicAwareTextarea = forwardRef<HTMLTextAreaElement, ArabicAwareTextareaProps>(({
   value,
   onChange,
   placeholder = "Message HypertroQ...",
@@ -28,9 +28,12 @@ export const ArabicAwareTextarea: React.FC<ArabicAwareTextareaProps> = ({
   onBlur,
   rows = 1,
   maxLength
-}) => {
-  // Ref to store textarea element for auto-resize
-  const textareaRef = useRef<HTMLTextAreaElement>(null);
+}, ref) => {
+  // Internal ref for auto-resize functionality
+  const internalRef = useRef<HTMLTextAreaElement>(null);
+  
+  // Use the passed ref or fallback to internal ref
+  const textareaRef = (ref as React.RefObject<HTMLTextAreaElement>) || internalRef;
 
   // Memoize expensive text direction calculation to avoid recalculation on every render
   const direction = useMemo(() => getTextDirection(value), [value]);
@@ -61,7 +64,7 @@ export const ArabicAwareTextarea: React.FC<ArabicAwareTextareaProps> = ({
     if (textareaRef.current) {
       autoResize(textareaRef.current);
     }
-  }, [value, autoResize]);
+  }, [value, autoResize, textareaRef]);
   
   // Optimized change handler - immediate response
   const handleChange = useCallback((e: React.ChangeEvent<HTMLTextAreaElement>) => {
@@ -127,4 +130,6 @@ export const ArabicAwareTextarea: React.FC<ArabicAwareTextareaProps> = ({
       }, [autoResize])}
     />
   );
-};
+});
+
+ArabicAwareTextarea.displayName = 'ArabicAwareTextarea';

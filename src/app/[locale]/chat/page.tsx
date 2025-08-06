@@ -22,6 +22,7 @@ import { useApiCache } from '@/hooks/use-smart-cache';
 import { useOptimizedChatHistory, useOptimizedUserPlan, useOptimizedUserRole } from '@/hooks/use-optimized-fetch';
 import { OptimizedMessage } from '@/components/optimized-message';
 import { OptimizedImage } from '@/components/optimized-image';
+import { useVirtualKeyboard } from '@/hooks/use-virtual-keyboard';
 
 // Imports for DropdownMenu, Avatar, and Select
 import {
@@ -65,6 +66,9 @@ const ChatPage = () => {
   const params = useParams();
   const router = useRouter();
   const searchParams = useSearchParams();
+  
+  // Initialize virtual keyboard handler for mobile input positioning
+  useVirtualKeyboard();
   
   // Get conversation ID from URL parameters - supports both /chat/[id] and /chat?id=...
   const initialConversationId = Array.isArray(params.id) ? params.id[0] : params.id || searchParams.get('id') || null;
@@ -183,6 +187,7 @@ const ChatPage = () => {
   const selectedImagesRef = useRef(selectedImages);
   const messagesRef = useRef(messages);
   const messagesEndRef = useRef<HTMLDivElement>(null);
+  const inputRef = useRef<HTMLTextAreaElement>(null); // For focus-and-scroll handling
   const refetchUserPlanRef = useRef(refetchUserPlan);
   const refetchChatHistoryRef = useRef(refetchChatHistory);
 
@@ -201,81 +206,17 @@ const ChatPage = () => {
     }
   }, [setInput]);
 
-  // Mobile keyboard handling state
-  const [isInputFocused, setIsInputFocused] = reactUseState(false);
-  const [viewportHeight, setViewportHeight] = reactUseState(0);
-  
-  // Handle input focus/blur for mobile keyboard management
+  // Focus handler for input to scroll into view when keyboard appears
   const handleInputFocus = useCallback(() => {
-    setIsInputFocused(true);
-  }, [setIsInputFocused]);
-
-  const handleInputBlur = useCallback(() => {
-    setIsInputFocused(false);
-  }, [setIsInputFocused]);
-
-  // Track viewport height changes for mobile keyboard detection
-  useEffect(() => {
-    if (typeof window === 'undefined') return;
-    
-    const updateViewportHeight = () => {
-      setViewportHeight(window.visualViewport?.height || window.innerHeight);
-    };
-    
-    // Initial height
-    updateViewportHeight();
-    
-    // Listen for viewport changes (mainly for mobile keyboard)
-    window.visualViewport?.addEventListener('resize', updateViewportHeight);
-    window.addEventListener('resize', updateViewportHeight);
-    
-    return () => {
-      window.visualViewport?.removeEventListener('resize', updateViewportHeight);
-      window.removeEventListener('resize', updateViewportHeight);
-    };
-  }, [setViewportHeight]);
-
-  // Calculate if keyboard is visible based on viewport height change
-  const isKeyboardVisible = useMemo(() => {
-    if (!isMobile || viewportHeight === 0) return false;
-    const fullHeight = window.screen.availHeight || window.innerHeight;
-    const heightDifference = fullHeight - viewportHeight;
-    return heightDifference > 150; // Keyboard is likely visible if viewport shrunk by more than 150px
-  }, [isMobile, viewportHeight]);
-
-  // Enhanced mobile keyboard handling with Visual Viewport API
-  useEffect(() => {
-    if (typeof window === 'undefined' || !isMobile) return;
-
-    const handleViewportChange = () => {
-      const viewport = window.visualViewport;
-      if (!viewport) return;
-
-      // Calculate actual keyboard height
-      const fullHeight = window.screen.availHeight || window.innerHeight;
-      const keyboardHeight = Math.max(0, fullHeight - viewport.height);
-      const isKeyboardVisible = keyboardHeight > 150; // Threshold for keyboard detection
-      
-      // Set CSS custom properties for dynamic positioning
-      document.documentElement.style.setProperty('--viewport-height', `${viewport.height}px`);
-      document.documentElement.style.setProperty('--keyboard-height', `${keyboardHeight}px`);
-      document.documentElement.style.setProperty('--keyboard-visible', isKeyboardVisible ? '1' : '0');
-      
-      // For more precise positioning, set the offset from bottom
-      const offsetFromBottom = isKeyboardVisible ? keyboardHeight : 0;
-      document.documentElement.style.setProperty('--keyboard-offset', `${offsetFromBottom}px`);
-    };
-
-    // Initial setup
-    handleViewportChange();
-    
-    if (window.visualViewport) {
-      window.visualViewport.addEventListener('resize', handleViewportChange);
-      return () => {
-        window.visualViewport?.removeEventListener('resize', handleViewportChange);
-      };
-    }
-  }, [isMobile]);
+    // The timeout is crucial. It waits for the keyboard animation to start
+    // and for the CSS '--keyboard-inset' padding to be applied.
+    setTimeout(() => {
+      inputRef.current?.scrollIntoView({
+        behavior: 'smooth',
+        block: 'end', // Aligns the bottom of the input with the bottom of the visible area
+      });
+    }, 300); // 300ms is a safe delay for most devices
+  }, []);
 
   // Auto-scroll to bottom when messages change
   useEffect(() => {
@@ -600,14 +541,7 @@ const ChatPage = () => {
     }
   }, [messages, autoScroll]);
 
-  // Scroll to bottom when keyboard appears on mobile to keep input visible
-  useEffect(() => {
-    if (isMobile && isKeyboardVisible && isInputFocused && messagesEndRef.current) {
-      setTimeout(() => {
-        messagesEndRef.current?.scrollIntoView({ behavior: 'smooth' });
-      }, 200); // Small delay to allow keyboard animation
-    }
-  }, [isMobile, isKeyboardVisible, isInputFocused]);
+
 
   // Handle scroll to detect if user is at bottom
   const handleScroll = (e: React.UIEvent<HTMLDivElement>) => {
@@ -1180,7 +1114,7 @@ const ChatPage = () => {
   }
 
   return (
-    <div className={`flex ${isMobile ? 'mobile-chat-container' : 'h-screen'} bg-background text-foreground overflow-hidden relative animate-fade-in`}>
+    <div className={`flex ${isMobile ? 'mobile-chat-container' : 'h-[100dvh]'} bg-background text-foreground overflow-hidden relative animate-fade-in`}>
       {/* Mobile Backdrop Overlay */}
       {isMobile && isSidebarOpen && (
         <div 
@@ -1717,7 +1651,7 @@ const ChatPage = () => {
                 </div>
 
                 {/* Chat Input Area - Inline when empty chat */}
-                <div className="w-full max-w-3xl mt-8">
+                <div className="w-full max-w-3xl mt-8 pb-[calc(0.5rem+var(--keyboard-inset,0px))] transition-all duration-300">
                   <form onSubmit={onSubmit} className="relative">
                     {/* Multi-Image Preview */}
                     {selectedImages.length > 0 && (
@@ -1778,11 +1712,11 @@ const ChatPage = () => {
                     
                     <div className="relative flex items-center">
                       <ArabicAwareTextarea
+                        ref={inputRef}
                         value={input}
                         onChange={handleInputChange}
                         onPaste={handlePaste}
                         onFocus={handleInputFocus}
-                        onBlur={handleInputBlur}
                         placeholder={t('main.inputPlaceholder')}
                         className="w-full pr-24 pl-12 py-3 text-base rounded-2xl glass-input resize-none"
                         rows={1}
@@ -1824,6 +1758,7 @@ const ChatPage = () => {
                       <span className={`${input.length > 1800 ? 'text-orange-500' : ''}`}>{input.length}/2000</span>
                     </div>
                   </form>
+                  <div data-messages-end className="messages-end-marker" />
                 </div>
               </div>
             )}
@@ -1863,7 +1798,7 @@ const ChatPage = () => {
                 </div>
               </div>
             )}
-            <div ref={messagesEndRef} />
+            <div ref={messagesEndRef} data-messages-end className="messages-end-marker" />
           </div>
         </div>
 
@@ -1874,6 +1809,7 @@ const ChatPage = () => {
               flex-shrink-0
               ${isMobile && messages.length > 0 ? 'mobile-input-area' : 'p-2 md:p-4'}
               bg-background/95 backdrop-blur-lg border-t border-border/30
+              pb-[calc(0.5rem+var(--keyboard-inset,0px))] transition-all duration-300
             `}
           >
             <div className="w-full max-w-5xl mx-auto">
@@ -1937,11 +1873,11 @@ const ChatPage = () => {
                 
                 <div className="relative flex items-center">
                   <ArabicAwareTextarea
+                    ref={inputRef}
                     value={input}
                     onChange={handleInputChange}
                     onPaste={handlePaste}
                     onFocus={handleInputFocus}
-                    onBlur={handleInputBlur}
                     placeholder={t('main.inputPlaceholder')}
                     className="w-full pr-24 pl-12 py-3 text-base rounded-2xl glass-input resize-none"
                     rows={1}
