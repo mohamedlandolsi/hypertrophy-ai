@@ -1212,7 +1212,9 @@
     },
     "toasts": {
       "logoutSuccessTitle": "تم تسجيل الخروج بنجاح",
-      "logoutSuccessText": "لقد تم تسجيل خروجك من حسابك بنجاح."
+      "logoutSuccessText": "لقد تم تسجيل خروجك من حسابك بنجاح.",
+      "deleteSuccessTitle": "تم حذف الدردشة",
+      "deleteSuccessText": "تمت إزالة المحادثة."
     },
     "connectionStatus": {
       "offline": "أنت غير متصل. يرجى التحقق من اتصالك.",

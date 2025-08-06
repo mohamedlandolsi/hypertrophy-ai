@@ -1214,7 +1214,9 @@
     },
     "toasts": {
       "logoutSuccessTitle": "Signed Out Successfully",
-      "logoutSuccessText": "You have been successfully signed out of your account."
+      "logoutSuccessText": "You have been successfully signed out of your account.",
+      "deleteSuccessTitle": "Chat deleted",
+      "deleteSuccessText": "The conversation has been removed."
     },
     "connectionStatus": {
       "offline": "You are offline. Please check your connection.",

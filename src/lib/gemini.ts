@@ -369,6 +369,46 @@ ARABIC FITNESS TERMINOLOGY GUIDE:
   return '';
 }
 
+/**
+ * Translate non-English queries to English for vector search compatibility
+ * This ensures Arabic/French queries can find relevant English documents
+ */
+async function translateQueryToEnglish(query: string, sourceLanguage: 'arabic' | 'french'): Promise<string> {
+  try {
+    console.log(`🔄 Translating ${sourceLanguage} query for vector search: "${query}"`);
+    
+    const translationPrompt = sourceLanguage === 'arabic' 
+      ? `Translate this Arabic text to English, preserving fitness and training terminology. Keep it concise and natural:
+
+Arabic: ${query}
+
+English:`
+      : `Translate this French text to English, preserving fitness and training terminology. Keep it concise and natural:
+
+French: ${query}
+
+English:`;
+
+    const model = genAI.getGenerativeModel({ 
+      model: "gemini-1.5-flash",
+      generationConfig: {
+        temperature: 0.1, // Low temperature for consistent translation
+        maxOutputTokens: 100, // Short translation
+      }
+    });
+
+    const result = await model.generateContent(translationPrompt);
+    const translatedQuery = result.response.text().trim();
+    
+    console.log(`✅ Translated query: "${translatedQuery}"`);
+    return translatedQuery;
+    
+  } catch (error) {
+    console.error(`❌ Translation failed, using original query:`, error);
+    return query; // Fallback to original query
+  }
+}
+
 export async function sendToGemini(
   conversation: ConversationMessage[], 
   userId?: string,
@@ -419,7 +459,23 @@ export async function sendToGeminiWithCitations(
     // Allow RAG for both authenticated users AND guest users for better performance
     if (aiConfig.useKnowledgeBase) {
       try {
-        const userQuery = latestUserMessage.content;
+        // CRITICAL FIX: Translate non-English queries to English for vector search
+        // The knowledge base is in English, so non-English queries need translation
+        let userQuery = latestUserMessage.content;
+        const isArabic = isArabicText(latestUserMessage.content);
+        // Improved French detection: check for French words and accented characters
+        const isFrench = /\b(le|la|les|un|une|des|du|de|et|ou|pour|dans|avec|sur|par|donnez|moi|exercices?|entraînement|muscle|pectoraux|biceps|triceps|jambes|dos|épaules)\b/i.test(latestUserMessage.content) || 
+                         /[àâäéèêëïîôùûüÿç]/i.test(latestUserMessage.content);
+        
+        if (isArabic) {
+          console.log('🔄 Detected Arabic query, translating for vector search...');
+          userQuery = await translateQueryToEnglish(latestUserMessage.content, 'arabic');
+        } else if (isFrench) {
+          console.log('🔄 Detected French query, translating for vector search...');
+          userQuery = await translateQueryToEnglish(latestUserMessage.content, 'french');
+        }
+        
+        console.log(`🔍 RAG search query: "${userQuery}" ${userQuery !== latestUserMessage.content ? '(translated)' : '(original)'}`);
         
         // Temporarily disable multi-query to get core search working first
         const useMultiQuery = false; // shouldUseMultiQuery(userQuery);

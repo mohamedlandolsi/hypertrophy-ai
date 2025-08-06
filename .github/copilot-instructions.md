@@ -23,8 +23,24 @@
 ### Critical Retrieval Improvements
 - **Eliminated Batch Limits**: pgvector SQL searches full database, not batched JSON fallback
 - **AND-Based Keywords**: PostgreSQL full-text search with `&` logic for precision 
+- **Query Translation Fix**: Non-English queries translated to English for vector search compatibility
 - **Simplified Pipeline**: Disabled multi-query/hybrid for reliability and speed
 - **Performance**: <1000ms retrieval time, searches all chunks simultaneously
+
+### Multi-Language RAG Support
+```typescript
+// CRITICAL: Knowledge base is in English, queries may be Arabic/French
+// System automatically translates for vector search, responds in original language
+
+// Arabic query: "أعطيني تمارين" 
+// → Translates to: "give me exercises"
+// → Searches English knowledge base
+// → Responds in Arabic with retrieved context
+
+if (isArabic) {
+  userQuery = await translateQueryToEnglish(originalQuery, 'arabic');
+}
+```
 
 ### Usage Pattern
 ```typescript

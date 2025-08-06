@@ -1240,7 +1240,9 @@
     },
     "toasts": {
       "logoutSuccessTitle": "Déconnexion Réussie",
-      "logoutSuccessText": "Vous avez été déconnecté avec succès de votre compte."
+      "logoutSuccessText": "Vous avez été déconnecté avec succès de votre compte.",
+      "deleteSuccessTitle": "Chat supprimé",
+      "deleteSuccessText": "La conversation a été supprimée."
     },
     "connectionStatus": {
       "offline": "Vous êtes hors ligne. Veuillez vérifier votre connexion.",
