@@ -2,48 +2,57 @@
 
 ## 🏗️ Architecture Overview
 
-**HypertroQ** is a sophisticated RAG-powered AI fitness coaching platform with enterprise-level architecture featuring personalized client memory, multilingual support, scientific knowledge base integration, and subscription management.
+**HypertroQ** is a sophisticated RAG-powered AI fitness coaching platform built with Next.js 15 App Router, featuring personalized client memory, multilingual support, and subscription management.
+
+### Critical System Requirements
+- **Admin-Only AI Operations**: All AI functionality requires admin configuration via singleton `AIConfiguration` table - system will fail if not configured
+- **Authentication Gate**: Users must login before sending messages (no guest mode)
+- **Subscription Enforcement**: Server-side validation with daily/monthly limits enforced in API routes
+- **Vector Storage**: Embeddings stored as JSON strings (768 dimensions via Gemini text-embedding-004)
 
 ### Core Components
-- **RAG System**: Hybrid vector similarity + keyword search using Gemini embeddings with optimized chunking
-- **Client Memory**: Auto-extracting user profiling system with 50+ structured fields and AI function calling
-- **AI Configuration**: Admin-controlled singleton pattern for system prompts, model selection, and RAG parameters
-- **Authentication**: Supabase SSR with role-based access, onboarding flow, and login-required chat
-- **File Processing**: Multi-format pipeline (PDF, DOC, TXT, MD) with semantic chunking and embedding generation
-- **Subscription System**: Two-tier (FREE/PRO) with daily limits, LemonSqueezy integration, and usage tracking
-- **Internationalization**: Full i18n with next-intl supporting Arabic RTL, French, and English
-- **Error Handling**: Centralized `ApiErrorHandler` with structured logging, correlation IDs, and type-safe errors
-- **Performance**: Comprehensive caching strategy with optimized components and smart data fetching
-- **Modern UI**: Glassmorphism design with animations, gradients, and mobile-first responsive layouts
+- **RAG System**: Optimized pgvector + AND-based keyword search (`/src/lib/vector-search.ts`)
+- **Client Memory**: AI auto-extracts user data via Gemini function calling (`/src/lib/client-memory.ts`)
+- **Authentication**: Supabase SSR with role-based access (`/src/lib/supabase/server.ts`)
+- **File Processing**: Multi-format pipeline with semantic chunking (`/src/lib/enhanced-file-processor.ts`)
+- **Error Handling**: Centralized `ApiErrorHandler` with correlation IDs (`/src/lib/error-handler.ts`)
+- **Internationalization**: Arabic RTL + French/English with automatic detection (`/src/lib/text-formatting.ts`)
 
-### Critical Architecture Decisions
-- **Admin-Required Setup**: All AI operations require admin configuration through singleton `AIConfiguration` table
-- **Hybrid RAG Search**: Combines vector similarity + keyword matching with configurable thresholds and muscle-specific priority
-- **Function-Calling Memory**: AI automatically extracts user information via Gemini function calling instead of regex patterns
-- **Login-Required Chat**: Unauthenticated users must login to send messages (no guest messaging)
-- **JSON Vector Storage**: Temporary embedding storage as JSON strings until pgvector migration
-- **Server-Side Limits**: Subscription enforcement with daily message tracking and monthly upload quotas
-- **Multi-Image Base64**: Gallery display with base64 storage and conditional rendering patterns
-- **Windows Development**: PowerShell-optimized debug scripts and file path handling
-- **Batched Vector Processing**: Optimized JSON similarity search with batching (100-chunk batches) for performance
+## 🔧 RAG Pipeline Performance Fixes
 
-## 🚀 Development Workflows
+### Critical Retrieval Improvements
+- **Eliminated Batch Limits**: pgvector SQL searches full database, not batched JSON fallback
+- **AND-Based Keywords**: PostgreSQL full-text search with `&` logic for precision 
+- **Simplified Pipeline**: Disabled multi-query/hybrid for reliability and speed
+- **Performance**: <1000ms retrieval time, searches all chunks simultaneously
 
-### Essential Commands
+### Usage Pattern
+```typescript
+// 1. Use efficient vector search for semantic matching
+const vectorResults = await fetchRelevantKnowledge(embedding, 10, 0.3);
+
+// 2. Use AND keyword search for exact term matching  
+const keywordResults = await performAndKeywordSearch(query, 10);
+
+// 3. Combine results as needed (avoid complex hybrid for now)
+const combined = [...vectorResults, ...keywordResults];
+```
+
+## 🚀 Essential Development Workflows
+
+### Critical Commands
 ```bash
 npm run dev              # Development server
 npm run dev:turbo        # Development with turbopack (faster builds)
 npm run build           # Prisma generate + Next.js production build
-npm start               # Production server
-npm run lint            # ESLint validation
 npx prisma migrate dev  # Apply schema changes with migration name
 npx prisma studio       # Visual database browser
 npm run postinstall     # Generate Prisma client (auto-run after install)
 ```
 
-### Critical Environment Variables
+### Must-Have Environment Variables
 ```bash
-# Core Services
+# Core Services (Required)
 NEXT_PUBLIC_SUPABASE_URL=        # Supabase project URL
 NEXT_PUBLIC_SUPABASE_ANON_KEY=   # Public key for client-side
 SUPABASE_SERVICE_ROLE_KEY=       # Server-side admin operations
@@ -51,97 +60,41 @@ GEMINI_API_KEY=                  # Google Gemini API for AI/embeddings
 DATABASE_URL=                    # PostgreSQL connection string
 DIRECT_URL=                      # Direct DB connection (for migrations)
 
-# Subscription System (LemonSqueezy) - Current Pricing: $9/month, $90/year
+# Subscription System (LemonSqueezy)
 LEMONSQUEEZY_API_KEY=            # API key for payment processing
-LEMONSQUEEZY_STORE_ID=           # Store ID for product management
-LEMONSQUEEZY_PRO_MONTHLY_PRODUCT_ID=  # Monthly subscription product
-LEMONSQUEEZY_PRO_MONTHLY_VARIANT_ID=  # Monthly subscription variant
-LEMONSQUEEZY_PRO_YEARLY_PRODUCT_ID=   # Yearly subscription product (same as monthly)
-LEMONSQUEEZY_PRO_YEARLY_VARIANT_ID=   # Yearly subscription variant (different from monthly)
+LEMONSQUEEZY_STORE_ID=           # Store identifier
+LEMONSQUEEZY_PRO_MONTHLY_VARIANT_ID=    # Monthly subscription variant
+LEMONSQUEEZY_PRO_YEARLY_VARIANT_ID=     # Yearly subscription variant  
 LEMONSQUEEZY_WEBHOOK_SECRET=     # Webhook signature verification
-NEXT_PUBLIC_SITE_URL=            # Site URL for checkout success/cancel redirects
-```
-DIRECT_URL=                      # Direct DB connection (for migrations)
-
-# Subscription System (LemonSqueezy) - Current Pricing: $9/month, $90/year
-LEMONSQUEEZY_API_KEY=            # API key for payment processing
-LEMONSQUEEZY_STORE_ID=           # Store ID for product management
-LEMONSQUEEZY_PRO_MONTHLY_PRODUCT_ID=  # Monthly subscription product
-LEMONSQUEEZY_PRO_MONTHLY_VARIANT_ID=  # Monthly subscription variant
-LEMONSQUEEZY_PRO_YEARLY_PRODUCT_ID=   # Yearly subscription product (same as monthly)
-LEMONSQUEEZY_PRO_YEARLY_VARIANT_ID=   # Yearly subscription variant (different from monthly)
-LEMONSQUEEZY_WEBHOOK_SECRET=     # Webhook signature verification
-NEXT_PUBLIC_SITE_URL=            # Site URL for checkout success/cancel redirects
+NEXT_PUBLIC_SITE_URL=            # Site URL for checkout redirects
 ```
 
-### Debug Scripts (Run from project root)
-**Essential Testing & Debugging:**
+### Essential Debug Scripts (Run from project root)
+- `check-ai-config.js` - Validate AI configuration setup (run this first!)
 - `debug-rag-system.js` - Test vector search and context retrieval
-- `check-ai-config.js` - Validate AI configuration setup
-- `manage-user-plans.js` - Admin tool for managing user subscriptions and billing
-- `check-user-plan.js` - Verify individual user subscription status
 - `find-users.js` - Get actual user IDs for testing
-- `debug-lemonsqueezy-checkout.js` - Test LemonSqueezy checkout URL generation
-
-**Knowledge Base & RAG:**
-- `examine-knowledge.js` - Analyze knowledge base content
-- `debug-knowledge-chunks.js` - Debug PDF processing and chunking
-- `test-rag-fixes.js` - Test RAG configuration and context retrieval
-- `check-pdf-items.js` - Debug PDF processing and chunking
-
-**Specialized Tools:**
 - `create-admin.js` - Create admin user accounts
-- `test-arabic-support.js` - Test Arabic language detection and responses
-- `final-google-oauth-onboarding-verification.js` - Verify OAuth onboarding flow
+- `check-user-plan.js` - Verify individual user subscription status
 
-### Windows Environment Notes
-- Use PowerShell as the default shell when running terminal commands
-- Debug scripts are Node.js files, run with `node script-name.js`
-- File paths use backslashes in Windows but forward slashes work in most contexts
-- All debug scripts use CommonJS (require/module.exports) pattern
-- Environment variables must be accessible from project root for debug scripts
+## 📋 Critical Project Patterns
 
-## 📋 Project-Specific Patterns
-
-### 1. AI Configuration Enforcement
-- **All AI operations require admin setup** via `getAIConfiguration()` in `/src/lib/gemini.ts`
-- System will throw errors if `AIConfiguration` table is empty or incomplete
-- Admin must configure prompts, model parameters, and feature flags via `/admin` page
-- Uses singleton pattern: single row with `id: 'singleton'` in database
-- **Available models**: Latest Gemini 2.5 Pro, 2.5 Flash, 2.0 Flash models with tiered access (FREE/PRO)
-- **Model selection**: Admin can choose from dropdown with descriptions (speed vs accuracy trade-offs)
-
-### 2. RAG System Architecture (`/src/lib/vector-search.ts`)
+### 1. AI Configuration Enforcement (REQUIRED FOR SYSTEM TO WORK)
 ```typescript
-// Vector embeddings stored as JSON strings (pgvector migration pending)
-// Hybrid search: semantic similarity + keyword matching
-await fetchRelevantKnowledge(queryEmbedding, topK, highRelevanceThreshold)
+// All AI operations require admin setup via getAIConfiguration() in /src/lib/gemini.ts
+const config = await getAIConfiguration(userPlan); // Throws if not configured
 ```
-- Uses Gemini text-embedding-004 model (768 dimensions)
-- Chunking strategy: 512 chars with 100 char overlap for fitness content
-- Search combines cosine similarity + exact keyword matching
-- **IMPORTANT**: AI context is clean (no titles/sources) - use `getContextSources()` for UI article links
-- **Configurable RAG parameters**: Similarity threshold, max chunks, high relevance threshold via admin settings
+- **First-time setup**: Visit `/admin/settings` to configure AI system prompts and models
+- **Admin access required**: Only users with `role: 'admin'` can configure the system
+- **Singleton pattern**: Single row with `id: 'singleton'` in `AIConfiguration` table
+- **No fallbacks**: System will fail if configuration is missing (by design)
 
-### 3. Client Memory Auto-Extraction (`/src/lib/client-memory.ts`)
-```typescript
-// AI automatically extracts user information from chat messages  
-await updateClientMemory(userId, memoryUpdate)
-// Function calling approach with 50+ structured profile fields
-const memorySummary = await generateMemorySummary(userId)
-```
-- AI automatically extracts user information from chat messages via Gemini function calling
-- Structured storage in `ClientMemory` table with 50+ profile fields
-- Includes training history, goals, limitations, preferences, sleep patterns
-- **Training Structure Support**: Handles both weekly (1-7 days/week) and cycle-based patterns (1 on/1 off, 2 on/1 off, custom cycles)
-
-### 4. API Route Patterns (`/src/app/api/*/route.ts`)
+### 2. API Route Authentication Pattern
 ```typescript
 export async function POST(request: NextRequest) {
   const context = ApiErrorHandler.createContext(request);
   
   try {
-    // Auth required for chat operations (no guest mode)
+    // ALWAYS authenticate first
     const supabase = await createClient();
     const { data: { user } } = await supabase.auth.getUser();
     
@@ -152,7 +105,7 @@ export async function POST(request: NextRequest) {
       );
     }
     
-    // Handle both JSON and FormData
+    // Handle both JSON and FormData (for image uploads)
     const contentType = request.headers.get('content-type');
     let body, imageFile;
     
@@ -164,202 +117,121 @@ export async function POST(request: NextRequest) {
       body = await request.json();
     }
     
-    // Validate, process, return
-    // ...
+    // Your logic here
   } catch (error) {
     return ApiErrorHandler.handleError(error, context);
   }
 }
 ```
-- Always use `ApiErrorHandler.createContext(request)` for structured logging
-- Handle both JSON and FormData (for image uploads) in POST routes
-- User authentication via `createClient()` from `@/lib/supabase/server`
-- Structure: validate → authenticate → process → return with error handling
-- **Authentication Required**: Return 401 for unauthenticated users (no guest mode)
-- **Content-Type Detection**: Use `request.headers.get('content-type')` to handle multipart vs JSON
 
-### 7. Internationalization & Arabic Support
+### 3. Database Operations with Prisma
 ```typescript
-// Full i18n support with locale routing and translations
-import { useTranslations, useLocale } from 'next-intl';
-import { isArabicText, getTextDirection } from '@/lib/text-formatting';
+import { prisma } from '@/lib/prisma'; // Use this singleton instance
 
-const t = useTranslations('ChatPage');
-const locale = useLocale();
-const direction = getTextDirection(text); // Automatic RTL/LTR detection
-```
-- Language files: `messages/en.json`, `messages/ar.json`, `messages/fr.json`
-- Automatic Arabic detection via `isArabicText()` function (30% threshold)
-- Arabic-aware input components: `arabic-aware-input.tsx`, `arabic-aware-textarea.tsx`
-- RTL/LTR text direction handling with mixed content support
-- Dynamic locale switching with URL preservation
-
-### 8. Database Schema & Operations (`/prisma/schema.prisma`)
-```typescript
-// Core data models with specific relationships
-model User {
-  plan: UserPlan @default(FREE)
-  hasCompletedOnboarding: Boolean @default(false)
-  messagesUsedToday: Int @default(0)
-  lastMessageReset: DateTime @default(now())
-  clientMemory: ClientMemory?
-  subscription: Subscription?
-}
-
-model AIConfiguration {
-  id: String @id @default("singleton") // Singleton pattern
-  ragSimilarityThreshold: Float @default(0.1)
-  ragMaxChunks: Int @default(17)
-  freeModelName: String @default("gemini-2.5-flash")
-  proModelName: String @default("gemini-2.5-pro")
-}
-```
-- Use `@/lib/prisma` for database client (single instance with query logging)
-- Cascade deletes: `KnowledgeChunk` → `KnowledgeItem`, `Message` → `Chat`
-- Include patterns: Always include related data needed for UI in single queries
-- Transaction usage: Wrap multi-table operations in `prisma.$transaction()`
-- **Schema cleanup**: Removed unused `Profile` and `Document` tables
-
-### 9. File Processing Pipeline (`/src/lib/enhanced-file-processor.ts`)
-```typescript
-// Process → Chunk → Embed → Store workflow
-await processFileWithEmbeddings(buffer, mimeType, fileName, knowledgeItemId)
-// Creates KnowledgeChunk records with embeddings and proper indexing
-```
-- Supports PDF, DOC/DOCX, TXT, MD via `mammoth`, `pdf-parse` libraries
-- Fitness-specific chunking with 512 chars + 100 char overlap for context preservation
-- Title prefixing: `${title}\n\n${content}` for better embedding context
-- Automatic embedding generation with Gemini text-embedding-004 model
-
-### 10. Chat System Architecture (`/src/app/[locale]/chat/page.tsx`)
-```typescript
-// Uses Vercel AI SDK useChat hook for robust state management
-const { messages, input, handleInputChange, handleSubmit, isLoading, error } = useChat({
-  api: '/api/chat',
-  body: { conversationId, isGuest: !user },
-  onFinish: (message) => {
-    // Handle conversation ID from response headers
-    if (serverData?.conversationId) {
-      setConversationId(serverData.conversationId);
-      window.history.replaceState(null, '', `/${locale}/chat?id=${serverData.conversationId}`);
-    }
+// Always include related data in single queries
+const user = await prisma.user.findUnique({
+  where: { id: userId },
+  include: {
+    clientMemory: true,
+    chats: { take: 10, orderBy: { createdAt: 'desc' } },
+    subscription: true
   }
 });
+
+// Use transactions for multi-table operations
+await prisma.$transaction([
+  prisma.user.update({ where: { id }, data: { plan: 'PRO' } }),
+  prisma.subscription.create({ data: subscriptionData })
+]);
 ```
-- **State Management**: Uses AI SDK's built-in state instead of custom React state
-- **Conversation Flow**: New chats get ID from first response, URL updates automatically
-- **Image Support**: FormData handling for multipart uploads with multiple images
-- **Error Handling**: Structured error responses with toast notifications
-- **Authentication Gate**: Users must login before sending any messages
+
+### 4. Vector Search & RAG System
+```typescript
+// OPTIMIZED RAG: Uses efficient pgvector SQL, no batch limits
+import { fetchRelevantKnowledge, performAndKeywordSearch } from '@/lib/vector-search';
+
+// Vector search - efficient pgvector with full database coverage
+const vectorResults = await fetchRelevantKnowledge(
+  queryEmbedding.embedding, 
+  topK: 10,           // Configurable via admin
+  threshold: 0.3      // Configurable via admin
+);
+
+// AND-based keyword search for precision
+const keywordResults = await performAndKeywordSearch(query, 10);
+
+// CRITICAL: AI context is clean (no titles/sources)
+// Use getContextSources() for UI article links
+```
+
+### 5. Subscription Plan Enforcement
+```typescript
+import { getUserPlan, canUserSendMessage } from '@/lib/subscription';
+
+// Check limits before processing
+const { plan, messagesUsedToday } = await getUserPlan(userId);
+const canSend = await canUserSendMessage(userId);
+
+if (!canSend) {
+  return NextResponse.json(
+    { error: 'Daily message limit reached' },
+    { status: 429 }
+  );
+}
+```
 
 ## 🔧 Key Integration Points
 
-### Supabase Auth Middleware (`/src/middleware.ts`)
-- Automatic session refresh for all protected routes using createServerClient
-- Cookie-based authentication state management with SSR support
-- Handles auth state without blocking user navigation
-- Admin route protection: redirects unauthenticated users to login
-- Integrates with next-intl for internationalized route handling
-
-### Error Handling (`/src/lib/error-handler.ts`)
-- Centralized `ApiErrorHandler` with request context tracking
-- Structured logging with correlation IDs for debugging
-- Validates files, auth states, and request bodies with typed errors
-- Uses `AppError` class with specific error types (VALIDATION, AUTHENTICATION, etc.)
-
-### API Route Patterns (`/src/app/api/*/route.ts`)
-- Always use `ApiErrorHandler.createContext(request)` for logging
-- Handle both JSON and FormData (for image uploads) in POST routes
-- User authentication via `createClient()` from `@/lib/supabase/server`
-- Structure: validate → authenticate → process → return with error handling
-- Use try-catch with structured error responses
-- **Authentication Required**: All chat operations require login (no guest mode)
-- **Content-Type Detection**: Use `request.headers.get('content-type')` to handle multipart vs JSON
-
-### API Route Example Pattern
+### Supabase Authentication & Middleware
 ```typescript
-export async function POST(request: NextRequest) {
-  const context = ApiErrorHandler.createContext(request);
-  
-  try {
-    // Authentication required for all chat operations
-    const supabase = await createClient();
-    const { data: { user } } = await supabase.auth.getUser();
-    
-    if (!user) {
-      return NextResponse.json(
-        { error: 'Authentication required', message: 'Please log in to send messages' },
-        { status: 401 }
-      );
-    }
-    
-    // Handle both JSON and FormData
-    const contentType = request.headers.get('content-type');
-    let body, imageFile;
-    
-    if (contentType?.includes('multipart/form-data')) {
-      const formData = await request.formData();
-      body = { message: formData.get('message') as string };
-      imageFile = formData.get('image') as File;
-    } else {
-      body = await request.json();
-    }
-    
-    // Validate, process, return
-    // ...
-  } catch (error) {
-    return ApiErrorHandler.handleError(error, context);
-  }
+// Server-side auth in API routes
+import { createClient } from '@/lib/supabase/server';
+
+// Client-side auth in components
+import { createClient } from '@/lib/supabase/client';
+
+// Admin operations (service role)
+import { createAdminClient } from '@/lib/supabase/server';
+```
+- **Middleware**: Automatic session refresh, admin route protection at `/src/middleware.ts`
+- **Role-based access**: `User.role` field controls admin access (`'admin'` | `'user'`)
+- **No guest mode**: All chat operations require authenticated users
+
+### Arabic & Internationalization
+```typescript
+// Language detection and direction handling
+import { isArabicText, getTextDirection } from '@/lib/text-formatting';
+
+const direction = getTextDirection(text); // 'rtl' | 'ltr'
+const isArabic = isArabicText(text); // 30% Arabic characters threshold
+```
+- **Dynamic locale routing**: `/[locale]/` prefix for all pages
+- **Arabic-aware components**: Use `arabic-aware-input.tsx` for proper RTL support
+- **Language files**: `messages/{en,ar,fr}.json` for translations
+
+### Error Handling Pattern
+```typescript
+import { ApiErrorHandler, AppError, ValidationError } from '@/lib/error-handler';
+
+// In API routes - ALWAYS use this pattern
+const context = ApiErrorHandler.createContext(request);
+try {
+  // Your logic
+} catch (error) {
+  return ApiErrorHandler.handleError(error, context);
 }
+
+// Throw typed errors
+throw new ValidationError('Invalid file size');
+throw new AuthenticationError('User must be logged in');
 ```
 
-### Component Patterns
-- **Arabic-aware components**: Use `arabic-aware-input.tsx`, `arabic-aware-textarea.tsx` for proper RTL support
-- **Plan badges**: Use `PlanBadge` component with `UserPlan` enum (FREE/PRO)
-- **Subscription UI**: `UpgradeButton` handles Lemon Squeezy checkout flow
-- **Theme support**: All components support dark/light mode via `next-themes`
-- **Text Direction**: Use `getTextDirection()` from `@/lib/text-formatting` for mixed Arabic/English content
-- **Client-Only Wrapping**: Use `ClientOnly` wrapper for components with hydration issues
-- **Authentication State**: Use `createClient()` from `@/lib/supabase/client` for client-side auth
-
-### Error Handling Integration
-- Import `AppError`, `ValidationError`, `AuthenticationError` from `@/lib/error-handler`
-- Use `ApiErrorHandler.validateFile()` for file uploads with size/type constraints
-- Wrap API routes with `ApiErrorHandler.handleError(error, context)` in catch blocks
-- Error types: `VALIDATION`, `AUTHENTICATION`, `AUTHORIZATION`, `NOT_FOUND`, `RATE_LIMIT`
-
-### Database Schema Highlights (`/prisma/schema.prisma`)
-- `KnowledgeChunk` - Chunked content with embeddings (chunkIndex for ordering)
-- `ClientMemory` - Comprehensive user profiling (50+ fields covering fitness data)
-- `AIConfiguration` - Single-row config table (`id: 'singleton'`) for system behavior
-  - **NEW**: RAG configuration fields (`ragSimilarityThreshold`, `ragMaxChunks`, `ragHighRelevanceThreshold`)
-- `User.hasCompletedOnboarding` - Tracks onboarding completion for user flow
-- `User.plan` - Subscription tier (FREE/PRO) with message tracking
-- `User.uploadsThisMonth` / `lastUploadReset` - Monthly upload tracking for free tier limits
-- `Subscription` - Lemon Squeezy integration with billing periods and variants
-- `Message.imageData` - Base64 encoded image storage with `imageMimeType`
-- `ProcessingStatus` - Tracks file processing states (`PROCESSING`, `READY`, `FAILED`)
-
-### Database Operation Patterns
-- Use `@/lib/prisma` for database client (single instance with query logging)
-- Cascade deletes: `KnowledgeChunk` → `KnowledgeItem`, `Message` → `Chat`
-- Include patterns: Always include related data needed for UI in single queries
-- Transaction usage: Wrap multi-table operations in `prisma.$transaction()`
-- **Schema cleanup**: Removed unused `Profile` and `Document` tables (replaced by `ClientMemory` and `KnowledgeChunk`)
-
-### Tech Stack Essentials
-- **Framework**: Next.js 15 with App Router and Server Components
-- **Database**: PostgreSQL with Prisma ORM (vector embeddings as JSON, pgvector migration pending)
-- **AI/ML**: Google Gemini API (`text-embedding-004` model, 768 dimensions)
-- **Authentication**: Supabase SSR with role-based access control
-- **UI**: Tailwind CSS + shadcn/ui components with `next-themes` dark mode
-- **File Processing**: `mammoth` (DOC), `pdf-parse` (PDF), `@tiptap/react` (rich text)
-- **Payments**: Lemon Squeezy webhook integration with same-tab checkout flow
-- **Chat**: Vercel AI SDK `useChat` hook for state management
-- **Development**: TypeScript, ESLint, Prisma Studio for DB management
-- **Internationalization**: next-intl with Arabic RTL support and dynamic locale detection
-- **Animation**: Framer Motion for glassmorphism UI and smooth transitions
-- **Analytics**: Vercel Analytics for performance tracking
+### Database Schema Highlights
+- **AIConfiguration**: Singleton table (`id: 'singleton'`) controlling all AI behavior
+- **ClientMemory**: 50+ fields for comprehensive user profiling via AI extraction
+- **KnowledgeChunk**: Chunked content with JSON embeddings (768 dimensions)
+- **User.plan**: `FREE` | `PRO` with usage tracking fields
+- **Cascade deletes**: Proper cleanup when removing parent records
 
 ## 🎯 Testing & Debugging
 
@@ -466,5 +338,3 @@ src/
 - **Daily Reset**: Message counts reset at midnight via `lastMessageReset` field
 - **Monthly Reset**: Upload counts reset monthly via `lastUploadReset` field
 - **Plan Checking**: Use `getUserPlan()` and `canUserSendMessage()` functions
-
-````

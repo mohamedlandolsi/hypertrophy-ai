@@ -16,21 +16,178 @@ export interface KnowledgeContext {
 }
 
 /**
+ * Efficient pgvector-based similarity search using raw SQL
+ * PERFORMANCE: Searches all chunks in database without batch limits
+ */
+async function performOptimizedPgvectorSearch(
+  queryEmbedding: number[], 
+  topK: number, 
+  threshold: number = 0.3,
+  userId?: string
+): Promise<KnowledgeContext[]> {
+  console.log(`🔍 pgvector search: ${topK} chunks, threshold ${threshold}`);
+  
+  try {
+    // Direct SQL query using pgvector for maximum efficiency  
+    const embeddingStr = `[${queryEmbedding.join(',')}]`;
+    
+    const chunks = userId
+      ? await prisma.$queryRaw`
+          SELECT
+            kc.content,
+            ki.id as "knowledgeId", 
+            ki.title,
+            1 - (kc."embeddingData"::vector <=> ${embeddingStr}::vector) as similarity,
+            kc."chunkIndex"
+          FROM "KnowledgeChunk" kc
+          JOIN "KnowledgeItem" ki ON kc."knowledgeItemId" = ki.id  
+          WHERE ki.status = 'READY' 
+            AND kc."embeddingData" IS NOT NULL
+            AND ki."userId" = ${userId}
+          ORDER BY kc."embeddingData"::vector <=> ${embeddingStr}::vector
+          LIMIT ${topK}
+        `
+      : await prisma.$queryRaw`
+          SELECT
+            kc.content,
+            ki.id as "knowledgeId", 
+            ki.title,
+            1 - (kc."embeddingData"::vector <=> ${embeddingStr}::vector) as similarity,
+            kc."chunkIndex"
+          FROM "KnowledgeChunk" kc
+          JOIN "KnowledgeItem" ki ON kc."knowledgeItemId" = ki.id  
+          WHERE ki.status = 'READY' 
+            AND kc."embeddingData" IS NOT NULL
+          ORDER BY kc."embeddingData"::vector <=> ${embeddingStr}::vector
+          LIMIT ${topK}
+        `;
+    
+    const results = (chunks as Array<{
+      content: string;
+      knowledgeId: string;
+      title: string; 
+      similarity: number;
+      chunkIndex: number;
+    }>).filter(chunk => chunk.similarity >= threshold);
+    
+    console.log(`✅ pgvector returned ${results.length}/${topK} chunks above threshold`);
+    return results;
+    
+  } catch (error) {
+    console.error(`❌ pgvector search error:`, error);
+    throw error;
+  }
+}
+
+/**
  * Fetch relevant knowledge chunks using efficient vector similarity search
- * with two-step retrieval: fetch larger pool, then filter by high relevance
- * 
- * @param queryEmbedding - The vector embedding of the user's query
- * @param topK - Maximum number of chunks to retrieve from AI configuration
- * @param highRelevanceThreshold - Optional high relevance threshold for filtering
- * @returns Promise<KnowledgeContext[]>
+ * OPTIMIZED: Direct pgvector SQL for full-database search, no batch limits
  */
 export async function fetchRelevantKnowledge(
-  queryEmbedding: number[],  
+  queryEmbedding: number[],
   topK: number,
   highRelevanceThreshold?: number
 ): Promise<KnowledgeContext[]> {
-  // Use optimized search with batching for better performance
-  return await optimizedJsonSimilaritySearch(queryEmbedding, topK, highRelevanceThreshold);
+  console.log(`🚀 Starting optimized vector search for top ${topK} chunks`);
+  
+  try {
+    // Use efficient pgvector SQL query - no fallback, no batch limits
+    const threshold = highRelevanceThreshold || 0.3;
+    const results = await performOptimizedPgvectorSearch(queryEmbedding, topK, threshold);
+    console.log(`✅ Optimized pgvector search returned ${results.length} results`);
+    return results;
+  } catch (error) {
+    console.error(`❌ Optimized pgvector search failed:`, error);
+    // Only fallback for critical errors, not normal "no results" cases
+    const errorMessage = error instanceof Error ? error.message : String(error);
+    if (errorMessage.includes('pgvector') || errorMessage.includes('vector')) {
+      console.log(`🔄 Using JSON fallback due to pgvector unavailability`);
+      return await optimizedJsonSimilaritySearch(queryEmbedding, topK, highRelevanceThreshold);
+    }
+    throw error; // Re-throw other errors
+  }
+}
+
+/**
+ * AND-based keyword search for precise term matching
+ * OPTIMIZED: Uses PostgreSQL full-text search with AND logic for specificity
+ */
+export async function performAndKeywordSearch(
+  query: string,
+  topK: number = 5,
+  userId?: string
+): Promise<KnowledgeContext[]> {
+  console.log(`🔍 AND-based keyword search: "${query}"`);
+  
+  try {
+    // Clean and prepare search terms for AND logic
+    const searchTerms = query
+      .toLowerCase()
+      .replace(/[^\w\s]/g, ' ')
+      .split(' ')
+      .filter(term => term.length > 2)
+      .join(' & '); // PostgreSQL AND syntax for precision
+    
+    if (!searchTerms) {
+      console.log(`⚠️ No valid search terms extracted from: "${query}"`);
+      return [];
+    }
+    
+    console.log(`🎯 Search terms (AND logic): "${searchTerms}"`);
+    
+    // Use PostgreSQL to_tsvector and to_tsquery for full-text search with AND logic
+    const chunks = userId 
+      ? await prisma.$queryRaw`
+          SELECT 
+            kc.content,
+            kc."chunkIndex",
+            ki.id as "knowledgeId",
+            ki.title,
+            ts_rank(to_tsvector('english', kc.content), to_tsquery('english', ${searchTerms})) as similarity
+          FROM "KnowledgeChunk" kc
+          JOIN "KnowledgeItem" ki ON kc."knowledgeItemId" = ki.id
+          WHERE ki.status = 'READY'
+            AND to_tsvector('english', kc.content) @@ to_tsquery('english', ${searchTerms})
+            AND ki."userId" = ${userId}
+          ORDER BY similarity DESC
+          LIMIT ${topK}
+        `
+      : await prisma.$queryRaw`
+          SELECT 
+            kc.content,
+            kc."chunkIndex",
+            ki.id as "knowledgeId",
+            ki.title,
+            ts_rank(to_tsvector('english', kc.content), to_tsquery('english', ${searchTerms})) as similarity
+          FROM "KnowledgeChunk" kc
+          JOIN "KnowledgeItem" ki ON kc."knowledgeItemId" = ki.id
+          WHERE ki.status = 'READY'
+            AND to_tsvector('english', kc.content) @@ to_tsquery('english', ${searchTerms})
+          ORDER BY similarity DESC
+          LIMIT ${topK}
+        `;
+    
+    const results = (chunks as Array<{
+      content: string;
+      knowledgeId: string; 
+      title: string;
+      chunkIndex: number;
+      similarity: number;
+    }>).map(chunk => ({
+      content: chunk.content,
+      knowledgeId: chunk.knowledgeId,
+      title: chunk.title,
+      similarity: Math.min(chunk.similarity, 1.0), // Normalize to 0-1 range
+      chunkIndex: chunk.chunkIndex
+    }));
+    
+    console.log(`✅ AND keyword search returned ${results.length} results`);
+    return results;
+    
+  } catch (error) {
+    console.error('❌ AND keyword search error:', error);
+    return [];
+  }
 }
 
 /**
