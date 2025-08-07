@@ -40,16 +40,11 @@ export default function LanguageSwitcher() {
     router.push(newPath);
   };
 
-  const currentLanguage = languages.find(lang => lang.code === locale);
-
   return (
     <DropdownMenu>
       <DropdownMenuTrigger asChild>
-        <Button variant="ghost" size="sm" className="h-8 px-2">
-          <Languages className="h-4 w-4 me-1" />
-          <span className="text-sm font-medium">
-            {currentLanguage?.nativeName || 'English'}
-          </span>
+        <Button variant="ghost" size="sm" className="h-8 w-8 p-0">
+          <Languages className="h-4 w-4" />
         </Button>
       </DropdownMenuTrigger>
       <DropdownMenuContent align="end" className="min-w-[160px]">

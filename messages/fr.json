@@ -1517,6 +1517,106 @@
     "required": "Requis pour continuer",
     "version": "Version {version}"
   },
+  "PrivacyPolicy": {
+    "title": "Politique de confidentialité",
+    "subtitle": "Votre vie privée et la sécurité de vos données sont nos priorités absolues. Découvrez comment nous protégeons et traitons vos informations personnelles.",
+    "effectiveDate": "Date d'entrée en vigueur",
+    "lastUpdated": "Dernière mise à jour",
+    "sections": {
+      "dataCollection": {
+        "title": "Informations que nous collectons",
+        "description": "Nous collectons des informations pour vous fournir un coaching fitness personnalisé et améliorer nos services.",
+        "personalData": {
+          "title": "Informations personnelles",
+          "name": "Nom complet et coordonnées",
+          "age": "Âge et informations démographiques",
+          "gender": "Genre (optionnel)",
+          "contact": "Adresse e-mail pour la gestion du compte"
+        },
+        "healthData": {
+          "title": "Données de santé et de fitness",
+          "bodyMetrics": "Taille, poids, pourcentage de graisse corporelle",
+          "fitnessGoals": "Objectifs et buts d'entraînement",
+          "injuries": "Blessures actuelles et passées",
+          "medications": "Médicaments pouvant affecter l'entraînement",
+          "trainingHistory": "Expérience d'entraînement et historique des séances"
+        },
+        "usageData": {
+          "title": "Informations d'utilisation",
+          "interactions": "Messages de chat et interactions avec l'IA",
+          "preferences": "Préférences d'entraînement et paramètres",
+          "performance": "Données d'utilisation de l'application et de performance"
+        }
+      },
+      "storage": {
+        "title": "Comment nous stockons vos données",
+        "description": "Vos données sont stockées en toute sécurité et protégées grâce aux mesures de sécurité standard de l'industrie.",
+        "supabase": {
+          "title": "Infrastructure Supabase",
+          "description": "Nous utilisons Supabase, une plateforme de base de données sécurisée et conforme, pour stocker vos informations personnelles. Supabase est certifiée SOC 2 Type II et conforme aux exigences RGPD."
+        },
+        "security": {
+          "title": "Mesures de sécurité",
+          "encryption": "Chiffrement de bout en bout pour la transmission des données",
+          "access": "Contrôles d'accès basés sur les rôles et authentification",
+          "monitoring": "Surveillance de sécurité 24h/24 et détection des menaces",
+          "backups": "Sauvegardes chiffrées régulières et récupération après sinistre"
+        }
+      },
+      "usage": {
+        "title": "Comment nous utilisons vos informations",
+        "description": "Nous utilisons vos données exclusivement pour fournir un coaching fitness personnalisé et améliorer nos services.",
+        "personalization": "Personnaliser votre expérience de coaching IA",
+        "coaching": "Fournir des recommandations d'exercices et de nutrition sur mesure",
+        "progress": "Suivre vos progrès fitness et vos objectifs",
+        "communication": "Envoyer des mises à jour importantes du compte et des notifications",
+        "improvement": "Analyser les modèles d'utilisation pour améliorer nos modèles d'IA"
+      },
+      "rights": {
+        "title": "Vos droits sur les données",
+        "description": "Vous avez un contrôle total sur vos données personnelles. Voici vos droits sous les lois internationales sur la vie privée :",
+        "access": {
+          "title": "Droit d'accès",
+          "description": "Demander une copie de toutes les données que nous avons sur vous"
+        },
+        "rectification": {
+          "title": "Droit de rectification",
+          "description": "Corriger toute information inexacte ou incomplète"
+        },
+        "erasure": {
+          "title": "Droit à l'effacement",
+          "description": "Demander la suppression de vos données personnelles"
+        },
+        "portability": {
+          "title": "Portabilité des données",
+          "description": "Exporter vos données dans un format lisible par machine"
+        },
+        "restriction": {
+          "title": "Restreindre le traitement",
+          "description": "Limiter la façon dont nous traitons vos informations personnelles"
+        },
+        "objection": {
+          "title": "Droit d'objection",
+          "description": "S'opposer à certains types de traitement de données"
+        }
+      },
+      "compliance": {
+        "title": "Conformité internationale",
+        "description": "Nous nous conformons aux principales réglementations internationales sur la vie privée pour protéger les utilisateurs du monde entier.",
+        "gdpr": "Utilisateurs de l'UE protégés sous le RGPD",
+        "ccpa": "Résidents de Californie couverts par le CCPA",
+        "pipeda": "Utilisateurs canadiens protégés sous la PIPEDA"
+      },
+      "contact": {
+        "title": "Contactez notre équipe vie privée",
+        "description": "Vous avez des questions sur votre vie privée ou vos données ? Notre Délégué à la Protection des Données est là pour vous aider.",
+        "dpo": {
+          "title": "Délégué à la Protection des Données",
+          "responseTime": "Nous répondons à toutes les demandes de confidentialité dans les 72 heures"
+        }
+      }
+    }
+  },
   "ConsentForm": {
     "title": "Consentement au traitement des données",
     "description": "Pour vous fournir une expérience d'entraînement personnalisée, nous devons collecter et traiter certaines de vos informations personnelles.",
