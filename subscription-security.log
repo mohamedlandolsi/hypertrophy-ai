@@ -295,4 +295,19 @@ Timestamp: 2025-08-06T18:00:02.297Z
 Found 0 expired active subscriptions
 [dotenv@17.2.1] injecting env (0) from .env -- tip: ⚙️  override existing env vars with { override: true }
 📊 Checking subscription security...
+^C🔒 STARTING SUBSCRIPTION SECURITY CHECK
+==========================================
+Timestamp: 2025-08-07T09:00:02.360Z
+[dotenv@17.2.1] injecting env (21) from .env -- tip: 📡 observe env with Radar: https://dotenvx.com/radar
+📊 Checking subscription security...
+🚀 SUBSCRIPTION SECURITY JOB STARTED
+=====================================
+
+✅ Database connection: OK
+✅ Environment variables: OK
+[dotenv@17.2.1] injecting env (0) from .env -- tip: 🔐 prevent committing .env to code: https://dotenvx.com/precommit
+📊 Checking subscription security...
+Found 0 expired active subscriptions
+Found 3 PRO users without valid subscriptions
+Found 0 expired active subscriptions
 ^C

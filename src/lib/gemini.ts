@@ -18,6 +18,21 @@ interface GeminiResponse {
   citations?: Array<{ id: string; title: string }>;
 }
 
+interface PromptFeedback {
+  blockReason?: string;
+  safetyRatings?: Array<{
+    category: string;
+    probability: string;
+  }>;
+}
+
+interface GeminiAPIResponse {
+  response: {
+    text: () => string;
+    promptFeedback?: PromptFeedback;
+  };
+}
+
 interface ProcessedAIConfig {
   systemPrompt: string;
   modelName: string;
@@ -819,9 +834,33 @@ ${aiConfig.toolEnforcementMode === 'STRICT' ?
         const followUpResult = await Promise.race([
           chat.sendMessage([{ text: "Please provide your coaching response now." }]),
           followUpTimeoutPromise
-        ]) as { response: { text: () => string } };
-        
-        const aiResponse = followUpResult.response.text();
+        ]) as GeminiAPIResponse;
+
+        console.log(`🚀 Follow-up Gemini API call completed`);
+
+        // --- START FIX: Check for safety blocks and empty responses on follow-up ---
+        const followUpResponse = followUpResult.response;
+
+        if (followUpResponse.promptFeedback?.blockReason) {
+          const blockReason = followUpResponse.promptFeedback.blockReason;
+          console.error(`❌ Follow-up Gemini response blocked. Reason: ${blockReason}`);
+          const errorMessage = `My follow-up response was blocked by a safety filter. (Reason: ${blockReason})`;
+          return {
+            content: isArabicText(latestUserMessage.content) ? "تم حظر إجابتي التكميلية بسبب مرشح الأمان." : errorMessage,
+            citations: []
+          };
+        }
+
+        const aiResponse = followUpResponse.text();
+        if (!aiResponse || aiResponse.trim() === '') {
+          console.warn('⚠️ AI returned an empty string on follow-up call.');
+          const emptyResponseMessage = "The AI returned an empty response after processing additional information. Please try your request again.";
+          return {
+            content: isArabicText(latestUserMessage.content) ? "أعاد الذكاء الاصطناعي استجابة فارغة بعد معالجة المعلومات. يرجى المحاولة مرة أخرى." : emptyResponseMessage,
+            citations: []
+          };
+        }
+        // --- END FIX ---
 
         // Log conversation for future context (ONLY for authenticated users)
         if (userId) {
@@ -855,7 +894,31 @@ ${aiConfig.toolEnforcementMode === 'STRICT' ?
           citations: referencedSources
         };
       } else {
-        const aiResponse = result.response.text();
+        console.log(`📄 No function calls needed, extracting direct response...`);
+
+        // --- START FIX: Check for safety blocks and empty responses ---
+        const response = (result as GeminiAPIResponse).response; // Cast to access promptFeedback
+
+        if (response.promptFeedback?.blockReason) {
+          const blockReason = response.promptFeedback.blockReason;
+          console.error(`❌ Gemini response blocked. Reason: ${blockReason}`);
+          const errorMessage = `My response was blocked due to a safety filter. Please try rephrasing your question. (Reason: ${blockReason})`;
+          return {
+            content: isArabicText(latestUserMessage.content) ? "تم حظر إجابتي بسبب مرشح الأمان. يرجى إعادة صياغة سؤالك." : errorMessage,
+            citations: []
+          };
+        }
+
+        const aiResponse = response.text();
+        if (!aiResponse || aiResponse.trim() === '') {
+          console.warn('⚠️ AI returned an empty string. This might be due to a silent filter or model refusal.');
+          const emptyResponseMessage = "The AI returned an empty response. This can happen due to a content filter. Please try again or rephrase your question.";
+          return {
+            content: isArabicText(latestUserMessage.content) ? "أعاد الذكاء الاصطناعي استجابة فارغة. قد يكون هذا بسبب مرشح المحتوى. يرجى المحاولة مرة أخرى." : emptyResponseMessage,
+            citations: []
+          };
+        }
+        // --- END FIX ---
 
         // Log conversation for future context (ONLY for authenticated users)
         if (userId) {
