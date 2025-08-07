@@ -190,7 +190,8 @@
     "unexpectedError": "Une erreur inattendue s'est produite. Veuillez réessayer.",
     "passwordTooShort": "Le mot de passe doit contenir au moins 6 caractères",
     "googleAuthError": "Impossible de s'authentifier avec Google",
-    "googleAuthUnexpectedError": "Une erreur inattendue s'est produite avec l'authentification Google"
+    "googleAuthUnexpectedError": "Une erreur inattendue s'est produite avec l'authentification Google",
+    "consentRequired": "Vous devez consentir au traitement des données pour créer un compte."
   },
   "ResetPasswordPage": {
     "title": "Réinitialiser le mot de passe",
@@ -1350,5 +1351,210 @@
       "confirm": "Confirmer",
       "keyboardShortcuts": "Entrée pour envoyer • Shift+Entrée pour nouvelle ligne"
     }
+  },
+  "privacyPolicy": {
+    "title": "Politique de confidentialité",
+    "pageTitle": "Politique de confidentialité - HypertroQ",
+    "lastUpdated": "Dernière mise à jour : {date}",
+    "effectiveDate": "Date d'entrée en vigueur : {date}",
+    "intro": "Chez HypertroQ, nous nous engageons à protéger votre vie privée et vos informations personnelles. Cette politique de confidentialité explique comment nous collectons, utilisons et protégeons vos informations lorsque vous utilisez notre plateforme d'entraînement fitness alimentée par l'IA.",
+    "whatWeCollect": {
+      "title": "Informations que nous collectons",
+      "personalInfo": {
+        "title": "Informations personnelles",
+        "description": "Lorsque vous créez un compte ou complétez votre profil, nous pouvons collecter :",
+        "items": [
+          "Nom et adresse e-mail",
+          "Âge, sexe, taille et poids",
+          "Informations de fitness et d'entraînement",
+          "Objectifs de fitness et préférences",
+          "Photos de profil (si téléchargées)",
+          "Informations de santé et limitations physiques"
+        ]
+      },
+      "interactionData": {
+        "title": "Données d'interaction",
+        "description": "Nous collectons des informations sur la façon dont vous interagissez avec notre plateforme :",
+        "items": [
+          "Conversations de chat avec l'IA",
+          "Images et fichiers téléchargés",
+          "Activité d'utilisation et préférences",
+          "Informations de performance et de progression"
+        ]
+      },
+      "technicalData": {
+        "title": "Données techniques",
+        "description": "Nous collectons automatiquement certaines informations techniques :",
+        "items": [
+          "Adresse IP et type de navigateur",
+          "Informations sur l'appareil et le système d'exploitation",
+          "Heures d'accès et d'utilisation",
+          "Cookies et identifiants de session"
+        ]
+      }
+    },
+    "howWeUse": {
+      "title": "Comment nous utilisons vos informations",
+      "description": "Nous utilisons vos informations aux fins suivantes :",
+      "items": [
+        "Fournir des recommandations d'entraînement personnalisées",
+        "Améliorer nos services d'IA et d'entraînement",
+        "Surveiller les progrès et suivre les objectifs",
+        "Gérer votre compte et abonnement",
+        "Communiquer avec vous sur le service",
+        "Assurer la sécurité et prévenir la fraude",
+        "Se conformer aux exigences légales"
+      ]
+    },
+    "dataSharing": {
+      "title": "Partage de données",
+      "description": "Nous ne vendons pas vos informations personnelles. Nous pouvons partager des données avec :",
+      "serviceProviders": {
+        "title": "Prestataires de services",
+        "description": "Tierces parties de confiance qui nous aident à faire fonctionner notre plateforme (comme Supabase pour la base de données, Google pour l'IA)."
+      },
+      "legalRequirements": {
+        "title": "Exigences légales",
+        "description": "Lorsque requis par la loi ou pour protéger nos droits et ceux des autres utilisateurs."
+      },
+      "businessTransfers": {
+        "title": "Transferts d'entreprise",
+        "description": "En cas de fusion, acquisition ou vente d'actifs."
+      }
+    },
+    "dataSecurity": {
+      "title": "Sécurité des données",
+      "description": "Nous mettons en œuvre des mesures de sécurité robustes pour protéger vos informations :",
+      "measures": [
+        "Chiffrement des données en transit et au repos",
+        "Contrôles d'accès stricts",
+        "Audits de sécurité réguliers",
+        "Surveillance réseau continue",
+        "Sauvegardes sécurisées des données"
+      ]
+    },
+    "yourRights": {
+      "title": "Vos droits",
+      "description": "Vous avez les droits suivants concernant vos données personnelles :",
+      "rights": [
+        "Accès : Demander une copie de vos données personnelles",
+        "Rectification : Mettre à jour les informations inexactes",
+        "Effacement : Demander la suppression de vos données ('droit à l'oubli')",
+        "Restriction : Limiter le traitement de vos données",
+        "Portabilité : Obtenir vos données dans un format utilisable",
+        "Opposition : Vous opposer au traitement de vos données"
+      ],
+      "exercising": "Pour exercer ces droits, veuillez nous contacter à {email}."
+    },
+    "dataRetention": {
+      "title": "Conservation des données",
+      "description": "Nous conservons vos données personnelles uniquement aussi longtemps que nécessaire aux fins décrites dans cette politique de confidentialité. Lorsque vous fermez votre compte, nous supprimerons vos informations personnelles à moins que nous ne soyons légalement tenus de les conserver."
+    },
+    "cookies": {
+      "title": "Cookies",
+      "description": "Nous utilisons des cookies et des technologies similaires pour :",
+      "purposes": [
+        "Mémoriser vos préférences",
+        "Améliorer les performances du site",
+        "Analyser les modèles d'utilisation",
+        "Fournir du contenu personnalisé"
+      ],
+      "control": "Vous pouvez contrôler les cookies via les paramètres de votre navigateur."
+    },
+    "thirdPartyServices": {
+      "title": "Services tiers",
+      "description": "Notre plateforme peut contenir des liens vers des services tiers. Nous ne sommes pas responsables des pratiques de confidentialité de ces services. Nous vous encourageons à examiner leurs politiques de confidentialité."
+    },
+    "childrenPrivacy": {
+      "title": "Confidentialité des enfants",
+      "description": "Notre service est destiné aux personnes âgées de 18 ans et plus. Nous ne collectons pas sciemment d'informations personnelles auprès d'enfants de moins de 18 ans."
+    },
+    "internationalTransfers": {
+      "title": "Transferts internationaux",
+      "description": "Vos données peuvent être transférées et traitées dans des pays autres que votre pays de résidence. Nous nous assurons que des garanties appropriées sont en place pour protéger vos données personnelles conformément à cette politique de confidentialité."
+    },
+    "changes": {
+      "title": "Modifications de la politique de confidentialité",
+      "description": "Nous pouvons mettre à jour cette politique de confidentialité de temps à autre. Nous vous informerons de tout changement important en publiant la nouvelle politique de confidentialité sur cette page et en mettant à jour la date de 'dernière mise à jour'."
+    },
+    "contact": {
+      "title": "Nous contacter",
+      "description": "Si vous avez des questions sur cette politique de confidentialité ou nos pratiques de données, veuillez nous contacter :",
+      "email": "E-mail : {email}",
+      "address": "Adresse : {address}"
+    }
+  },
+  "consentForm": {
+    "title": "Consentement au traitement des données",
+    "description": "Pour vous fournir une expérience d'entraînement personnalisée, nous devons collecter et traiter certaines de vos informations personnelles.",
+    "dataTypes": {
+      "title": "Types de données :",
+      "items": {
+        "0": "Informations personnelles (nom, âge, sexe, taille, poids)",
+        "1": "Informations de fitness (niveau d'expérience, objectifs, préférences)",
+        "2": "Informations de santé (blessures, limitations, médicaments)",
+        "3": "Conversations de chat et interactions avec l'IA",
+        "4": "Images et fichiers téléchargés"
+      }
+    },
+    "purposes": {
+      "title": "Finalités du traitement :",
+      "items": {
+        "0": "Fournir des recommandations personnalisées d'entraînement et de nutrition",
+        "1": "Suivre les progrès et surveiller les objectifs",
+        "2": "Améliorer nos services d'IA et d'entraînement",
+        "3": "Gérer votre compte et abonnement",
+        "4": "Assurer la sécurité et prévenir la fraude"
+      }
+    },
+    "rights": {
+      "title": "Vos droits :",
+      "description": "Vous avez le droit d'accéder, de corriger, de supprimer et de vous opposer au traitement de vos données. Vous pouvez retirer votre consentement à tout moment.",
+      "privacyPolicy": "Pour plus de détails, veuillez consulter notre {link}.",
+      "privacyPolicyLink": "politique de confidentialité complète"
+    },
+    "checkbox": "Je consens au traitement de mes données personnelles aux fins énoncées ci-dessus et confirme que j'ai lu et compris la politique de confidentialité.",
+    "required": "Requis pour continuer",
+    "version": "Version {version}"
+  },
+  "ConsentForm": {
+    "title": "Consentement au traitement des données",
+    "description": "Pour vous fournir une expérience d'entraînement personnalisée, nous devons collecter et traiter certaines de vos informations personnelles.",
+    "dataTypes": {
+      "title": "Types de données",
+      "description": "Informations personnelles, données de santé, historique d'entraînement et communications",
+      "items": {
+        "0": "Informations personnelles (nom, âge, sexe, taille, poids)",
+        "1": "Informations de fitness (niveau d'expérience, objectifs, préférences)",
+        "2": "Informations de santé (blessures, limitations, médicaments)",
+        "3": "Conversations de chat et interactions avec l'IA",
+        "4": "Images et fichiers téléchargés"
+      }
+    },
+    "purposes": {
+      "title": "Finalités du traitement",
+      "ai": "Fournir un coaching personnalisé alimenté par l'IA et des recommandations",
+      "personalization": "Personnaliser vos plans d'entraînement et conseils nutritionnels",
+      "health": "Suivre vos métriques de santé et progrès de fitness",
+      "communication": "Vous envoyer des mises à jour et répondre à vos questions",
+      "items": {
+        "0": "Fournir des recommandations personnalisées d'entraînement et de nutrition",
+        "1": "Suivre les progrès et surveiller les objectifs",
+        "2": "Améliorer nos services d'IA et d'entraînement",
+        "3": "Gérer votre compte et abonnement",
+        "4": "Assurer la sécurité et prévenir la fraude"
+      }
+    },
+    "rights": {
+      "title": "Vos droits",
+      "description": "Vous avez le droit d'accéder, de corriger, de supprimer et de vous opposer au traitement de vos données. Vous pouvez retirer votre consentement à tout moment.",
+      "privacyPolicy": "Pour plus de détails, veuillez consulter notre {link}.",
+      "privacyPolicyLink": "politique de confidentialité complète"
+    },
+    "checkbox": "Je consens au traitement de mes données personnelles aux fins énoncées ci-dessus et confirme que j'ai lu et compris la politique de confidentialité.",
+    "checkboxSimple": "J'accepte le traitement de mes données personnelles tel que décrit dans notre Politique de confidentialité",
+    "required": "Requis pour continuer",
+    "version": "Version {version}",
+    "privacyPolicy": "Politique de confidentialité"
   }
 }

@@ -28,6 +28,7 @@ export async function saveOnboardingData(formData: {
   height?: number;
   weight?: number;
   bodyFatPercentage?: number;
+  dataProcessingConsent?: boolean;
 
   // Training Information
   trainingExperience?: string;
@@ -58,24 +59,34 @@ export async function saveOnboardingData(formData: {
     throw new Error('User not authenticated');
   }
 
+  // Extract consent and other user-level data
+  const { dataProcessingConsent, ...clientMemoryData } = formData;
+
   // Create or update client memory with the provided data
   await prisma.clientMemory.upsert({
     where: { userId: user.id },
     update: {
-      ...formData,
+      ...clientMemoryData,
       lastInteraction: new Date(),
     },
     create: {
       userId: user.id,
-      ...formData,
+      ...clientMemoryData,
       lastInteraction: new Date(),
     },
   });
 
-  // Mark onboarding as complete
+  // Update user table with consent information and mark onboarding as complete
   await prisma.user.update({
     where: { id: user.id },
-    data: { hasCompletedOnboarding: true },
+    data: { 
+      hasCompletedOnboarding: true,
+      ...(dataProcessingConsent !== undefined && {
+        dataProcessingConsent,
+        consentTimestamp: dataProcessingConsent ? new Date() : null,
+        privacyPolicyVersion: dataProcessingConsent ? '1.0' : null,
+      }),
+    },
   });
 
   return { success: true };

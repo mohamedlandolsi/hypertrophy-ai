@@ -11,6 +11,7 @@ import { Checkbox } from '@/components/ui/checkbox';
 import { Badge } from '@/components/ui/badge';
 import { X, Plus, Save, User, Target, Activity, Heart, Home, TrendingUp } from 'lucide-react';
 import { useToast } from '@/hooks/use-toast';
+import { ConsentAccordion } from '@/components/ui/consent-accordion';
 
 interface ProfileFormData {
   // Personal Information
@@ -69,6 +70,10 @@ interface ProfileFormData {
   // Communication Preferences
   preferredLanguage?: string;
   communicationStyle?: string;
+
+  // Privacy and Consent
+  consentGiven?: boolean;
+  consentTimestamp?: string;
 }
 
 const ArrayInput = ({ 
@@ -794,6 +799,31 @@ export default function ProfileForm() {
               onFocus={handleInputFocus}
             />
           </div>
+        </CardContent>
+      </Card>
+
+      {/* Privacy and Consent Management */}
+      <Card>
+        <CardHeader>
+          <CardTitle className="flex items-center gap-2">
+            <Heart className="h-5 w-5" />
+            Privacy & Data Consent
+          </CardTitle>
+          <CardDescription>
+            Manage your data processing consent and privacy preferences
+          </CardDescription>
+        </CardHeader>
+        <CardContent className="grid gap-4">
+          <ConsentAccordion
+            consentGiven={formData.consentGiven === true}
+            onConsentChange={(consent) => {
+              updateField('consentGiven', consent);
+              if (consent) {
+                updateField('consentTimestamp', new Date().toISOString());
+              }
+            }}
+            consentTimestamp={formData.consentTimestamp}
+          />
         </CardContent>
       </Card>
 

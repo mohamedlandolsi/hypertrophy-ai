@@ -19,9 +19,25 @@ export async function GET() {
       where: { userId: user.id },
     });
 
+    // Fetch user consent information
+    const userWithConsent = await prisma.user.findUnique({
+      where: { id: user.id },
+      select: { 
+        dataProcessingConsent: true, 
+        consentTimestamp: true 
+      }
+    });
+
     return NextResponse.json({
       success: true,
-      profile: profile || null
+      profile: profile ? {
+        ...profile,
+        consentGiven: userWithConsent?.dataProcessingConsent,
+        consentTimestamp: userWithConsent?.consentTimestamp?.toISOString(),
+      } : {
+        consentGiven: userWithConsent?.dataProcessingConsent,
+        consentTimestamp: userWithConsent?.consentTimestamp?.toISOString(),
+      }
     });
 
   } catch (error) {
@@ -63,125 +79,143 @@ export async function POST(request: NextRequest) {
       return Array.isArray(value) ? value : [];
     };
 
+    // Extract consent and other user-level data
+    const { 
+      consentGiven,
+      consentTimestamp,
+      ...clientMemoryData 
+    } = data;
+
     // Update or create the user's profile
     const updatedProfile = await prisma.clientMemory.upsert({
       where: { userId: user.id },
       update: {
         // Personal Information
-        name: data.name || undefined,
-        age: data.age ? parseInt(data.age) : undefined,
-        gender: data.gender || undefined,
-        height: data.height ? parseFloat(data.height) : undefined,
-        weight: data.weight ? parseFloat(data.weight) : undefined,
-        bodyFatPercentage: data.bodyFatPercentage ? parseFloat(data.bodyFatPercentage) : undefined,
+        name: clientMemoryData.name || undefined,
+        age: clientMemoryData.age ? parseInt(clientMemoryData.age) : undefined,
+        gender: clientMemoryData.gender || undefined,
+        height: clientMemoryData.height ? parseFloat(clientMemoryData.height) : undefined,
+        weight: clientMemoryData.weight ? parseFloat(clientMemoryData.weight) : undefined,
+        bodyFatPercentage: clientMemoryData.bodyFatPercentage ? parseFloat(clientMemoryData.bodyFatPercentage) : undefined,
 
         // Training Information
-        trainingExperience: data.trainingExperience || undefined,
-        weeklyTrainingDays: data.weeklyTrainingDays ? parseInt(data.weeklyTrainingDays) : undefined,
-        preferredTrainingStyle: data.preferredTrainingStyle || undefined,
-        trainingSchedule: data.trainingSchedule || undefined,
-        availableTime: data.availableTime ? parseInt(data.availableTime) : undefined,
-        activityLevel: data.activityLevel || undefined,
+        trainingExperience: clientMemoryData.trainingExperience || undefined,
+        weeklyTrainingDays: clientMemoryData.weeklyTrainingDays ? parseInt(clientMemoryData.weeklyTrainingDays) : undefined,
+        preferredTrainingStyle: clientMemoryData.preferredTrainingStyle || undefined,
+        trainingSchedule: clientMemoryData.trainingSchedule || undefined,
+        availableTime: clientMemoryData.availableTime ? parseInt(clientMemoryData.availableTime) : undefined,
+        activityLevel: clientMemoryData.activityLevel || undefined,
 
         // Goals and Motivation
-        primaryGoal: data.primaryGoal || undefined,
-        secondaryGoals: data.secondaryGoals ? processArray(data.secondaryGoals) : undefined,
-        targetWeight: data.targetWeight ? parseFloat(data.targetWeight) : undefined,
-        targetBodyFat: data.targetBodyFat ? parseFloat(data.targetBodyFat) : undefined,
-        goalDeadline: data.goalDeadline ? new Date(data.goalDeadline) : undefined,
-        motivation: data.motivation || undefined,
+        primaryGoal: clientMemoryData.primaryGoal || undefined,
+        secondaryGoals: clientMemoryData.secondaryGoals ? processArray(clientMemoryData.secondaryGoals) : undefined,
+        targetWeight: clientMemoryData.targetWeight ? parseFloat(clientMemoryData.targetWeight) : undefined,
+        targetBodyFat: clientMemoryData.targetBodyFat ? parseFloat(clientMemoryData.targetBodyFat) : undefined,
+        goalDeadline: clientMemoryData.goalDeadline ? new Date(clientMemoryData.goalDeadline) : undefined,
+        motivation: clientMemoryData.motivation || undefined,
 
         // Health and Limitations
-        injuries: data.injuries ? processArray(data.injuries) : undefined,
-        limitations: data.limitations ? processArray(data.limitations) : undefined,
-        medications: data.medications ? processArray(data.medications) : undefined,
-        allergies: data.allergies ? processArray(data.allergies) : undefined,
+        injuries: clientMemoryData.injuries ? processArray(clientMemoryData.injuries) : undefined,
+        limitations: clientMemoryData.limitations ? processArray(clientMemoryData.limitations) : undefined,
+        medications: clientMemoryData.medications ? processArray(clientMemoryData.medications) : undefined,
+        allergies: clientMemoryData.allergies ? processArray(clientMemoryData.allergies) : undefined,
 
         // Preferences and Lifestyle
-        dietaryPreferences: data.dietaryPreferences ? processArray(data.dietaryPreferences) : undefined,
-        foodDislikes: data.foodDislikes ? processArray(data.foodDislikes) : undefined,
-        supplementsUsed: data.supplementsUsed ? processArray(data.supplementsUsed) : undefined,
-        sleepHours: data.sleepHours ? parseFloat(data.sleepHours) : undefined,
-        stressLevel: data.stressLevel || undefined,
-        workSchedule: data.workSchedule || undefined,
+        dietaryPreferences: clientMemoryData.dietaryPreferences ? processArray(clientMemoryData.dietaryPreferences) : undefined,
+        foodDislikes: clientMemoryData.foodDislikes ? processArray(clientMemoryData.foodDislikes) : undefined,
+        supplementsUsed: clientMemoryData.supplementsUsed ? processArray(clientMemoryData.supplementsUsed) : undefined,
+        sleepHours: clientMemoryData.sleepHours ? parseFloat(clientMemoryData.sleepHours) : undefined,
+        stressLevel: clientMemoryData.stressLevel || undefined,
+        workSchedule: clientMemoryData.workSchedule || undefined,
 
         // Training Environment
-        gymAccess: data.gymAccess !== undefined ? Boolean(data.gymAccess) : undefined,
-        homeGym: data.homeGym !== undefined ? Boolean(data.homeGym) : undefined,
-        equipmentAvailable: data.equipmentAvailable ? processArray(data.equipmentAvailable) : undefined,
-        gymBudget: data.gymBudget ? parseFloat(data.gymBudget) : undefined,
+        gymAccess: clientMemoryData.gymAccess !== undefined ? Boolean(clientMemoryData.gymAccess) : undefined,
+        homeGym: clientMemoryData.homeGym !== undefined ? Boolean(clientMemoryData.homeGym) : undefined,
+        equipmentAvailable: clientMemoryData.equipmentAvailable ? processArray(clientMemoryData.equipmentAvailable) : undefined,
+        gymBudget: clientMemoryData.gymBudget ? parseFloat(clientMemoryData.gymBudget) : undefined,
 
         // Progress Tracking
-        currentBench: data.currentBench ? parseFloat(data.currentBench) : undefined,
-        currentSquat: data.currentSquat ? parseFloat(data.currentSquat) : undefined,
-        currentDeadlift: data.currentDeadlift ? parseFloat(data.currentDeadlift) : undefined,
-        currentOHP: data.currentOHP ? parseFloat(data.currentOHP) : undefined,
+        currentBench: clientMemoryData.currentBench ? parseFloat(clientMemoryData.currentBench) : undefined,
+        currentSquat: clientMemoryData.currentSquat ? parseFloat(clientMemoryData.currentSquat) : undefined,
+        currentDeadlift: clientMemoryData.currentDeadlift ? parseFloat(clientMemoryData.currentDeadlift) : undefined,
+        currentOHP: clientMemoryData.currentOHP ? parseFloat(clientMemoryData.currentOHP) : undefined,
 
         // Communication Preferences
-        preferredLanguage: data.preferredLanguage || undefined,
-        communicationStyle: data.communicationStyle || undefined,
+        preferredLanguage: clientMemoryData.preferredLanguage || undefined,
+        communicationStyle: clientMemoryData.communicationStyle || undefined,
 
         lastInteraction: new Date(),
       },
       create: {
         userId: user.id,
         // Personal Information
-        name: data.name || undefined,
-        age: data.age ? parseInt(data.age) : undefined,
-        gender: data.gender || undefined,
-        height: data.height ? parseFloat(data.height) : undefined,
-        weight: data.weight ? parseFloat(data.weight) : undefined,
-        bodyFatPercentage: data.bodyFatPercentage ? parseFloat(data.bodyFatPercentage) : undefined,
+        name: clientMemoryData.name || undefined,
+        age: clientMemoryData.age ? parseInt(clientMemoryData.age) : undefined,
+        gender: clientMemoryData.gender || undefined,
+        height: clientMemoryData.height ? parseFloat(clientMemoryData.height) : undefined,
+        weight: clientMemoryData.weight ? parseFloat(clientMemoryData.weight) : undefined,
+        bodyFatPercentage: clientMemoryData.bodyFatPercentage ? parseFloat(clientMemoryData.bodyFatPercentage) : undefined,
 
         // Training Information
-        trainingExperience: data.trainingExperience || undefined,
-        weeklyTrainingDays: data.weeklyTrainingDays ? parseInt(data.weeklyTrainingDays) : undefined,
-        preferredTrainingStyle: data.preferredTrainingStyle || undefined,
-        trainingSchedule: data.trainingSchedule || undefined,
-        availableTime: data.availableTime ? parseInt(data.availableTime) : undefined,
-        activityLevel: data.activityLevel || undefined,
+        trainingExperience: clientMemoryData.trainingExperience || undefined,
+        weeklyTrainingDays: clientMemoryData.weeklyTrainingDays ? parseInt(clientMemoryData.weeklyTrainingDays) : undefined,
+        preferredTrainingStyle: clientMemoryData.preferredTrainingStyle || undefined,
+        trainingSchedule: clientMemoryData.trainingSchedule || undefined,
+        availableTime: clientMemoryData.availableTime ? parseInt(clientMemoryData.availableTime) : undefined,
+        activityLevel: clientMemoryData.activityLevel || undefined,
 
         // Goals and Motivation
-        primaryGoal: data.primaryGoal || undefined,
-        secondaryGoals: data.secondaryGoals ? processArray(data.secondaryGoals) : undefined,
-        targetWeight: data.targetWeight ? parseFloat(data.targetWeight) : undefined,
-        targetBodyFat: data.targetBodyFat ? parseFloat(data.targetBodyFat) : undefined,
-        goalDeadline: data.goalDeadline ? new Date(data.goalDeadline) : undefined,
-        motivation: data.motivation || undefined,
+        primaryGoal: clientMemoryData.primaryGoal || undefined,
+        secondaryGoals: clientMemoryData.secondaryGoals ? processArray(clientMemoryData.secondaryGoals) : undefined,
+        targetWeight: clientMemoryData.targetWeight ? parseFloat(clientMemoryData.targetWeight) : undefined,
+        targetBodyFat: clientMemoryData.targetBodyFat ? parseFloat(clientMemoryData.targetBodyFat) : undefined,
+        goalDeadline: clientMemoryData.goalDeadline ? new Date(clientMemoryData.goalDeadline) : undefined,
+        motivation: clientMemoryData.motivation || undefined,
 
         // Health and Limitations
-        injuries: data.injuries ? processArray(data.injuries) : undefined,
-        limitations: data.limitations ? processArray(data.limitations) : undefined,
-        medications: data.medications ? processArray(data.medications) : undefined,
-        allergies: data.allergies ? processArray(data.allergies) : undefined,
+        injuries: clientMemoryData.injuries ? processArray(clientMemoryData.injuries) : undefined,
+        limitations: clientMemoryData.limitations ? processArray(clientMemoryData.limitations) : undefined,
+        medications: clientMemoryData.medications ? processArray(clientMemoryData.medications) : undefined,
+        allergies: clientMemoryData.allergies ? processArray(clientMemoryData.allergies) : undefined,
 
         // Preferences and Lifestyle
-        dietaryPreferences: data.dietaryPreferences ? processArray(data.dietaryPreferences) : undefined,
-        foodDislikes: data.foodDislikes ? processArray(data.foodDislikes) : undefined,
-        supplementsUsed: data.supplementsUsed ? processArray(data.supplementsUsed) : undefined,
-        sleepHours: data.sleepHours ? parseFloat(data.sleepHours) : undefined,
-        stressLevel: data.stressLevel || undefined,
-        workSchedule: data.workSchedule || undefined,
+        dietaryPreferences: clientMemoryData.dietaryPreferences ? processArray(clientMemoryData.dietaryPreferences) : undefined,
+        foodDislikes: clientMemoryData.foodDislikes ? processArray(clientMemoryData.foodDislikes) : undefined,
+        supplementsUsed: clientMemoryData.supplementsUsed ? processArray(clientMemoryData.supplementsUsed) : undefined,
+        sleepHours: clientMemoryData.sleepHours ? parseFloat(clientMemoryData.sleepHours) : undefined,
+        stressLevel: clientMemoryData.stressLevel || undefined,
+        workSchedule: clientMemoryData.workSchedule || undefined,
 
         // Training Environment
-        gymAccess: data.gymAccess !== undefined ? Boolean(data.gymAccess) : undefined,
-        homeGym: data.homeGym !== undefined ? Boolean(data.homeGym) : undefined,
-        equipmentAvailable: data.equipmentAvailable ? processArray(data.equipmentAvailable) : undefined,
-        gymBudget: data.gymBudget ? parseFloat(data.gymBudget) : undefined,
+        gymAccess: clientMemoryData.gymAccess !== undefined ? Boolean(clientMemoryData.gymAccess) : undefined,
+        homeGym: clientMemoryData.homeGym !== undefined ? Boolean(clientMemoryData.homeGym) : undefined,
+        equipmentAvailable: clientMemoryData.equipmentAvailable ? processArray(clientMemoryData.equipmentAvailable) : undefined,
+        gymBudget: clientMemoryData.gymBudget ? parseFloat(clientMemoryData.gymBudget) : undefined,
 
         // Progress Tracking
-        currentBench: data.currentBench ? parseFloat(data.currentBench) : undefined,
-        currentSquat: data.currentSquat ? parseFloat(data.currentSquat) : undefined,
-        currentDeadlift: data.currentDeadlift ? parseFloat(data.currentDeadlift) : undefined,
-        currentOHP: data.currentOHP ? parseFloat(data.currentOHP) : undefined,
+        currentBench: clientMemoryData.currentBench ? parseFloat(clientMemoryData.currentBench) : undefined,
+        currentSquat: clientMemoryData.currentSquat ? parseFloat(clientMemoryData.currentSquat) : undefined,
+        currentDeadlift: clientMemoryData.currentDeadlift ? parseFloat(clientMemoryData.currentDeadlift) : undefined,
+        currentOHP: clientMemoryData.currentOHP ? parseFloat(clientMemoryData.currentOHP) : undefined,
 
         // Communication Preferences
-        preferredLanguage: data.preferredLanguage || 'en',
-        communicationStyle: data.communicationStyle || undefined,
+        preferredLanguage: clientMemoryData.preferredLanguage || 'en',
+        communicationStyle: clientMemoryData.communicationStyle || undefined,
 
         lastInteraction: new Date(),
       }
     });
+
+    // Update user table with consent information if provided
+    if (consentGiven !== undefined) {
+      await prisma.user.update({
+        where: { id: user.id },
+        data: {
+          dataProcessingConsent: consentGiven,
+          consentTimestamp: consentGiven ? (consentTimestamp ? new Date(consentTimestamp) : new Date()) : null,
+        },
+      });
+    }
 
     return NextResponse.json({
       success: true,

@@ -427,3 +427,17 @@ Found 0 expired active subscriptions
 Total expired subscriptions processed: 0
 Total PRO users downgraded: 1
 Total actions: 1
+🔒 STARTING SUBSCRIPTION SECURITY CHECK
+==========================================
+Timestamp: 2025-08-07T18:00:02.275Z
+[dotenv@17.2.1] injecting env (21) from .env -- tip: ⚙️  specify custom .env file path with { path: '/custom/path/.env' }
+📊 Checking subscription security...
+🚀 SUBSCRIPTION SECURITY JOB STARTED
+=====================================
+
+Found 0 expired active subscriptions
+✅ Database connection: OK
+✅ Environment variables: OK
+[dotenv@17.2.1] injecting env (0) from .env -- tip: ⚙️  load multiple .env files with { path: ['.env.local', '.env'] }
+📊 Checking subscription security...
+^C

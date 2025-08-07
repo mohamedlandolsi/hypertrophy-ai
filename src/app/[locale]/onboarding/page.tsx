@@ -23,6 +23,7 @@ interface OnboardingData {
   height?: number;
   weight?: number;
   bodyFatPercentage?: number;
+  dataProcessingConsent?: boolean;
 
   // Training Information
   trainingExperience?: string;

@@ -8,6 +8,7 @@ import { Label } from '@/components/ui/label';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { User } from 'lucide-react';
 import { useTranslations } from 'next-intl';
+import { ConsentAccordion } from '@/components/ui/consent-accordion';
 
 interface Step1Data {
   name?: string;
@@ -16,6 +17,7 @@ interface Step1Data {
   height?: number;
   weight?: number;
   bodyFatPercentage?: number;
+  dataProcessingConsent?: boolean;
 }
 
 interface Step1Props {
@@ -25,6 +27,7 @@ interface Step1Props {
 
 export function Step1PersonalInfo({ onNext, initialData = {} }: Step1Props) {
   const [formData, setFormData] = useState<Step1Data>(initialData);
+  const [consentGiven, setConsentGiven] = useState(initialData.dataProcessingConsent || false);
   const t = useTranslations('Onboarding.step1');
 
   // Mobile keyboard handling - scroll input into view on focus
@@ -44,7 +47,14 @@ export function Step1PersonalInfo({ onNext, initialData = {} }: Step1Props) {
 
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault();
-    onNext(formData);
+    
+    // Include consent status in the form data
+    const submissionData = {
+      ...formData,
+      dataProcessingConsent: consentGiven
+    };
+    
+    onNext(submissionData);
   };
 
   return (
@@ -144,8 +154,20 @@ export function Step1PersonalInfo({ onNext, initialData = {} }: Step1Props) {
             </div>
           </div>
 
+          {/* Data Processing Consent Section */}
+          {/* Data Processing Consent */}
+          <ConsentAccordion
+            consentGiven={consentGiven}
+            onConsentChange={setConsentGiven}
+            required={true}
+          />
+
           <div className="flex justify-end pt-4">
-            <Button type="submit" className="w-full md:w-auto">
+            <Button 
+              type="submit" 
+              className="w-full md:w-auto"
+              disabled={!consentGiven}
+            >
               {t('continue')}
             </Button>
           </div>

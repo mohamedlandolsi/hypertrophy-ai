@@ -27,13 +27,16 @@ import { Loader2 } from "lucide-react";
 import { GoogleIcon } from "@/components/ui/google-icon";
 import { getAuthCallbackUrl } from "@/lib/utils/site-url";
 import { useTranslations, useLocale } from "next-intl";
+import { Checkbox } from "@/components/ui/checkbox";
 
 export default function SignupForm() {
   const [isLoading, setIsLoading] = useState(false);
   const [isGoogleLoading, setIsGoogleLoading] = useState(false);
+  const [consentGiven, setConsentGiven] = useState(false);
   const router = useRouter();
   const t = useTranslations("SignupPage");
   const tValidation = useTranslations("PasswordValidation");
+  const tConsent = useTranslations("ConsentForm");
   const locale = useLocale();
 
   // Create translation-aware validation schema
@@ -63,6 +66,12 @@ export default function SignupForm() {
   };
 
   const onSubmit = async (data: SignupFormData) => {
+    // Check consent before proceeding
+    if (!consentGiven) {
+      toast.error(t("consentRequired"));
+      return;
+    }
+
     setIsLoading(true);
     
     try {
@@ -73,6 +82,10 @@ export default function SignupForm() {
         password: data.password,
         options: {
           emailRedirectTo: getAuthCallbackUrl(),
+          data: {
+            consentGiven: true,
+            consentTimestamp: new Date().toISOString(),
+          },
         },
       });
 
@@ -101,6 +114,12 @@ export default function SignupForm() {
   };
 
   const handleGoogleSignup = async () => {
+    // Check consent before proceeding
+    if (!consentGiven) {
+      toast.error(t("consentRequired"));
+      return;
+    }
+
     setIsGoogleLoading(true);
     
     try {
@@ -110,6 +129,10 @@ export default function SignupForm() {
         provider: "google",
         options: {
           redirectTo: getAuthCallbackUrl(),
+          queryParams: {
+            consentGiven: 'true',
+            consentTimestamp: new Date().toISOString(),
+          },
         },
       });
 
@@ -197,13 +220,36 @@ export default function SignupForm() {
                 </p>
               )}
             </div>
+
+            {/* Data Processing Consent */}
+            <div className="grid gap-3 pt-2">
+              <div className="flex items-start space-x-2">
+                <Checkbox
+                  id="consent"
+                  checked={consentGiven}
+                  onCheckedChange={(checked) => setConsentGiven(checked === true)}
+                  className="mt-0.5"
+                />
+                <Label htmlFor="consent" className="text-sm leading-relaxed cursor-pointer">
+                  {tConsent("checkboxSimple")}{" "}
+                  <Link 
+                    href={`/${locale}/privacy-policy`} 
+                    className="underline hover:text-primary text-blue-600" 
+                    target="_blank"
+                    rel="noopener noreferrer"
+                  >
+                    {tConsent("privacyPolicy")}
+                  </Link>
+                </Label>
+              </div>
+            </div>
           </CardContent>
           
           <CardFooter className="flex flex-col gap-4 pt-4">
             <Button 
               type="submit" 
               className="w-full" 
-              disabled={isLoading || isGoogleLoading}
+              disabled={isLoading || isGoogleLoading || !consentGiven}
             >
               {isLoading && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
               {isLoading ? t("signingUp") : t("signUp")}
@@ -214,7 +260,7 @@ export default function SignupForm() {
               variant="outline"
               className="w-full"
               onClick={handleGoogleSignup}
-              disabled={isLoading || isGoogleLoading}
+              disabled={isLoading || isGoogleLoading || !consentGiven}
             >
               {isGoogleLoading ? (
                 <Loader2 className="mr-2 h-4 w-4 animate-spin" />

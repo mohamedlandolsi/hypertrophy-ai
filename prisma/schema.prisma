@@ -34,6 +34,10 @@ model User {
   plan                   UserPlan        @default(FREE)
   lastUploadReset        DateTime        @default(now())
   uploadsThisMonth       Int             @default(0)
+  // Privacy and consent fields
+  dataProcessingConsent  Boolean         @default(false)
+  consentTimestamp       DateTime?
+  privacyPolicyVersion   String?
   chats                  Chat[]
   clientMemory           ClientMemory?
   knowledgeItems         KnowledgeItem[]

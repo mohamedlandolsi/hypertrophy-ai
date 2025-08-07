@@ -190,7 +190,8 @@
     "unexpectedError": "An unexpected error occurred. Please try again.",
     "passwordTooShort": "Password must be at least 6 characters long",
     "googleAuthError": "Could not authenticate with Google",
-    "googleAuthUnexpectedError": "An unexpected error occurred with Google authentication"
+    "googleAuthUnexpectedError": "An unexpected error occurred with Google authentication",
+    "consentRequired": "You must consent to data processing to create an account."
   },
   "ResetPasswordPage": {
     "title": "Reset Password",
@@ -862,6 +863,151 @@
       "failedTitle": "Failed to Grant PRO Plan",
       "invalidDuration": "Please enter a valid positive number for duration"
     }
+  },
+  "PrivacyPolicy": {
+    "title": "Privacy Policy",
+    "subtitle": "Your privacy and data security are our top priorities. Learn how we protect and handle your personal information.",
+    "effectiveDate": "Effective Date",
+    "lastUpdated": "Last Updated",
+    "sections": {
+      "dataCollection": {
+        "title": "What Information We Collect",
+        "description": "We collect information to provide you with personalized fitness coaching and improve our services.",
+        "personalData": {
+          "title": "Personal Information",
+          "name": "Full name and contact details",
+          "age": "Age and demographic information",
+          "gender": "Gender (optional)",
+          "contact": "Email address for account management"
+        },
+        "healthData": {
+          "title": "Health & Fitness Data",
+          "bodyMetrics": "Height, weight, body fat percentage",
+          "fitnessGoals": "Training goals and objectives",
+          "injuries": "Current and past injuries",
+          "medications": "Medications that may affect training",
+          "trainingHistory": "Training experience and workout history"
+        },
+        "usageData": {
+          "title": "Usage Information",
+          "interactions": "Chat messages and AI interactions",
+          "preferences": "Training preferences and settings",
+          "performance": "App usage and performance data"
+        }
+      },
+      "storage": {
+        "title": "How We Store Your Data",
+        "description": "Your data is securely stored and protected using industry-standard security measures.",
+        "supabase": {
+          "title": "Supabase Infrastructure",
+          "description": "We use Supabase, a secure and compliant database platform, to store your personal information. Supabase is SOC 2 Type II certified and complies with GDPR requirements."
+        },
+        "security": {
+          "title": "Security Measures",
+          "encryption": "End-to-end encryption for data transmission",
+          "access": "Role-based access controls and authentication",
+          "monitoring": "24/7 security monitoring and threat detection",
+          "backups": "Regular encrypted backups and disaster recovery"
+        }
+      },
+      "usage": {
+        "title": "How We Use Your Information",
+        "description": "We use your data exclusively to provide personalized fitness coaching and improve our services.",
+        "personalization": "Customize your AI coaching experience",
+        "coaching": "Provide tailored workout and nutrition recommendations",
+        "progress": "Track your fitness progress and goals",
+        "communication": "Send important account updates and notifications",
+        "improvement": "Analyze usage patterns to improve our AI models"
+      },
+      "rights": {
+        "title": "Your Data Rights",
+        "description": "You have full control over your personal data. Here are your rights under international privacy laws:",
+        "access": {
+          "title": "Right to Access",
+          "description": "Request a copy of all data we have about you"
+        },
+        "rectification": {
+          "title": "Right to Rectification",
+          "description": "Correct any inaccurate or incomplete information"
+        },
+        "erasure": {
+          "title": "Right to Erasure",
+          "description": "Request deletion of your personal data"
+        },
+        "portability": {
+          "title": "Data Portability",
+          "description": "Export your data in a machine-readable format"
+        },
+        "restriction": {
+          "title": "Restrict Processing",
+          "description": "Limit how we process your personal information"
+        },
+        "objection": {
+          "title": "Right to Object",
+          "description": "Object to certain types of data processing"
+        }
+      },
+      "compliance": {
+        "title": "International Compliance",
+        "description": "We comply with major international privacy regulations to protect users worldwide.",
+        "gdpr": "EU users protected under GDPR",
+        "ccpa": "California residents covered by CCPA",
+        "pipeda": "Canadian users protected under PIPEDA"
+      },
+      "contact": {
+        "title": "Contact Our Privacy Team",
+        "description": "Have questions about your privacy or data? Our Data Protection Officer is here to help.",
+        "dpo": {
+          "title": "Data Protection Officer",
+          "responseTime": "We respond to all privacy inquiries within 72 hours"
+        }
+      }
+    }
+  },
+  "ConsentForm": {
+    "title": "Data Processing Consent",
+    "description": "To provide you with a personalized training experience, we need to collect and process some of your personal information.",
+    "dataTypes": {
+      "title": "Data Types",
+      "description": "Personal information, health data, training history, and communication records",
+      "items": {
+        "0": "Personal information (name, age, gender, height, weight)",
+        "1": "Fitness information (experience level, goals, preferences)",
+        "2": "Health information (injuries, limitations, medications)",
+        "3": "Chat conversations and AI interactions",
+        "4": "Uploaded images and files"
+      }
+    },
+    "purposes": {
+      "title": "Processing Purposes",
+      "ai": "Provide personalized AI coaching and training recommendations",
+      "personalization": "Customize your workout plans and nutrition guidance", 
+      "health": "Track your health metrics and fitness progress",
+      "communication": "Send you updates and respond to your inquiries",
+      "items": {
+        "0": "Provide personalized training and nutrition recommendations",
+        "1": "Track progress and monitor goals",
+        "2": "Improve our AI and coaching services",
+        "3": "Manage your account and subscription",
+        "4": "Ensure security and prevent fraud"
+      }
+    },
+    "rights": {
+      "title": "Your Rights",
+      "description": "You have the right to access, correct, delete, and object to the processing of your data. You can withdraw your consent at any time.",
+      "privacyPolicy": "For more details, please see our {link}.",
+      "privacyPolicyLink": "full privacy policy"
+    },
+    "checkbox": "I consent to the processing of my personal data for the purposes stated above and confirm that I have read and understood the privacy policy.",
+    "checkboxSimple": "I agree to the processing of my personal data as described in our Privacy Policy",
+    "required": "Required to continue",
+    "version": "Version {version}",
+    "agreement": "I understand and agree to the processing of my personal data as outlined in the Privacy Policy",
+    "healthDataNotice": "This includes sensitive health information such as body metrics, injuries, and training history",
+    "privacyPolicyLink": "Read our Privacy Policy",
+    "privacyPolicy": "Privacy Policy",
+    "agree": "I Agree & Continue",
+    "disagree": "I Don't Agree"
   },
   "Onboarding": {
     "welcome": {
