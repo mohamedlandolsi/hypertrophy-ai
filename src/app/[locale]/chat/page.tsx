@@ -160,6 +160,38 @@ const ChatPage = () => {
     },
   ];
 
+  // Quick prompt recommendations - all available prompts (memoized to prevent re-creation)
+  const promptRecommendations = useMemo(() => [
+    t('promptRecommendations.bestRepRange'),
+    t('promptRecommendations.weeklyTraining'), 
+    t('promptRecommendations.supplementRecommendations'),
+    t('promptRecommendations.upperLowerSplit'),
+    t('promptRecommendations.fullBodyRoutine'),
+    t('promptRecommendations.trainingSplits'),
+    t('promptRecommendations.chestTraining'),
+    t('promptRecommendations.backExercises'),
+    t('promptRecommendations.armTraining'),
+    t('promptRecommendations.legWorkout'),
+    t('promptRecommendations.shoulderBuilding'),
+    t('promptRecommendations.hypertrophyPrinciples'),
+    t('promptRecommendations.optimalRepRange'),
+    t('promptRecommendations.setsPerMuscle'),
+    t('promptRecommendations.restTime'),
+    t('promptRecommendations.calorieCalculation'),
+    t('promptRecommendations.calorieBalance'),
+    t('promptRecommendations.effectiveSupplements')
+  ], [t]);
+
+  const [displayedPrompts, setDisplayedPrompts] = reactUseState<string[]>([]);
+
+  // Set random prompts on component mount only
+  useEffect(() => {
+    if (promptRecommendations.length > 0) {
+      const shuffled = [...promptRecommendations].sort(() => 0.5 - Math.random());
+      setDisplayedPrompts(shuffled.slice(0, 3));
+    }
+  }, [promptRecommendations]); // Depend on promptRecommendations to ensure translations are loaded
+
   // Add connection status tracking
   const { isOnline } = useOnlineStatus();
 
@@ -1640,11 +1672,7 @@ const ChatPage = () => {
                 
                 {/* Enhanced Example prompt buttons for mobile */}
                 <div className="flex flex-wrap gap-2 justify-center w-full max-w-xs md:max-w-2xl mt-6">
-                  {[
-                    t('promptRecommendations.bestRepRange'),
-                    t('promptRecommendations.weeklyTraining'), 
-                    t('promptRecommendations.supplementRecommendations')
-                  ].map((prompt, index) => (
+                  {displayedPrompts.map((prompt, index) => (
                     <Button
                       key={index}
                       variant="outline"

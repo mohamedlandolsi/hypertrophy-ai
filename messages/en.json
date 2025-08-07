@@ -1239,7 +1239,22 @@
     "promptRecommendations": {
       "bestRepRange": "Best rep range for muscle growth?",
       "weeklyTraining": "Weekly training structure?",
-      "supplementRecommendations": "Supplement recommendations?"
+      "supplementRecommendations": "Supplement recommendations?",
+      "upperLowerSplit": "Build me an effective Upper/Lower split program.",
+      "fullBodyRoutine": "Create a science-based Full Body workout routine.",
+      "trainingSplits": "Suggest the best training splits for muscle growth.",
+      "chestTraining": "What is the optimal way to train chest for hypertrophy?",
+      "backExercises": "Show me the most effective exercises for back growth.",
+      "armTraining": "How can I optimally train my arms (biceps & triceps & forearms)?",
+      "legWorkout": "Design a complete, evidence-based leg workout.",
+      "shoulderBuilding": "What's the best approach for building bigger shoulders?",
+      "hypertrophyPrinciples": "Guide me through the core principles of training for muscle growth.",
+      "optimalRepRange": "What is the optimal rep range for hypertrophy?",
+      "setsPerMuscle": "How many sets should I do per muscle group?",
+      "restTime": "What is the ideal rest time between sets for muscle growth?",
+      "calorieCalculation": "Calculate my daily calorie and macro needs.",
+      "calorieBalance": "Should I be in a calorie surplus, deficit, or maintenance?",
+      "effectiveSupplements": "Which supplements are scientifically proven to be effective?"
     },
     "dialogs": {
       "upgradeLimitReached": {

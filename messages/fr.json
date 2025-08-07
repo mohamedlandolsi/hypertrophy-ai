@@ -1265,7 +1265,22 @@
     "promptRecommendations": {
       "bestRepRange": "Meilleure gamme de répétitions pour la croissance musculaire?",
       "weeklyTraining": "Structure d'entraînement hebdomadaire?",
-      "supplementRecommendations": "Recommandations de suppléments?"
+      "supplementRecommendations": "Recommandations de suppléments?",
+      "upperLowerSplit": "Construisez-moi un programme efficace de split haut/bas du corps.",
+      "fullBodyRoutine": "Créez une routine d'entraînement corps entier basée sur la science.",
+      "trainingSplits": "Suggérez les meilleurs splits d'entraînement pour la croissance musculaire.",
+      "chestTraining": "Quelle est la façon optimale d'entraîner les pectoraux pour l'hypertrophie?",
+      "backExercises": "Montrez-moi les exercices les plus efficaces pour la croissance du dos.",
+      "armTraining": "Comment puis-je entraîner mes bras de manière optimale (biceps, triceps et avant-bras)?",
+      "legWorkout": "Concevez un entraînement complet des jambes basé sur des preuves.",
+      "shoulderBuilding": "Quelle est la meilleure approche pour développer des épaules plus larges?",
+      "hypertrophyPrinciples": "Guidez-moi à travers les principes fondamentaux de l'entraînement pour la croissance musculaire.",
+      "optimalRepRange": "Quelle est la gamme de répétitions optimale pour l'hypertrophie?",
+      "setsPerMuscle": "Combien de séries dois-je faire par groupe musculaire?",
+      "restTime": "Quel est le temps de repos idéal entre les séries pour la croissance musculaire?",
+      "calorieCalculation": "Calculez mes besoins quotidiens en calories et macronutriments.",
+      "calorieBalance": "Dois-je être en surplus, déficit ou maintien calorique?",
+      "effectiveSupplements": "Quels suppléments sont scientifiquement prouvés efficaces?"
     },
     "dialogs": {
       "upgradeLimitReached": {

@@ -2,30 +2,34 @@
 
 ## 🏗️ Architecture Overview
 
-**HypertroQ** is a sophisticated RAG-powered AI fitness coaching platform built with Next.js 15 App Router, featuring personalized client memory, multilingual support, and subscription management.
+**HypertroQ** is a sophisticated RAG-powered AI fitness coaching platform built with Next.js 15 App Router, featuring personalized client memory, multilingual support, subscription management, and advanced performance optimizations.
 
 ### Critical System Requirements
 - **Admin-Only AI Operations**: All AI functionality requires admin configuration via singleton `AIConfiguration` table - system will fail if not configured
 - **Authentication Gate**: Users must login before sending messages (no guest mode)
 - **Subscription Enforcement**: Server-side validation with daily/monthly limits enforced in API routes
 - **Vector Storage**: Embeddings stored as JSON strings (768 dimensions via Gemini text-embedding-004)
+- **Performance-First**: Optimized for <2s page loads with advanced caching and component optimization
 
 ### Core Components
 - **RAG System**: Optimized pgvector + AND-based keyword search (`/src/lib/vector-search.ts`)
 - **Client Memory**: AI auto-extracts user data via Gemini function calling (`/src/lib/client-memory.ts`)
 - **Authentication**: Supabase SSR with role-based access (`/src/lib/supabase/server.ts`)
-- **File Processing**: Multi-format pipeline with semantic chunking (`/src/lib/enhanced-file-processor.ts`)
+- **File Processing**: Serverless pipeline with Supabase Storage (`/src/lib/enhanced-file-processor.ts`)
 - **Error Handling**: Centralized `ApiErrorHandler` with correlation IDs (`/src/lib/error-handler.ts`)
 - **Internationalization**: Arabic RTL + French/English with automatic detection (`/src/lib/text-formatting.ts`)
+- **Performance Layer**: Smart caching, memoization, and lazy loading (`/src/hooks/use-optimized-*`)
 
 ## 🔧 RAG Pipeline Performance Fixes
 
-### Critical Retrieval Improvements
+### Critical Retrieval Improvements (Recently Optimized)
 - **Eliminated Batch Limits**: pgvector SQL searches full database, not batched JSON fallback
 - **AND-Based Keywords**: PostgreSQL full-text search with `&` logic for precision 
 - **Query Translation Fix**: Non-English queries translated to English for vector search compatibility
 - **Simplified Pipeline**: Disabled multi-query/hybrid for reliability and speed
 - **Performance**: <1000ms retrieval time, searches all chunks simultaneously
+- **Optimized Thresholds**: Configurable similarity thresholds (recommended: 0.05-0.1) via AI Configuration
+- **Keyword Dominance**: 80% keyword weight, 20% vector weight for specific muscle group queries
 
 ### Multi-Language RAG Support
 ```typescript
@@ -91,6 +95,8 @@ NEXT_PUBLIC_SITE_URL=            # Site URL for checkout redirects
 - `find-users.js` - Get actual user IDs for testing
 - `create-admin.js` - Create admin user accounts
 - `check-user-plan.js` - Verify individual user subscription status
+- `test-performance-optimizations.js` - Validate chat performance enhancements
+- `comprehensive-debug.js` - Complete system flow debugging
 
 ## 📋 Critical Project Patterns
 
@@ -170,7 +176,7 @@ import { fetchRelevantKnowledge, performAndKeywordSearch } from '@/lib/vector-se
 const vectorResults = await fetchRelevantKnowledge(
   queryEmbedding.embedding, 
   topK: 10,           // Configurable via admin
-  threshold: 0.3      // Configurable via admin
+  threshold: 0.05     // Configurable via admin (recommended: 0.05-0.1)
 );
 
 // AND-based keyword search for precision
@@ -180,7 +186,27 @@ const keywordResults = await performAndKeywordSearch(query, 10);
 // Use getContextSources() for UI article links
 ```
 
-### 5. Subscription Plan Enforcement
+### 5. Performance Optimization Pattern
+```typescript
+// Use optimized hooks for chat performance
+import { 
+  useOptimizedChatHistory, 
+  useOptimizedUserPlan, 
+  useOptimizedUserRole 
+} from '@/hooks/use-optimized-fetch';
+import { OptimizedMessage } from '@/components/optimized-message';
+import { OptimizedImage } from '@/components/optimized-image';
+
+// Smart caching with TTL
+const { data, loading, error } = useOptimizedChatHistory(page, limit);
+
+// Memoized components for performance
+const MessageComponent = React.memo(OptimizedMessage, (prev, next) => 
+  prev.message.id === next.message.id && prev.message.content === next.message.content
+);
+```
+
+### 6. Subscription Plan Enforcement
 ```typescript
 import { getUserPlan, canUserSendMessage } from '@/lib/subscription';
 
@@ -212,6 +238,17 @@ import { createAdminClient } from '@/lib/supabase/server';
 - **Middleware**: Automatic session refresh, admin route protection at `/src/middleware.ts`
 - **Role-based access**: `User.role` field controls admin access (`'admin'` | `'user'`)
 - **No guest mode**: All chat operations require authenticated users
+
+### Serverless File Processing
+```typescript
+// Direct uploads to Supabase Storage, no server memory usage
+const uploadUrl = await getSignedUploadUrl(fileName, contentType, userId);
+// Process files from storage, not server filesystem
+const fileContent = await downloadFromStorage(filePath);
+```
+- **Scalable**: No memory limits, handles large files via Supabase Storage
+- **Bucket Structure**: User-specific folders with RLS policies
+- **Processing Pipeline**: Text extraction → chunking → embedding generation → database storage
 
 ### Arabic & Internationalization
 ```typescript
@@ -248,6 +285,7 @@ throw new AuthenticationError('User must be logged in');
 - **KnowledgeChunk**: Chunked content with JSON embeddings (768 dimensions)
 - **User.plan**: `FREE` | `PRO` with usage tracking fields
 - **Cascade deletes**: Proper cleanup when removing parent records
+- **Performance indexes**: Optimized queries for vector search and pagination
 
 ## 🎯 Testing & Debugging
 
@@ -272,6 +310,12 @@ const { functionName } = require('./src/lib/module-name');
 - **Build Process**: `npm run build` includes Prisma client generation
 - **Environment**: Windows PowerShell default - use forward slashes in paths
 - **Debugging**: VS Code with Prisma extension for schema management
+
+### Performance Testing & Optimization
+- **Performance Scripts**: Use `test-performance-optimizations.js` to validate system performance
+- **Chat Optimizations**: Comprehensive performance layer with memoized components (`/src/components/optimized-*`)
+- **Bundle Analysis**: `npx @next/bundle-analyzer` to monitor chunk sizes
+- **Database Optimization**: Connection pooling settings in `.env` for scalability
 
 ### Common Issues
 - **"AI Configuration not found"** → Run `/admin` setup first
@@ -332,7 +376,7 @@ src/
     └── schema.prisma          # Database schema definition
 ```
 
-**Navigation Tips**: Admin features (`/src/app/admin/`), Core AI logic (`/src/lib/gemini.ts`), Vector operations (`/src/lib/vector-search.ts`), Subscription system (`/src/lib/subscription.ts`, `/src/lib/lemonsqueezy.ts`, `/src/components/plan-badge.tsx`, `/src/components/upgrade-button.tsx`), Arabic support (`/src/components/arabic-aware-*.tsx`, `/src/lib/text-formatting.ts`), Error handling (`/src/lib/error-handler.ts` with `ApiErrorHandler` class), Client memory (`/src/lib/client-memory.ts` for automatic user profile extraction), Multi-currency support (`/src/lib/currency.ts`), Webhook processing (`/src/app/api/webhooks/lemon-squeezy/route.ts`)
+**Navigation Tips**: Admin features (`/src/app/admin/`), Core AI logic (`/src/lib/gemini.ts`), Vector operations (`/src/lib/vector-search.ts`), Subscription system (`/src/lib/subscription.ts`, `/src/lib/lemonsqueezy.ts`, `/src/components/plan-badge.tsx`, `/src/components/upgrade-button.tsx`), Arabic support (`/src/components/arabic-aware-*.tsx`, `/src/lib/text-formatting.ts`), Error handling (`/src/lib/error-handler.ts` with `ApiErrorHandler` class), Client memory (`/src/lib/client-memory.ts` for automatic user profile extraction), Multi-currency support (`/src/lib/currency.ts`), Webhook processing (`/src/app/api/webhooks/lemon-squeezy/route.ts`), Performance optimizations (`/src/hooks/use-optimized-*`, `/src/components/optimized-*`)
 
 ## 💳 Subscription System Details
 
