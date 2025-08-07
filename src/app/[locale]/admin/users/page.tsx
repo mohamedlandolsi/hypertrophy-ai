@@ -45,15 +45,18 @@ import {
   Trash2,
   Shield,
   User as UserIcon,
-  Calendar
+  Calendar,
+  Crown
 } from 'lucide-react';
 import { showToast } from '@/lib/toast';
+import { GrantProPlanDialog } from '@/components/admin/grant-pro-plan-dialog';
 
 interface UserProfile {
   id: string;
   email: string;
   displayName: string;
   role: 'user' | 'admin';
+  plan: 'FREE' | 'PRO';
   hasCompletedOnboarding: boolean;
   createdAt: string;
   lastSignIn?: string;
@@ -63,6 +66,12 @@ interface UserProfile {
   lastChatTitle?: string;
   isActive: boolean;
   avatarUrl?: string;
+  subscription?: {
+    id: string;
+    status: string;
+    currentPeriodEnd: string | null;
+    planId: string | null;
+  };
 }
 
 interface UserStats {
@@ -80,6 +89,11 @@ export default function UserManagementPage() {
   const [isLoading, setIsLoading] = useState(true);
   const [searchTerm, setSearchTerm] = useState('');
   const [selectedRole, setSelectedRole] = useState<'all' | 'user' | 'admin'>('all');
+  
+  // Grant PRO Plan Dialog state
+  const [grantProDialogOpen, setGrantProDialogOpen] = useState(false);
+  const [selectedUserForPro, setSelectedUserForPro] = useState<UserProfile | null>(null);
+  const [adminApiWarning, setAdminApiWarning] = useState<string | null>(null);
 
   const filterUsers = useCallback(() => {
     let filtered = users;
@@ -103,14 +117,49 @@ export default function UserManagementPage() {
   const fetchUsers = useCallback(async () => {
     try {
       const response = await fetch('/api/admin/users');
+      
       if (!response.ok) {
-        throw new Error('Failed to fetch users');
+        const errorData = await response.json().catch(() => ({}));
+        
+        if (response.status === 500 && errorData.error?.includes('authentication data')) {
+          // Specific error for Supabase admin API issues
+          showToast.error(
+            'Authentication Error', 
+            'Unable to fetch user data. Please check Supabase admin permissions and service role key.'
+          );
+          console.error('Supabase admin API error:', errorData);
+          return;
+        }
+        
+        throw new Error(errorData.error || `HTTP ${response.status}: ${response.statusText}`);
       }
-      const userData = await response.json();
-      setUsers(userData);
+      
+      const responseData = await response.json();
+      
+      // Handle both direct user array and wrapped response with warning
+      if (Array.isArray(responseData)) {
+        // Normal successful response
+        setUsers(responseData);
+      } else if (responseData.users && Array.isArray(responseData.users)) {
+        // Fallback response with warning
+        setUsers(responseData.users);
+        
+        if (responseData.warning) {
+          setAdminApiWarning(responseData.warning);
+          console.warn('Admin API warning:', responseData.adminApiError);
+        } else {
+          setAdminApiWarning(null);
+        }
+      } else {
+        throw new Error('Unexpected response format');
+      }
+      
     } catch (error) {
       console.error('Error fetching users:', error);
-      showToast.error(tToasts('usersLoadErrorTitle'));
+      showToast.error(
+        tToasts('usersLoadErrorTitle'),
+        error instanceof Error ? error.message : 'Unknown error occurred'
+      );
     }
   }, [tToasts]);
 
@@ -190,6 +239,12 @@ export default function UserManagementPage() {
     }
   };
 
+  // Function to handle successful PRO plan grant
+  const handleProPlanGrantSuccess = () => {
+    // Refresh the users list to show updated plan status
+    fetchUsers();
+  };
+
   const getRoleBadgeVariant = (role: 'user' | 'admin') => {
     return role === 'admin' ? 'default' : 'secondary';
   };
@@ -226,6 +281,37 @@ export default function UserManagementPage() {
             </p>
           </div>
         </div>
+
+        {/* Admin API Warning Banner */}
+        {adminApiWarning && (
+          <div className="bg-yellow-50 dark:bg-yellow-950/20 border border-yellow-200 dark:border-yellow-800 rounded-lg p-4">
+            <div className="flex items-start gap-3">
+              <div className="w-5 h-5 text-yellow-600 dark:text-yellow-400 mt-0.5">
+                ⚠️
+              </div>
+              <div className="flex-1">
+                <h3 className="text-sm font-semibold text-yellow-800 dark:text-yellow-200 mb-1">
+                  Limited User Data Available
+                </h3>
+                <p className="text-sm text-yellow-700 dark:text-yellow-300 mb-3">
+                  {adminApiWarning}
+                </p>
+                <div className="text-sm text-yellow-700 dark:text-yellow-300">
+                  <p className="font-medium mb-2">To show real user emails and names:</p>
+                  <ol className="list-decimal list-inside space-y-1 text-xs">
+                    <li>Go to Supabase Dashboard → Settings → API</li>
+                    <li>Copy the <code className="bg-yellow-100 dark:bg-yellow-900 px-1 rounded">service_role</code> key</li>
+                    <li>Update <code className="bg-yellow-100 dark:bg-yellow-900 px-1 rounded">SUPABASE_SERVICE_ROLE_KEY</code> in your environment</li>
+                    <li>Restart your development server</li>
+                  </ol>
+                  <p className="mt-2 text-xs">
+                    You can still grant PRO plans using the displayed User IDs.
+                  </p>
+                </div>
+              </div>
+            </div>
+          </div>
+        )}
 
         {/* Stats Cards */}
         {stats && (
@@ -332,6 +418,7 @@ export default function UserManagementPage() {
                   <TableRow>
                     <TableHead>User</TableHead>
                     <TableHead>Role</TableHead>
+                    <TableHead>Plan</TableHead>
                     <TableHead>Status</TableHead>
                     <TableHead>Joined</TableHead>
                     <TableHead className="text-right">Actions</TableHead>
@@ -373,6 +460,11 @@ export default function UserManagementPage() {
                             <div>
                               <p className="font-medium">{user.displayName}</p>
                               <p className="text-sm text-muted-foreground">{user.email}</p>
+                              {(user.email.includes('user-') && user.email.includes('@hidden.email')) && (
+                                <p className="text-xs text-blue-600 dark:text-blue-400 font-mono">
+                                  ID: {user.id.substring(0, 12)}...
+                                </p>
+                              )}
                             </div>
                           </div>
                         </TableCell>
@@ -390,6 +482,26 @@ export default function UserManagementPage() {
                               </>
                             )}
                           </Badge>
+                        </TableCell>
+                        <TableCell>
+                          <div className="flex items-center gap-2">
+                            <Badge variant={user.plan === 'PRO' ? 'default' : 'outline'} 
+                                   className={user.plan === 'PRO' ? 'bg-yellow-500 hover:bg-yellow-600' : ''}>
+                              {user.plan === 'PRO' ? (
+                                <>
+                                  <Crown className="h-3 w-3 mr-1" />
+                                  PRO
+                                </>
+                              ) : (
+                                'FREE'
+                              )}
+                            </Badge>
+                            {user.plan === 'PRO' && user.subscription?.currentPeriodEnd && (
+                              <span className="text-xs text-muted-foreground">
+                                until {new Date(user.subscription.currentPeriodEnd).toLocaleDateString()}
+                              </span>
+                            )}
+                          </div>
                         </TableCell>
                         <TableCell>
                           <Badge variant={user.hasCompletedOnboarding ? 'default' : 'outline'}>
@@ -410,6 +522,20 @@ export default function UserManagementPage() {
                             <DropdownMenuContent align="end">
                               <DropdownMenuLabel>Actions</DropdownMenuLabel>
                               <DropdownMenuSeparator />
+                              
+                              {/* Plan Management */}
+                              <DropdownMenuItem
+                                onClick={() => {
+                                  setSelectedUserForPro(user);
+                                  setGrantProDialogOpen(true);
+                                }}
+                              >
+                                <Crown className="mr-2 h-4 w-4" />
+                                Grant PRO Plan
+                              </DropdownMenuItem>
+                              <DropdownMenuSeparator />
+                              
+                              {/* Role Management */}
                               {user.role === 'user' ? (
                                 <DropdownMenuItem
                                   onClick={() => updateUserRole(user.id, 'admin')}
@@ -466,6 +592,21 @@ export default function UserManagementPage() {
           </CardContent>
         </Card>
       </div>
+
+      {/* Grant PRO Plan Dialog */}
+      {selectedUserForPro && (
+        <GrantProPlanDialog
+          open={grantProDialogOpen}
+          onOpenChange={setGrantProDialogOpen}
+          user={{
+            id: selectedUserForPro.id,
+            email: selectedUserForPro.email,
+            displayName: selectedUserForPro.displayName,
+            plan: selectedUserForPro.plan
+          }}
+          onSuccess={handleProPlanGrantSuccess}
+        />
+      )}
     </AdminLayout>
   );
 }

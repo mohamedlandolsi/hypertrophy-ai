@@ -841,6 +841,28 @@
     "users": "Users",
     "knowledge": "Knowledge Base"
   },
+  "AdminUsers": {
+    "grantProPlan": {
+      "title": "Grant PRO Plan Access",
+      "description": "Grant PRO plan access with a custom duration",
+      "duration": "Duration",
+      "timeUnit": "Time Unit",
+      "days": "Days",
+      "months": "Months", 
+      "years": "Years",
+      "reason": "Reason (Optional)",
+      "reasonPlaceholder": "Optional reason for granting PRO access...",
+      "currentPlan": "Current Plan:",
+      "planExpiresOn": "Plan will expire on:",
+      "note": "This will immediately grant PRO access and reset their daily/monthly usage limits. Any existing subscription will be replaced with this admin-granted access.",
+      "cancel": "Cancel",
+      "grantAccess": "Grant PRO Access",
+      "granting": "Granting...",
+      "successTitle": "PRO Plan Granted Successfully",
+      "failedTitle": "Failed to Grant PRO Plan",
+      "invalidDuration": "Please enter a valid positive number for duration"
+    }
+  },
   "Onboarding": {
     "welcome": {
       "title": "Welcome to HypertroQ",

@@ -28,6 +28,7 @@ export async function GET() {
       select: {
         id: true,
         role: true,
+        plan: true,
         hasCompletedOnboarding: true,
         chats: {
           select: {
@@ -43,6 +44,15 @@ export async function GET() {
           select: {
             id: true
           }
+        },
+        subscription: {
+          select: {
+            id: true,
+            status: true,
+            currentPeriodEnd: true,
+            planId: true,
+            variantId: true
+          }
         }
       },
       orderBy: {
@@ -52,29 +62,77 @@ export async function GET() {
 
     // Get auth data from Supabase for email and display names using admin client
     const adminClient = createAdminClient();
-    const { data: authUsers, error: supabaseError } = await adminClient.auth.admin.listUsers();
     
-    if (supabaseError) {
-      console.error('Supabase admin error:', supabaseError);
-      // If admin API fails, still return data but with masked emails
-      const combinedUsers = users.map(user => {
+    let authUsers;
+    let supabaseError;
+    
+    try {
+      console.log('Attempting to fetch users with admin client...');
+      const result = await adminClient.auth.admin.listUsers();
+      authUsers = result.data;
+      supabaseError = result.error;
+      
+      if (supabaseError) {
+        console.error('Supabase admin listUsers error:', {
+          message: supabaseError.message,
+          status: supabaseError.status,
+          code: supabaseError.code || 'unknown'
+        });
+      } else {
+        console.log(`Successfully fetched ${authUsers?.users?.length || 0} auth users`);
+      }
+    } catch (adminError) {
+      console.error('Admin client error:', adminError);
+      supabaseError = adminError;
+    }
+    
+    if (supabaseError || !authUsers?.users) {
+      console.error('Failed to get user data from Supabase admin API. Error:', supabaseError);
+      console.log('Attempting fallback approach...');
+      
+      // Fallback: Try to get at least some user data by using regular client for current user
+      // and provide a more informative response
+      const regularClient = await createClient();
+      const { data: { user: currentUser } } = await regularClient.auth.getUser();
+      
+      const fallbackUsers = users.map(user => {
         const lastChat = user.chats[0];
+        
+        // If this is the current admin user, we can get their real data
+        const isCurrentUser = currentUser && user.id === currentUser.id;
+        
         return {
           id: user.id,
-          email: `•••@user-${user.id.substring(0, 6)}.com`, // Masked email as fallback
-          displayName: `User ${user.id.substring(0, 8)}`, // Fallback display name
+          email: isCurrentUser ? (currentUser.email || 'Admin User') : `user-${user.id.substring(0, 8)}@hidden.email`,
+          displayName: isCurrentUser 
+            ? (currentUser.user_metadata?.display_name || currentUser.user_metadata?.full_name || currentUser.email?.split('@')[0] || 'Admin User')
+            : `User ${user.id.substring(0, 8)}`,
           role: user.role,
+          plan: user.plan,
           hasCompletedOnboarding: user.hasCompletedOnboarding,
           createdAt: lastChat?.createdAt || new Date().toISOString(),
           lastSignIn: lastChat?.createdAt || null,
-          emailConfirmed: true,
+          emailConfirmed: isCurrentUser ? true : false,
           chatCount: user.chats.length,
           knowledgeItemsCount: user.knowledgeItems.length,
           lastChatTitle: lastChat?.title || null,
-          isActive: user.chats.length > 0
+          isActive: user.chats.length > 0,
+          avatarUrl: isCurrentUser ? (currentUser.user_metadata?.avatar_url || null) : null,
+          subscription: user.subscription ? {
+            id: user.subscription.id,
+            status: user.subscription.status,
+            currentPeriodEnd: user.subscription.currentPeriodEnd?.toISOString() || null,
+            planId: user.subscription.planId
+          } : null,
+          _note: isCurrentUser ? 'Real data' : 'Limited data - Admin API unavailable'
         };
       });
-      return NextResponse.json(combinedUsers);
+      
+      return NextResponse.json({
+        users: fallbackUsers,
+        warning: 'Limited user data available. Supabase admin API access failed. Please check service role key configuration.',
+        adminApiError: (supabaseError as Error)?.message || String(supabaseError) || 'Admin API access failed'
+      });
     }
 
     // Create a map of auth users for easier lookup
@@ -93,6 +151,7 @@ export async function GET() {
         email: authUser?.email || 'No email',
         displayName: authUser?.user_metadata?.display_name || authUser?.user_metadata?.full_name || authUser?.email?.split('@')[0] || `User ${user.id.substring(0, 8)}`,
         role: user.role,
+        plan: user.plan,
         hasCompletedOnboarding: user.hasCompletedOnboarding,
         createdAt: authUser?.created_at || lastChat?.createdAt || new Date().toISOString(),
         lastSignIn: authUser?.last_sign_in_at || lastChat?.createdAt || null,
@@ -101,7 +160,13 @@ export async function GET() {
         knowledgeItemsCount: user.knowledgeItems.length,
         lastChatTitle: lastChat?.title || null,
         isActive: user.chats.length > 0,
-        avatarUrl: authUser?.user_metadata?.avatar_url || null
+        avatarUrl: authUser?.user_metadata?.avatar_url || null,
+        subscription: user.subscription ? {
+          id: user.subscription.id,
+          status: user.subscription.status,
+          currentPeriodEnd: user.subscription.currentPeriodEnd?.toISOString() || null,
+          planId: user.subscription.planId
+        } : null
       };
     });
 

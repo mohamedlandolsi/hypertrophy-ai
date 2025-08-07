@@ -190,6 +190,7 @@ const ChatPage = () => {
       const shuffled = [...promptRecommendations].sort(() => 0.5 - Math.random());
       setDisplayedPrompts(shuffled.slice(0, 3));
     }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [promptRecommendations]); // Depend on promptRecommendations to ensure translations are loaded
 
   // Add connection status tracking
