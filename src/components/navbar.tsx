@@ -26,6 +26,7 @@ import {
 import { useRouter, usePathname } from 'next/navigation';
 import LanguageSwitcher from '@/components/language-switcher';
 import { useTranslations } from 'next-intl';
+import { BetaBadge } from '@/components/beta-badge';
 
 const Navbar = () => {
   const [isMobileMenuOpen, setIsMobileMenuOpen] = useState(false);
@@ -143,9 +144,12 @@ const Navbar = () => {
               height={36}
               className="h-9 w-9 object-contain"
             />
-            <span className="text-xl font-bold bg-gradient-to-r from-blue-600 to-purple-600 bg-clip-text text-transparent">
-              HypertroQ
-            </span>
+            <div className="flex items-center gap-2">
+              <span className="text-xl font-bold bg-gradient-to-r from-blue-600 to-purple-600 bg-clip-text text-transparent">
+                HypertroQ
+              </span>
+              <BetaBadge size="sm" />
+            </div>
           </Link>
         </div>
 

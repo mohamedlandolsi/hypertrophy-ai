@@ -59,6 +59,7 @@ import { MessageLimitIndicator } from '@/components/message-limit-indicator';
 import { PlanBadge } from '@/components/plan-badge';
 import { useOnlineStatus } from '@/hooks/use-online-status';
 import { UpgradeLimitDialog } from '@/components/upgrade-limit-dialog';
+import { BetaBadge } from '@/components/beta-badge';
 
 const ChatPage = () => {
   const t = useTranslations('ChatPage');
@@ -1146,8 +1147,11 @@ const ChatPage = () => {
                       className="w-8 h-8 object-contain"
                     />
                   </div>
-                  <div>
-                    <h2 className="text-lg font-bold text-foreground">{t('sidebar.header')}</h2>
+                  <div className="flex-1">
+                    <div className="flex items-center gap-2">
+                      <h2 className="text-lg font-bold text-foreground">{t('sidebar.header')}</h2>
+                      <BetaBadge size="sm" />
+                    </div>
                     <p className="text-xs text-muted-foreground">{t('sidebar.subheader')}</p>
                   </div>
                 </div>
@@ -1379,12 +1383,15 @@ const ChatPage = () => {
               {isSidebarOpen ? <ChevronLeft className="h-5 w-5" /> : <Menu className="h-5 w-5" />}
             </Button>
             <div className="flex flex-col min-w-0">
-              <h1 className="text-lg md:text-xl font-bold text-foreground truncate">
-                {isMobile && activeChatId ? 
-                  ((chatHistory as ChatHistoryItem[]).find((chat) => chat.id === activeChatId)?.title || 'Chat') 
-                  : 'HypertroQ'
-                }
-              </h1>
+              <div className="flex items-center gap-2">
+                <h1 className="text-lg md:text-xl font-bold text-foreground truncate">
+                  {isMobile && activeChatId ? 
+                    ((chatHistory as ChatHistoryItem[]).find((chat) => chat.id === activeChatId)?.title || 'Chat') 
+                    : 'HypertroQ'
+                  }
+                </h1>
+                {(!isMobile || !activeChatId) && <BetaBadge size="sm" />}
+              </div>
               {!isMobile && activeChatId && (
                 <p className="text-xs text-muted-foreground truncate">
                   {(chatHistory as ChatHistoryItem[]).find((chat) => chat.id === activeChatId)?.title || 'Active Chat'}
