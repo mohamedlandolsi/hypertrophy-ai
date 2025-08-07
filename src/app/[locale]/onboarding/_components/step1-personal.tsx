@@ -94,8 +94,6 @@ export function Step1PersonalInfo({ onNext, initialData = {} }: Step1Props) {
                 <SelectContent>
                   <SelectItem value="MALE">{t('genderOptions.male')}</SelectItem>
                   <SelectItem value="FEMALE">{t('genderOptions.female')}</SelectItem>
-                  <SelectItem value="OTHER">{t('genderOptions.other')}</SelectItem>
-                  <SelectItem value="PREFER_NOT_TO_SAY">{t('genderOptions.preferNotToSay')}</SelectItem>
                 </SelectContent>
               </Select>
             </div>

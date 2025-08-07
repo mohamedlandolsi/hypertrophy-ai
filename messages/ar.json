@@ -890,6 +890,12 @@
         "experiencePlaceholder": "اختر مستوى خبرتك",
         "weeklyDays": "أيام التدريب في الأسبوع",
         "weeklyDaysPlaceholder": "كم يوماً؟",
+        "trainingStructure": "هيكل التدريب",
+        "trainingStructurePlaceholder": "اختر هيكل التدريب",
+        "trainingCyclePattern": "نمط دورة التدريب",
+        "trainingCyclePlaceholder": "اختر نمط دورتك",
+        "customCycleDescription": "وصف الدورة المخصصة",
+        "customCyclePlaceholder": "اوصف نمط دورتك المخصصة",
         "trainingStyle": "أسلوب التدريب المفضل",
         "trainingStylePlaceholder": "ما هو أسلوبك المفضل؟",
         "trainingSchedule": "وقت التدريب المفضل",
@@ -900,9 +906,10 @@
         "activityLevelPlaceholder": "مستوى نشاطك العام"
       },
       "experienceOptions": {
-        "beginner": "مبتدئ (0-1 سنة)",
-        "intermediate": "متوسط (1-3 سنوات)",
-        "advanced": "متقدم (3+ سنوات)"
+        "beginner": "مبتدئ",
+        "intermediate": "متوسط",
+        "advanced": "متقدم",
+        "years": "سنوات"
       },
       "daysOptions": {
         "2days": "يومان",
@@ -911,6 +918,18 @@
         "5days": "5 أيام",
         "6days": "6 أيام",
         "7days": "7 أيام"
+      },
+      "trainingStructureOptions": {
+        "weekly": "جدول أسبوعي",
+        "cycle": "نمط دوري"
+      },
+      "cycleOptions": {
+        "1_on_1_off": "يوم تدريب، يوم راحة",
+        "2_on_1_off": "يومان تدريب، يوم راحة",
+        "3_on_1_off": "3 أيام تدريب، يوم راحة",
+        "2_on_2_off": "يومان تدريب، يومان راحة",
+        "3_on_2_off": "3 أيام تدريب، يومان راحة",
+        "custom": "نمط مخصص"
       },
       "trainingStyleOptions": {
         "hypertrophy": "الضخامة/بناء العضلات",

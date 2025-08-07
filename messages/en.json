@@ -914,6 +914,12 @@
         "experiencePlaceholder": "Select your experience level",
         "weeklyDays": "Training Days per Week",
         "weeklyDaysPlaceholder": "How many days?",
+        "trainingStructure": "Training Structure",
+        "trainingStructurePlaceholder": "Select your training structure",
+        "trainingCyclePattern": "Training Cycle Pattern",
+        "trainingCyclePlaceholder": "Select your cycle pattern",
+        "customCycleDescription": "Custom Cycle Description",
+        "customCyclePlaceholder": "Describe your custom cycle pattern",
         "trainingStyle": "Preferred Training Style",
         "trainingStylePlaceholder": "What's your preferred style?",
         "trainingSchedule": "Preferred Training Time",
@@ -924,9 +930,10 @@
         "activityLevelPlaceholder": "Your general activity level"
       },
       "experienceOptions": {
-        "beginner": "Beginner (0-1 years)",
-        "intermediate": "Intermediate (1-3 years)",
-        "advanced": "Advanced (3+ years)"
+        "beginner": "Beginner",
+        "intermediate": "Intermediate", 
+        "advanced": "Advanced",
+        "years": "years"
       },
       "daysOptions": {
         "2days": "2 days",
@@ -935,6 +942,18 @@
         "5days": "5 days",
         "6days": "6 days",
         "7days": "7 days"
+      },
+      "trainingStructureOptions": {
+        "weekly": "Weekly Schedule",
+        "cycle": "Cycle Pattern"
+      },
+      "cycleOptions": {
+        "1_on_1_off": "1 day on, 1 day off",
+        "2_on_1_off": "2 days on, 1 day off",
+        "3_on_1_off": "3 days on, 1 day off",
+        "2_on_2_off": "2 days on, 2 days off",
+        "3_on_2_off": "3 days on, 2 days off",
+        "custom": "Custom pattern"
       },
       "trainingStyleOptions": {
         "hypertrophy": "Hypertrophy/Muscle Building",

@@ -402,4 +402,28 @@ Timestamp: 2025-08-07T16:00:02.366Z
 ✅ Environment variables: OK
 [dotenv@17.2.1] injecting env (0) from .env -- tip: ⚙️  suppress all logs with { quiet: true }
 📊 Checking subscription security...
-^C
+^C🔒 STARTING SUBSCRIPTION SECURITY CHECK
+==========================================
+Timestamp: 2025-08-07T17:05:29.689Z
+[dotenv@17.2.1] injecting env (21) from .env -- tip: ⚙️  override existing env vars with { override: true }
+📊 Checking subscription security...
+🚀 SUBSCRIPTION SECURITY JOB STARTED
+=====================================
+
+✅ Database connection: OK
+✅ Environment variables: OK
+[dotenv@17.2.1] injecting env (0) from .env -- tip: 🛠️  run anywhere with `dotenvx run -- yourcommand`
+📊 Checking subscription security...
+Found 0 expired active subscriptions
+Found 1 PRO users without valid subscriptions
+Found 0 expired active subscriptions
+
+🔧 ACTIONS PERFORMED:
+1. Downgraded user 3e9ab191-e4e9-4eb4-a8eb-e95cbc39c7ba from PRO to FREE due to invalid subscription
+
+✅ Subscription security check completed successfully
+
+📈 FINAL SUMMARY:
+Total expired subscriptions processed: 0
+Total PRO users downgraded: 1
+Total actions: 1

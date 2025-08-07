@@ -920,6 +920,12 @@
         "experiencePlaceholder": "Sélectionnez votre niveau d'expérience",
         "weeklyDays": "Jours d'Entraînement par Semaine",
         "weeklyDaysPlaceholder": "Combien de jours ?",
+        "trainingStructure": "Structure d'Entraînement",
+        "trainingStructurePlaceholder": "Sélectionnez votre structure d'entraînement",
+        "trainingCyclePattern": "Modèle de Cycle d'Entraînement",
+        "trainingCyclePlaceholder": "Sélectionnez votre modèle de cycle",
+        "customCycleDescription": "Description du Cycle Personnalisé",
+        "customCyclePlaceholder": "Décrivez votre modèle de cycle personnalisé",
         "trainingStyle": "Style d'Entraînement Préféré",
         "trainingStylePlaceholder": "Quel est votre style préféré ?",
         "trainingSchedule": "Heure d'Entraînement Préférée",
@@ -930,9 +936,10 @@
         "activityLevelPlaceholder": "Votre niveau d'activité général"
       },
       "experienceOptions": {
-        "beginner": "Débutant (0-1 an)",
-        "intermediate": "Intermédiaire (1-3 ans)",
-        "advanced": "Avancé (3+ ans)"
+        "beginner": "Débutant",
+        "intermediate": "Intermédiaire",
+        "advanced": "Avancé",
+        "years": "ans"
       },
       "daysOptions": {
         "2days": "2 jours",
@@ -941,6 +948,18 @@
         "5days": "5 jours",
         "6days": "6 jours",
         "7days": "7 jours"
+      },
+      "trainingStructureOptions": {
+        "weekly": "Planning Hebdomadaire",
+        "cycle": "Modèle Cyclique"
+      },
+      "cycleOptions": {
+        "1_on_1_off": "1 jour d'entraînement, 1 jour de repos",
+        "2_on_1_off": "2 jours d'entraînement, 1 jour de repos",
+        "3_on_1_off": "3 jours d'entraînement, 1 jour de repos",
+        "2_on_2_off": "2 jours d'entraînement, 2 jours de repos",
+        "3_on_2_off": "3 jours d'entraînement, 2 jours de repos",
+        "custom": "Modèle personnalisé"
       },
       "trainingStyleOptions": {
         "hypertrophy": "Hypertrophie/Construction Musculaire",

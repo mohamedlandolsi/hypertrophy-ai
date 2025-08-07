@@ -11,7 +11,10 @@ import { useTranslations } from 'next-intl';
 
 interface Step2Data {
   trainingExperience?: string;
+  trainingStructureType?: string;
   weeklyTrainingDays?: number;
+  trainingCycle?: string;
+  customCyclePattern?: string;
   preferredTrainingStyle?: string;
   trainingSchedule?: string;
   availableTime?: number;
@@ -69,12 +72,27 @@ export function Step2TrainingInfo({ onNext, onBack, initialData = {} }: Step2Pro
                   <SelectValue placeholder={t('fields.experiencePlaceholder')} />
                 </SelectTrigger>
                 <SelectContent>
-                  <SelectItem value="beginner">{t('experienceOptions.beginner')}</SelectItem>
-                  <SelectItem value="intermediate">{t('experienceOptions.intermediate')}</SelectItem>
-                  <SelectItem value="advanced">{t('experienceOptions.advanced')}</SelectItem>
+                  <SelectItem value="beginner">{t('experienceOptions.beginner')} (0-1 {t('experienceOptions.years')})</SelectItem>
+                  <SelectItem value="intermediate">{t('experienceOptions.intermediate')} (2-5 {t('experienceOptions.years')})</SelectItem>
+                  <SelectItem value="advanced">{t('experienceOptions.advanced')} (5+ {t('experienceOptions.years')})</SelectItem>
                 </SelectContent>
               </Select>
             </div>
+            <div>
+              <Label htmlFor="trainingStructure">{t('fields.trainingStructure')}</Label>
+              <Select value={formData.trainingStructureType || ''} onValueChange={(value) => updateField('trainingStructureType', value)}>
+                <SelectTrigger>
+                  <SelectValue placeholder={t('fields.trainingStructurePlaceholder')} />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="weekly">{t('trainingStructureOptions.weekly')}</SelectItem>
+                  <SelectItem value="cycle">{t('trainingStructureOptions.cycle')}</SelectItem>
+                </SelectContent>
+              </Select>
+            </div>
+          </div>
+
+          {formData.trainingStructureType === 'weekly' && (
             <div>
               <Label htmlFor="weeklyDays">{t('fields.weeklyDays')}</Label>
               <Select 
@@ -94,7 +112,40 @@ export function Step2TrainingInfo({ onNext, onBack, initialData = {} }: Step2Pro
                 </SelectContent>
               </Select>
             </div>
-          </div>
+          )}
+
+          {formData.trainingStructureType === 'cycle' && (
+            <div className="space-y-4">
+              <div>
+                <Label htmlFor="trainingCycle">{t('fields.trainingCyclePattern')}</Label>
+                <Select value={formData.trainingCycle || ''} onValueChange={(value) => updateField('trainingCycle', value)}>
+                  <SelectTrigger>
+                    <SelectValue placeholder={t('fields.trainingCyclePlaceholder')} />
+                  </SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="1_on_1_off">{t('cycleOptions.1_on_1_off')}</SelectItem>
+                    <SelectItem value="2_on_1_off">{t('cycleOptions.2_on_1_off')}</SelectItem>
+                    <SelectItem value="3_on_1_off">{t('cycleOptions.3_on_1_off')}</SelectItem>
+                    <SelectItem value="2_on_2_off">{t('cycleOptions.2_on_2_off')}</SelectItem>
+                    <SelectItem value="3_on_2_off">{t('cycleOptions.3_on_2_off')}</SelectItem>
+                    <SelectItem value="custom">{t('cycleOptions.custom')}</SelectItem>
+                  </SelectContent>
+                </Select>
+              </div>
+              {formData.trainingCycle === 'custom' && (
+                <div>
+                  <Label htmlFor="customCycle">{t('fields.customCycleDescription')}</Label>
+                  <Input
+                    id="customCycle"
+                    value={formData.customCyclePattern || ''}
+                    onChange={(e) => updateField('customCyclePattern', e.target.value)}
+                    placeholder={t('fields.customCyclePlaceholder')}
+                    onFocus={handleInputFocus}
+                  />
+                </div>
+              )}
+            </div>
+          )}
 
           <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
             <div>
