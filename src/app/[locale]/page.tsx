@@ -9,7 +9,7 @@ import { createClient } from "@/lib/supabase/client";
 import type { User } from "@supabase/supabase-js";
 import PulsatingButton from "@/components/magicui/pulsating-button";
 import LineShadowText from "@/components/magicui/line-shadow-text";
-import { Check, X, MessageSquare } from "lucide-react";
+import { Check, X, MessageSquare, ArrowRight, Zap } from "lucide-react";
 import { motion, useInView } from "framer-motion";
 import { useRef } from "react";
 import AnimatedBackground from "@/components/ui/animated-background";
@@ -19,6 +19,7 @@ import ConnectingPath from "@/components/ui/connecting-path";
 import ClientOnly from "@/components/ui/client-only";
 import Head from "next/head";
 import { generateSchema } from "@/lib/seo";
+import ThreeDCTAButton from "@/components/ui/three-d-cta-button";
 
 export default function Home() {
   const t = useTranslations('HomePage');
@@ -27,6 +28,7 @@ export default function Home() {
   const [showGenericAnswer, setShowGenericAnswer] = useState(false);
   const [showHypertroQAnswer, setShowHypertroQAnswer] = useState(false);
   const trustBarRef = useRef(null);
+  const chatButtonRef = useRef<HTMLDivElement>(null);
   const isTrustBarInView = useInView(trustBarRef, { once: true, margin: "-50px" });
 
   useEffect(() => {
@@ -42,9 +44,21 @@ export default function Home() {
     const timer1 = setTimeout(() => setShowGenericAnswer(true), 2000);
     const timer2 = setTimeout(() => setShowHypertroQAnswer(true), 6000);
     
+    // Auto-scroll to chat button after initial animations
+    const scrollTimer = setTimeout(() => {
+      if (chatButtonRef.current) {
+        chatButtonRef.current.scrollIntoView({ 
+          behavior: 'smooth', 
+          block: 'center',
+          inline: 'nearest' 
+        });
+      }
+    }, 3000); // Scroll after 3 seconds
+    
     return () => {
       clearTimeout(timer1);
       clearTimeout(timer2);
+      clearTimeout(scrollTimer);
     };
   }, []);
 
@@ -144,6 +158,8 @@ export default function Home() {
 
           {/* Action Buttons */}
           <motion.div 
+            ref={chatButtonRef}
+            id="action-buttons"
             className="flex flex-col sm:flex-row gap-4 justify-center mb-12"
             initial={{ opacity: 0, y: 20 }}
             animate={{ opacity: 1, y: 0 }}
@@ -151,18 +167,43 @@ export default function Home() {
           >
             {user ? (
               <div className="animate-fade-in flex justify-center">
-                <PulsatingButton className="bg-gradient-to-r from-blue-600 to-purple-600 hover:from-blue-700 hover:to-purple-700 text-white text-base md:text-lg px-6 md:px-8 py-3 md:py-4 rounded-xl font-semibold">
-                  <Link href={`/${locale}/chat`}>{t('hero.goToChat')}</Link>
-                </PulsatingButton>
+                <ThreeDCTAButton
+                  href={`/${locale}/chat`}
+                  label={t('hero.goToChat')}
+                  ariaLabel={t('hero.goToChat')}
+                  className="w-full sm:w-auto"
+                />
               </div>
             ) : (
               <div className="animate-fade-in flex flex-col sm:flex-row gap-3 md:gap-4 justify-center items-center">
-                <PulsatingButton className="bg-gradient-to-r from-blue-600 to-purple-600 hover:from-blue-700 hover:to-purple-700 text-white text-base md:text-lg px-6 md:px-8 py-3 md:py-4 rounded-xl font-semibold w-full sm:w-auto">
-                  <Link href={`/${locale}/signup`}>{t('hero.getStartedFree')}</Link>
-                </PulsatingButton>
-                <Button asChild variant="outline" size="lg" className="text-base md:text-lg px-6 md:px-8 py-2.5 md:py-3 rounded-xl border-2 hover:bg-muted/50 w-full sm:w-auto">
-                  <Link href="#comparison-section">{t('hero.seeDemo')}</Link>
-                </Button>
+                <motion.div
+                  whileHover={{ scale: 1.05 }}
+                  whileTap={{ scale: 0.95 }}
+                  className="relative group w-full sm:w-auto"
+                >
+                  {/* Glowing background effect */}
+                  <div className="absolute -inset-1 bg-gradient-to-r from-blue-600 via-purple-600 to-cyan-600 rounded-2xl blur-lg opacity-75 group-hover:opacity-100 transition duration-1000 group-hover:duration-200 animate-tilt"></div>
+                  
+                  <PulsatingButton className="relative bg-gradient-to-r from-blue-600 via-purple-600 to-cyan-600 hover:from-blue-700 hover:via-purple-700 hover:to-cyan-700 text-white text-base md:text-lg px-8 md:px-10 py-4 md:py-5 rounded-xl font-bold shadow-2xl border border-white/20 backdrop-blur-sm w-full sm:w-auto">
+                    <Link href={`/${locale}/signup`} className="flex items-center justify-center gap-3">
+                      <Zap className="w-5 h-5 animate-pulse" />
+                      {t('hero.getStartedFree')}
+                      <ArrowRight className="w-5 h-5 group-hover:translate-x-1 transition-transform duration-300" />
+                    </Link>
+                  </PulsatingButton>
+                </motion.div>
+                
+                <motion.div
+                  whileHover={{ scale: 1.02 }}
+                  whileTap={{ scale: 0.98 }}
+                >
+                  <Button asChild variant="outline" size="lg" className="text-base md:text-lg px-6 md:px-8 py-2.5 md:py-3 rounded-xl border-2 hover:bg-muted/50 w-full sm:w-auto backdrop-blur-sm border-primary/20 hover:border-primary/40 transition-all duration-300">
+                    <Link href="#comparison-section" className="flex items-center gap-2">
+                      {t('hero.seeDemo')}
+                      <ArrowRight className="w-4 h-4" />
+                    </Link>
+                  </Button>
+                </motion.div>
               </div>
             )}
           </motion.div>

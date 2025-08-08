@@ -1033,3 +1033,47 @@
     );
   }
 }
+
+/* Glowing button animations */
+@keyframes tilt {
+  0%, 50%, 100% {
+    transform: rotate(0deg);
+  }
+  25% {
+    transform: rotate(1deg);
+  }
+  75% {
+    transform: rotate(-1deg);
+  }
+}
+
+.animate-tilt {
+  animation: tilt 10s infinite linear;
+}
+
+/* Additional helpers for 3D CTA */
+@keyframes huerotate {
+  0% { filter: hue-rotate(0deg); }
+  100% { filter: hue-rotate(360deg); }
+}
+
+.shimmer {
+  --c: linear-gradient(120deg, transparent 40%, rgba(255,255,255,0.35) 50%, transparent 60%);
+  background-image: var(--c);
+  background-size: 300% 100%;
+  animation: shimmerMove 2.8s ease-in-out infinite;
+}
+
+@keyframes shimmerMove {
+  0% { background-position: 120% 0; }
+  50% { background-position: -20% 0; }
+  100% { background-position: -120% 0; }
+}
+
+.grid-overlay {
+  background-image:
+    linear-gradient(rgba(255,255,255,0.08) 1px, transparent 1px),
+    linear-gradient(90deg, rgba(255,255,255,0.08) 1px, transparent 1px);
+  background-size: 26px 26px, 26px 26px;
+  background-position: center center;
+}
