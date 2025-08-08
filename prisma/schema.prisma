@@ -31,6 +31,7 @@ model User {
   hasCompletedOnboarding Boolean         @default(false)
   lastMessageReset       DateTime        @default(now())
   messagesUsedToday      Int             @default(0)
+  freeMessagesRemaining  Int             @default(15)
   plan                   UserPlan        @default(FREE)
   lastUploadReset        DateTime        @default(now())
   uploadsThisMonth       Int             @default(0)

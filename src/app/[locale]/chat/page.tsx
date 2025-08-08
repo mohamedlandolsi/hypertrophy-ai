@@ -1243,6 +1243,7 @@ const ChatPage = () => {
                     <MessageLimitIndicator
                       messagesUsed={userPlan.messagesUsedToday || 0}
                       dailyLimit={userPlan.dailyLimit || 5}
+                      freeMessagesRemaining={userPlan.freeMessagesRemaining || 0}
                       plan={userPlan.plan}
                       className="px-1"
                     />

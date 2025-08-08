@@ -1098,8 +1098,6 @@
     "invalidFileTypeText": "Le fichier \"{fileName}\" n'est pas un type d'image pris en charge (JPEG, PNG, GIF, WebP).",
     "tooManyImagesTitle": "Trop d'images",
     "tooManyImagesText": "Vous pouvez télécharger un maximum de {max} images par message.",
-    "imagePastedTitle": "Image collée",
-    "imagePastedText": "L'image a été ajoutée à votre message.",
     "imagesPastedText": "{count} images ont été ajoutées à votre message.",
     "confirmImageReplace": "Voulez-vous remplacer l'image actuelle par l'image collée ?",
     "limitReachedTitle": "Limite quotidienne atteinte",
@@ -1175,10 +1173,14 @@
   },
   "messageLimitIndicator": {
     "title": "Messages Quotidiens",
+    "freeMessages": "Messages Gratuits",
     "messagesRemaining": "{count} messages restants aujourd'hui",
+    "freeMessagesRemaining": "{count} messages gratuits restants",
     "limitReached": "Limite Quotidienne Atteinte",
     "limitReachedMessage": "Vous avez atteint votre limite quotidienne de messages. Passez à Pro pour des messages illimités.",
+    "freeMessagesExhausted": "Vos messages gratuits ont été utilisés. Vous avez maintenant 5 messages quotidiens.",
     "runningLowMessage": "Vous manquez de messages. Il ne vous reste que {count} messages aujourd'hui.",
+    "freeMessagesRunningLow": "Il vous reste {count} messages gratuits.",
     "unlockUnlimited": "Débloquer la messagerie illimitée",
     "proFeatures": "Obtenez des messages illimités, la mémoire de conversation et des fonctionnalités d'entraînement avancées.",
     "upgradePrompt": "Passez à Pro pour des messages illimités."
@@ -1262,7 +1264,9 @@
       "logoutSuccessTitle": "Déconnexion Réussie",
       "logoutSuccessText": "Vous avez été déconnecté avec succès de votre compte.",
       "deleteSuccessTitle": "Chat supprimé",
-      "deleteSuccessText": "La conversation a été supprimée."
+      "deleteSuccessText": "La conversation a été supprimée.",
+      "imagePastedTitle": "Image collée",
+      "imagePastedText": "L'image a été ajoutée à votre message."
     },
     "connectionStatus": {
       "offline": "Vous êtes hors ligne. Veuillez vérifier votre connexion.",

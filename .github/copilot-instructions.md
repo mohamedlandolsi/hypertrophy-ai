@@ -10,6 +10,7 @@
 - **Subscription Enforcement**: Server-side validation with daily/monthly limits enforced in API routes
 - **Vector Storage**: Embeddings stored as JSON strings (768 dimensions via Gemini text-embedding-004)
 - **Performance-First**: Optimized for <2s page loads with advanced caching and component optimization
+- **React 19 & Next.js 15**: Latest versions with App Router, Server Components, and React concurrent features
 
 ### Core Components
 - **RAG System**: Optimized pgvector + AND-based keyword search (`/src/lib/vector-search.ts`)
@@ -68,6 +69,8 @@ npm run build           # Prisma generate + Next.js production build
 npx prisma migrate dev  # Apply schema changes with migration name
 npx prisma studio       # Visual database browser
 npm run postinstall     # Generate Prisma client (auto-run after install)
+npm run lint            # ESLint validation
+npm start               # Production server
 ```
 
 ### Must-Have Environment Variables
@@ -97,6 +100,9 @@ NEXT_PUBLIC_SITE_URL=            # Site URL for checkout redirects
 - `check-user-plan.js` - Verify individual user subscription status
 - `test-performance-optimizations.js` - Validate chat performance enhancements
 - `comprehensive-debug.js` - Complete system flow debugging
+- `test-ai-integration.js` - Test Gemini API integration
+- `test-enhanced-rag.js` - Validate RAG system performance
+- `debug-lemonsqueezy-checkout.js` - Test subscription checkout flow
 
 ## 📋 Critical Project Patterns
 
@@ -380,8 +386,33 @@ src/
 
 ## 💳 Subscription System Details
 
+### Free Messages System (NEW!)
+```typescript
+// New users get 15 free messages before daily limits kick in
+const { freeMessagesRemaining, messagesUsedToday } = await getUserPlan();
+
+// Free messages are consumed first, then daily limits apply
+if (freeMessagesRemaining > 0) {
+  // Use free message
+  await prisma.user.update({
+    where: { id: userId },
+    data: { freeMessagesRemaining: { decrement: 1 } }
+  });
+} else {
+  // Use daily message (for FREE users only)
+  await prisma.user.update({
+    where: { id: userId },
+    data: { messagesUsedToday: { increment: 1 } }
+  });
+}
+```
+- **New User Experience**: 15 free messages before daily limits
+- **Existing Users**: All existing users granted 15 free messages (one-time)
+- **UI Updates**: Message limit indicator shows free messages with green progress bar
+- **Database Field**: `User.freeMessagesRemaining` (default: 15 for new users)
+
 ### Current Pricing Structure (USD)
-- **FREE Plan**: 15 messages/day, 5 uploads/month, max 10MB files, 10 knowledge items
+- **FREE Plan**: 15 free messages + 5 messages/day thereafter, 5 uploads/month, max 10MB files, 10 knowledge items
 - **PRO Plan Monthly**: $9/month - Unlimited messages, unlimited uploads, max 100MB files, unlimited knowledge items  
 - **PRO Plan Yearly**: $90/year (10 months pricing) - Same features as monthly
 

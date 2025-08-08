@@ -1070,8 +1070,6 @@
     "invalidFileTypeText": "الملف \"{fileName}\" ليس نوع صورة مدعوم (JPEG, PNG, GIF, WebP).",
     "tooManyImagesTitle": "صور كثيرة جدًا",
     "tooManyImagesText": "يمكنك تحميل {max} صور كحد أقصى لكل رسالة.",
-    "imagePastedTitle": "تم لصق الصورة",
-    "imagePastedText": "تمت إضافة الصورة إلى رسالتك.",
     "imagesPastedText": "تمت إضافة {count} صور إلى رسالتك.",
     "confirmImageReplace": "هل تريد استبدال الصورة الحالية بالصورة الملصقة؟",
     "limitReachedTitle": "تم الوصول إلى الحد اليومي",
@@ -1147,10 +1145,14 @@
   },
   "messageLimitIndicator": {
     "title": "الرسائل اليومية",
+    "freeMessages": "الرسائل المجانية",
     "messagesRemaining": "{count} رسائل متبقية اليوم",
+    "freeMessagesRemaining": "{count} رسائل مجانية متبقية",
     "limitReached": "تم الوصول إلى الحد اليومي",
     "limitReachedMessage": "لقد وصلت إلى الحد اليومي للرسائل. قم بالترقية إلى Pro للحصول على رسائل غير محدودة.",
+    "freeMessagesExhausted": "تم استخدام رسائلك المجانية. لديك الآن 5 رسائل يومية.",
     "runningLowMessage": "رسائلك على وشك النفاد. لم يتبق سوى {count} رسائل اليوم.",
+    "freeMessagesRunningLow": "لديك {count} رسائل مجانية متبقية.",
     "unlockUnlimited": "افتح المراسلة غير المحدودة",
     "proFeatures": "احصل على رسائل غير محدودة وذاكرة المحادثة وميزات التدريب المتقدمة.",
     "upgradePrompt": "قم بالترقية إلى Pro للحصول على رسائل غير محدودة."
@@ -1234,7 +1236,9 @@
       "logoutSuccessTitle": "تم تسجيل الخروج بنجاح",
       "logoutSuccessText": "لقد تم تسجيل خروجك من حسابك بنجاح.",
       "deleteSuccessTitle": "تم حذف الدردشة",
-      "deleteSuccessText": "تمت إزالة المحادثة."
+      "deleteSuccessText": "تمت إزالة المحادثة.",
+      "imagePastedTitle": "تم لصق الصورة",
+      "imagePastedText": "تمت إضافة الصورة إلى رسالتك."
     },
     "connectionStatus": {
       "offline": "أنت غير متصل. يرجى التحقق من اتصالك.",

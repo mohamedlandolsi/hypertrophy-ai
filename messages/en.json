@@ -999,7 +999,6 @@
       "privacyPolicyLink": "full privacy policy"
     },
     "checkbox": "I consent to the processing of my personal data for the purposes stated above and confirm that I have read and understood the privacy policy.",
-    "checkboxSimple": "I agree to the processing of my personal data as described in our Privacy Policy",
     "required": "Required to continue",
     "version": "Version {version}",
     "agreement": "I understand and agree to the processing of my personal data as outlined in the Privacy Policy",
@@ -1239,8 +1238,6 @@
     "invalidFileTypeText": "File \"{fileName}\" is not a supported image type (JPEG, PNG, GIF, WebP).",
     "tooManyImagesTitle": "Too Many Images",
     "tooManyImagesText": "You can upload a maximum of {max} images per message.",
-    "imagePastedTitle": "Image Pasted",
-    "imagePastedText": "Image has been added to your message.",
     "imagesPastedText": "{count} images have been added to your message.",
     "confirmImageReplace": "Replace current image with pasted image?",
     "limitReachedTitle": "Daily limit reached",
@@ -1316,10 +1313,14 @@
   },
   "messageLimitIndicator": {
     "title": "Daily Messages",
+    "freeMessages": "Free Messages",
     "messagesRemaining": "{count} messages remaining today",
+    "freeMessagesRemaining": "{count} free messages remaining",
     "limitReached": "Daily Limit Reached",
     "limitReachedMessage": "You've reached your daily message limit. Upgrade to Pro for unlimited messages.",
+    "freeMessagesExhausted": "Your free messages have been used up. You now have 5 daily messages.",
     "runningLowMessage": "You're running low on messages. Only {count} left today.",
+    "freeMessagesRunningLow": "You have {count} free messages remaining.",
     "unlockUnlimited": "Unlock unlimited messaging",
     "proFeatures": "Get unlimited messages, conversation memory, and advanced coaching features.",
     "upgradePrompt": "Upgrade to Pro for unlimited messages."
@@ -1403,7 +1404,9 @@
       "logoutSuccessTitle": "Signed Out Successfully",
       "logoutSuccessText": "You have been successfully signed out of your account.",
       "deleteSuccessTitle": "Chat deleted",
-      "deleteSuccessText": "The conversation has been removed."
+      "deleteSuccessText": "The conversation has been removed.",
+      "imagePastedTitle": "Image Pasted",
+      "imagePastedText": "Image has been added to your message."
     },
     "connectionStatus": {
       "offline": "You are offline. Please check your connection.",

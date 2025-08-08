@@ -31,6 +31,7 @@ interface UserPlanData {
     maxKnowledgeItems: number;
   };
   messagesUsedToday: number;
+  freeMessagesRemaining?: number;
   uploadsThisMonth?: number;
   knowledgeItemsCount?: number;
   subscription?: {
@@ -214,29 +215,46 @@ export function SubscriptionDashboard() {
           <CardHeader className="pb-2">
             <CardTitle className="text-sm font-medium flex items-center gap-2">
               <MessageSquare className="h-4 w-4" />
-              Daily Messages
+              {planData.freeMessagesRemaining && planData.freeMessagesRemaining > 0 
+                ? 'Free Messages' 
+                : 'Daily Messages'
+              }
             </CardTitle>
           </CardHeader>
           <CardContent>
             <div className="space-y-2">
               <div className="flex items-baseline gap-2">
                 <span className="text-2xl font-bold">
-                  {planData.limits.dailyMessages === -1 ? '∞' : planData.messagesUsedToday}
+                  {planData.limits.dailyMessages === -1 
+                    ? '∞' 
+                    : planData.freeMessagesRemaining && planData.freeMessagesRemaining > 0
+                      ? `${15 - planData.freeMessagesRemaining}`
+                      : planData.messagesUsedToday
+                  }
                 </span>
                 {planData.limits.dailyMessages !== -1 && (
                   <span className="text-sm text-muted-foreground">
-                    / {planData.limits.dailyMessages}
+                    / {planData.freeMessagesRemaining && planData.freeMessagesRemaining > 0 
+                        ? '15' 
+                        : planData.limits.dailyMessages
+                      }
                   </span>
                 )}
               </div>
               {planData.limits.dailyMessages !== -1 && (
                 <Progress
-                  value={(planData.messagesUsedToday / planData.limits.dailyMessages) * 100}
+                  value={planData.freeMessagesRemaining && planData.freeMessagesRemaining > 0
+                    ? ((15 - planData.freeMessagesRemaining) / 15) * 100
+                    : (planData.messagesUsedToday / planData.limits.dailyMessages) * 100
+                  }
                   className="h-2"
                 />
               )}
               <p className="text-xs text-muted-foreground">
-                {messagesRemaining} remaining today
+                {planData.freeMessagesRemaining && planData.freeMessagesRemaining > 0
+                  ? `${planData.freeMessagesRemaining} free messages remaining`
+                  : `${messagesRemaining} remaining today`
+                }
               </p>
             </div>
           </CardContent>

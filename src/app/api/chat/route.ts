@@ -53,7 +53,8 @@ export async function POST(request: NextRequest) {
       canUserSendMessage().catch(() => ({ 
         canSend: false, 
         reason: 'Error checking message limits',
-        messagesRemaining: 0
+        messagesRemaining: 0,
+        freeMessagesRemaining: 0
       }))
     ]);
 
@@ -200,6 +201,7 @@ export async function POST(request: NextRequest) {
         error: 'MESSAGE_LIMIT_REACHED',
         message: messageCheck.reason,
         messagesRemaining: messageCheck.messagesRemaining || 0,
+        freeMessagesRemaining: messageCheck.freeMessagesRemaining || 0,
         requiresUpgrade: true
       }, { status: 429 });
     }

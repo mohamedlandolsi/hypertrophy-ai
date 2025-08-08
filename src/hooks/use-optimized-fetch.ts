@@ -149,6 +149,7 @@ export function useOptimizedUserPlan(enabled: boolean = true) {
   return useOptimizedFetch<{
     plan: 'FREE' | 'PRO';
     messagesUsedToday: number;
+    freeMessagesRemaining: number;
     dailyLimit: number;
     uploadsThisMonth: number;
     knowledgeItemsCount: number;

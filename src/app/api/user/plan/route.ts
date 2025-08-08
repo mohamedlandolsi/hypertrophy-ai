@@ -74,6 +74,7 @@ export async function GET(request: NextRequest) {
       plan: planInfo.plan,
       limits: planInfo.limits,
       messagesUsedToday: planInfo.messagesUsedToday,
+      freeMessagesRemaining: planInfo.freeMessagesRemaining,
       dailyLimit: planInfo.limits.dailyMessages, // Add this for backward compatibility
       uploadsThisMonth,
       knowledgeItemsCount: userData?._count.knowledgeItems || 0,

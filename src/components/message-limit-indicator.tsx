@@ -9,6 +9,7 @@ import { useTranslations } from 'next-intl';
 interface MessageLimitIndicatorProps {
   messagesUsed: number;
   dailyLimit: number;
+  freeMessagesRemaining?: number;
   plan: 'FREE' | 'PRO';
   className?: string;
 }
@@ -16,6 +17,7 @@ interface MessageLimitIndicatorProps {
 export function MessageLimitIndicator({ 
   messagesUsed, 
   dailyLimit, 
+  freeMessagesRemaining = 0,
   plan,
   className = '' 
 }: MessageLimitIndicatorProps) {
@@ -26,19 +28,33 @@ export function MessageLimitIndicator({
     return null;
   }
 
-  const messagesRemaining = Math.max(0, dailyLimit - messagesUsed);
-  const progressPercentage = (messagesUsed / dailyLimit) * 100;
+  // Calculate progress based on whether user has free messages or not
+  const hasFreeMessages = freeMessagesRemaining > 0;
+  const messagesRemaining = hasFreeMessages 
+    ? freeMessagesRemaining 
+    : Math.max(0, dailyLimit - messagesUsed);
+  
+  // For progress bar calculation
+  const progressPercentage = hasFreeMessages 
+    ? ((15 - freeMessagesRemaining) / 15) * 100  // 15 is the initial free messages
+    : (messagesUsed / dailyLimit) * 100;
+    
   const isNearLimit = progressPercentage >= 80;
-  const isAtLimit = messagesUsed >= dailyLimit;
+  const isAtLimit = hasFreeMessages ? freeMessagesRemaining === 0 : messagesUsed >= dailyLimit;
 
   return (
     <div className={`space-y-3 ${className}`}>
       {/* Progress Bar */}
       <div className="space-y-2">
         <div className="flex justify-between text-sm">
-          <span className="text-muted-foreground">{t('title')}</span>
+          <span className="text-muted-foreground">
+            {hasFreeMessages ? t('freeMessages') : t('title')}
+          </span>
           <span className="font-medium">
-            {messagesUsed} / {dailyLimit}
+            {hasFreeMessages 
+              ? `${15 - freeMessagesRemaining} / 15` 
+              : `${messagesUsed} / ${dailyLimit}`
+            }
           </span>
         </div>
         <Progress 
@@ -50,11 +66,16 @@ export function MessageLimitIndicator({
               ? 'rgb(239 68 68)' // red
               : isNearLimit 
                 ? 'rgb(245 158 11)' // amber
-                : 'rgb(59 130 246)' // blue
+                : hasFreeMessages
+                  ? 'rgb(34 197 94)' // green for free messages
+                  : 'rgb(59 130 246)' // blue
           } as React.CSSProperties}
         />
         <div className="text-xs text-muted-foreground">
-          {t('messagesRemaining', { count: messagesRemaining })}
+          {hasFreeMessages 
+            ? t('freeMessagesRemaining', { count: freeMessagesRemaining })
+            : t('messagesRemaining', { count: messagesRemaining })
+          }
         </div>
       </div>
 
@@ -63,7 +84,10 @@ export function MessageLimitIndicator({
         <Alert className="border-red-200 bg-red-50 dark:border-red-800 dark:bg-red-950/20">
           <AlertTriangle className="h-4 w-4 text-red-600 dark:text-red-400" />
           <AlertDescription className="text-red-800 dark:text-red-200">
-            {t('limitReachedMessage')}
+            {hasFreeMessages 
+              ? t('freeMessagesExhausted')
+              : t('limitReachedMessage')
+            }
           </AlertDescription>
         </Alert>
       )}
@@ -72,7 +96,10 @@ export function MessageLimitIndicator({
         <Alert className="border-amber-200 bg-amber-50 dark:border-amber-800 dark:bg-amber-950/20">
           <AlertTriangle className="h-4 w-4 text-amber-600 dark:text-amber-400" />
           <AlertDescription className="text-amber-800 dark:text-amber-200">
-            {t('runningLowMessage', { count: messagesRemaining })}
+            {hasFreeMessages 
+              ? t('freeMessagesRunningLow', { count: freeMessagesRemaining })
+              : t('runningLowMessage', { count: messagesRemaining })
+            }
           </AlertDescription>
         </Alert>
       )}

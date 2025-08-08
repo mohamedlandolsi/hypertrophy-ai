@@ -41,6 +41,7 @@ export async function getUserPlan(): Promise<{
   plan: UserPlan;
   limits: UserPlanLimits;
   messagesUsedToday: number;
+  freeMessagesRemaining: number;
   subscription?: {
     id: string;
     status: string;
@@ -125,6 +126,7 @@ export async function getUserPlan(): Promise<{
       plan: userPlan,
       limits: PLAN_LIMITS[userPlan],
       messagesUsedToday,
+      freeMessagesRemaining: userData.freeMessagesRemaining,
       subscription: userData.subscription || undefined,
     };
   } catch (error) {
@@ -140,6 +142,7 @@ export async function canUserSendMessage(): Promise<{
   canSend: boolean;
   reason?: string;
   messagesRemaining?: number;
+  freeMessagesRemaining?: number;
 }> {
   const planInfo = await getUserPlan();
   
@@ -147,30 +150,41 @@ export async function canUserSendMessage(): Promise<{
     return { canSend: false, reason: 'User not found or not authenticated' };
   }
 
-  const { plan, limits, messagesUsedToday } = planInfo;
+  const { plan, limits, messagesUsedToday, freeMessagesRemaining } = planInfo;
 
   // Pro users have unlimited messages
   if (plan === 'PRO') {
-    return { canSend: true };
+    return { canSend: true, freeMessagesRemaining };
   }
 
-  // Free users have daily limits
+  // Free users: Check free messages first, then daily limits
+  if (freeMessagesRemaining > 0) {
+    return { 
+      canSend: true, 
+      freeMessagesRemaining,
+      messagesRemaining: limits.dailyMessages - messagesUsedToday 
+    };
+  }
+
+  // No free messages left, check daily limits
   if (messagesUsedToday >= limits.dailyMessages) {
     return {
       canSend: false,
       reason: `Daily message limit reached (${limits.dailyMessages} messages). Upgrade to Pro for unlimited messages.`,
       messagesRemaining: 0,
+      freeMessagesRemaining: 0,
     };
   }
 
   return {
     canSend: true,
     messagesRemaining: limits.dailyMessages - messagesUsedToday,
+    freeMessagesRemaining: 0,
   };
 }
 
 /**
- * Increment user's daily message count
+ * Increment user's daily message count and handle free messages
  */
 export async function incrementUserMessageCount(): Promise<void> {
   try {
@@ -179,14 +193,37 @@ export async function incrementUserMessageCount(): Promise<void> {
 
     if (!user) return;
 
-    await prisma.user.update({
+    // Get current user data to check free messages
+    const userData = await prisma.user.findUnique({
       where: { id: user.id },
-      data: {
-        messagesUsedToday: {
-          increment: 1,
-        },
-      },
+      select: { freeMessagesRemaining: true, plan: true }
     });
+
+    if (!userData) return;
+
+    // If user has free messages remaining, use those first
+    if (userData.freeMessagesRemaining > 0) {
+      await prisma.user.update({
+        where: { id: user.id },
+        data: {
+          freeMessagesRemaining: {
+            decrement: 1,
+          },
+        },
+      });
+    } else {
+      // No free messages left, increment daily count (for free users only)
+      if (userData.plan === 'FREE') {
+        await prisma.user.update({
+          where: { id: user.id },
+          data: {
+            messagesUsedToday: {
+              increment: 1,
+            },
+          },
+        });
+      }
+    }
   } catch (error) {
     console.error('Error incrementing message count:', error);
   }
