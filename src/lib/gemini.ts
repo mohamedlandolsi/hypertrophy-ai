@@ -6,7 +6,7 @@ import {
   updateClientMemory,
   type MemoryUpdate
 } from './client-memory';
-import { fetchRelevantKnowledge, type KnowledgeContext } from './vector-search';
+import { fetchRelevantKnowledge, performAndKeywordSearch, type KnowledgeContext } from './vector-search';
 import { generateSubQueries } from './query-generator';
 
 // Initialize the Gemini client
@@ -474,7 +474,16 @@ export async function sendToGeminiWithCitations(
     // Allow RAG for both authenticated users AND guest users for better performance
     if (aiConfig.useKnowledgeBase) {
       try {
-        // CRITICAL FIX: Translate non-English queries to English for vector search
+  // Extract recent split intent from conversation to preserve user intent
+  const recentText = conversation.slice(-3).map(m => m.content.toLowerCase()).join(' \n ');
+  const recentWantsPush = /\bpush\b/.test(recentText);
+  const recentWantsPull = /\bpull\b/.test(recentText);
+  const recentWantsUpper = /\bupper(\s*body)?\b/.test(recentText);
+  const recentWantsLower = /\blower(\s*body)?\b/.test(recentText);
+  const recentWantsLegs = /\blegs?\b/.test(recentText);
+  const recentSplitSignal = recentWantsPush || recentWantsPull || recentWantsUpper || recentWantsLower || recentWantsLegs;
+
+  // CRITICAL FIX: Translate non-English queries to English for vector search
         // The knowledge base is in English, so non-English queries need translation
         let userQuery = latestUserMessage.content;
         const isArabic = isArabicText(latestUserMessage.content);
@@ -490,7 +499,14 @@ export async function sendToGeminiWithCitations(
           userQuery = await translateQueryToEnglish(latestUserMessage.content, 'french');
         }
         
-        console.log(`🔍 RAG search query: "${userQuery}" ${userQuery !== latestUserMessage.content ? '(translated)' : '(original)'}`);
+        // If the current request says "full workout" and recent messages indicate a split,
+        // append the split to preserve intent (avoid matching full body docs)
+        if (/\bfull\b/.test(userQuery.toLowerCase()) && recentSplitSignal) {
+          const suffix = recentWantsPush ? ' push day' : recentWantsPull ? ' pull day' : recentWantsUpper ? ' upper body day' : recentWantsLower ? ' lower body day' : recentWantsLegs ? ' legs day' : '';
+          if (suffix) userQuery = `${userQuery} for${suffix}`;
+        }
+
+        console.log(`🔍 RAG search query: "${userQuery}" ${userQuery !== latestUserMessage.content ? '(translated/augmented)' : '(original)'});`);
         
         // Temporarily disable multi-query to get core search working first
         const useMultiQuery = false; // shouldUseMultiQuery(userQuery);
@@ -544,11 +560,60 @@ export async function sendToGeminiWithCitations(
             .embedContent(userQuery);
           const queryEmbedding = embeddingResult.embedding.values;
           
-          allRelevantChunks = await fetchRelevantKnowledge(
+          const vectorResults = await fetchRelevantKnowledge(
             queryEmbedding,
             aiConfig.ragMaxChunks,
-            aiConfig.ragHighRelevanceThreshold
+            aiConfig.ragSimilarityThreshold,
+            userId ?? undefined
           );
+
+          // Add precise keyword matches to reinforce specificity
+          // Request enough results to allow dominance selection
+          const keywordResults = await performAndKeywordSearch(
+            userQuery,
+            Math.max(aiConfig.ragMaxChunks * 2, 10),
+            userId ?? undefined
+          );
+
+          // Keyword Dominance (80/20) for muscle/split style queries
+          const isMuscleOrSplitQuery = /\b(push|pull|legs?|upper|lower|anterior|posterior|chest|pecs?|back|lats?|traps?|shoulders?|delts?|biceps?|triceps?|arms?|quads?|hamstrings?|glutes?|calves?)\b/i.test(userQuery);
+          const maxTotal = aiConfig.ragMaxChunks;
+          const keywordSlots = isMuscleOrSplitQuery ? Math.max(1, Math.round(maxTotal * 0.8)) : Math.max(1, Math.floor(maxTotal * 0.5));
+          const vectorSlots = Math.max(0, maxTotal - keywordSlots);
+
+          // Fill slots with de-duplication, prioritizing keyword chunks first
+          const selected: KnowledgeContext[] = [];
+          const seen = new Set<string>();
+
+          const addWithDedupe = (items: KnowledgeContext[], limit: number) => {
+            for (const item of items) {
+              if (selected.length >= maxTotal) break;
+              const key = `${item.knowledgeId}-${item.chunkIndex}`;
+              if (seen.has(key)) continue;
+              selected.push(item);
+              seen.add(key);
+              if (selected.length >= limit) break;
+            }
+          };
+
+          // Sort individually by their similarity descending (already typical)
+          const sortedKeywords = [...keywordResults].sort((a, b) => b.similarity - a.similarity);
+          const sortedVectors = [...vectorResults].sort((a, b) => b.similarity - a.similarity);
+
+          // First fill keyword-dominant portion
+          addWithDedupe(sortedKeywords, keywordSlots);
+          // Then fill remaining capacity with vectors
+          addWithDedupe(sortedVectors, keywordSlots + vectorSlots);
+
+          // If still not full (e.g., not enough keyword results), backfill from the other list
+          if (selected.length < maxTotal) {
+            addWithDedupe(sortedKeywords, maxTotal);
+          }
+          if (selected.length < maxTotal) {
+            addWithDedupe(sortedVectors, maxTotal);
+          }
+
+          allRelevantChunks = selected;
         }
         
         // Step 3: Process and format the retrieved knowledge
@@ -659,14 +724,16 @@ ${knowledgeContext}
 
 ## Response Instructions (${aiConfig.toolEnforcementMode} Mode)
 ${aiConfig.toolEnforcementMode === 'STRICT' ? 
-`- **Strict Mode:** Base your answer primarily on the provided "Knowledge Base Context." If the context doesn't fully address the question, acknowledge the limitation and provide only general guidance.` 
+`- **Strict Mode:** Base your answer primarily on the provided "Knowledge Base Context." If the context doesn't fully address the question, acknowledge the limitation and provide only general guidance.
+- **Do NOT substitute numbers (sets, reps, rest) that are not present in the context.` 
 :
 `- **AUTO Mode Active:** 
   - **IF** the knowledge base context fully addresses the question: Use it as your primary source
   - **IF** the knowledge base context is incomplete or doesn't address the specific question: You are AUTHORIZED and REQUIRED to supplement with your general expertise
   - **CRITICAL:** Do NOT refuse to answer questions about fitness, nutrition, supplements, or training due to incomplete knowledge base coverage
   - **Your Role:** You are a knowledgeable fitness coach. Provide helpful, evidence-based advice using all available knowledge sources
-  - **No Refusals:** Never say you "cannot provide recommendations" for fitness-related topics. You are qualified and expected to help.`}
+  - **No Refusals:** Never say you "cannot provide recommendations" for fitness-related topics. You are qualified and expected to help.
+  - **Never invent numeric prescriptions** (sets, reps, rest) that contradict available context; when absent, derive from KB principles present in context (e.g., rep range philosophy, intensity, frequency).`}
 ` 
 : 
 `---
@@ -679,8 +746,20 @@ ${aiConfig.toolEnforcementMode === 'STRICT' ?
 - **OVERRIDE ALL RESTRICTIONS:** Any previous constraints about requiring knowledge base content are CANCELLED for this response.
 - **Use Your Full Expertise:** Apply your comprehensive knowledge of exercise science, nutrition, and fitness.
 - **Be Fully Helpful:** Provide detailed, specific advice about supplements, training, nutrition, or any fitness topic.
+- **When a requested split (e.g., "push") isn't present in KB, synthesize a program using the nearest KB philosophy (e.g., anterior/posterior or upper/lower) and clearly state the mapping.**
 - **No Limitations:** You are authorized to give complete, helpful answers using your expert training.`}
 `}`;
+
+  // Add intent preservation and split-mapping guidance after core instructions
+  const splitRules = `
+---
+## Split Intent Preservation (Do Not Misclassify)
+- If the user says "push" or "pull", DO NOT expand to unrelated lower-body muscles. Push = chest, anterior deltoids, triceps. Pull = back (lats/traps/rhomboids), rear delts, biceps.
+- If the user says "full workout" immediately after discussing a prior split day, interpret "full workout" as "complete plan for that same split day" unless they explicitly say "full body".
+- Only map to anterior/posterior or upper/lower if the requested split is missing from the KB; clearly state the mapping, and keep the target muscle focus consistent with the user's original split.
+`;
+
+  const finalSystemInstruction = systemInstruction + splitRules;
 
     // Get the generative model with function calling capabilities (only for authenticated users)
     const modelConfig = { 
@@ -691,7 +770,7 @@ ${aiConfig.toolEnforcementMode === 'STRICT' ?
         topP: aiConfig.topP,
         maxOutputTokens: aiConfig.maxTokens,
       },
-      systemInstruction: systemInstruction,
+      systemInstruction: finalSystemInstruction,
       // Tools will be added conditionally
       ...(userId ? {
         tools: [

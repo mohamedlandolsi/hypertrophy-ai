@@ -86,14 +86,15 @@ async function performOptimizedPgvectorSearch(
 export async function fetchRelevantKnowledge(
   queryEmbedding: number[],
   topK: number,
-  highRelevanceThreshold?: number
+  similarityThreshold?: number,
+  userId?: string
 ): Promise<KnowledgeContext[]> {
   console.log(`🚀 Starting optimized vector search for top ${topK} chunks`);
   
   try {
     // Use efficient pgvector SQL query - no fallback, no batch limits
-    const threshold = highRelevanceThreshold || 0.3;
-    const results = await performOptimizedPgvectorSearch(queryEmbedding, topK, threshold);
+    const threshold = similarityThreshold ?? 0.3;
+    const results = await performOptimizedPgvectorSearch(queryEmbedding, topK, threshold, userId);
     console.log(`✅ Optimized pgvector search returned ${results.length} results`);
     return results;
   } catch (error) {
@@ -102,7 +103,9 @@ export async function fetchRelevantKnowledge(
     const errorMessage = error instanceof Error ? error.message : String(error);
     if (errorMessage.includes('pgvector') || errorMessage.includes('vector')) {
       console.log(`🔄 Using JSON fallback due to pgvector unavailability`);
-      return await optimizedJsonSimilaritySearch(queryEmbedding, topK, highRelevanceThreshold);
+      // Use the same similarity threshold for the JSON fallback path
+      const threshold = similarityThreshold ?? 0.3;
+      return await optimizedJsonSimilaritySearch(queryEmbedding, topK, threshold);
     }
     throw error; // Re-throw other errors
   }
@@ -120,13 +123,37 @@ export async function performAndKeywordSearch(
   console.log(`🔍 AND-based keyword search: "${query}"`);
   
   try {
-    // Clean and prepare search terms for AND logic
-    const searchTerms = query
-      .toLowerCase()
+    // Special handling: build muscle-group aware query groups
+    const raw = query.toLowerCase();
+    const hasPush = /\bpush\b/.test(raw);
+    const hasPull = /\bpull\b/.test(raw);
+    const hasUpper = /\bupper(\s*body)?\b/.test(raw);
+    const hasLower = /\blower(\s*body)?\b/.test(raw);
+    const hasLegs = /\blegs?\b/.test(raw);
+    const hasFullBody = /\bfull\s*body\b/.test(raw);
+
+    // Tokenize and remove ambiguous 'full' unless explicitly 'full body'
+    const baseTokens = raw
       .replace(/[^\w\s]/g, ' ')
-      .split(' ')
-      .filter(term => term.length > 2)
-      .join(' & '); // PostgreSQL AND syntax for precision
+      .split(/\s+/)
+      .filter(t => t && t.length > 2 && t !== 'the' && t !== 'and' && (t !== 'full' || hasFullBody));
+
+    const tsQueryParts: string[] = [];
+    if (hasPush) tsQueryParts.push('(push | chest | shoulder | delt | delts | triceps | pressing)');
+    if (hasPull) tsQueryParts.push('(pull | back | lat | lats | trap | traps | biceps | rowing | row | pulldown)');
+    if (hasUpper) tsQueryParts.push('(upper | chest | shoulders | delts | back | lats | traps | arms)');
+    if (hasLower || hasLegs) tsQueryParts.push('(lower | legs | quads | quadriceps | hamstrings | glutes | calves | adductors)');
+    if (hasFullBody) tsQueryParts.push('(full & body)');
+
+    // Add remaining tokens as AND terms (avoid duplicates and already covered signals)
+    const ignore = new Set(['push','pull','upper','lower','body','legs','leg','full']);
+    const otherTerms = Array.from(new Set(baseTokens.filter(t => !ignore.has(t))));
+    if (otherTerms.length > 0) {
+      tsQueryParts.push(otherTerms.join(' & '));
+    }
+
+    // Final tsquery string using AND between groups for precision
+    const searchTerms = tsQueryParts.join(' & ');
     
     if (!searchTerms) {
       console.log(`⚠️ No valid search terms extracted from: "${query}"`);

@@ -146,9 +146,9 @@ export async function POST(request: NextRequest) {
       );
     }
 
-    if (typeof ragSimilarityThreshold !== 'number' || ragSimilarityThreshold < 0.1 || ragSimilarityThreshold > 1.0) {
+  if (typeof ragSimilarityThreshold !== 'number' || ragSimilarityThreshold < 0.05 || ragSimilarityThreshold > 1.0) {
       return NextResponse.json(
-        { error: 'Similarity Threshold must be between 0.1 and 1.0' },
+    { error: 'Similarity Threshold must be between 0.05 and 1.0' },
         { status: 400 }
       );
     }
@@ -160,9 +160,9 @@ export async function POST(request: NextRequest) {
       );
     }
 
-    if (typeof ragHighRelevanceThreshold !== 'number' || ragHighRelevanceThreshold < 0.1 || ragHighRelevanceThreshold > 1.0) {
+  if (typeof ragHighRelevanceThreshold !== 'number' || ragHighRelevanceThreshold < 0.05 || ragHighRelevanceThreshold > 1.0) {
       return NextResponse.json(
-        { error: 'High Relevance Threshold must be between 0.1 and 1.0' },
+    { error: 'High Relevance Threshold must be between 0.05 and 1.0' },
         { status: 400 }
       );
     }

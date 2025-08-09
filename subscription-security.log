@@ -601,3 +601,58 @@ Found 0 PRO users without valid subscriptions
 Total expired subscriptions processed: 0
 Total PRO users downgraded: 0
 Total actions: 0
+🔒 STARTING SUBSCRIPTION SECURITY CHECK
+==========================================
+Timestamp: 2025-08-08T21:00:03.565Z
+[dotenv@17.2.1] injecting env (21) from .env -- tip: 📡 auto-backup env with Radar: https://dotenvx.com/radar
+📊 Checking subscription security...
+🚀 SUBSCRIPTION SECURITY JOB STARTED
+=====================================
+
+✅ Database connection: OK
+✅ Environment variables: OK
+[dotenv@17.2.1] injecting env (0) from .env -- tip: 🔐 prevent committing .env to code: https://dotenvx.com/precommit
+📊 Checking subscription security...
+Found 0 expired active subscriptions
+Found 0 PRO users without valid subscriptions
+
+✅ No security issues found - all subscriptions are valid
+
+✅ Subscription security check completed successfully
+
+📈 FINAL SUMMARY:
+Total expired subscriptions processed: 0
+Total PRO users downgraded: 0
+Total actions: 0
+🔒 STARTING SUBSCRIPTION SECURITY CHECK
+==========================================
+Timestamp: 2025-08-08T22:00:03.048Z
+[dotenv@17.2.1] injecting env (21) from .env -- tip: 🔐 prevent committing .env to code: https://dotenvx.com/precommit
+📊 Checking subscription security...
+🚀 SUBSCRIPTION SECURITY JOB STARTED
+=====================================
+
+✅ Database connection: OK
+✅ Environment variables: OK
+[dotenv@17.2.1] injecting env (0) from .env -- tip: 🛠️  run anywhere with `dotenvx run -- yourcommand`
+📊 Checking subscription security...
+Found 0 expired active subscriptions
+Found 0 PRO users without valid subscriptions
+
+✅ No security issues found - all subscriptions are valid
+
+✅ Subscription security check completed successfully
+
+📈 FINAL SUMMARY:
+Total expired subscriptions processed: 0
+Total PRO users downgraded: 0
+Total actions: 0
+🔒 STARTING SUBSCRIPTION SECURITY CHECK
+==========================================
+Timestamp: 2025-08-09T13:00:02.425Z
+[dotenv@17.2.1] injecting env (21) from .env -- tip: ⚙️  specify custom .env file path with { path: '/custom/path/.env' }
+📊 Checking subscription security...
+🚀 SUBSCRIPTION SECURITY JOB STARTED
+=====================================
+
+^C

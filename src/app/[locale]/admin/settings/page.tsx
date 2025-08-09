@@ -287,13 +287,13 @@ export default function AdminSettingsPage() {
                     <Input
                       id="ragSimilarityThreshold"
                       type="number"
-                      min={0.1}
+                      min={0.05}
                       max={1.0}
                       step={0.01}
                       value={config.ragSimilarityThreshold}
                       onChange={(e) => updateConfig('ragSimilarityThreshold', parseFloat(e.target.value))}
                     />
-                    <p className="text-xs text-gray-500">Minimum relevance score (0.1-1.0)</p>
+                    <p className="text-xs text-gray-500">Minimum relevance score (0.05-1.0)</p>
                   </div>
                   
                   <div className="space-y-2">
@@ -314,7 +314,7 @@ export default function AdminSettingsPage() {
                     <Input
                       id="ragHighRelevanceThreshold"
                       type="number"
-                      min={0.1}
+                      min={0.05}
                       max={1.0}
                       step={0.01}
                       value={config.ragHighRelevanceThreshold}
