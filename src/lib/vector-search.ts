@@ -27,56 +27,81 @@ async function performOptimizedPgvectorSearch(
 ): Promise<KnowledgeContext[]> {
   console.log(`🔍 pgvector search: ${topK} chunks, threshold ${threshold}`);
   
-  try {
-    // Direct SQL query using pgvector for maximum efficiency  
-    const embeddingStr = `[${queryEmbedding.join(',')}]`;
-    
-    const chunks = userId
-      ? await prisma.$queryRaw`
-          SELECT
-            kc.content,
-            ki.id as "knowledgeId", 
-            ki.title,
-            1 - (kc."embeddingData"::vector <=> ${embeddingStr}::vector) as similarity,
-            kc."chunkIndex"
-          FROM "KnowledgeChunk" kc
-          JOIN "KnowledgeItem" ki ON kc."knowledgeItemId" = ki.id  
-          WHERE ki.status = 'READY' 
-            AND kc."embeddingData" IS NOT NULL
-            AND ki."userId" = ${userId}
-          ORDER BY kc."embeddingData"::vector <=> ${embeddingStr}::vector
-          LIMIT ${topK}
-        `
-      : await prisma.$queryRaw`
-          SELECT
-            kc.content,
-            ki.id as "knowledgeId", 
-            ki.title,
-            1 - (kc."embeddingData"::vector <=> ${embeddingStr}::vector) as similarity,
-            kc."chunkIndex"
-          FROM "KnowledgeChunk" kc
-          JOIN "KnowledgeItem" ki ON kc."knowledgeItemId" = ki.id  
-          WHERE ki.status = 'READY' 
-            AND kc."embeddingData" IS NOT NULL
-          ORDER BY kc."embeddingData"::vector <=> ${embeddingStr}::vector
-          LIMIT ${topK}
-        `;
-    
-    const results = (chunks as Array<{
-      content: string;
-      knowledgeId: string;
-      title: string; 
-      similarity: number;
-      chunkIndex: number;
-    }>).filter(chunk => chunk.similarity >= threshold);
-    
-    console.log(`✅ pgvector returned ${results.length}/${topK} chunks above threshold`);
-    return results;
-    
-  } catch (error) {
-    console.error(`❌ pgvector search error:`, error);
-    throw error;
+  // Retry logic for database connection issues
+  const maxRetries = 2;
+  let retryCount = 0;
+  
+  while (retryCount <= maxRetries) {
+    try {
+      // Direct SQL query using pgvector for maximum efficiency  
+      const embeddingStr = `[${queryEmbedding.join(',')}]`;
+      
+      const chunks = userId
+        ? await prisma.$queryRaw`
+            SELECT
+              kc.content,
+              ki.id as "knowledgeId", 
+              ki.title,
+              1 - (kc."embeddingData"::vector <=> ${embeddingStr}::vector) as similarity,
+              kc."chunkIndex"
+            FROM "KnowledgeChunk" kc
+            JOIN "KnowledgeItem" ki ON kc."knowledgeItemId" = ki.id  
+            WHERE ki.status = 'READY' 
+              AND kc."embeddingData" IS NOT NULL
+              AND ki."userId" = ${userId}
+            ORDER BY kc."embeddingData"::vector <=> ${embeddingStr}::vector
+            LIMIT ${topK}
+          `
+        : await prisma.$queryRaw`
+            SELECT
+              kc.content,
+              ki.id as "knowledgeId", 
+              ki.title,
+              1 - (kc."embeddingData"::vector <=> ${embeddingStr}::vector) as similarity,
+              kc."chunkIndex"
+            FROM "KnowledgeChunk" kc
+            JOIN "KnowledgeItem" ki ON kc."knowledgeItemId" = ki.id  
+            WHERE ki.status = 'READY' 
+              AND kc."embeddingData" IS NOT NULL
+            ORDER BY kc."embeddingData"::vector <=> ${embeddingStr}::vector
+            LIMIT ${topK}
+          `;
+      
+      const results = (chunks as Array<{
+        content: string;
+        knowledgeId: string;
+        title: string; 
+        similarity: number;
+        chunkIndex: number;
+      }>).filter(chunk => chunk.similarity >= threshold);
+      
+      console.log(`✅ pgvector returned ${results.length}/${topK} chunks above threshold`);
+      return results;
+      
+    } catch (error: unknown) {
+      const errorMessage = error instanceof Error ? error.message : 'Unknown error';
+      const errorCode = error && typeof error === 'object' && 'code' in error ? error.code : undefined;
+      console.error(`❌ pgvector search error (attempt ${retryCount + 1}):`, errorMessage);
+      
+      // Check if it's a connection error that we should retry
+      const isConnectionError = errorMessage?.includes('connection') || 
+                                errorMessage?.includes('closed') ||
+                                errorCode === 'P1017';
+      
+      if (isConnectionError && retryCount < maxRetries) {
+        retryCount++;
+        console.log(`🔄 Retrying pgvector search (attempt ${retryCount + 1})...`);
+        await new Promise(resolve => setTimeout(resolve, 1000)); // Wait 1 second before retry
+        continue;
+      }
+      
+      // If not a retryable error or max retries exceeded, throw the error
+      throw error;
+    }
   }
+  
+  // This should never be reached due to the while loop structure
+  throw new Error('Vector search failed after all retry attempts');
 }
 
 /**
@@ -117,25 +142,94 @@ export async function performAndKeywordSearch(
   topK: number = 5,
   userId?: string
 ): Promise<KnowledgeContext[]> {
-  console.log(`🔍 AND-based keyword search: "${query}"`);
+  console.log(`🔍 Intelligent keyword search: "${query}"`);
   
   try {
-    // Clean and prepare search terms for AND logic
-    const searchTerms = query
-      .toLowerCase()
-      .replace(/[^\w\s]/g, ' ')
-      .split(' ')
-      .filter(term => term.length > 2)
-      .join(' & '); // PostgreSQL AND syntax for precision
+    const lowerQuery = query.toLowerCase();
+    let searchTerms: string;
+    
+    // SMART MUSCLE GROUP DETECTION: Use flexible search for muscle-specific queries
+    if (lowerQuery.includes('triceps') || (lowerQuery.includes('arms') && (lowerQuery.includes('isolation') || lowerQuery.includes('exercises') || lowerQuery.includes('train')))) {
+      // Triceps/Arms-specific search with OR logic for broader coverage
+      searchTerms = 'triceps | arms | biceps | isolation | "arm training" | biasing | heads';
+      console.log(`💪 Arms/Triceps query detected - using flexible search: "${searchTerms}"`);
+      
+    } else if (lowerQuery.includes('biceps') || lowerQuery.includes('elbow flexors')) {
+      // Biceps-specific search
+      searchTerms = 'biceps | "elbow flexors" | brachialis | brachioradialis | arms | curl';
+      console.log(`💪 Biceps query detected - using targeted search: "${searchTerms}"`);
+      
+    } else if (lowerQuery.includes('chest') || lowerQuery.includes('pectorals') || lowerQuery.includes('pec')) {
+      // Chest-specific search
+      searchTerms = 'chest | pectorals | pec | press | bench | fly | dip';
+      console.log(`🫀 Chest query detected - using targeted search: "${searchTerms}"`);
+      
+    } else if (lowerQuery.includes('back') || lowerQuery.includes('lats') || lowerQuery.includes('latissimus')) {
+      // Back-specific search
+      searchTerms = 'back | lats | latissimus | dorsi | "back training" | pull | row';
+      console.log(`🧗 Back query detected - using targeted search: "${searchTerms}"`);
+      
+    } else if (lowerQuery.includes('shoulders') || lowerQuery.includes('deltoids') || lowerQuery.includes('delts')) {
+      // Shoulders-specific search
+      searchTerms = 'shoulders | deltoids | delts | "shoulder training" | press | raise';
+      console.log(`🫸 Shoulders query detected - using targeted search: "${searchTerms}"`);
+      
+    } else if (lowerQuery.includes('legs') || lowerQuery.includes('quads') || lowerQuery.includes('hamstrings') || lowerQuery.includes('glutes') || lowerQuery.includes('lower body')) {
+      // Legs-specific search
+      searchTerms = 'legs | quads | hamstrings | glutes | "lower body" | squat | deadlift | lunge';
+      console.log(`🦵 Legs query detected - using targeted search: "${searchTerms}"`);
+      
+    } else if (lowerQuery.includes('upper') && lowerQuery.includes('lower')) {
+      // Upper/Lower split queries
+      searchTerms = '(upper | body) & (lower | body) & (workout | routine | structure | program)';
+      console.log(`🎯 Upper/Lower split detected - using enhanced search: "${searchTerms}"`);
+      
+    } else if (lowerQuery.includes('full body') || lowerQuery.includes('full-body')) {
+      // Full body queries
+      searchTerms = '"full body" | "full-body" | complete | total | "whole body"';
+      console.log(`🎯 Full body query detected - using targeted search: "${searchTerms}"`);
+      
+    } else if (lowerQuery.includes('program') || lowerQuery.includes('routine') || lowerQuery.includes('split')) {
+      // Program/routine queries - use key content terms
+      const contentTerms = [];
+      if (lowerQuery.includes('beginner')) contentTerms.push('beginner');
+      if (lowerQuery.includes('intermediate')) contentTerms.push('intermediate');
+      if (lowerQuery.includes('advanced')) contentTerms.push('advanced');
+      if (lowerQuery.includes('3') || lowerQuery.includes('three')) contentTerms.push('3');
+      if (lowerQuery.includes('4') || lowerQuery.includes('four')) contentTerms.push('4');
+      if (lowerQuery.includes('5') || lowerQuery.includes('five')) contentTerms.push('5');
+      
+      searchTerms = contentTerms.length > 0 
+        ? `(program | routine | workout | split) & (${contentTerms.join(' | ')})`
+        : 'program | routine | workout | split | structure';
+      console.log(`📋 Program query detected - using targeted search: "${searchTerms}"`);
+      
+    } else {
+      // Default approach: Remove stop words and use important terms only
+      const stopWords = ['what', 'are', 'the', 'best', 'how', 'to', 'for', 'is', 'and', 'or', 'a', 'an'];
+      const terms = lowerQuery
+        .replace(/[^\w\s]/g, ' ')
+        .split(' ')
+        .filter(term => term.length > 2 && !stopWords.includes(term));
+      
+      if (terms.length === 0) {
+        console.log(`⚠️ No meaningful search terms found in: "${query}"`);
+        return [];
+      }
+      
+      // Use OR logic for better coverage when we have few meaningful terms
+      searchTerms = terms.length <= 2 ? terms.join(' | ') : terms.join(' & ');
+      console.log(`🎯 General search (${terms.length} terms): "${searchTerms}"`);
+    }
     
     if (!searchTerms) {
       console.log(`⚠️ No valid search terms extracted from: "${query}"`);
       return [];
     }
     
-    console.log(`🎯 Search terms (AND logic): "${searchTerms}"`);
+    console.log(`🎯 Final search terms: "${searchTerms}"`);
     
-    // Use PostgreSQL to_tsvector and to_tsquery for full-text search with AND logic
+    // Use PostgreSQL to_tsvector and to_tsquery for full-text search
     const chunks = userId 
       ? await prisma.$queryRaw`
           SELECT 

@@ -17,7 +17,8 @@ import {
   ChevronLeft,
   Users,
   BarChart3,
-  FileText
+  FileText,
+  MessageSquare
 } from 'lucide-react';
 
 interface AdminSidebarProps {
@@ -42,6 +43,12 @@ const adminNavItems = [
     href: '/admin/knowledge',
     icon: Database,
     description: 'Manage AI knowledge content'
+  },
+  {
+    title: 'AI Testing',
+    href: '/admin/ai-testing',
+    icon: MessageSquare,
+    description: 'Test AI responses and prompts'
   },
   {
     title: 'User Management',

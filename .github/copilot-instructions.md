@@ -10,7 +10,8 @@
 - **Subscription Enforcement**: Server-side validation with daily/monthly limits enforced in API routes
 - **Vector Storage**: Embeddings stored as JSON strings (768 dimensions via Gemini text-embedding-004)
 - **Performance-First**: Optimized for <2s page loads with advanced caching and component optimization
-- **React 19 & Next.js 15**: Latest versions with App Router, Server Components, and React concurrent features
+- **Next.js 15 + React 19**: Latest versions with App Router, Server Components, and React concurrent features
+- **PostgreSQL + pgvector**: Advanced vector similarity search with full-text search integration
 
 ### Core Components
 - **RAG System**: Optimized pgvector + AND-based keyword search (`/src/lib/vector-search.ts`)
@@ -20,6 +21,18 @@
 - **Error Handling**: Centralized `ApiErrorHandler` with correlation IDs (`/src/lib/error-handler.ts`)
 - **Internationalization**: Arabic RTL + French/English with automatic detection (`/src/lib/text-formatting.ts`)
 - **Performance Layer**: Smart caching, memoization, and lazy loading (`/src/hooks/use-optimized-*`)
+- **Subscription System**: LemonSqueezy integration with webhook processing (`/src/lib/lemonsqueezy.ts`)
+
+### Tech Stack & Dependencies
+- **Framework**: Next.js 15.3.3 with App Router and Turbopack support
+- **Database**: PostgreSQL with Prisma ORM (v6.9.0) and pgvector extension
+- **Authentication**: Supabase SSR (v0.6.1) with role-based access control
+- **AI/ML**: Google Gemini API (v0.24.1) for chat and embeddings
+- **UI**: Radix UI + Tailwind CSS + shadcn/ui components
+- **Payments**: LemonSqueezy for subscription management
+- **File Processing**: Mammoth (Word), pdf-parse, with Supabase Storage
+- **Animations**: Framer Motion for enhanced UX interactions
+- **Rich Text**: TipTap editor for knowledge management
 
 ## 🔧 RAG Pipeline Performance Fixes
 
@@ -104,9 +117,37 @@ NEXT_PUBLIC_SITE_URL=            # Site URL for checkout redirects
 - `test-enhanced-rag.js` - Validate RAG system performance
 - `debug-lemonsqueezy-checkout.js` - Test subscription checkout flow
 
+### Critical Debug Script Patterns
+```javascript
+// All debug scripts use CommonJS (require/module.exports)
+const { PrismaClient } = require('@prisma/client');
+const { functionName } = require('./src/lib/module-name');
+
+// Execute from project root: node script-name.js
+// Scripts are designed for immediate troubleshooting
+// Use environment variables from .env automatically
+```
+
 ## 📋 Critical Project Patterns
 
-### 1. AI Configuration Enforcement (REQUIRED FOR SYSTEM TO WORK)
+### 1. Data Flow Architecture
+```typescript
+// User Message → Authentication → Subscription Check → AI Config → RAG Retrieval → Gemini API → Response
+// Each step has mandatory validation and error handling
+
+// RAG Pipeline Flow:
+const userQuery = "exercises for shoulders";
+// 1. Query translation (if non-English)
+const translatedQuery = await translateQueryToEnglish(userQuery, 'arabic');
+// 2. Generate embeddings via Gemini
+const embedding = await generateEmbeddings(translatedQuery);
+// 3. Vector search + keyword search in parallel
+const context = await fetchRelevantKnowledge(embedding, 10, 0.05);
+// 4. Inject context into AI prompt with user memory
+const response = await generateAIResponse(query, context, userMemory);
+```
+
+### 2. AI Configuration Enforcement (REQUIRED FOR SYSTEM TO WORK)
 ```typescript
 // All AI operations require admin setup via getAIConfiguration() in /src/lib/gemini.ts
 const config = await getAIConfiguration(userPlan); // Throws if not configured
@@ -116,7 +157,7 @@ const config = await getAIConfiguration(userPlan); // Throws if not configured
 - **Singleton pattern**: Single row with `id: 'singleton'` in `AIConfiguration` table
 - **No fallbacks**: System will fail if configuration is missing (by design)
 
-### 2. API Route Authentication Pattern
+### 3. API Route Authentication Pattern
 ```typescript
 export async function POST(request: NextRequest) {
   const context = ApiErrorHandler.createContext(request);
@@ -152,7 +193,7 @@ export async function POST(request: NextRequest) {
 }
 ```
 
-### 3. Database Operations with Prisma
+### 4. Database Operations with Prisma
 ```typescript
 import { prisma } from '@/lib/prisma'; // Use this singleton instance
 
@@ -173,7 +214,7 @@ await prisma.$transaction([
 ]);
 ```
 
-### 4. Vector Search & RAG System
+### 5. Vector Search & RAG System
 ```typescript
 // OPTIMIZED RAG: Uses efficient pgvector SQL, no batch limits
 import { fetchRelevantKnowledge, performAndKeywordSearch } from '@/lib/vector-search';
@@ -192,7 +233,7 @@ const keywordResults = await performAndKeywordSearch(query, 10);
 // Use getContextSources() for UI article links
 ```
 
-### 5. Performance Optimization Pattern
+### 6. Performance Optimization Pattern
 ```typescript
 // Use optimized hooks for chat performance
 import { 
@@ -212,7 +253,7 @@ const MessageComponent = React.memo(OptimizedMessage, (prev, next) =>
 );
 ```
 
-### 6. Subscription Plan Enforcement
+### 7. Subscription Plan Enforcement
 ```typescript
 import { getUserPlan, canUserSendMessage } from '@/lib/subscription';
 
@@ -226,6 +267,22 @@ if (!canSend) {
     { status: 429 }
   );
 }
+```
+
+### 8. Internationalization & Routing Patterns
+```typescript
+// Dynamic locale routing with middleware
+// Structure: /[locale]/page → /en/chat, /ar/chat, /fr/chat
+// Middleware handles automatic locale detection and admin route protection
+
+// Arabic text detection and RTL support
+import { isArabicText, getTextDirection } from '@/lib/text-formatting';
+const direction = getTextDirection(text); // 'rtl' | 'ltr'
+const isArabic = isArabicText(text); // 30% Arabic characters threshold
+
+// Use arabic-aware components for proper RTL support
+import { ArabicAwareInput } from '@/components/arabic-aware-input';
+import { ArabicAwareTextarea } from '@/components/arabic-aware-textarea';
 ```
 
 ## 🔧 Key Integration Points
@@ -386,6 +443,14 @@ src/
 
 ## 💳 Subscription System Details
 
+### Maintenance Mode System
+```typescript
+// Global maintenance mode with admin bypass
+// Check src/app/maintenance/page.tsx for maintenance page
+// Admin users can still access the system during maintenance
+// Controlled via environment variable MAINTENANCE_MODE=true
+```
+
 ### Free Messages System (NEW!)
 ```typescript
 // New users get 15 free messages before daily limits kick in
@@ -429,3 +494,34 @@ if (freeMessagesRemaining > 0) {
 - **Daily Reset**: Message counts reset at midnight via `lastMessageReset` field
 - **Monthly Reset**: Upload counts reset monthly via `lastUploadReset` field
 - **Plan Checking**: Use `getUserPlan()` and `canUserSendMessage()` functions
+- **Maintenance Mode**: Admin bypass during system maintenance periods
+
+## 🎯 Development Best Practices
+
+### Performance & Optimization
+- Use `OptimizedMessage`, `OptimizedImage` components for chat performance
+- Leverage `useOptimizedChatHistory`, `useOptimizedUserPlan` hooks for caching
+- Implement memoization with React.memo for heavy components
+- Use pgvector for efficient vector search (no batch limits)
+- Monitor bundle size with `npx @next/bundle-analyzer`
+
+### Error Handling & Debugging
+- Always use `ApiErrorHandler.createContext()` and `ApiErrorHandler.handleError()` 
+- Run debug scripts from project root to troubleshoot issues
+- Check AI configuration first with `check-ai-config.js`
+- Use correlation IDs for tracking request flows
+- Test subscription flows with `debug-lemonsqueezy-checkout.js`
+
+### Security & Authentication
+- Implement middleware for route protection (`/src/middleware.ts`)
+- Use role-based access control (`admin` vs `user` roles)
+- Validate subscription limits server-side in all API endpoints
+- Store sensitive configs in environment variables
+- Use Supabase RLS policies for data isolation
+
+### Code Organization
+- Keep debug scripts in project root using CommonJS
+- Follow `/src/app/[locale]/` structure for i18n routes
+- Use TypeScript for all core logic with proper typing
+- Maintain separation: UI components, business logic (`/lib`), API routes
+- Document complex patterns in markdown files for future reference

@@ -6,7 +6,7 @@ import {
   updateClientMemory,
   type MemoryUpdate
 } from './client-memory';
-import { fetchRelevantKnowledge, type KnowledgeContext } from './vector-search';
+import { fetchRelevantKnowledge, performAndKeywordSearch, type KnowledgeContext } from './vector-search';
 import { generateSubQueries } from './query-generator';
 
 // Initialize the Gemini client
@@ -539,16 +539,86 @@ export async function sendToGeminiWithCitations(
           allRelevantChunks = Array.from(allChunks.values());
           
         } else {
-          // Step 1: Single-query retrieval (original logic)
+          // Step 1: Generate embeddings for the user query
           const embeddingResult = await genAI.getGenerativeModel({ model: "text-embedding-004" })
             .embedContent(userQuery);
           const queryEmbedding = embeddingResult.embedding.values;
           
-          allRelevantChunks = await fetchRelevantKnowledge(
-            queryEmbedding,
-            aiConfig.ragMaxChunks,
-            aiConfig.ragHighRelevanceThreshold
+          // Step 2: Enhanced retrieval based on query type
+          const workoutKeywords = [
+            'workout', 'program', 'routine', 'exercise', 'training',
+            'rep', 'reps', 'set', 'sets', 'rest', 'progression',
+            'muscle', 'chest', 'back', 'legs', 'arms', 'shoulders',
+            'bicep', 'tricep', 'quad', 'hamstring', 'glute', 'calves'
+          ];
+          
+          const isWorkoutProgrammingQuery = workoutKeywords.some(keyword => 
+            userQuery.toLowerCase().includes(keyword.toLowerCase())
           );
+          
+          if (isWorkoutProgrammingQuery) {
+            console.log(`🏋️ Using enhanced workout programming retrieval`);
+            
+            try {
+              allRelevantChunks = await fetchRelevantKnowledge(
+                queryEmbedding,
+                aiConfig.ragMaxChunks + 2, // Slightly more chunks for workout programming
+                aiConfig.ragSimilarityThreshold // Use similarity threshold, not high-relevance cutoff
+              );
+
+              // Fallback pass: if recall is too low, relax the threshold and expand search slightly
+              if (allRelevantChunks.length < Math.max(3, Math.floor(aiConfig.ragMaxChunks / 2))) {
+                const relaxedThreshold = Math.max(0.2, aiConfig.ragSimilarityThreshold - 0.2);
+                console.log(`🛠️ Low recall (${allRelevantChunks.length}). Retrying workout retrieval with relaxed threshold ${relaxedThreshold}...`);
+                const extra = await fetchRelevantKnowledge(
+                  queryEmbedding,
+                  aiConfig.ragMaxChunks + 5,
+                  relaxedThreshold
+                );
+                if (extra.length) {
+                  const merged = new Map<string, KnowledgeContext>();
+                  for (const c of [...allRelevantChunks, ...extra]) {
+                    merged.set(`${c.knowledgeId}-${c.chunkIndex}`, c);
+                  }
+                  allRelevantChunks = Array.from(merged.values());
+                  console.log(`✅ Fallback merged results: ${allRelevantChunks.length}`);
+                }
+              }
+            } catch (vectorError: unknown) {
+              const errorMessage = vectorError instanceof Error ? vectorError.message : 'Unknown error';
+              console.error(`❌ Vector search failed, falling back to keyword search:`, errorMessage);
+              
+              // Use keyword search as fallback for workout programming queries
+              allRelevantChunks = await performAndKeywordSearch(userQuery, aiConfig.ragMaxChunks);
+              console.log(`🔍 Keyword fallback retrieved ${allRelevantChunks.length} chunks`);
+            }
+          } else {
+            console.log(`🔍 Using standard vector retrieval`);
+            allRelevantChunks = await fetchRelevantKnowledge(
+              queryEmbedding,
+              aiConfig.ragMaxChunks,
+              aiConfig.ragSimilarityThreshold // Use similarity threshold for primary retrieval
+            );
+
+            // Fallback pass for non-workout queries as well
+            if (allRelevantChunks.length < Math.max(2, Math.floor(aiConfig.ragMaxChunks / 2))) {
+              const relaxedThreshold = Math.max(0.2, aiConfig.ragSimilarityThreshold - 0.2);
+              console.log(`🛠️ Low recall (${allRelevantChunks.length}). Retrying standard retrieval with relaxed threshold ${relaxedThreshold}...`);
+              const extra = await fetchRelevantKnowledge(
+                queryEmbedding,
+                aiConfig.ragMaxChunks + 3,
+                relaxedThreshold
+              );
+              if (extra.length) {
+                const merged = new Map<string, KnowledgeContext>();
+                for (const c of [...allRelevantChunks, ...extra]) {
+                  merged.set(`${c.knowledgeId}-${c.chunkIndex}`, c);
+                }
+                allRelevantChunks = Array.from(merged.values());
+                console.log(`✅ Fallback merged results: ${allRelevantChunks.length}`);
+              }
+            }
+          }
         }
         
         // Step 3: Process and format the retrieved knowledge
@@ -615,7 +685,7 @@ export async function sendToGeminiWithCitations(
       }
     }
 
-    // Enhanced system instruction with tool enforcement awareness
+    // Enhanced system instruction with flexible knowledge base usage
     const systemInstruction = `${aiConfig.systemPrompt}
 
 ${languageInstruction}
@@ -651,35 +721,53 @@ You have access to a function called "update_client_profile" that MUST be used w
 
 ${knowledgeContext ? 
 `---
-## Knowledge Base Context
-The following information has been retrieved from the knowledge base to answer the user's query.
+## Knowledge Base Integration Protocol
+
+The following information, if available, has been retrieved from your specialized knowledge base.
+
+### Retrieved Knowledge Base Context:
 
 ${knowledgeContext}
----
 
-## Response Instructions (${aiConfig.toolEnforcementMode} Mode)
-${aiConfig.toolEnforcementMode === 'STRICT' ? 
-`- **Strict Mode:** Base your answer primarily on the provided "Knowledge Base Context." If the context doesn't fully address the question, acknowledge the limitation and provide only general guidance.` 
-:
-`- **AUTO Mode Active:** 
-  - **IF** the knowledge base context fully addresses the question: Use it as your primary source
-  - **IF** the knowledge base context is incomplete or doesn't address the specific question: You are AUTHORIZED and REQUIRED to supplement with your general expertise
-  - **CRITICAL:** Do NOT refuse to answer questions about fitness, nutrition, supplements, or training due to incomplete knowledge base coverage
-  - **Your Role:** You are a knowledgeable fitness coach. Provide helpful, evidence-based advice using all available knowledge sources
-  - **No Refusals:** Never say you "cannot provide recommendations" for fitness-related topics. You are qualified and expected to help.`}
+### Response Protocol:
+1. **Prioritize Knowledge Base:** You are an evidence-based coach. Your primary goal is to synthesize and apply the information from the provided knowledge base context. Your recommendations for workout programming, exercise selection, rep ranges, and training advice should be strongly grounded in this context.
+2. **Synthesize, Don't Copy:** Do not simply copy-paste text from the knowledge base. Analyze, interpret, and build your response based on the provided information, just as an expert coach would from scientific literature.
+3. **Fill in the Gaps with Expertise:** If the knowledge base context is relevant but incomplete (e.g., it provides principles but not a full program), use your broader expertise in exercise science, nutrition, and coaching to fill in the missing details. For example, if the context gives principles for an "Upper/Lower" split but no specific exercises, you should select appropriate exercises that align with those principles.
+4. **Acknowledge Insufficient Information Gracefully:** If the knowledge base provides no relevant context for the user's query, it is acceptable to state that you don't have specific information in your specialized knowledge base on that topic. You can then provide a high-level, principles-based answer from your general knowledge, while making it clear that it's not from the specialized knowledge base.
+5. **Be Smart and Interpret:** Your role is to be an intelligent coach, not just a search index. Analyze and interpret the information in the knowledge base to provide the best possible answer to the user.
+
+
+### RESPONSE RULES:
+
+**IF CONTEXT IS SUFFICIENT:**
+- Build your response primarily from the provided knowledge base context
+- Use the specific rep ranges, rest periods, exercises, and principles mentioned in the context
+- Reference the progression methods described in the context
+- Avoid adding unrelated generic advice
+
+**IF CONTEXT IS INSUFFICIENT (SMART FALLBACK):**
+Follow this ordered fallback strictly:
+1) Synthesize from closely related knowledge base items and principles already retrieved (or that clearly apply) to fill minor gaps. Be explicit about which parts come from the KB.
+2) If key parameters are still missing, provide concise, evidence-based guidance from your general expertise to complete the answer. Clearly label this section as "Expert guidance beyond current KB coverage" so it’s transparent. Keep it conservative and aligned with the KB philosophy.
+3) End with a short note inviting the user/admin to add missing details to the knowledge base for even more precise guidance in the future.
+
+
+
+
+---
 ` 
 : 
 `---
-## EXPERT FALLBACK MODE (${aiConfig.toolEnforcementMode} Mode)
-${aiConfig.toolEnforcementMode === 'STRICT' ? 
-`- **Strict Knowledge Base Mode:** No specific information was found in the knowledge base for this query.
-- **Limited Response:** You may only provide general guidance and should encourage the user to upload relevant research papers or documents for more specific advice.` 
-:
-`- **AUTO Mode - Full Expert Access:** No specific information was found in the knowledge base for this query.
-- **OVERRIDE ALL RESTRICTIONS:** Any previous constraints about requiring knowledge base content are CANCELLED for this response.
-- **Use Your Full Expertise:** Apply your comprehensive knowledge of exercise science, nutrition, and fitness.
-- **Be Fully Helpful:** Provide detailed, specific advice about supplements, training, nutrition, or any fitness topic.
-- **No Limitations:** You are authorized to give complete, helpful answers using your expert training.`}
+## NO KNOWLEDGE BASE CONTEXT AVAILABLE
+
+**CRITICAL PROTOCOL**: No directly relevant items were retrieved from the knowledge base.
+
+Respond using a transparent, two-part structure:
+1) "What I can infer from related KB principles" — Briefly state any high-level principles from the KB that are reasonably applicable.
+2) "Expert guidance beyond current KB coverage" — Provide a concise, evidence-based recommendation from your broader expertise to help the user move forward now. Keep it conservative and consistent with the KB’s methodology and tone. Avoid speculative or trendy claims.
+
+Close with a single sentence inviting the user/admin to add targeted materials on this topic to the knowledge base for even more precise answers next time.
+---
 `}`;
 
     // Get the generative model with function calling capabilities (only for authenticated users)
