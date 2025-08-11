@@ -861,8 +861,8 @@ Close with a single sentence inviting the user/admin to add targeted materials o
     // Send the current message with performance monitoring
     console.log(`🤖 Sending message to Gemini API (${aiConfig.modelName})...`);
     
-    // Create a timeout promise - shorter timeout for flash models
-    const timeoutDuration = aiConfig.modelName.includes('pro') ? 30000 : 20000; // 30s for PRO, 20s for others
+    // Create a timeout promise - longer timeout for complex queries
+    const timeoutDuration = aiConfig.modelName.includes('pro') ? 60000 : 45000; // 60s for PRO, 45s for others
     console.log(`⏱️ Setting timeout to ${timeoutDuration/1000} seconds for ${aiConfig.modelName}`);
     
     const timeoutPromise = new Promise((_, reject) =>
