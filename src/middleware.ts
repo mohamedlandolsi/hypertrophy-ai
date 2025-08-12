@@ -1,6 +1,7 @@
 import { createServerClient, type CookieOptions } from '@supabase/ssr'
 import { NextResponse, type NextRequest } from 'next/server'
 import createIntlMiddleware from 'next-intl/middleware';
+import { PrismaClient } from '@prisma/client';
 
 // Create the intl middleware
 const intlMiddleware = createIntlMiddleware({
@@ -10,7 +11,18 @@ const intlMiddleware = createIntlMiddleware({
   localePrefix: 'always'
 });
 
+// Create a single Prisma instance for the middleware
+const prisma = new PrismaClient();
+
 export async function middleware(request: NextRequest) {
+  // Check maintenance mode first (before any other processing)
+  const isMaintenanceMode = process.env.MAINTENANCE_MODE === 'true';
+  const pathname = request.nextUrl.pathname;
+  
+  // Allow access to maintenance page and admin routes during maintenance
+  const isMaintenancePage = pathname.includes('/maintenance');
+  const isApiRoute = pathname.startsWith('/api');
+  
   // Handle internationalization first
   const intlResponse = intlMiddleware(request);
   
@@ -68,6 +80,33 @@ export async function middleware(request: NextRequest) {
 
   // Get user session
   const { data: { user } } = await supabase.auth.getUser()
+
+  // Enhanced maintenance mode check with admin bypass
+  if (isMaintenanceMode && !isMaintenancePage && !isApiRoute) {
+    // Check if user is admin (admin users can bypass maintenance mode)
+    let isAdmin = false;
+    if (user) {
+      try {
+        // Check user role using Prisma
+        const userData = await prisma.user.findUnique({
+          where: { id: user.id },
+          select: { role: true }
+        });
+        
+        isAdmin = userData?.role === 'admin';
+      } catch (error) {
+        console.error('Error checking admin status in middleware:', error);
+        // If there's an error checking role, treat as non-admin for safety
+        isAdmin = false;
+      }
+    }
+    
+    // Redirect to maintenance page unless user is admin
+    if (!isAdmin) {
+      const locale = pathname.match(/^\/(en|ar|fr)/)?.[1] || 'en';
+      return NextResponse.redirect(new URL(`/${locale}/maintenance`, request.url));
+    }
+  }
 
   // Admin route protection - only check authentication, role check happens in API routes
   if (request.nextUrl.pathname.startsWith('/admin')) {

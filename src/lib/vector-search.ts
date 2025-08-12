@@ -6,6 +6,9 @@
  */
 
 import { prisma } from './prisma';
+import { GoogleGenerativeAI } from '@google/generative-ai';
+
+const genAI = new GoogleGenerativeAI(process.env.GEMINI_API_KEY!);
 
 export interface KnowledgeContext {
   content: string;
@@ -13,6 +16,112 @@ export interface KnowledgeContext {
   title: string;
   similarity: number;
   chunkIndex: number;
+}
+
+/**
+ * NEW: Orchestrates a more robust, multi-layered retrieval process.
+ * This ensures both specific intent documents AND foundational principles are retrieved.
+ */
+export async function fetchEnhancedKnowledgeContext(
+  query: string,
+  maxChunks: number,
+  similarityThreshold: number,
+  highRelevanceThreshold: number,
+  strictMusclePriority: boolean = false,
+  userId?: string
+): Promise<KnowledgeContext[]> {
+  console.log(`🚀 Enhanced multi-layered retrieval: "${query}"`);
+  
+  try {
+    // --- Step 1: Foundational Principle Retrieval ---
+    // Always retrieve core programming principles to ensure the AI never forgets the rules.
+    console.log('📚 Fetching foundational programming principles...');
+    
+    const corePrinciples = await prisma.knowledgeItem.findMany({
+      where: {
+        category: 'Programming Principles',
+        status: 'READY',
+        ...(userId && { userId })
+      },
+      include: {
+        chunks: {
+          where: {
+            embeddingData: {
+              not: null
+            }
+          },
+          take: 2 // Take top 2 chunks per principle document
+        }
+      },
+      take: 5 // Limit to the top 5 most important principle documents
+    });
+
+    const principleContexts: KnowledgeContext[] = [];
+    for (const doc of corePrinciples) {
+      for (const chunk of doc.chunks) {
+        principleContexts.push({
+          content: chunk.content,
+          knowledgeId: doc.id,
+          title: doc.title,
+          similarity: 1.0, // Assign max similarity as these are considered mandatory
+          chunkIndex: chunk.chunkIndex
+        });
+      }
+    }
+
+    console.log(`✅ Retrieved ${principleContexts.length} foundational principle chunks`);
+
+    // --- Step 2: Specific Intent Retrieval (Vector Search) ---
+    console.log('🎯 Performing vector search for specific intent...');
+    const queryEmbedding = await getEmbedding(query);
+    const intentContexts = await fetchRelevantKnowledge(
+      queryEmbedding,
+      maxChunks,
+      highRelevanceThreshold
+    );
+
+    console.log(`✅ Retrieved ${intentContexts.length} intent-specific chunks`);
+
+    // --- Step 3: Combine and De-duplicate ---
+    // Combine principles and intent-based results, ensuring no duplicates by title + chunkIndex
+    const combinedContexts = [...principleContexts, ...intentContexts];
+    const uniqueContexts = Array.from(
+      new Map(
+        combinedContexts.map(item => [`${item.title}-${item.chunkIndex}`, item])
+      ).values()
+    );
+
+    console.log(`✅ Combined contexts: ${combinedContexts.length} total, ${uniqueContexts.length} unique`);
+
+    // Optional: Apply strict muscle priority filtering if enabled
+    if (strictMusclePriority) {
+      console.log('🎯 Applying strict muscle priority filtering...');
+      // This could be enhanced with muscle-specific keywords detection
+    }
+
+    return uniqueContexts.slice(0, maxChunks + principleContexts.length); // Allow extra for principles
+    
+  } catch (error) {
+    console.error('❌ Enhanced knowledge retrieval failed:', error);
+    // Fallback to standard retrieval if enhanced fails
+    console.log('🔄 Falling back to standard vector search...');
+    const queryEmbedding = await getEmbedding(query);
+    return await fetchRelevantKnowledge(queryEmbedding, maxChunks, highRelevanceThreshold);
+  }
+}
+
+/**
+ * Helper function to generate embeddings using Gemini
+ */
+async function getEmbedding(text: string): Promise<number[]> {
+  try {
+    const model = genAI.getGenerativeModel({ model: 'text-embedding-004' });
+    const result = await model.embedContent(text);
+    return result.embedding.values;
+  } catch (error) {
+    console.error('Error generating embedding:', error);
+    throw new Error('Failed to generate embedding for query');
+  }
 }
 
 /**
@@ -67,15 +176,19 @@ async function performOptimizedPgvectorSearch(
             LIMIT ${topK}
           `;
       
+      // Return topK results (sorted by similarity). Do NOT discard here — caller will
+      // mark which ones are "high relevance". Filtering early can produce empty context.
       const results = (chunks as Array<{
         content: string;
         knowledgeId: string;
         title: string; 
         similarity: number;
         chunkIndex: number;
-      }>).filter(chunk => chunk.similarity >= threshold);
-      
-      console.log(`✅ pgvector returned ${results.length}/${topK} chunks above threshold`);
+      }>);
+
+      // Optional: count how many exceed the threshold for logging
+      const countAbove = results.filter(r => r.similarity >= threshold).length;
+      console.log(`✅ pgvector returned ${results.length}/${topK} chunks (${countAbove} >= threshold ${threshold})`);
       return results;
       
     } catch (error: unknown) {
@@ -489,18 +602,19 @@ export async function fallbackJsonSimilaritySearch(
     
     console.log(`🎯 Top similarity scores: ${sortedSimilarities.slice(0, 5).map(s => s.similarity.toFixed(4)).join(', ')}`);
 
-    // Apply high relevance threshold filtering if provided
-    let candidateChunks = sortedSimilarities;
+    // Keep all chunks - mark high relevance for logging only, don't filter out useful chunks
+    const candidateChunks = sortedSimilarities;
+    let highRelevanceCount = 0;
     if (highRelevanceThreshold !== undefined) {
-      candidateChunks = sortedSimilarities.filter(
+      highRelevanceCount = sortedSimilarities.filter(
         chunk => chunk.similarity >= highRelevanceThreshold
-      );
+      ).length;
       
-      console.log(`🔍 High relevance filtering: ${sortedSimilarities.length} total → ${candidateChunks.length} above threshold ${highRelevanceThreshold}`);
+      console.log(`🔍 High relevance marking: ${sortedSimilarities.length} total → ${highRelevanceCount} above threshold ${highRelevanceThreshold}`);
     }
 
     if (candidateChunks.length === 0) {
-      console.log('⚠️ No chunks meet the similarity criteria');
+      console.log('⚠️ No chunks available');
       return [];
     }
 

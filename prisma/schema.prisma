@@ -22,7 +22,6 @@ model KnowledgeChunk {
   @@index([knowledgeItemId, chunkIndex])
   @@index([createdAt])
   @@index([createdAt, knowledgeItemId])
-  // Removed embeddingData index - too large for B-tree index
 }
 
 model User {
@@ -31,14 +30,13 @@ model User {
   hasCompletedOnboarding Boolean         @default(false)
   lastMessageReset       DateTime        @default(now())
   messagesUsedToday      Int             @default(0)
-  freeMessagesRemaining  Int             @default(15)
   plan                   UserPlan        @default(FREE)
   lastUploadReset        DateTime        @default(now())
   uploadsThisMonth       Int             @default(0)
-  // Privacy and consent fields
-  dataProcessingConsent  Boolean         @default(false)
   consentTimestamp       DateTime?
+  dataProcessingConsent  Boolean         @default(false)
   privacyPolicyVersion   String?
+  freeMessagesRemaining  Int             @default(15)
   chats                  Chat[]
   clientMemory           ClientMemory?
   knowledgeItems         KnowledgeItem[]
@@ -80,6 +78,7 @@ model KnowledgeItem {
   filePath  String?
   mimeType  String?
   status    ProcessingStatus @default(PROCESSING)
+  category  String?          @default("General")
   createdAt DateTime         @default(now())
   updatedAt DateTime         @updatedAt
   userId    String
@@ -168,9 +167,9 @@ model AIConfiguration {
   ragMaxChunks              Int      @default(17)
   ragSimilarityThreshold    Float    @default(0.1)
   strictMusclePriority      Boolean  @default(true)
-  toolEnforcementMode       String   @default("AUTO")  // AUTO or STRICT
   freeModelName             String   @default("gemini-2.5-flash")
   proModelName              String   @default("gemini-2.5-pro")
+  toolEnforcementMode       String   @default("AUTO")
 }
 
 enum Role {

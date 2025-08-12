@@ -93,7 +93,9 @@ export async function POST(request: NextRequest) {
       ragHighRelevanceThreshold,
       useKnowledgeBase,
       useClientMemory,
-      enableWebSearch
+      enableWebSearch,
+      toolEnforcementMode,
+      strictMusclePriority
     } = body;
 
     // Validate required fields and constraints
@@ -125,9 +127,9 @@ export async function POST(request: NextRequest) {
       );
     }
 
-    if (typeof maxTokens !== 'number' || maxTokens < 1 || maxTokens > 32768) {
+    if (typeof maxTokens !== 'number' || maxTokens < 1 || maxTokens > 65536) {
       return NextResponse.json(
-        { error: 'Max tokens must be between 1 and 32768' },
+        { error: 'Max tokens must be between 1 and 65536' },
         { status: 400 }
       );
     }
@@ -167,39 +169,47 @@ export async function POST(request: NextRequest) {
       );
     }
 
+    // Validate toolEnforcementMode if provided
+    if (toolEnforcementMode !== undefined && typeof toolEnforcementMode !== 'string') {
+      return NextResponse.json(
+        { error: 'Tool Enforcement Mode must be a string' },
+        { status: 400 }
+      );
+    }
+
+    // Validate strictMusclePriority if provided
+    if (strictMusclePriority !== undefined && typeof strictMusclePriority !== 'boolean') {
+      return NextResponse.json(
+        { error: 'Strict Muscle Priority must be a boolean' },
+        { status: 400 }
+      );
+    }
+
     // Update or create configuration
+    const updateData = {
+      systemPrompt: systemPrompt.trim(),
+      freeModelName: freeModelName.trim(),
+      proModelName: proModelName.trim(),
+      temperature,
+      maxTokens,
+      topK,
+      topP,
+      ragSimilarityThreshold,
+      ragMaxChunks,
+      ragHighRelevanceThreshold,
+      useKnowledgeBase: Boolean(useKnowledgeBase),
+      useClientMemory: Boolean(useClientMemory),
+      enableWebSearch: Boolean(enableWebSearch),
+      ...(toolEnforcementMode !== undefined && { toolEnforcementMode: toolEnforcementMode.trim() }),
+      ...(strictMusclePriority !== undefined && { strictMusclePriority: Boolean(strictMusclePriority) })
+    };
+
     const config = await prisma.aIConfiguration.upsert({
       where: { id: 'singleton' },
-      update: {
-        systemPrompt: systemPrompt.trim(),
-        freeModelName: freeModelName.trim(),
-        proModelName: proModelName.trim(),
-        temperature,
-        maxTokens,
-        topK,
-        topP,
-        ragSimilarityThreshold,
-        ragMaxChunks,
-        ragHighRelevanceThreshold,
-        useKnowledgeBase: Boolean(useKnowledgeBase),
-        useClientMemory: Boolean(useClientMemory),
-        enableWebSearch: Boolean(enableWebSearch)
-      },
+      update: updateData,
       create: {
         id: 'singleton',
-        systemPrompt: systemPrompt.trim(),
-        freeModelName: freeModelName.trim(),
-        proModelName: proModelName.trim(),
-        temperature,
-        maxTokens,
-        topK,
-        topP,
-        ragSimilarityThreshold,
-        ragMaxChunks,
-        ragHighRelevanceThreshold,
-        useKnowledgeBase: Boolean(useKnowledgeBase),
-        useClientMemory: Boolean(useClientMemory),
-        enableWebSearch: Boolean(enableWebSearch)
+        ...updateData
       }
     });
 

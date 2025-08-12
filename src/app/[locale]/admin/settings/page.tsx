@@ -9,6 +9,7 @@ import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Textarea } from '@/components/ui/textarea';
+import { Switch } from '@/components/ui/switch';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 
 interface AIConfiguration {
@@ -26,6 +27,8 @@ interface AIConfiguration {
   useKnowledgeBase: boolean;
   useClientMemory: boolean;
   enableWebSearch: boolean;
+  toolEnforcementMode: string;
+  strictMusclePriority: boolean;
   createdAt: string;
   updatedAt: string;
 }
@@ -225,10 +228,11 @@ export default function AdminSettingsPage() {
                     id="maxTokens"
                     type="number"
                     min={1}
-                    max={32768}
+                    max={65536}
                     value={config.maxTokens}
                     onChange={(e) => updateConfig('maxTokens', parseInt(e.target.value))}
                   />
+                  <p className="text-xs text-gray-500">Maximum response length (1-65,536 tokens)</p>
                 </div>
               </div>
 
@@ -268,7 +272,7 @@ export default function AdminSettingsPage() {
                     type="number"
                     min={0}
                     max={1}
-                    step={0.1}
+                    step={0.01}
                     value={config.topP}
                     onChange={(e) => updateConfig('topP', parseFloat(e.target.value))}
                   />
@@ -361,6 +365,39 @@ export default function AdminSettingsPage() {
                       className="rounded"
                     />
                     <Label htmlFor="enableWebSearch">Enable Web Search</Label>
+                  </div>
+                </div>
+              </div>
+
+              {/* NEW: Enforcement Modes */}
+              <div className="space-y-4">
+                <h3 className="text-lg font-medium">AI Behavior Controls</h3>
+                <p className="text-sm text-gray-600">Advanced settings to control AI response patterns and knowledge prioritization</p>
+                
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+                  <div className="flex flex-row items-center justify-between rounded-lg border p-4">
+                    <div className="space-y-0.5">
+                      <Label className="text-base">Tool Enforcement Mode</Label>
+                      <p className="text-sm text-gray-500">
+                        Forces the AI to use specific tools for structured outputs like workout plans.
+                      </p>
+                    </div>
+                    <Switch
+                      checked={config.toolEnforcementMode === 'ENABLED'}
+                      onCheckedChange={(checked) => updateConfig('toolEnforcementMode', checked ? 'ENABLED' : 'AUTO')}
+                    />
+                  </div>
+                  <div className="flex flex-row items-center justify-between rounded-lg border p-4">
+                    <div className="space-y-0.5">
+                      <Label className="text-base">Strict Muscle Priority</Label>
+                      <p className="text-sm text-gray-500">
+                        Prioritizes knowledge base articles related to specific muscles mentioned by the user.
+                      </p>
+                    </div>
+                    <Switch
+                      checked={config.strictMusclePriority}
+                      onCheckedChange={(checked) => updateConfig('strictMusclePriority', checked)}
+                    />
                   </div>
                 </div>
               </div>
