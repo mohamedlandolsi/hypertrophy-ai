@@ -1,14 +1,20 @@
 // src/lib/gemini.ts
 
-import { GoogleGenerativeAI, Content, GenerationConfig } from '@google/generative-ai';
+import { GoogleGenerativeAI, Content, GenerationConfig, Part } from '@google/generative-ai';
 import { prisma } from './prisma';
 import {
   updateClientMemory,
   type MemoryUpdate
 } from './client-memory';
-import { fetchEnhancedKnowledgeContext, type KnowledgeContext } from './vector-search';
+import { fetchKnowledgeContext, type KnowledgeContext } from './vector-search';
 import { fetchUserProfile, type UserProfileData } from './user-profile-integration';
 import { AIConfiguration, ClientMemory } from '@prisma/client';
+import { 
+  functionDeclarations, 
+  handleProfileUpdate, 
+  handleConflictDetection,
+  type EnhancedMemoryUpdate 
+} from './function-calling';
 
 // Initialize the Gemini client
 if (!process.env.GEMINI_API_KEY) {
@@ -16,11 +22,10 @@ if (!process.env.GEMINI_API_KEY) {
 }
 const genAI = new GoogleGenerativeAI(process.env.GEMINI_API_KEY);
 
+// Define interfaces for better type safety
 interface ConversationMessage {
   role: 'user' | 'model';
   content: string;
-  imageData?: string;
-  imageMimeType?: string;
 }
 
 interface AiResponse {
@@ -28,10 +33,7 @@ interface AiResponse {
   citations: KnowledgeContext[];
 }
 
-/**
- * Fetches the current AI configuration from the database.
- * Caches the result to avoid repeated database calls.
- */
+// Caching for AI configuration to reduce database calls
 let aiConfigCache: AIConfiguration | null = null;
 export async function getAIConfiguration(): Promise<AIConfiguration> {
   if (aiConfigCache) {
@@ -45,15 +47,12 @@ export async function getAIConfiguration(): Promise<AIConfiguration> {
   return config;
 }
 
-/**
- * Formats various context pieces into a single string for the prompt.
- */
 function formatContextForPrompt(
   profile: UserProfileData | null,
   memory: ClientMemory | null,
   knowledgeContext: KnowledgeContext[]
 ): string {
-  let contextString = "";
+  let contextString = "### CONTEXTUAL INFORMATION ###\n\n";
 
   if (profile) {
     contextString += "<user_profile>\n";
@@ -61,7 +60,7 @@ function formatContextForPrompt(
     contextString += "\n</user_profile>\n\n";
   }
 
-  if (memory) {
+  if (memory && Object.keys(memory).length > 1) { // Check if memory has more than just the id/userId
     contextString += "<long_term_memory>\n";
     contextString += JSON.stringify(memory, null, 2);
     contextString += "\n</long_term_memory>\n\n";
@@ -69,16 +68,17 @@ function formatContextForPrompt(
 
   if (knowledgeContext.length > 0) {
     contextString += "<knowledge_base_context>\n";
-    knowledgeContext.forEach(chunk => {
-      contextString += `--- Source: ${chunk.title} ---\n`;
+    contextString += "This is your source of truth. Synthesize your answer from these scientifically-backed guides:\n";
+    knowledgeContext.forEach((chunk, index) => {
+      contextString += `--- Guide Chunk ${index + 1}: ${chunk.title} (Relevance Score: ${chunk.score.toFixed(2)}) ---\n`;
       contextString += `${chunk.content}\n`;
-      contextString += `--- End Source ---\n\n`;
     });
     contextString += "</knowledge_base_context>\n";
   } else {
-     contextString += "<knowledge_base_context>\nNo specific information was found in the knowledge base for this query. Use your general knowledge as a fallback, but clearly state that the information is from your general training expertise and not the specific knowledge base.\n</knowledge_base_context>\n";
+    contextString += "<knowledge_base_context>\nNo specific information was found in the knowledge base for this query. You MUST inform the user of this and use your general expertise as a fallback.\n</knowledge_base_context>\n";
   }
 
+  contextString += "### END CONTEXTUAL INFORMATION ###"
   return contextString;
 }
 
@@ -93,9 +93,6 @@ function formatConversationHistory(history: ConversationMessage[]): Content[] {
 }
 
 
-/**
- * NEW: Asynchronously updates the user's memory based on the last interaction.
- */
 async function updateMemory(userId: string, userMessage: string, aiResponse: string): Promise<void> {
   const memoryPrompt = `
     Analyze the following user message and AI response.
@@ -109,55 +106,41 @@ async function updateMemory(userId: string, userMessage: string, aiResponse: str
     If you found new information to save, provide it as a JSON object with one or more of the following keys: 'newGoals', 'newPreferences', 'newInjuries', 'otherNotes'.
     Each key should be an array of strings.
     If no new, lasting information is present, respond with an empty JSON object {}.
-
-    Example 1:
-    User Message: "My left shoulder has been bugging me on bench press lately."
-    AI Response: "Okay, let's be careful with that. We can substitute bench press with a neutral grip machine press to see if that helps. Make sure to keep me updated on how your shoulder feels."
-    JSON Output: {"newInjuries": ["Left shoulder discomfort during bench press."]}
-
-    Example 2:
-    User Message: "What's the best split for me?"
-    AI Response: "Based on your goal to build overall muscle, a Full Body split 3 times a week would be a great start."
-    JSON Output: {}
   `;
   
   try {
-    // Use the configured free model for memory updates (lightweight operation)
-    const config = await getAIConfiguration();
-    const model = genAI.getGenerativeModel({ model: config.freeModelName });
+    const model = genAI.getGenerativeModel({ model: "gemini-1.5-flash-latest" });
     const result = await model.generateContent(memoryPrompt);
     const text = result.response.text().trim();
     
-    // Validate that we received a JSON object
     if (text.startsWith('{') && text.endsWith('}')) {
       const parsedMemory = JSON.parse(text) as MemoryUpdate;
       
-      // Check if there's anything to update
       const hasNewInfo = Object.values(parsedMemory).some(value => Array.isArray(value) && value.length > 0);
 
       if (hasNewInfo) {
         console.log(`🧠 Updating memory for user ${userId}:`, parsedMemory);
         await updateClientMemory(userId, parsedMemory);
       } else {
-        console.log(`🧠 No new memory update for user ${userId}.`);
+        console.log(`🧠 No new lasting memory found for user ${userId}.`);
       }
     }
   } catch (error) {
     console.error("Error updating client memory:", error);
-    // Non-critical error, so we don't throw. The chat can continue without a memory update.
   }
 }
 
-/**
- * Main function to generate a chat response.
- */
 export async function generateChatResponse(
   userId: string,
   conversationHistory: ConversationMessage[],
-  newUserMessage: string
+  newUserMessage: string,
+  selectedModel?: 'flash' | 'pro'
 ): Promise<AiResponse> {
   try {
+    console.log("🚀 generateChatResponse called", { userId, messageLength: newUserMessage.length });
+    
     // 1. Fetch AI Configuration and User Data in parallel
+    console.log("📊 Fetching AI config and user data...");
     const [config, userProfile, clientMemory, userData] = await Promise.all([
       getAIConfiguration(),
       fetchUserProfile(userId),
@@ -167,29 +150,66 @@ export async function generateChatResponse(
         select: { plan: true }
       })
     ]);
+    
+    console.log("✅ Data fetched successfully", { 
+      hasConfig: !!config, 
+      hasProfile: !!userProfile, 
+      hasMemory: !!clientMemory, 
+      userPlan: userData?.plan 
+    });
 
-    // 2. Fetch Relevant Knowledge from Vector DB
-    const knowledgeContext = await fetchEnhancedKnowledgeContext(
+    // 2. Fetch High-Quality Knowledge from Vector DB using the new logic
+    console.log(`📚 Fetching KB context with threshold: ${config.ragSimilarityThreshold}`);
+    const knowledgeContext = await fetchKnowledgeContext(
       newUserMessage,
       config.ragMaxChunks,
-      config.ragSimilarityThreshold,
-      config.ragHighRelevanceThreshold,
-      config.strictMusclePriority,
-      userId
+      config.ragSimilarityThreshold
     );
-    
+    console.log(`📚 Retrieved ${knowledgeContext.length} knowledge chunks.`);
+
     // 3. Construct the full prompt for Gemini
+    console.log("🔨 Constructing prompt...");
     const systemInstruction = config.systemPrompt;
     const formattedContext = formatContextForPrompt(userProfile, clientMemory, knowledgeContext);
-    const formattedHistory = formatConversationHistory(conversationHistory);
 
-    const modelName = userData?.plan === 'PRO' ? config.proModelName : config.freeModelName;
+    const fullSystemPrompt = `${systemInstruction}\n\n${formattedContext}`;
+    console.log(`📝 System prompt length: ${fullSystemPrompt.length} chars`);
+
+    // 5. Determine which model to use based on user selection and plan
+    let modelName: string;
+    if (selectedModel) {
+      // User has selected a specific model
+      if (selectedModel === 'pro') {
+        // User wants PRO model - check if they have PRO plan
+        if (userData?.plan === 'PRO') {
+          modelName = config.proModelName;
+          console.log(`🎯 Using user-selected PRO model: ${modelName}`);
+        } else {
+          // User doesn't have PRO plan, fallback to flash model
+          modelName = config.freeModelName;
+          console.log(`⚠️ User selected PRO model but doesn't have PRO plan, using Flash model: ${modelName}`);
+        }
+      } else {
+        // User selected flash model
+        modelName = config.freeModelName;
+        console.log(`🎯 Using user-selected Flash model: ${modelName}`);
+      }
+    } else {
+      // No specific model selected, use plan-based default
+      modelName = userData?.plan === 'PRO' ? config.proModelName : config.freeModelName;
+      console.log(`🔄 Using plan-based model: ${modelName} (plan: ${userData?.plan || 'FREE'})`);
+    }
+
+    console.log(`🤖 Using model: ${modelName}`);
     const model = genAI.getGenerativeModel({ 
       model: modelName,
       systemInstruction: {
         role: "system",
-        parts: [{ text: `${systemInstruction}\n\n${formattedContext}` }]
-      }
+        parts: [{ text: fullSystemPrompt }]
+      },
+      tools: [{
+        functionDeclarations: functionDeclarations
+      }]
     });
     
     const generationConfig: GenerationConfig = {
@@ -199,25 +219,94 @@ export async function generateChatResponse(
       maxOutputTokens: config.maxTokens,
     };
     
-    const chat = model.startChat({ 
-      history: formattedHistory,
-      generationConfig
-    });
-    const result = await chat.sendMessage(newUserMessage);
-    const aiContent = result.response.text();
+    const formattedHistory = formatConversationHistory(conversationHistory);
+    const chat = model.startChat({ history: formattedHistory, generationConfig });
     
-    // 4. (Fire-and-forget) Asynchronously update the user's memory.
-    // We don't await this because we want to return the response to the user ASAP.
+    console.log("🔄 Sending request to Gemini...");
+    const result = await chat.sendMessage(newUserMessage);
+    
+    // Handle function calls if present
+    let finalResponse = result.response;
+    const functionCalls = result.response.functionCalls();
+    
+    if (functionCalls && functionCalls.length > 0) {
+      console.log(`🛠️ Processing ${functionCalls.length} function calls...`);
+      
+      const functionResponses: Part[] = [];
+      
+      for (const functionCall of functionCalls) {
+        const { name, args } = functionCall;
+        console.log(`📞 Calling function: ${name}`, args);
+        
+        try {
+          let functionResult: Record<string, unknown> = {};
+          
+          if (name === 'updateClientProfile') {
+            await handleProfileUpdate(userId, args as EnhancedMemoryUpdate);
+            functionResult = { success: true, message: 'Profile updated successfully' };
+          } else if (name === 'detectProfileConflict') {
+            const conflictHandled = await handleConflictDetection(userId, args as Parameters<typeof handleConflictDetection>[1]);
+            functionResult = { 
+              conflictDetected: true, 
+              handled: conflictHandled,
+              requiresUserConfirmation: (args as Record<string, unknown>).resolutionNeeded 
+            };
+          }
+          
+          functionResponses.push({
+            functionResponse: {
+              name: functionCall.name,
+              response: functionResult
+            }
+          });
+          
+        } catch (error) {
+          console.error(`❌ Error executing function ${name}:`, error);
+          functionResponses.push({
+            functionResponse: {
+              name: functionCall.name,
+              response: { error: 'Function execution failed', message: error?.toString() }
+            }
+          });
+        }
+      }
+      
+      // Send function responses back to the model for final response
+      if (functionResponses.length > 0) {
+        console.log("🔄 Sending function responses back to model...");
+        const followUpResult = await chat.sendMessage(functionResponses);
+        finalResponse = followUpResult.response;
+      }
+    }
+    
+    const aiContent = finalResponse.text();
+    console.log(`✅ Gemini response received: ${aiContent.length} chars`);
+    
+    if (aiContent.length === 0) {
+      console.error("❌ EMPTY RESPONSE FROM GEMINI!");
+    }
+    
+    // 4. Asynchronously update memory without blocking the response
     updateMemory(userId, newUserMessage, aiContent).catch(console.error);
     
     // 5. Return the response and citations
+    console.log("🎯 Returning response with citations");
     return {
       content: aiContent,
       citations: knowledgeContext
     };
 
   } catch (error) {
-    console.error("Error in generateChatResponse:", error);
+    console.error("❌ Error in generateChatResponse:", error);
+    if (error instanceof Error) {
+      console.error("❌ Error details:", {
+        name: error.name,
+        message: error.message,
+        stack: error.stack
+      });
+    } else {
+      console.error("❌ Unknown error type:", typeof error, error);
+    }
     throw new Error("I'm sorry, I encountered an error while generating a response. Please try again.");
   }
 }
@@ -239,12 +328,10 @@ interface LegacyMessage {
 export async function sendToGeminiWithCitations(
   conversationHistory: LegacyMessage[],
   userId: string,
-  // eslint-disable-next-line @typescript-eslint/no-unused-vars
   _imageBuffers?: Buffer[],
-  // eslint-disable-next-line @typescript-eslint/no-unused-vars
   _imageMimeTypes?: string[],
-  // eslint-disable-next-line @typescript-eslint/no-unused-vars
-  _userPlan?: string
+  _userPlan?: string,
+  selectedModel?: 'flash' | 'pro'
 ): Promise<AiResponse> {
   // Convert the conversation format
   const convertedHistory: ConversationMessage[] = conversationHistory.map(msg => ({
@@ -256,7 +343,7 @@ export async function sendToGeminiWithCitations(
   const lastUserMessage = conversationHistory[conversationHistory.length - 1];
   const newUserMessage = lastUserMessage?.content || '';
   
-  return generateChatResponse(userId, convertedHistory.slice(0, -1), newUserMessage);
+  return generateChatResponse(userId, convertedHistory.slice(0, -1), newUserMessage, selectedModel);
 }
 
 /**

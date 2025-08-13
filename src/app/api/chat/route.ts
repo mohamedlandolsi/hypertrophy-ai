@@ -69,6 +69,7 @@ export async function POST(request: NextRequest) {
       conversationId?: string;
       message: string;
       isGuest?: boolean;
+      selectedModel?: 'flash' | 'pro';
     };
     const imageFiles: File[] = [];
     const imageBuffers: Buffer[] = [];
@@ -87,6 +88,7 @@ export async function POST(request: NextRequest) {
           conversationId: formData.get('conversationId') as string,
           message: formData.get('message') as string,
           isGuest: formData.get('isGuest') === 'true',
+          selectedModel: formData.get('selectedModel') as 'flash' | 'pro',
         };
         
         // Handle multiple images
@@ -149,7 +151,7 @@ export async function POST(request: NextRequest) {
     
     console.log("✅ Parsed Body:", body);
     
-    const { conversationId: rawConversationId, message, isGuest = false } = body;
+    const { conversationId: rawConversationId, message, isGuest = false, selectedModel } = body;
     
     // Properly handle empty conversationId (treat empty string as null/undefined)
     const conversationId = rawConversationId && rawConversationId.trim() !== '' ? rawConversationId : undefined;
@@ -158,6 +160,7 @@ export async function POST(request: NextRequest) {
     console.log("👤 userId:", user?.id);
     console.log("📝 message length:", message?.length);
     console.log("🎭 isGuest:", isGuest);
+    console.log("🤖 selectedModel:", selectedModel);
 
     logger.info('Received conversationId from frontend:', { conversationId, userId: user?.id, messageLength: message?.length });
 
@@ -310,8 +313,16 @@ export async function POST(request: NextRequest) {
       }),
       // Get AI response from Gemini - NEW RAG SYSTEM WITH CITATIONS (with user's plan)
       // Pass all images to Gemini API (it supports multiple images)
-      sendToGeminiWithCitations(conversationForGemini, user.id, imageBuffers, imageMimeTypes, finalUserPlan)
+      sendToGeminiWithCitations(conversationForGemini, user.id, imageBuffers, imageMimeTypes, finalUserPlan, selectedModel)
     ]);
+
+    // Validate AI response before saving
+    if (!aiResult || !aiResult.content || aiResult.content.trim().length === 0) {
+      console.error("❌ Empty or invalid AI response received:", aiResult);
+      throw new Error("AI generated an empty response. Please try again.");
+    }
+
+    console.log(`✅ AI response validated: ${aiResult.content.length} characters`);
 
     // Save assistant message and increment message count in parallel
     const [assistantMessage] = await Promise.all([

@@ -1660,5 +1660,15 @@
     "required": "Requis pour continuer",
     "version": "Version {version}",
     "privacyPolicy": "Politique de confidentialité"
+  },
+  "maintenance": {
+    "pageTitle": "Chat en maintenance - HypertroQ",
+    "pageDescription": "Notre système de chat IA est temporairement en maintenance. Les autres fonctionnalités restent accessibles.",
+    "title": "Chat en maintenance",
+    "description": "Notre système de chat IA est actuellement en maintenance pour améliorer votre expérience.",
+    "duration": "Durée prévue : 1-2 heures",
+    "accessNote": "Vous pouvez toujours accéder aux autres parties du site pendant que nous travaillons sur le système de chat. Nous nous excusons pour la gêne occasionnée.",
+    "needHelp": "Besoin d'aide immédiate ?",
+    "goBack": "Retour à l'accueil"
   }
 }

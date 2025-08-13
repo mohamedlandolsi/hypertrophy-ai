@@ -5,10 +5,11 @@ import { prisma } from './prisma';
 
 // Define the structure of our knowledge context
 export interface KnowledgeContext {
-    id: string;
-    title: string;
     content: string;
-    score: number;
+    knowledgeId: string;
+    title: string;
+    similarity: number;
+    chunkIndex: number;
 }
 
 // Initialize Gemini client
@@ -31,7 +32,7 @@ async function getEmbedding(query: string): Promise<number[]> {
 
 /**
  * Fetches relevant knowledge base chunks using efficient vector similarity search
- * This is the primary RAG function - currently using pgvector with Pinecone interface compatibility
+ * This is the primary RAG function that replaces the complex multi-layered approach
  * @param query - The user's message/question.
  * @param maxChunks - The maximum number of chunks to return.
  * @param similarityThreshold - The minimum similarity score for a chunk to be considered relevant.
@@ -56,10 +57,11 @@ export async function fetchKnowledgeContext(
         
         const chunks = await prisma.$queryRaw`
             SELECT
-              kc.id,
               kc.content,
+              ki.id as "knowledgeId", 
               ki.title,
-              1 - (kc."embeddingData"::vector <=> ${embeddingStr}::vector) as score
+              1 - (kc."embeddingData"::vector <=> ${embeddingStr}::vector) as similarity,
+              kc."chunkIndex"
             FROM "KnowledgeChunk" kc
             JOIN "KnowledgeItem" ki ON kc."knowledgeItemId" = ki.id  
             WHERE ki.status = 'READY' 
@@ -69,15 +71,16 @@ export async function fetchKnowledgeContext(
           `;
 
         const results = (chunks as Array<{
-            id: string;
             content: string;
+            knowledgeId: string;
             title: string; 
-            score: number;
+            similarity: number;
+            chunkIndex: number;
         }>);
 
         // 3. Filter the results based on the similarity threshold
         const relevantChunks = results.filter(
-            chunk => chunk.score >= similarityThreshold
+            chunk => chunk.similarity >= similarityThreshold
         );
 
         if (relevantChunks.length === 0) {
@@ -103,7 +106,7 @@ export async function fetchKnowledgeContext(
 /**
  * Fallback similarity search using JSON embeddings (for systems without pgvector)
  */
-export async function fallbackJsonSimilaritySearch(
+async function fallbackJsonSimilaritySearch(
     queryEmbedding: number[],
     maxChunks: number,
     similarityThreshold: number
@@ -135,13 +138,14 @@ export async function fallbackJsonSimilaritySearch(
         const similarities = chunks.map(chunk => {
             try {
                 const chunkEmbedding = JSON.parse(chunk.embeddingData!) as number[];
-                const score = cosineSimilarity(queryEmbedding, chunkEmbedding);
+                const similarity = cosineSimilarity(queryEmbedding, chunkEmbedding);
                 
                 return {
-                    id: chunk.id,
                     content: chunk.content,
+                    knowledgeId: chunk.knowledgeItem.id,
                     title: chunk.knowledgeItem.title,
-                    score: score
+                    similarity: similarity,
+                    chunkIndex: chunk.chunkIndex
                 };
             } catch (parseError) {
                 console.error('Error parsing embedding data:', parseError);
@@ -150,9 +154,9 @@ export async function fallbackJsonSimilaritySearch(
         }).filter(Boolean) as KnowledgeContext[];
 
         // Sort by similarity and filter by threshold
-        const sortedSimilarities = similarities.sort((a, b) => b.score - a.score);
+        const sortedSimilarities = similarities.sort((a, b) => b.similarity - a.similarity);
         const relevantChunks = sortedSimilarities.filter(
-            chunk => chunk.score >= similarityThreshold
+            chunk => chunk.similarity >= similarityThreshold
         );
 
         return relevantChunks.slice(0, maxChunks);
@@ -189,68 +193,4 @@ function cosineSimilarity(a: number[], b: number[]): number {
     }
 
     return dotProduct / (normA * normB);
-}
-
-/**
- * Admin function to run embedding audit
- */
-export async function runEmbeddingAudit() {
-  console.log('🔍 Running embedding audit...');
-  
-  const chunks = await prisma.knowledgeChunk.findMany({
-    where: {
-      embeddingData: { not: null }
-    },
-    select: {
-      id: true,
-      knowledgeItemId: true,
-      chunkIndex: true,
-      embeddingData: true
-    }
-  });
-  
-  return {
-    totalChunks: chunks.length,
-    chunksWithEmbeddings: chunks.filter(c => c.embeddingData).length,
-    auditComplete: true
-  };
-}
-
-/**
- * Admin function to re-embed missing chunks
- */
-export async function reembedMissingChunks() {
-  console.log('🔄 Re-embedding missing chunks...');
-  
-  const chunksWithoutEmbeddings = await prisma.knowledgeChunk.findMany({
-    where: {
-      embeddingData: null
-    }
-  });
-  
-  console.log(`Found ${chunksWithoutEmbeddings.length} chunks without embeddings`);
-  
-  return {
-    processed: 0,
-    skipped: chunksWithoutEmbeddings.length,
-    message: 'Re-embedding functionality not yet implemented'
-  };
-}
-
-/**
- * Delete embeddings for a knowledge item
- */
-export async function deleteEmbeddings(knowledgeItemId: string) {
-  console.log(`🗑️ Deleting embeddings for knowledge item: ${knowledgeItemId}`);
-  
-  const result = await prisma.knowledgeChunk.updateMany({
-    where: {
-      knowledgeItemId: knowledgeItemId
-    },
-    data: {
-      embeddingData: null
-    }
-  });
-  
-  return { deletedCount: result.count };
 }

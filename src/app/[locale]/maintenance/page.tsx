@@ -1,6 +1,25 @@
 import { Wrench, Clock, Mail } from 'lucide-react';
+import { getTranslations } from 'next-intl/server';
+import Link from 'next/link';
 
-export default function MaintenancePage() {
+type Props = {
+  params: Promise<{ locale: string }>;
+};
+
+export async function generateMetadata({ params }: Props) {
+  const { locale } = await params;
+  const t = await getTranslations({ locale, namespace: 'maintenance' });
+  
+  return {
+    title: t('pageTitle'),
+    description: t('pageDescription'),
+  };
+}
+
+export default async function MaintenancePage({ params }: Props) {
+  const { locale } = await params;
+  const t = await getTranslations('maintenance');
+  
   return (
     <div className="min-h-screen bg-gradient-to-br from-gray-900 via-blue-900 to-gray-900 flex items-center justify-center px-4">
       <div className="max-w-md w-full text-center space-y-8">
@@ -14,10 +33,10 @@ export default function MaintenancePage() {
         {/* Main Message */}
         <div className="space-y-4">
           <h1 className="text-4xl font-bold text-white mb-4">
-            Chat Under Maintenance
+            {t('title')}
           </h1>
           <p className="text-xl text-gray-300 leading-relaxed">
-            Our AI chat system is currently undergoing maintenance to improve your experience.
+            {t('description')}
           </p>
         </div>
 
@@ -25,18 +44,18 @@ export default function MaintenancePage() {
         <div className="bg-white/10 backdrop-blur-sm rounded-lg p-6 space-y-4">
           <div className="flex items-center justify-center space-x-2 text-blue-300">
             <Clock className="w-5 h-5" />
-            <span className="text-sm font-medium">Expected Duration: 1-2 hours</span>
+            <span className="text-sm font-medium">{t('duration')}</span>
           </div>
           
           <div className="text-gray-300 text-sm">
-            <p>You can still access other parts of the website while we work on the chat system. We apologize for any inconvenience.</p>
+            <p>{t('accessNote')}</p>
           </div>
         </div>
 
         {/* Contact Info */}
         <div className="space-y-3">
           <p className="text-gray-400 text-sm">
-            Need immediate assistance?
+            {t('needHelp')}
           </p>
           <div className="flex items-center justify-center space-x-2 text-blue-300">
             <Mail className="w-4 h-4" />
@@ -51,12 +70,12 @@ export default function MaintenancePage() {
 
         {/* Return Button */}
         <div className="pt-4">
-          <button 
-            onClick={() => window.history.back()}
-            className="bg-blue-600 hover:bg-blue-700 text-white px-6 py-2 rounded-lg transition-colors duration-200"
+          <Link 
+            href={`/${locale}`}
+            className="inline-block bg-blue-600 hover:bg-blue-700 text-white px-6 py-2 rounded-lg transition-colors duration-200"
           >
-            Go Back
-          </button>
+            {t('goBack')}
+          </Link>
         </div>
       </div>
     </div>

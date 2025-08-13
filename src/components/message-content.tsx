@@ -4,6 +4,7 @@ import React, { useState } from 'react';
 import ReactMarkdown from 'react-markdown';
 import remarkGfm from 'remark-gfm';
 import { getTextFormatting } from '@/lib/text-formatting';
+import { LaTeXText } from './latex-text';
 import Image from 'next/image';
 import {
   Dialog,
@@ -212,6 +213,13 @@ export const MessageContent: React.FC<MessageContentProps> = ({ content, imageDa
         <ReactMarkdown
           remarkPlugins={[remarkGfm]}
           components={{
+          // Custom text renderer that handles LaTeX
+          text: ({ children }) => {
+            if (typeof children === 'string') {
+              return <LaTeXText>{children}</LaTeXText>;
+            }
+            return <>{children}</>;
+          },
           // Custom styling for different elements
           p: ({ children }) => (
             <p 
@@ -225,19 +233,19 @@ export const MessageContent: React.FC<MessageContentProps> = ({ content, imageDa
                 wordSpacing: formatting.dir === 'auto' ? '0.1em' : 'normal',
               }}
             >
-              {children}
+              {typeof children === 'string' ? <LaTeXText>{children}</LaTeXText> : children}
             </p>
           ),
           // Bold text
           strong: ({ children }) => (
             <strong className="font-bold text-foreground dark:text-foreground">
-              {children}
+              {typeof children === 'string' ? <LaTeXText>{children}</LaTeXText> : children}
             </strong>
           ),
           // Italic text
           em: ({ children }) => (
             <em className="italic text-foreground/80 dark:text-foreground/80">
-              {children}
+              {typeof children === 'string' ? <LaTeXText>{children}</LaTeXText> : children}
             </em>
           ),
           // Unordered lists
@@ -255,23 +263,23 @@ export const MessageContent: React.FC<MessageContentProps> = ({ content, imageDa
           // List items
           li: ({ children }) => (
             <li className="text-sm leading-relaxed mb-1 text-foreground dark:text-foreground">
-              {children}
+              {typeof children === 'string' ? <LaTeXText>{children}</LaTeXText> : children}
             </li>
           ),
           // Headings
           h1: ({ children }) => (
             <h1 className="text-lg font-bold mb-3 mt-4 first:mt-0 text-foreground dark:text-foreground">
-              {children}
+              {typeof children === 'string' ? <LaTeXText>{children}</LaTeXText> : children}
             </h1>
           ),
           h2: ({ children }) => (
             <h2 className="text-base font-bold mb-2 mt-3 first:mt-0 text-foreground dark:text-foreground">
-              {children}
+              {typeof children === 'string' ? <LaTeXText>{children}</LaTeXText> : children}
             </h2>
           ),
           h3: ({ children }) => (
             <h3 className="text-sm font-bold mb-2 mt-3 first:mt-0 text-foreground dark:text-foreground">
-              {children}
+              {typeof children === 'string' ? <LaTeXText>{children}</LaTeXText> : children}
             </h3>
           ),
           // Code blocks
@@ -280,20 +288,20 @@ export const MessageContent: React.FC<MessageContentProps> = ({ content, imageDa
             if (isInline) {
               return (
                 <code className="px-1.5 py-0.5 rounded bg-muted dark:bg-muted text-xs font-mono text-foreground dark:text-foreground">
-                  {children}
+                  {typeof children === 'string' ? <LaTeXText>{children}</LaTeXText> : children}
                 </code>
               );
             }
             return (
               <code className="block p-3 rounded-lg bg-muted dark:bg-muted text-xs font-mono overflow-x-auto text-foreground dark:text-foreground">
-                {children}
+                {typeof children === 'string' ? <LaTeXText>{children}</LaTeXText> : children}
               </code>
             );
           },
           // Blockquotes
           blockquote: ({ children }) => (
             <blockquote className="border-l-4 border-primary dark:border-primary pl-4 my-3 italic text-foreground/70 dark:text-foreground/70">
-              {children}
+              {typeof children === 'string' ? <LaTeXText>{children}</LaTeXText> : children}
             </blockquote>
           ),
           // Tables

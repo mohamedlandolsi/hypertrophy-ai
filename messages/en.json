@@ -1495,5 +1495,15 @@
       "confirm": "Confirm",
       "keyboardShortcuts": "Enter to send • Shift+Enter for new line"
     }
+  },
+  "maintenance": {
+    "pageTitle": "Chat Under Maintenance - HypertroQ",
+    "pageDescription": "Our AI chat system is temporarily under maintenance. Other features remain accessible.",
+    "title": "Chat Under Maintenance",
+    "description": "Our AI chat system is currently undergoing maintenance to improve your experience.",
+    "duration": "Expected Duration: 1-2 hours",
+    "accessNote": "You can still access other parts of the website while we work on the chat system. We apologize for any inconvenience.",
+    "needHelp": "Need immediate assistance?",
+    "goBack": "Go Back to Home"
   }
 }

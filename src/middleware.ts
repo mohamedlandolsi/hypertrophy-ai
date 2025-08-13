@@ -19,9 +19,11 @@ export async function middleware(request: NextRequest) {
   const isMaintenanceMode = process.env.MAINTENANCE_MODE === 'true';
   const pathname = request.nextUrl.pathname;
   
-  // Allow access to maintenance page and admin routes during maintenance
+  // Allow access to maintenance page during maintenance
   const isMaintenancePage = pathname.includes('/maintenance');
-  const isApiRoute = pathname.startsWith('/api');
+  
+  // Only apply maintenance mode to chat-related routes
+  const isChatRoute = pathname.includes('/chat') || pathname.includes('/api/chat');
   
   // Handle internationalization first
   const intlResponse = intlMiddleware(request);
@@ -81,8 +83,8 @@ export async function middleware(request: NextRequest) {
   // Get user session
   const { data: { user } } = await supabase.auth.getUser()
 
-  // Enhanced maintenance mode check with admin bypass
-  if (isMaintenanceMode && !isMaintenancePage && !isApiRoute) {
+  // Enhanced maintenance mode check with admin bypass - ONLY for chat routes
+  if (isMaintenanceMode && !isMaintenancePage && isChatRoute) {
     // Check if user is admin (admin users can bypass maintenance mode)
     let isAdmin = false;
     if (user) {

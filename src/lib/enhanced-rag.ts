@@ -253,10 +253,10 @@ async function performVectorSearch(query: string, limit: number): Promise<Enhanc
     
     return results.map((result) => ({
       content: result.content,
-      knowledgeId: result.knowledgeId,
+      knowledgeId: result.id, // Map id to knowledgeId for compatibility
       title: result.title,
-      similarity: result.similarity,
-      chunkIndex: result.chunkIndex,
+      similarity: result.score, // Map score to similarity for compatibility
+      chunkIndex: 0, // Default value since new interface doesn't have chunkIndex
       source: 'vector' as const
     }));
     
