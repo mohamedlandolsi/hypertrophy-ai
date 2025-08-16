@@ -36,10 +36,10 @@ export const ArabicAwareTextarea = forwardRef<HTMLTextAreaElement, ArabicAwareTe
   const textareaRef = (ref as React.RefObject<HTMLTextAreaElement>) || internalRef;
 
   // Memoize expensive text direction calculation to avoid recalculation on every render
-  const direction = useMemo(() => getTextDirection(value), [value]);
+  const direction = useMemo(() => getTextDirection(value || ''), [value]);
   
   // Memoize Arabic text detection to avoid repeated regex operations
-  const hasArabic = useMemo(() => isArabicText(value), [value]);
+  const hasArabic = useMemo(() => isArabicText(value || ''), [value]);
   
   // Memoize placeholder to avoid recalculation
   const placeholderText = useMemo(() => {

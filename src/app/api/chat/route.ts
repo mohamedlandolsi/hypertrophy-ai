@@ -1,38 +1,247 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { createClient } from '@/lib/supabase/server';
 import { prisma } from '@/lib/prisma';
-import { sendToGeminiWithCitations, formatConversationForGemini } from '@/lib/gemini';
+import { GoogleGenerativeAI, SchemaType, FunctionCallingMode, FunctionDeclaration } from '@google/generative-ai';
+import { getSystemPrompt } from '@/lib/ai/core-prompts';
+import { fetchKnowledgeContext } from '@/lib/vector-search';
+import { generateWorkoutProgram, detectWorkoutProgramIntent } from '@/lib/ai/workout-program-generator';
 import { 
   ApiErrorHandler, 
   ValidationError, 
   AuthenticationError,
   logger 
 } from '@/lib/error-handler';
-import { canUserSendMessage, incrementUserMessageCount, getUserPlan } from '@/lib/subscription';
+import { canUserSendMessage, incrementUserMessageCount } from '@/lib/subscription';
 
 // Configure API route to handle large file uploads
 export const maxDuration = 60; // 60 seconds timeout for image processing
 export const runtime = 'nodejs';
-
-// Increase body size limit for this API route (Vercel allows up to 50MB for body parsing)
 export const dynamic = 'force-dynamic';
 export const preferredRegion = 'auto';
+
+// Common muscle groups for strict muscle priority logic
+const MUSCLE_GROUPS = [
+  'chest', 'pectorals', 'pecs',
+  'biceps', 'bicep',
+  'triceps', 'tricep', 
+  'shoulders', 'delts', 'deltoids',
+  'back', 'lats', 'latissimus', 'rhomboids', 'traps', 'trapezius',
+  'legs', 'quads', 'quadriceps', 'hamstrings', 'glutes', 'calves',
+  'abs', 'core', 'abdominals',
+  'forearms', 'forearm'
+];
+
+// Initialize Gemini client
+if (!process.env.GEMINI_API_KEY) {
+  throw new Error("GEMINI_API_KEY environment variable is not set.");
+}
+const genAI = new GoogleGenerativeAI(process.env.GEMINI_API_KEY);
+
+/**
+ * Map UI model selection to actual Gemini model names
+ */
+function getGeminiModelName(selectedModel: string, config: Record<string, unknown>): string {
+  const modelMap: Record<string, string> = {
+    'flash': 'gemini-2.5-flash',
+    'pro': 'gemini-2.5-pro'
+  };
+  
+  // If selectedModel is provided and valid, use it
+  if (selectedModel && modelMap[selectedModel]) {
+    console.log(`🎯 Using selected model: ${selectedModel} → ${modelMap[selectedModel]}`);
+    return modelMap[selectedModel];
+  }
+  
+  // Fall back to config or default
+  const fallbackModel = (config.proModelName as string) || 'gemini-2.5-pro';
+  console.log(`🔄 Using fallback model: ${fallbackModel}`);
+  return fallbackModel;
+}
+
+interface KnowledgeChunk {
+  id: string;
+  content: string;
+  knowledgeItem: {
+    title: string;
+  };
+}
+
+// Tool definition for Gemini function calling  
+const updateClientProfileFunction: FunctionDeclaration = {
+  name: "updateClientProfile",
+  description: "Updates the client's profile information in the database. Use this when the user provides new or updated personal information like their weight, goals, experience level, or injuries.",
+  parameters: {
+    type: SchemaType.OBJECT,
+    properties: {
+      field: {
+        type: SchemaType.STRING,
+        description: "The profile field to update (e.g., weight, age, goal, experienceLevel, injuries)"
+      },
+      value: {
+        type: SchemaType.STRING, 
+        description: "The new value for the specified field"
+      },
+      action: {
+        type: SchemaType.STRING,
+        description: "Use 'set' to overwrite a value or 'add' to append to a list"
+      }
+    },
+    required: ["field", "value", "action"]
+  }
+};
+
+/**
+ * Handle tool call execution for profile updates
+ */
+async function executeToolCall(toolCall: { name: string; args: Record<string, unknown> }, userId: string): Promise<string> {
+  if (toolCall.name !== 'updateClientProfile') {
+    throw new Error(`Unknown tool: ${toolCall.name}`);
+  }
+
+  const { field, value, action } = toolCall.args as { field: string; value: string; action: string };
+
+  try {
+    // Get or create client memory
+    let clientMemory = await prisma.clientMemory.findUnique({
+      where: { userId: userId }
+    });
+
+    if (!clientMemory) {
+      clientMemory = await prisma.clientMemory.create({
+        data: { userId: userId }
+      });
+    }
+
+    // Prepare update data
+    const updateData: Record<string, unknown> = {};
+
+    if (action === 'set') {
+      // Direct field update
+      updateData[field] = value;
+    } else if (action === 'add') {
+      // Append to existing value (for lists like injuries)
+      const currentValue = (clientMemory as Record<string, unknown>)[field] as string;
+      if (currentValue) {
+        updateData[field] = `${currentValue}, ${value}`;
+      } else {
+        updateData[field] = value;
+      }
+    }
+
+    // Update the client memory
+    await prisma.clientMemory.update({
+      where: { userId: userId },
+      data: updateData
+    });
+
+    console.log(`✅ Profile updated: ${field} = ${value} (${action})`);
+    return `Successfully updated ${field} to "${value}" in your profile.`;
+
+  } catch (error) {
+    console.error('❌ Profile update error:', error);
+    return `Failed to update ${field}. Please try again.`;
+  }
+}
+
+/**
+ * Detect mentioned muscle groups in user prompt for strict muscle priority
+ */
+function detectMuscleGroups(prompt: string): string[] {
+  const lowerPrompt = prompt.toLowerCase();
+  return MUSCLE_GROUPS.filter(muscle => lowerPrompt.includes(muscle));
+}
+
+/**
+ * Perform muscle-specific vector search when strict muscle priority is enabled
+ */
+async function fetchMuscleSpecificKnowledge(
+  query: string,
+  muscleGroups: string[],
+  maxChunks: number,
+  // eslint-disable-next-line @typescript-eslint/no-unused-vars
+  similarityThreshold: number,
+  // eslint-disable-next-line @typescript-eslint/no-unused-vars
+  highRelevanceThreshold: number
+): Promise<KnowledgeChunk[]> {
+  try {
+    // Build muscle-specific filter for database query
+    const muscleFilter = {
+      OR: muscleGroups.map(muscle => ({
+        OR: [
+          { title: { contains: muscle, mode: 'insensitive' as const } },
+          { category: { contains: muscle, mode: 'insensitive' as const } }
+        ]
+      }))
+    };
+
+    // Get muscle-specific knowledge chunks
+    const muscleChunks = await prisma.knowledgeChunk.findMany({
+      where: {
+        knowledgeItem: muscleFilter
+      },
+      include: {
+        knowledgeItem: {
+          select: { title: true }
+        }
+      },
+      take: maxChunks
+    });
+
+    // Check if we have sufficient high-relevance chunks
+    const highRelevanceCount = muscleChunks.length;
+    const threshold = Math.max(3, Math.floor(maxChunks * 0.5)); // At least 3 or 50% of maxChunks
+    
+    if (highRelevanceCount >= threshold) {
+      console.log(`✅ Found ${highRelevanceCount} muscle-specific chunks for: ${muscleGroups.join(', ')}`);
+      return muscleChunks;
+    } else {
+      console.log(`⚠️ Insufficient muscle-specific chunks (${highRelevanceCount}/${threshold}), falling back to standard search`);
+      return [];
+    }
+  } catch (error) {
+    console.error('❌ Error in muscle-specific search:', error);
+    return [];
+  }
+}
+
+/**
+ * Format knowledge context for Gemini prompt
+ */
+function formatKnowledgeContext(chunks: KnowledgeChunk[]): string {
+  if (chunks.length === 0) {
+    return '';
+  }
+
+  const formattedChunks = chunks.map(chunk => 
+    `${chunk.content}\n---`
+  ).join('\n');
+
+  return `[KNOWLEDGE]\n${formattedChunks}\n[/KNOWLEDGE]`;
+}
+
+/**
+ * Format conversation history for Gemini API
+ */
+function formatConversationHistory(messages: Array<{ role: string; content: string }>): Array<{ role: string; parts: Array<{ text: string }> }> {
+  return messages.slice(-10).map(msg => ({
+    role: msg.role === 'USER' ? 'user' : 'model',
+    parts: [{ text: msg.content }]
+  }));
+}
 
 export async function POST(request: NextRequest) {
   const context = ApiErrorHandler.createContext(request);
   let user: { id: string } | null = null;
   
   try {
-    console.log("🛬 Chat API hit");
-    
+    console.log("🛬 Chat API hit - New RAG Pipeline");
     logger.info('Chat API request received', context);
     
-    // Get the authenticated user (but don't require it for guest users)
+    // 1. Authentication Check
     const supabase = await createClient();
     const { data: { user: authUser }, error: authError } = await supabase.auth.getUser();
     user = authUser;
 
-    // Early validation for guest users to avoid unnecessary processing
     if (!user) {
       logger.info('Guest user attempted to send message - redirecting to login', { ...context, isGuest: true });
       return NextResponse.json(
@@ -41,366 +250,376 @@ export async function POST(request: NextRequest) {
       );
     }
 
-    // Get user plan early for file size validation - fetch both user data and plan info in parallel
-    let currentUserPlan: 'FREE' | 'PRO' = 'FREE';
-    let maxFileSize = 5 * 1024 * 1024; // Default 5MB for guests
-    
-    const [planInfo, messageCheck] = await Promise.all([
-      getUserPlan().catch(error => {
-        console.warn("⚠️ Could not get user plan, using FREE defaults:", error);
-        return null;
-      }),
-      canUserSendMessage().catch(() => ({ 
-        canSend: false, 
-        reason: 'Error checking message limits',
-        messagesRemaining: 0,
-        freeMessagesRemaining: 0
-      }))
-    ]);
-
-    if (planInfo) {
-      currentUserPlan = planInfo.plan;
-      maxFileSize = planInfo.limits.maxFileSize * 1024 * 1024; // Convert MB to bytes
-      console.log("📋 User plan:", currentUserPlan, "- Max file size:", planInfo.limits.maxFileSize + "MB");
-    }
-
-    // Parse request body - handle both JSON and FormData
-    let body: {
-      conversationId?: string;
-      message: string;
-      isGuest?: boolean;
-      selectedModel?: 'flash' | 'pro';
-    };
-    const imageFiles: File[] = [];
-    const imageBuffers: Buffer[] = [];
-    const imageMimeTypes: string[] = [];
-    
-    const contentType = request.headers.get('content-type');
-    console.log("📦 Content-Type:", contentType);
-    
-    if (contentType?.includes('multipart/form-data')) {
-      // Handle multipart/form-data for image uploads
-      console.log("🧾 Raw Request Body: [multipart]");
-      
-      try {
-        const formData = await request.formData();
-        body = {
-          conversationId: formData.get('conversationId') as string,
-          message: formData.get('message') as string,
-          isGuest: formData.get('isGuest') === 'true',
-          selectedModel: formData.get('selectedModel') as 'flash' | 'pro',
-        };
-        
-        // Handle multiple images
-        const imageCount = parseInt(formData.get('imageCount') as string || '0');
-        console.log("🖼️ Image count:", imageCount);
-        
-        for (let i = 0; i < imageCount; i++) {
-          const imageFile = formData.get(`image_${i}`) as File;
-          if (imageFile) {
-            console.log(`📷 Processing image ${i + 1}: ${imageFile.name} (${(imageFile.size / 1024 / 1024).toFixed(2)}MB)`);
-            
-            // Validate image file with user's plan-specific limits
-            ApiErrorHandler.validateFile(imageFile, {
-              maxSize: maxFileSize,
-              allowedTypes: ['image/jpeg', 'image/png', 'image/gif', 'image/webp']
-            });
-            
-            imageFiles.push(imageFile);
-            imageBuffers.push(Buffer.from(await imageFile.arrayBuffer()));
-            imageMimeTypes.push(imageFile.type);
-          }
-        }
-      } catch (error: unknown) {
-        // Handle specific upload size errors
-        const errorMessage = error instanceof Error ? error.message : String(error);
-        
-        // Check for various types of size-related errors
-        if (errorMessage?.includes('413') || 
-            errorMessage?.toLowerCase().includes('too large') ||
-            errorMessage?.toLowerCase().includes('request entity too large') ||
-            errorMessage?.toLowerCase().includes('payload too large') ||
-            errorMessage?.toLowerCase().includes('body size limit')) {
-          
-          const maxSizeMB = Math.floor(maxFileSize / 1024 / 1024);
-          
-          // Provide specific error message based on plan and platform limits
-          let errorMsg = `Image file is too large. `;
-          
-          if (maxSizeMB >= 50) {
-            // For PRO users who hit platform limits
-            errorMsg += `Your ${currentUserPlan} plan allows ${maxSizeMB}MB files, but the platform has a 50MB limit. Please compress your image to under 50MB.`;
-          } else {
-            // For FREE users or smaller limits
-            errorMsg += `Maximum allowed size is ${maxSizeMB}MB for your ${currentUserPlan} plan. Consider compressing your image or upgrading your plan.`;
-          }
-          
-          throw new ValidationError(errorMsg, 'fileSize');
-        }
-        
-        // Log the full error for debugging
-        console.error("❌ Form data parsing error:", errorMessage);
-        throw error;
-      }
-    } else {
-      // Handle JSON for text-only messages
-      const rawBody = await request.text();
-      console.log("🧾 Raw Request Body:", rawBody);
-      body = JSON.parse(rawBody);
-    }
-    
-    console.log("✅ Parsed Body:", body);
-    
-    const { conversationId: rawConversationId, message, isGuest = false, selectedModel } = body;
-    
-    // Properly handle empty conversationId (treat empty string as null/undefined)
-    const conversationId = rawConversationId && rawConversationId.trim() !== '' ? rawConversationId : undefined;
-
-    console.log("🧠 conversationId:", conversationId);
-    console.log("👤 userId:", user?.id);
-    console.log("📝 message length:", message?.length);
-    console.log("🎭 isGuest:", isGuest);
-    console.log("🤖 selectedModel:", selectedModel);
-
-    logger.info('Received conversationId from frontend:', { conversationId, userId: user?.id, messageLength: message?.length });
-
-    // Validate required fields - allow empty message if images are present
-    if (!message || typeof message !== 'string') {
-      // Check if we have images - if so, allow empty message
-      if (imageBuffers.length === 0) {
-        throw new ValidationError('Message is required and must be a non-empty string', 'message');
-      }
-    }
-
-    // Trim the message and check if we have content (text or images)
-    const trimmedMessage = message?.trim() || '';
-    if (trimmedMessage.length === 0 && imageBuffers.length === 0) {
-      throw new ValidationError('Either a message or an image is required', 'content');
-    }
-
-    if (message && message.length > 2000) {
-      throw new ValidationError('Message is too long (maximum 2000 characters)', 'message');
-    }
-
-    // Guest users must login to send messages
-    if (isGuest || !user) {
-      logger.info('Guest user attempted to send message - redirecting to login', { ...context, isGuest: true });
-      return NextResponse.json(
-        { error: 'Authentication required', message: 'Please log in to send messages' },
-        { status: 401 }
-      );
-    }
-
-    // Handle authenticated users (existing logic)
     if (authError) {
       throw new AuthenticationError('Authentication error');
     }
 
-    logger.info('Processing authenticated user chat request', { ...context, userId: user.id });
+    // 2. Parse Request Body
+    const contentType = request.headers.get('content-type');
+    let body: Record<string, unknown>;
+    const imageFiles: File[] = [];
+    const imageBuffers: Buffer[] = [];
+    const imageMimeTypes: string[] = [];
 
-    // Check message limits for authenticated users (already checked in parallel above)
-    if (!messageCheck.canSend) {
-      return NextResponse.json({
-        error: 'MESSAGE_LIMIT_REACHED',
-        message: messageCheck.reason,
-        messagesRemaining: messageCheck.messagesRemaining || 0,
-        freeMessagesRemaining: messageCheck.freeMessagesRemaining || 0,
-        requiresUpgrade: true
-      }, { status: 429 });
+    if (contentType?.includes('multipart/form-data')) {
+      // Handle image uploads (existing logic)
+      const formData = await request.formData();
+      body = { 
+        message: formData.get('message') as string,
+        conversationId: formData.get('conversationId') as string,
+        selectedModel: formData.get('selectedModel') as string
+      };
+      
+      // Process uploaded images
+      for (let i = 0; i < 5; i++) {
+        const imageFile = formData.get(`image_${i}`) as File | null;
+        if (imageFile) {
+          console.log(`📷 Processing image ${i + 1}: ${imageFile.name}`);
+          imageFiles.push(imageFile);
+          imageBuffers.push(Buffer.from(await imageFile.arrayBuffer()));
+          imageMimeTypes.push(imageFile.type);
+        }
+      }
+    } else {
+      body = await request.json();
     }
 
-    // Ensure user exists in our database and get their plan - run in parallel with chat lookup if needed
-    const dbUserPromise = prisma.user.upsert({
-      where: { id: user.id },
-      update: {},
-      create: { id: user.id },
-      select: { plan: true }
-    });
+    const { conversationId: rawConversationId, message, selectedModel } = body;
+    const conversationId = typeof rawConversationId === 'string' && rawConversationId.trim() !== '' ? rawConversationId : undefined;
+
+    console.log("🧠 conversationId:", conversationId);
+    console.log("👤 userId:", user?.id);
+    console.log("📝 message length:", typeof message === 'string' ? message.length : 0);
+    console.log("🤖 selectedModel:", selectedModel);
+
+    // 3. Validate Input
+    const trimmedMessage = typeof message === 'string' ? message.trim() : '';
+    if (trimmedMessage.length === 0 && imageBuffers.length === 0) {
+      throw new ValidationError('Either a message or an image is required', 'content');
+    }
+
+    if (typeof message === 'string' && message.length > 2000) {
+      throw new ValidationError('Message is too long (maximum 2000 characters)', 'message');
+    }
+
+    // 4. Check User Permissions
+    const canSend = await canUserSendMessage();
+    if (!canSend) {
+      return NextResponse.json(
+        { error: 'Daily message limit reached', message: 'You have reached your daily message limit' },
+        { status: 429 }
+      );
+    }
+
+    // 5. Fetch Configuration and User Data
+    console.log("📋 Step 1: Fetching AI Configuration and User Data...");
+    const [config, userProfile] = await Promise.all([
+      prisma.aIConfiguration.findFirst(),
+      prisma.user.findUnique({
+        where: { id: user.id },
+        include: { clientMemory: true }
+      })
+    ]);
+
+    if (!config) {
+      throw new Error('AI Configuration not found. Please configure the AI system in admin settings.');
+    }
+
+    console.log(`✅ Configuration loaded - Knowledge Base: ${config.useKnowledgeBase}, Strict Muscle Priority: ${config.strictMusclePriority}`);
+
+    // 6. Generate System Prompt
+    console.log("🎯 Step 2: Generating System Prompt...");
+    const profileObject = userProfile?.clientMemory || {};
+    const systemPrompt: string = await getSystemPrompt(profileObject);
+    console.log(`✅ System prompt generated (${systemPrompt.length} characters)`);
+
+    // 7. Check for Workout Program Intent (Multi-Query RAG)
+    const isWorkoutProgramRequest = detectWorkoutProgramIntent(trimmedMessage);
     
-    const finalUserPlan = (await dbUserPromise).plan;
-
-    let chatId = conversationId;
-    let existingMessages: Array<{ role: string; content: string }> = [];
-
-    // If conversationId is provided, fetch existing messages
-    if (conversationId) {
-      console.log("🔍 Looking for existing chat with ID:", conversationId);
-      console.log("🔍 conversationId type:", typeof conversationId);
-      console.log("🔍 conversationId length:", conversationId.length);
+    if (isWorkoutProgramRequest && config.useKnowledgeBase) {
+      console.log("🏋️ Detected workout program request - using specialized multi-query RAG...");
       
-      const existingChat = await prisma.chat.findFirst({
-        where: {
-          id: conversationId,
-          userId: user.id,
-        },
+      try {
+        // Get conversation history for context
+        let conversationHistory: Array<{ role: string; content: string }> = [];
+        if (conversationId) {
+          const chat = await prisma.chat.findUnique({
+            where: { id: conversationId, userId: user.id },
+            include: {
+              messages: {
+                orderBy: { createdAt: 'desc' },
+                take: 10
+              }
+            }
+          });
+          if (chat) {
+            conversationHistory = chat.messages.reverse().map((msg: { role: string; content: string }) => ({
+              role: msg.role,
+              content: msg.content
+            }));
+          }
+        }
+
+        // Generate comprehensive workout program using multi-query RAG
+        const programResult = await generateWorkoutProgram(
+          trimmedMessage,
+          config,
+          profileObject,
+          conversationHistory,
+          typeof selectedModel === 'string' ? selectedModel : undefined // Pass selected model to workout program generation
+        );
+
+        // Increment message count
+        await incrementUserMessageCount();
+
+        // Save conversation
+        let chatId: string = conversationId || '';
+        if (!chatId) {
+          const newChat = await prisma.chat.create({
+            data: {
+              userId: user.id,
+              title: `Workout Program: ${trimmedMessage.substring(0, 50)}...`
+            }
+          });
+          chatId = newChat.id;
+        }
+
+        // Save messages
+        await Promise.all([
+          prisma.message.create({
+            data: {
+              chatId,
+              role: 'USER',
+              content: trimmedMessage
+            }
+          }),
+          prisma.message.create({
+            data: {
+              chatId,
+              role: 'ASSISTANT',
+              content: programResult.content
+            }
+          })
+        ]);
+
+        console.log("✅ Workout program generated and saved successfully");
+
+        return NextResponse.json({
+          conversationId: chatId,
+          response: programResult.content,
+          citations: programResult.citations,
+          isWorkoutProgram: true
+        });
+
+      } catch (error) {
+        console.error("❌ Workout program generation failed:", error);
+        // Fall back to standard RAG if program generation fails
+        console.log("⚠️ Falling back to standard RAG pipeline...");
+      }
+    }
+
+    // 8. Conditional RAG Execution (Standard Flow)
+    let knowledgeContext = '';
+    
+    if (config.useKnowledgeBase) {
+      console.log("📚 Step 3: Executing Standard RAG Pipeline...");
+      let knowledgeChunks: KnowledgeChunk[] = [];
+
+      // 9. Implement Strict Muscle Priority Logic
+      if (config.strictMusclePriority) {
+        console.log("💪 Step 4: Checking Strict Muscle Priority...");
+        const detectedMuscles = detectMuscleGroups(trimmedMessage);
+        
+        if (detectedMuscles.length > 0) {
+          console.log(`🎯 Detected muscle groups: ${detectedMuscles.join(', ')}`);
+          knowledgeChunks = await fetchMuscleSpecificKnowledge(
+            trimmedMessage,
+            detectedMuscles,
+            config.ragMaxChunks,
+            config.ragSimilarityThreshold,
+            config.ragHighRelevanceThreshold
+          );
+        }
+      }
+
+      // 9. Perform Standard Vector Search (if needed)
+      if (knowledgeChunks.length === 0) {
+        console.log("🔍 Step 5: Performing Standard Vector Search...");
+        const vectorResults = await fetchKnowledgeContext(
+          trimmedMessage,
+          config.ragMaxChunks,
+          config.ragSimilarityThreshold
+        );
+        
+        // Convert to KnowledgeChunk format
+        knowledgeChunks = vectorResults.map(result => ({
+          id: result.id,
+          content: result.content,
+          knowledgeItem: { title: result.title }
+        }));
+      }
+
+      // Format knowledge context
+      knowledgeContext = formatKnowledgeContext(knowledgeChunks);
+      console.log(`✅ Knowledge retrieval complete: ${knowledgeChunks.length} chunks found`);
+    } else {
+      console.log("⏭️ Step 3-5: Skipping RAG (Knowledge Base disabled)");
+    }
+
+    // 10. Get Conversation History
+    let existingMessages: Array<{ role: string; content: string }> = [];
+    if (conversationId) {
+      const chat = await prisma.chat.findUnique({
+        where: { id: conversationId, userId: user.id },
         include: {
           messages: {
-            orderBy: { createdAt: 'asc' },
-            select: {
-              role: true,
-              content: true,
-              imageData: true,
-              imageMimeType: true
-            }
+            orderBy: { createdAt: 'desc' },
+            take: 20
           }
         }
       });
-
-      console.log("🔍 Query result:", existingChat ? "Found" : "Not found");
-      
-      if (!existingChat) {
-        console.warn("🚨 Chat not found or does not belong to user", {
-          conversationId,
-          userId: user.id,
-          conversationIdType: typeof conversationId,
-          conversationIdLength: conversationId?.length
-        });
-        logger.warn('Invalid conversationId provided by user', { ...context, userId: user.id, conversationId });
-        throw new ValidationError(`Chat not found for ID: ${conversationId}. Please refresh the page and try again.`);
+      if (chat) {
+        existingMessages = chat.messages.reverse();
       }
-      
-      console.log("✅ Found existing chat with", existingChat.messages.length, "messages");
-      existingMessages = existingChat.messages;
-    } else {
-      // Create a new chat if no conversationId provided
-      console.log("🆕 Creating new chat");
+    }
+
+    // Create or get chat ID
+    let chatId: string = conversationId || '';
+    if (!chatId) {
       const newChat = await prisma.chat.create({
         data: {
-          title: message.substring(0, 50) + (message.length > 50 ? '...' : ''),
           userId: user.id,
+          title: trimmedMessage.length > 50 ? trimmedMessage.substring(0, 50) + '...' : trimmedMessage
         }
       });
-      console.log("✅ Created new chat with ID:", newChat.id);
       chatId = newChat.id;
     }
 
-    // Prepare image data for storage
-    let imageDataToStore: string | null = null;
-    let imageMimeTypeToStore: string | null = null;
+    // 11. Assemble Final Prompt for Gemini
+    console.log("🔨 Step 6: Assembling Final Prompt...");
     
-    if (imageBuffers.length > 0) {
-      if (imageBuffers.length === 1) {
-        // Single image - store directly for backward compatibility
-        imageDataToStore = imageBuffers[0].toString('base64');
-        imageMimeTypeToStore = imageMimeTypes[0];
-      } else {
-        // Multiple images - store as JSON
-        const imagesJson = imageBuffers.map((buffer, index) => ({
-          data: buffer.toString('base64'),
-          mimeType: imageMimeTypes[index],
-          name: imageFiles[index]?.name || `Image ${index + 1}`
-        }));
-        imageDataToStore = JSON.stringify(imagesJson);
-        imageMimeTypeToStore = 'application/json'; // Indicates multiple images stored as JSON
+    const conversationHistory = formatConversationHistory(existingMessages);
+    
+    // Build the complete prompt structure
+    let fullPrompt = systemPrompt;
+    
+    if (knowledgeContext) {
+      fullPrompt += `\n\n${knowledgeContext}`;
+    }
+    
+    fullPrompt += `\n\nUser: ${trimmedMessage}`;
+
+    console.log(`✅ Final prompt assembled (${fullPrompt.length} characters)`);
+
+    // 12. Save User Message
+    const userMessage = await prisma.message.create({
+      data: {
+        content: trimmedMessage || (imageBuffers.length > 0 ? '[Image]' : ''),
+        role: 'USER',
+        chatId: chatId as string,
+        imageData: imageBuffers.length > 0 ? Buffer.concat(imageBuffers).toString('base64') : null,
+        imageMimeType: imageMimeTypes[0] || null,
       }
+    });
+
+    // 13. Call Gemini API with Tool Calling
+    console.log("🤖 Step 7: Calling Gemini API with Profile Management Tools...");
+    
+    const modelName = getGeminiModelName(typeof selectedModel === 'string' ? selectedModel : '', config);
+    const model = genAI.getGenerativeModel({ 
+      model: modelName,
+      generationConfig: {
+        temperature: config.temperature,
+        topP: config.topP,
+        topK: config.topK,
+        maxOutputTokens: config.maxTokens,
+      },
+      tools: [{ functionDeclarations: [updateClientProfileFunction] }],
+      toolConfig: { functionCallingConfig: { mode: FunctionCallingMode.AUTO } }
+    });
+
+    // Create chat and send message
+    const chat = model.startChat({
+      history: conversationHistory
+    });
+
+    // For now, just send the text. Image handling can be added back later
+    const result = await chat.sendMessage(fullPrompt);
+    const response = await result.response;
+
+    // Check if the response contains tool calls
+    const functionCalls = response.functionCalls();
+    
+    let aiContent: string;
+    // finalAssistantMessage is declared but not currently used
+    // let finalAssistantMessage: Record<string, unknown>;
+
+    if (functionCalls && functionCalls.length > 0) {
+      console.log("🔧 Tool calls detected, executing profile updates...");
+      
+      // Execute all tool calls
+      const toolResponses = [];
+      for (const functionCall of functionCalls) {
+        console.log(`📝 Executing tool: ${functionCall.name}`);
+        const toolResult = await executeToolCall({
+          name: functionCall.name,
+          args: functionCall.args as Record<string, unknown>
+        }, user.id);
+        toolResponses.push({
+          functionResponse: {
+            name: functionCall.name,
+            response: { content: toolResult }
+          }
+        });
+      }
+
+      // Make second API call with tool responses
+      console.log("🔄 Making second API call with tool responses...");
+      const secondResult = await chat.sendMessage(toolResponses);
+      const secondResponse = await secondResult.response;
+      aiContent = secondResponse.text();
+
+      console.log(`✅ Final AI response received after tool execution (${aiContent.length} characters)`);
+
+    } else {
+      // No tool calls, process as normal
+      aiContent = response.text();
+      console.log(`✅ AI response received (${aiContent.length} characters)`);
     }
 
-    // Prepare conversation history for Gemini and save user message in parallel
-    const allMessages = [...existingMessages, { role: 'USER', content: trimmedMessage || (imageBuffers.length > 0 ? '[Image]' : '') }];
-    const conversationForGemini = formatConversationForGemini(allMessages);
-
-    // Save user message and get AI response in parallel for better performance
-    const [userMessage, aiResult] = await Promise.all([
-      // Save user message to database
-      prisma.message.create({
-        data: {
-          content: trimmedMessage || (imageBuffers.length > 0 ? '[Image]' : ''),
-          role: 'USER',
-          chatId: chatId as string,
-          imageData: imageDataToStore,
-          imageMimeType: imageMimeTypeToStore,
-        }
-      }),
-      // Get AI response from Gemini - NEW RAG SYSTEM WITH CITATIONS (with user's plan)
-      // Pass all images to Gemini API (it supports multiple images)
-      sendToGeminiWithCitations(conversationForGemini, user.id, imageBuffers, imageMimeTypes, finalUserPlan, selectedModel)
-    ]);
-
-    // Validate AI response before saving
-    if (!aiResult || !aiResult.content || aiResult.content.trim().length === 0) {
-      console.error("❌ Empty or invalid AI response received:", aiResult);
+    if (!aiContent || aiContent.trim().length === 0) {
       throw new Error("AI generated an empty response. Please try again.");
     }
 
-    console.log(`✅ AI response validated: ${aiResult.content.length} characters`);
+    console.log(`✅ AI response received (${aiContent.length} characters)`);
 
-    // Save assistant message and increment message count in parallel
-    const [assistantMessage] = await Promise.all([
-      prisma.message.create({
-        data: {
-          content: aiResult.content,
-          role: 'ASSISTANT',
-          chatId: chatId as string,
-        }
-      }),
-      // Increment user's daily message count (for subscription tracking)
-      incrementUserMessageCount()
-    ]);
-
-    logger.info('Chat API request completed successfully', { 
-      ...context, 
-      userId: user.id,
-      chatId,
-      messageLength: message.length,
-      hasImage: imageBuffers.length > 0,
-      responseLength: aiResult.content.length,
-      citationsCount: aiResult.citations?.length || 0
+    // 14. Save Assistant Message
+    const assistantMessage = await prisma.message.create({
+      data: {
+        content: aiContent,
+        role: 'ASSISTANT',
+        chatId: chatId as string,
+      }
     });
 
-    // Format the user message response based on how images were stored
-    const userMessageResponse: {
-      id: string;
-      content: string;
-      role: string;
-      createdAt: Date;
-      imageData?: string;
-      imageMimeType?: string;
-      images?: Array<{ data: string; mimeType: string; name: string }>;
-    } = {
-      id: userMessage.id,
-      content: userMessage.content,
-      role: userMessage.role,
-      createdAt: userMessage.createdAt,
-    };
-    
-    if (userMessage.imageData && userMessage.imageMimeType) {
-      if (userMessage.imageMimeType === 'application/json') {
-        // Multiple images stored as JSON
-        try {
-          const imagesJson = JSON.parse(userMessage.imageData) as Array<{ data: string; mimeType: string; name: string }>;
-          userMessageResponse.images = imagesJson.map((img) => ({
-            data: `data:${img.mimeType};base64,${img.data}`,
-            mimeType: img.mimeType,
-            name: img.name
-          }));
-          // For backward compatibility, also set single image fields to the first image
-          if (imagesJson.length > 0) {
-            userMessageResponse.imageData = `data:${imagesJson[0].mimeType};base64,${imagesJson[0].data}`;
-            userMessageResponse.imageMimeType = imagesJson[0].mimeType;
-          }
-        } catch (error) {
-          console.error('Error parsing images JSON:', error);
-        }
-      } else {
-        // Single image stored directly
-        userMessageResponse.imageData = `data:${userMessage.imageMimeType};base64,${userMessage.imageData}`;
-        userMessageResponse.imageMimeType = userMessage.imageMimeType;
-        // Also provide in new structured format
-        userMessageResponse.images = [{
-          data: `data:${userMessage.imageMimeType};base64,${userMessage.imageData}`,
-          mimeType: userMessage.imageMimeType,
-          name: 'Image'
-        }];
-      }
-    }
+    // 15. Increment Message Count
+    await incrementUserMessageCount();
 
-    // Return JSON response instead of streaming for better compatibility
-    // The frontend will handle the message display
+    // 16. Return Response
+    console.log("✅ Chat API request completed successfully");
+    
     return NextResponse.json({
-      content: aiResult.content,
+      content: aiContent,
       conversationId: chatId,
-      citations: aiResult.citations || [],
-      userMessage: userMessageResponse,
+      citations: [], // TODO: Extract citations from response if needed
+      userMessage: {
+        id: userMessage.id,
+        content: userMessage.content,
+        role: userMessage.role,
+        createdAt: userMessage.createdAt,
+        imageData: userMessage.imageData ? `data:${userMessage.imageMimeType};base64,${userMessage.imageData}` : undefined,
+        imageMimeType: userMessage.imageMimeType,
+      },
       assistantMessage: {
         id: assistantMessage.id,
         content: assistantMessage.content,
@@ -410,6 +629,7 @@ export async function POST(request: NextRequest) {
     });
 
   } catch (error) {
+    console.error("❌ Chat API error:", error);
     return ApiErrorHandler.handleError(error, { ...context, userId: user?.id });
   }
 }

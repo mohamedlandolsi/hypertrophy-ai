@@ -11,6 +11,7 @@ import { Label } from '@/components/ui/label';
 import { Textarea } from '@/components/ui/textarea';
 import { Switch } from '@/components/ui/switch';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
+import ExerciseManagement from '@/components/admin/exercise-management';
 
 interface AIConfiguration {
   id: string;
@@ -204,17 +205,17 @@ export default function AdminSettingsPage() {
 
               {/* System Prompt */}
               <div className="space-y-2">
-                <Label htmlFor="systemPrompt">System Prompt</Label>
+                <Label htmlFor="systemPrompt">Additional System Instructions</Label>
                 <Textarea
                   id="systemPrompt"
                   value={config.systemPrompt}
                   onChange={(e) => updateConfig('systemPrompt', e.target.value)}
-                  placeholder="Enter the system prompt for the AI..."
+                  placeholder="Enter additional instructions for the AI (these will be combined with core HypertroQ directives)..."
                   rows={6}
                   className="resize-none"
                 />
                 <p className="text-sm text-gray-500">
-                  This defines the AI&apos;s personality and instructions
+                  These additional instructions will be combined with the core HypertroQ coaching directives and user profile personalization. The core system handles Knowledge Base compliance, citation requirements, and user personalization automatically.
                 </p>
               </div>
 
@@ -418,6 +419,9 @@ export default function AdminSettingsPage() {
             </form>
           </CardContent>
         </Card>
+
+        {/* Exercise Management Section */}
+        <ExerciseManagement />
         </div>
       </div>
     </AdminLayout>

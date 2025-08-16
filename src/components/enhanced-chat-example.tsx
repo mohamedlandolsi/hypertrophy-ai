@@ -47,7 +47,7 @@ export default function EnhancedChatExample() {
       {/* Chat Messages */}
       <div className="space-y-3 min-h-[300px] border rounded-lg p-4">
         {chatHistory.map((msg, index) => {
-          const formatting = getTextFormatting(msg.content);
+          const formatting = getTextFormatting(msg.content || '');
           
           return (
             <div 
@@ -99,7 +99,7 @@ export default function EnhancedChatExample() {
       <div className="text-xs text-gray-500 mt-2">
         <p>
           🌍 UI Language: {locale.toUpperCase()} | 
-          🔤 Input Detection: {isArabicText(message) ? 'Arabic (RTL)' : 'Latin (LTR)'}
+          🔤 Input Detection: {isArabicText(message || '') ? 'Arabic (RTL)' : 'Latin (LTR)'}
         </p>
       </div>
     </div>

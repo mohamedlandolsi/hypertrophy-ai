@@ -8,6 +8,9 @@ const directionCache = new Map<string, 'ltr' | 'rtl' | 'auto'>();
  * Detects if text contains Arabic characters (optimized with caching)
  */
 export function isArabicText(text: string): boolean {
+  // Handle null/undefined text
+  if (!text || typeof text !== 'string') return false;
+  
   // Use cache for repeated calls with same text
   if (arabicCache.has(text)) {
     return arabicCache.get(text)!;
@@ -66,6 +69,19 @@ export function getTextDirection(text: string): 'ltr' | 'rtl' | 'auto' {
  * Applies proper formatting and direction attributes for mixed Arabic/English text
  */
 export function getTextFormatting(text: string) {
+  // Handle null/undefined text
+  if (!text || typeof text !== 'string') {
+    return {
+      dir: 'ltr' as const,
+      className: 'text-left',
+      lang: 'en',
+      style: {
+        unicodeBidi: 'normal' as const,
+        textAlign: 'left' as const
+      }
+    };
+  }
+  
   const direction = getTextDirection(text);
   const hasArabic = isArabicText(text) || text.match(/[\u0600-\u06FF\u0750-\u077F\u08A0-\u08FF\uFB50-\uFDFF\uFE70-\uFEFF]/);
     return {
@@ -85,6 +101,9 @@ export function getTextFormatting(text: string) {
  * Formats mixed Arabic/English text with proper bidirectional support
  */
 export function formatBidirectionalText(text: string): string {
+  // Handle null/undefined text
+  if (!text || typeof text !== 'string') return '';
+  
   const hasArabic = text.match(/[\u0600-\u06FF\u0750-\u077F\u08A0-\u08FF\uFB50-\uFDFF\uFE70-\uFEFF]/);
   
   if (!hasArabic) {

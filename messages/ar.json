@@ -1326,6 +1326,11 @@
       "continue": "متابعة",
       "confirm": "تأكيد",
       "keyboardShortcuts": "Enter للإرسال • Shift+Enter لسطر جديد"
+    },
+    "comingSoon": {
+      "title": "الدردشة قريباً",
+      "subtitle": "شيء رائع في الطريق",
+      "description": "نحن نعمل بجد لنقدم لك تجربة دردشة رائعة مع مدربك الذكي للياقة البدنية. ترقب التحديثات!"
     }
   },
   "privacyPolicy": {

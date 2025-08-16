@@ -27,16 +27,18 @@ export const InternationalInput: React.FC<InternationalInputProps> = ({
   const locale = useLocale();
   
   useEffect(() => {
-    const textDirection = getTextDirection(value);
+    const safeValue = value || '';
+    const textDirection = getTextDirection(safeValue);
     setDirection(textDirection);
   }, [value]);
   
   const getPlaceholder = () => {
+    const safeValue = value || '';
     // Use provided placeholder or fall back to translation
     if (placeholder) return placeholder;
     
     // If user is typing Arabic content, prioritize Arabic regardless of UI locale
-    if (direction === 'rtl' || isArabicText(value)) {
+    if (direction === 'rtl' || isArabicText(safeValue)) {
       return "اكتب رسالة للمدرب الذكي...";
     }
     
@@ -54,7 +56,7 @@ export const InternationalInput: React.FC<InternationalInputProps> = ({
       disabled={disabled}
       onKeyDown={onKeyDown}
       dir={direction}
-      lang={isArabicText(value) ? 'ar' : locale}
+      lang={isArabicText(value || '') ? 'ar' : locale}
       style={{
         unicodeBidi: direction === 'auto' ? 'plaintext' : 'normal',
         textAlign: direction === 'rtl' ? 'right' : 

@@ -1,20 +1,278 @@
 // src/lib/gemini.ts
+/* eslint-disable @typescript-eslint/no-explicit-any */
+/* eslint-disable @typescript-eslint/no-unused-vars */
 
-import { GoogleGenerativeAI, Content, GenerationConfig, Part } from '@google/generative-ai';
-import { prisma } from './prisma';
 import {
-  updateClientMemory,
-  type MemoryUpdate
-} from './client-memory';
-import { fetchKnowledgeContext, type KnowledgeContext } from './vector-search';
-import { fetchUserProfile, type UserProfileData } from './user-profile-integration';
-import { AIConfiguration, ClientMemory } from '@prisma/client';
-import { 
-  functionDeclarations, 
-  handleProfileUpdate, 
+  GoogleGenerativeAI,
+  Content,
+  GenerationConfig,
+  Part,
+} from "@google/generative-ai";
+import { prisma } from "./prisma";
+import { updateClientMemory, type MemoryUpdate } from "./client-memory";
+import { fetchKnowledgeContext, type KnowledgeContext } from "./vector-search";
+import {
+  fetchUserProfile,
+  type UserProfileData,
+} from "./user-profile-integration";
+import { AIConfiguration, ClientMemory } from "@prisma/client";
+import {
+  functionDeclarations,
+  handleProfileUpdate,
   handleConflictDetection,
-  type EnhancedMemoryUpdate 
-} from './function-calling';
+  type EnhancedMemoryUpdate,
+} from "./function-calling";
+import enhancedKnowledgeRetrieval, {
+  type SearchOptions,
+} from "./enhanced-rag-v2";
+import { getSystemPrompt, getBasicSystemPrompt } from "./ai/core-prompts";
+
+/**
+ * Enhanced knowledge retrieval wrapper that tries RAG v2 first, then falls back
+ */
+async function getEnhancedKnowledgeContext(
+  query: string,
+  maxChunks: number,
+  threshold: number,
+  config: AIConfiguration
+): Promise<KnowledgeContext[]> {
+  // Try enhanced RAG v2 first
+  try {
+    const searchOptions: SearchOptions = {
+      maxChunks: maxChunks,
+      similarityThreshold: threshold,
+      highRelevanceThreshold: config.ragHighRelevanceThreshold || 0.7,
+      useHybridSearch: true,
+      useReranking: true,
+      strictMusclePriority: config.strictMusclePriority || false,
+    };
+
+    console.log("🚀 Attempting enhanced RAG retrieval...");
+    const enhancedResults = await enhancedKnowledgeRetrieval(
+      query,
+      searchOptions
+    );
+
+    if (enhancedResults.length > 0) {
+      console.log(`✅ Enhanced RAG success: ${enhancedResults.length} results`);
+
+      // Convert to legacy format
+      return enhancedResults.map((chunk) => ({
+        id: chunk.knowledgeId,
+        title: chunk.title,
+        content: chunk.content,
+        score: chunk.similarity || chunk.keywordScore || 0,
+      }));
+    }
+  } catch (enhancedError) {
+    console.warn("⚠️ Enhanced RAG failed, using fallback:", enhancedError);
+  }
+
+  // Fallback to original system
+  console.log("🔄 Using original fetchKnowledgeContext...");
+  return await fetchKnowledgeContext(query, maxChunks, threshold);
+}
+
+/**
+ * Dynamically adjust similarity threshold based on query specificity
+ */
+function optimizeSimilarityThreshold(
+  query: string,
+  baseSimilarityThreshold: number
+): number {
+  // More specific queries can use lower thresholds (broader search)
+  const specificityIndicators = [
+    /\b(?:specific|exact|particular|precise)\b/gi,
+    /\b(?:how to|step by step|detailed|guide)\b/gi,
+    /\b(?:bicep|tricep|chest|lat|upper back|leg|shoulder|delt|quad|hamstring|glute|adductor|calf|wrist flexor|wrist extensor|forearm|brachioradialis|rear delt|front delt|side delt|lower back)\b/gi, // Specific muscle groups
+    /\b(?:squat|deadlift|bench|row|curl|press|fly|raise|extension|pushdown|overhead|cable|machine|dumbbell|kickback|thrust|hip thrust)\b/gi, // Specific exercises
+  ];
+
+  let specificity = 0;
+  for (const pattern of specificityIndicators) {
+    if (pattern.test(query)) {
+      specificity++;
+    }
+  }
+
+  // General queries should use higher thresholds (more relevant results)
+  const generalIndicators = [
+    /\b(?:general|overall|best|recommend|suggest)\b/gi,
+    /\b(?:workout|training|program|routine)\b/gi,
+  ];
+
+  let generality = 0;
+  for (const pattern of generalIndicators) {
+    if (pattern.test(query)) {
+      generality++;
+    }
+  }
+
+  // Adjust threshold: more specific = lower threshold, more general = higher threshold
+  let adjustedThreshold = baseSimilarityThreshold;
+
+  if (specificity > generality) {
+    // Specific query - lower threshold to capture more context
+    adjustedThreshold = Math.max(
+      0.05,
+      baseSimilarityThreshold - specificity * 0.05
+    );
+  } else if (generality > specificity) {
+    // General query - higher threshold for more relevant results
+    adjustedThreshold = Math.min(
+      0.4,
+      baseSimilarityThreshold + generality * 0.05
+    );
+  }
+
+  console.log(
+    `🎯 Similarity threshold optimized: ${baseSimilarityThreshold} → ${adjustedThreshold} (specificity: ${specificity}, generality: ${generality})`
+  );
+  return adjustedThreshold;
+}
+
+/**
+ * Generate a conflict confirmation prompt for the user
+ */
+function generateConflictConfirmationPrompt(
+  conflictData: Record<string, unknown>
+): string {
+  // Handle both old and new conflict data formats
+  const conflictField =
+    conflictData.conflictField || conflictData.field || "training preferences";
+  const currentValue = conflictData.currentValue || "your current profile";
+  const requestedValue =
+    conflictData.requestedValue ||
+    conflictData.newValue ||
+    "what you just mentioned";
+  const conflictType = conflictData.conflictType;
+  const suggestedResolution = conflictData.suggestedResolution;
+
+  let prompt = `⚠️ **Profile Conflict Detected**: I noticed conflicting information about your **${conflictField}**.`;
+
+  // Add specific conflict details if available
+  if (
+    currentValue !== "your current profile" &&
+    requestedValue !== "what you just mentioned"
+  ) {
+    prompt += `\n\n**Current profile shows**: ${currentValue}`;
+    prompt += `\n**You just mentioned**: ${requestedValue}`;
+  } else if (conflictField && conflictType) {
+    prompt += `\n\n**Conflict type**: ${conflictType}`;
+    if (conflictField !== "training preferences") {
+      prompt += `\n**Field**: ${conflictField}`;
+    }
+  }
+
+  if (suggestedResolution) {
+    prompt += `\n\n**💡 Suggested resolution**: ${suggestedResolution}`;
+  }
+
+  prompt += `\n\n**Please clarify**: Which information should I use for your profile? This will help me provide the most accurate recommendations for you.`;
+
+  return prompt;
+}
+
+// Token management constants
+const MAX_SYSTEM_PROMPT_TOKENS = 2000;
+const MAX_CONTEXT_TOKENS = 4000;
+const MAX_HISTORY_TOKENS = 1500;
+const TOKENS_PER_CHAR = 0.25; // Rough estimate: 4 chars per token
+
+// Exercise validation patterns
+// Enhanced exercise patterns - more comprehensive and specific
+const EXERCISE_PATTERNS = [
+  // Specific compound movements
+  /\b(?:squat|hack squat|pendulum squat|leg press|deadlift|romanian deadlift|stiff leg deadlift|chest press)\b/gi,
+  // Isolation movements
+  /\b(?:leg extension|leg curl|hip thrust|hip adduction|hip abduction|calf raise|keenan flap|exortism curl|preacher curl|tricep extension|tricep pushdown|)\b/gi,
+  // Machine exercises
+  /\b(?:machine|smith machine)\s+[\w\s]*(?:squat|press|curl|extension|raise|fly|row|pulldown)\b/gi,
+  // Cable/dumbbell/barbell exercises
+  /\b(?:cable|dumbbell|barbell)\s+[\w\s]*(?:curl|press|extension|raise|fly|row)\b/gi,
+  // Generic patterns (enhanced)
+  /\b(?:chest press|shoulder press|lat pulldown|pull-up|push-up|bench press|incline press)\b/gi,
+];
+
+// Comprehensive exercise database based on KB content analysis
+const COMPREHENSIVE_EXERCISE_LIST = [
+  // LEG EXERCISES (based on actual KB content)
+  "squat",
+  "hack squat",
+  "pendulum squat",
+  "leg press",
+  "smith machine squat",
+  "leg extension",
+  "leg curl",
+  "seated leg curl",
+  "lying leg curl",
+  "hip thrust",
+  "hip adduction machine",
+  "hip abduction machine",
+  "romanian deadlift",
+  "stiff leg deadlift",
+  "hyperextension",
+  "standing calf raises",
+  "seated calf raises",
+  "calf press",
+  "walking lunges",
+  "bulgarian split squat",
+  "step ups",
+
+  // CHEST EXERCISES
+  "bench press",
+  "incline bench press",
+  "decline bench press",
+  "machine chest press",
+  "incline machine press",
+  "decline machine press",
+  "chest fly",
+  "machine chest fly",
+  "cable fly",
+  "pec deck",
+  "dips",
+  "push ups",
+  "incline push ups",
+
+  // BACK EXERCISES
+  "lat pulldown",
+  "wide grip lat pulldown",
+  "close grip lat pulldown",
+  "seated cable row",
+  "chest supported row",
+  "t-bar row",
+  "pull ups",
+  "chin ups",
+  "assisted pull ups",
+  "machine row",
+  "single arm dumbbell row",
+
+  // SHOULDER EXERCISES
+  "shoulder press",
+  "machine shoulder press",
+  "dumbbell shoulder press",
+  "lateral raises",
+  "machine lateral raises",
+  "cable lateral raises",
+  "rear delt fly",
+  "machine reverse fly",
+  "cable reverse fly",
+  "front raises",
+  "upright rows",
+  "face pulls",
+
+  // ARM EXERCISES
+  "bicep curl",
+  "hammer curl",
+  "preacher curl",
+  "cable curl",
+  "tricep extension",
+  "overhead tricep extension",
+  "tricep pushdown",
+  "close grip bench press",
+  "tricep dips",
+  "skull crushers",
+];
 
 // Initialize the Gemini client
 if (!process.env.GEMINI_API_KEY) {
@@ -24,33 +282,1000 @@ const genAI = new GoogleGenerativeAI(process.env.GEMINI_API_KEY);
 
 // Define interfaces for better type safety
 interface ConversationMessage {
-  role: 'user' | 'model';
+  role: "user" | "model";
   content: string;
 }
 
 interface AiResponse {
   content: string;
   citations: KnowledgeContext[];
+  requiresConfirmation?: boolean;
+  conflictData?: Record<string, unknown>;
+}
+
+interface TokenBudget {
+  systemPrompt: number;
+  context: number;
+  history: number;
+  remaining: number;
 }
 
 // Caching for AI configuration to reduce database calls
 let aiConfigCache: AIConfiguration | null = null;
+let coreSystemPromptCache: string | null = null;
+
 export async function getAIConfiguration(): Promise<AIConfiguration> {
   if (aiConfigCache) {
     return aiConfigCache;
   }
   const config = await prisma.aIConfiguration.findFirst();
   if (!config) {
-    throw new Error('AI Configuration not found. Please configure the AI system in admin settings.');
+    throw new Error(
+      "AI Configuration not found. Please configure the AI system in admin settings."
+    );
   }
   aiConfigCache = config;
   return config;
 }
 
+/**
+ * Load core system prompt using the new core-prompts system
+ * This now integrates with user profile data for personalization
+ */
+async function getCoreSystemPrompt(config?: AIConfiguration, userProfile?: any): Promise<string> {
+  if (coreSystemPromptCache && !userProfile) {
+    return coreSystemPromptCache;
+  }
+
+  // Use the new core-prompts system for better prompt generation
+  if (config && userProfile) {
+    return await getSystemPrompt(userProfile);
+  } else if (config) {
+    return await getBasicSystemPrompt();
+  }
+
+  // Enhanced core directives as fallback (legacy support)
+  const fallbackCore = `
+### CRITICAL COACHING DIRECTIVES - NON-NEGOTIABLE ###
+
+You are HypertroQ, an evidence-based fitness coach specializing in muscle hypertrophy, exercise science, biomechanics, nutrition, and physiology.
+
+ABSOLUTE KNOWLEDGE BASE SUPREMACY:
+1. **KNOWLEDGE BASE IS YOUR SINGLE SOURCE OF TRUTH** - All hypertrophy recommendations MUST come from <knowledge_base_context>
+2. **EXERCISE SELECTION COMPLIANCE** - Only recommend exercises explicitly mentioned in your knowledge base for hypertrophy training
+3. **REP RANGE ADHERENCE** - Use ONLY the rep ranges specified in your knowledge base (typically 5-10 reps to 0-2 RIR for hypertrophy)
+4. **SET VOLUME LIMITS** - Strictly follow set limits from KB: ~72h frequency (Upper/Lower) = Max 2-4 sets per muscle; ~48h frequency (Full Body) = Max 1-3 sets per muscle
+5. **NO GENERAL KNOWLEDGE EXERCISES** - If KB lacks exercises for a muscle group, state clearly: "I don't have information about exercises for [muscle] in my knowledge base"
+
+WORKOUT PROGRAMMING ENFORCEMENT:
+- Upper Body: Use exercises from "A Guide to Structuring an Effective Upper Body Workout" and related KB guides
+- Lower Body: Use exercises from "A Guide to Structuring an Effective Lower Body Workout" and related KB guides
+- Equipment Priority: 1) Machines/cables (optimal for hypertrophy), 2) Free weights only if no machine alternative in KB
+- Mandatory Inclusions: Include any exercise KB marks as "mandatory" for complete development
+- No Redundancy: Avoid multiple exercises with same primary function (e.g., Leg Press + Hack Squat)
+
+PERSONALIZATION REQUIREMENTS:
+- Always integrate <user_profile> and <long_term_memory> into recommendations
+- Adjust for goals, experience, preferences, injuries, equipment access
+- Handle profile conflicts by stating conflict and asking confirmation before proceeding
+
+RESPONSE QUALITY STANDARDS:
+- Synthesize from KB, never copy-paste
+- Use professional, instructional tone with headings and bullet points
+- Include "Notes & Rationale" for each exercise selection explaining KB-based choice
+- Be transparent about KB limitations vs general expertise
+
+These directives override any conflicting instructions and must be followed in every response.
+`;
+
+  coreSystemPromptCache = fallbackCore;
+  return fallbackCore;
+}
+
+/**
+ * Combine core directives with database system prompt intelligently
+ * Now supports user profile integration for personalized prompts
+ */
+async function buildOptimizedSystemPrompt(
+  dbSystemPrompt: string,
+  tokenBudget: number,
+  config?: AIConfiguration,
+  userProfile?: any
+): Promise<string> {
+  const corePrompt = await getCoreSystemPrompt(config, userProfile);
+  const coreTokens = estimateTokens(corePrompt);
+
+  // Always preserve core directives
+  let result = corePrompt;
+
+  // Add database prompt if budget allows and it's not already included in core
+  const remainingBudget = tokenBudget - coreTokens;
+  if (remainingBudget > 100 && dbSystemPrompt && dbSystemPrompt.trim()) {
+    // Leave some buffer
+    const dbTokens = estimateTokens(dbSystemPrompt);
+
+    if (dbTokens <= remainingBudget) {
+      // Full database prompt fits
+      result += "\n\n### ADDITIONAL ADMIN CONFIGURATION ###\n" + dbSystemPrompt;
+    } else {
+      // Truncate database prompt to fit budget
+      const allowedChars = Math.floor(remainingBudget / TOKENS_PER_CHAR);
+      const truncatedDb = dbSystemPrompt.substring(0, allowedChars) + "...";
+      result += "\n\n### ADDITIONAL ADMIN CONFIGURATION ###\n" + truncatedDb;
+      console.log(
+        `⚠️ Database system prompt truncated to fit token budget (${dbTokens} → ${estimateTokens(
+          truncatedDb
+        )} tokens)`
+      );
+    }
+  } else if (remainingBudget <= 100) {
+    console.log(
+      `⚠️ Only using core system prompt - no budget for database prompt (core: ${coreTokens}, budget: ${tokenBudget})`
+    );
+  }
+
+  return result;
+}
+
+/**
+ * Estimate token count from text length
+ */
+function estimateTokens(text: string): number {
+  return Math.ceil(text.length * TOKENS_PER_CHAR);
+}
+
+/**
+ * Calculate token budget and prioritize content - Enhanced for KB prioritization
+ */
+function calculateTokenBudget(maxTokens: number): TokenBudget {
+  const outputReserve = Math.floor(maxTokens * 0.25); // Reduced output reserve to 25%
+  const inputBudget = maxTokens - outputReserve;
+
+  return {
+    systemPrompt: Math.min(
+      MAX_SYSTEM_PROMPT_TOKENS,
+      Math.floor(inputBudget * 0.25) // Reduced system prompt allocation
+    ),
+    context: Math.min(MAX_CONTEXT_TOKENS, Math.floor(inputBudget * 0.6)), // Increased KB context allocation to 60%
+    history: Math.min(MAX_HISTORY_TOKENS, Math.floor(inputBudget * 0.15)), // Reduced history allocation
+    remaining: inputBudget,
+  };
+}
+
+/**
+ * Trim content to fit token budget with priority: Core directives > KB > History
+ * Now supports user profile integration for personalized system prompts
+ */
+async function optimizeContentForTokens(
+  systemPrompt: string,
+  contextString: string,
+  history: ConversationMessage[],
+  budget: TokenBudget,
+  config?: AIConfiguration,
+  userProfile?: any
+): Promise<{
+  optimizedSystem: string;
+  optimizedContext: string;
+  optimizedHistory: ConversationMessage[];
+}> {
+  // Use the new optimized system prompt builder with user profile support
+  const optimizedSystem = await buildOptimizedSystemPrompt(
+    systemPrompt,
+    budget.systemPrompt,
+    config,
+    userProfile
+  );
+
+  // Optimize context (prioritize knowledge base chunks by relevance score)
+  let optimizedContext = contextString;
+  if (estimateTokens(contextString) > budget.context) {
+    console.log("⚠️ Context exceeds token budget, trimming...");
+    // Keep profile/memory, trim knowledge base chunks
+    const lines = contextString.split("\n");
+    const trimmedLines: string[] = [];
+    let currentContextTokens = 0;
+
+    for (const line of lines) {
+      const lineTokens = estimateTokens(line);
+      if (currentContextTokens + lineTokens <= budget.context) {
+        trimmedLines.push(line);
+        currentContextTokens += lineTokens;
+      } else if (
+        line.includes("user_profile") ||
+        line.includes("long_term_memory")
+      ) {
+        // Always keep profile/memory even if it exceeds budget slightly
+        trimmedLines.push(line);
+      }
+    }
+    optimizedContext = trimmedLines.join("\n");
+  }
+
+  // Optimize history (keep recent messages)
+  let optimizedHistory = history;
+  if (estimateTokens(JSON.stringify(history)) > budget.history) {
+    console.log("⚠️ History exceeds token budget, trimming...");
+    let historyTokens = 0;
+    optimizedHistory = [];
+
+    // Keep messages from newest to oldest until budget is reached
+    for (let i = history.length - 1; i >= 0; i--) {
+      const msgTokens = estimateTokens(history[i].content);
+      if (historyTokens + msgTokens <= budget.history) {
+        optimizedHistory.unshift(history[i]);
+        historyTokens += msgTokens;
+      } else {
+        break;
+      }
+    }
+  }
+
+  return { optimizedSystem, optimizedContext, optimizedHistory };
+}
+
+/**
+ * Validate that suggested exercises exist in knowledge base
+ */
+/**
+ * Comprehensive workout programming validation to ensure KB compliance
+ */
+async function validateWorkoutProgramming(
+  responseText: string,
+  knowledgeContext: KnowledgeContext[],
+  userQuery: string
+): Promise<string> {
+  console.log("🏋️ Validating workout programming compliance...");
+
+  let modifiedResponse = responseText;
+  const validationNotes: string[] = [];
+
+  // 1. Rep Range Validation
+  const repRangeMatches = responseText.match(/\b(\d+)-(\d+)\s*reps?\b/gi);
+  if (repRangeMatches) {
+    const kbRepRanges = extractRepRangesFromKB(knowledgeContext);
+    console.log("📊 Found rep ranges in response:", repRangeMatches);
+    console.log("📖 KB approved rep ranges:", kbRepRanges);
+
+    repRangeMatches.forEach((range) => {
+      const [, min, max] = range.match(/(\d+)-(\d+)/) || [];
+      const minNum = parseInt(min);
+      const maxNum = parseInt(max);
+
+      // Check if this rep range aligns with KB guidelines (typically 5-10 for hypertrophy)
+      if (kbRepRanges.length > 0) {
+        const isValidRange = kbRepRanges.some((kbRange) => {
+          const [kbMin, kbMax] = kbRange;
+          return minNum >= kbMin - 2 && maxNum <= kbMax + 2; // Allow 2-rep tolerance
+        });
+
+        if (!isValidRange) {
+          // Replace with KB-approved range
+          const bestKbRange = kbRepRanges[0]; // Use primary KB range
+          const replacementRange = `${bestKbRange[0]}-${bestKbRange[1]} reps`;
+          modifiedResponse = modifiedResponse.replace(range, replacementRange);
+          validationNotes.push(
+            `Rep range adjusted from "${range}" to "${replacementRange}" per KB guidelines`
+          );
+        }
+      }
+    });
+  }
+
+  // 2. Set Volume Validation
+  const setMatches = responseText.match(/\b(\d+)\s*sets?\b/gi);
+  if (setMatches) {
+    console.log("📊 Found set recommendations:", setMatches);
+    // Check for excessive set volumes that violate KB guidelines
+    setMatches.forEach((setRec) => {
+      const setNum = parseInt(setRec.match(/(\d+)/)?.[1] || "0");
+      if (setNum > 4) {
+        // KB typically recommends max 2-4 sets
+        const adjustedSets = "2-3 sets";
+        modifiedResponse = modifiedResponse.replace(setRec, adjustedSets);
+        validationNotes.push(
+          `Set volume reduced from "${setRec}" to "${adjustedSets}" per KB guidelines`
+        );
+      }
+    });
+  }
+
+  // 3. Exercise Selection Final Check
+  modifiedResponse = await validateExerciseCompliance(
+    modifiedResponse,
+    knowledgeContext
+  );
+
+  // 4. Add KB Adherence Notice
+  if (validationNotes.length > 0) {
+    const adherenceNote =
+      `\n\n📋 **KB Compliance Adjustments**: ${validationNotes.length} adjustment(s) made to ensure strict adherence to your evidence-based knowledge base:\n` +
+      validationNotes.map((note) => `• ${note}`).join("\n");
+    modifiedResponse += adherenceNote;
+  }
+
+  return modifiedResponse;
+}
+
+/**
+ * Extract approved rep ranges from knowledge base context
+ */
+function extractRepRangesFromKB(
+  knowledgeContext: KnowledgeContext[]
+): [number, number][] {
+  const repRanges: [number, number][] = [];
+
+  knowledgeContext.forEach((chunk) => {
+    const content = chunk.content.toLowerCase();
+
+    // Look for hypertrophy-specific rep ranges
+    const repMatches = content.match(/\b(\d+)-(\d+)\s*rep(?:s|etition)?/gi);
+    if (repMatches) {
+      repMatches.forEach((match) => {
+        const [, min, max] = match.match(/(\d+)-(\d+)/) || [];
+        if (min && max) {
+          const minNum = parseInt(min);
+          const maxNum = parseInt(max);
+
+          // Only include rep ranges that make sense for hypertrophy (3-20 range)
+          if (minNum >= 3 && maxNum <= 20 && minNum < maxNum) {
+            repRanges.push([minNum, maxNum]);
+          }
+        }
+      });
+    }
+
+    // Look for specific mentions of hypertrophy rep ranges
+    if (content.includes("hypertrophy") || content.includes("muscle growth")) {
+      // Extract rep ranges in context of hypertrophy
+      const hypertrophyRegex =
+        /(?:hypertrophy|muscle growth).*?(\d+)-(\d+)\s*rep/gi;
+      const hypertrophyMatches = content.match(hypertrophyRegex);
+      if (hypertrophyMatches) {
+        hypertrophyMatches.forEach((match) => {
+          const [, min, max] = match.match(/(\d+)-(\d+)/) || [];
+          if (min && max) {
+            repRanges.push([parseInt(min), parseInt(max)]);
+          }
+        });
+      }
+    }
+  });
+
+  // Deduplicate and return most conservative ranges
+  const uniqueRanges = Array.from(
+    new Set(repRanges.map((r) => `${r[0]}-${r[1]}`))
+  ).map((r) => r.split("-").map(Number) as [number, number]);
+
+  return uniqueRanges.sort((a, b) => a[0] - b[0]); // Sort by minimum rep count
+}
+
+/**
+ * Validate and enforce exercise compliance with knowledge base
+ * Now actively replaces invalid exercises with KB-approved alternatives
+ */
+async function validateExerciseCompliance(
+  responseText: string,
+  knowledgeContext: KnowledgeContext[]
+): Promise<string> {
+  // If no knowledge base context, apply strict enforcement
+  if (knowledgeContext.length === 0) {
+    console.log(
+      "⚠️ No knowledge base context - checking for hypertrophy programming mentions"
+    );
+
+    // Check if response contains hypertrophy programming advice
+    const hypertrophyKeywords =
+      /\b(?:hypertrophy|muscle building|rep range|sets|workout|training program|exercise)\b/gi;
+    if (hypertrophyKeywords.test(responseText)) {
+      return "I don't have any specific exercise guides available in my knowledge base right now. Please upload your training protocols and exercise guides so I can provide you with evidence-based recommendations from your own materials.";
+    }
+
+    return responseText; // Non-hypertrophy content can proceed
+  }
+
+  // Extract potential exercises from response
+  const exercises = new Set<string>();
+
+  for (const pattern of EXERCISE_PATTERNS) {
+    const matches = responseText.match(pattern);
+    if (matches) {
+      matches.forEach((match) => exercises.add(match.toLowerCase().trim()));
+    }
+  }
+
+  if (exercises.size === 0) {
+    return responseText; // No exercises detected, return as-is
+  }
+
+  // Build a comprehensive list of valid exercises from knowledge base
+  const validExercises = new Set<string>();
+  const exerciseToChunkMap = new Map<string, KnowledgeContext>();
+
+  for (const chunk of knowledgeContext) {
+    for (const pattern of EXERCISE_PATTERNS) {
+      const matches = chunk.content.match(pattern);
+      if (matches) {
+        matches.forEach((match) => {
+          const cleanExercise = match.toLowerCase().trim();
+          validExercises.add(cleanExercise);
+
+          // Store the best chunk for each exercise (highest score)
+          if (
+            !exerciseToChunkMap.has(cleanExercise) ||
+            chunk.score > exerciseToChunkMap.get(cleanExercise)!.score
+          ) {
+            exerciseToChunkMap.set(cleanExercise, chunk);
+          }
+        });
+      }
+    }
+  }
+
+  // Find invalid exercises and replace them
+  let modifiedResponse = responseText;
+  const invalidExercises: string[] = [];
+  const replacements: Array<{ original: string; replacement: string }> = [];
+
+  for (const exercise of exercises) {
+    const isValid = Array.from(validExercises).some(
+      (valid) => valid.includes(exercise) || exercise.includes(valid)
+    );
+
+    if (!isValid) {
+      invalidExercises.push(exercise);
+
+      // Find the best replacement from knowledge base
+      const replacement = findBestExerciseReplacement(
+        exercise,
+        Array.from(validExercises),
+        exerciseToChunkMap
+      );
+
+      if (replacement) {
+        // Replace in the response text (case-insensitive)
+        const regex = new RegExp(
+          `\\b${exercise.replace(/[.*+?^${}()|[\]\\]/g, "\\$&")}\\b`,
+          "gi"
+        );
+        modifiedResponse = modifiedResponse.replace(regex, replacement);
+        replacements.push({ original: exercise, replacement });
+        console.log(
+          `🔄 Replaced invalid exercise "${exercise}" with "${replacement}"`
+        );
+      }
+    }
+  }
+
+  // Add transparency note if replacements were made
+  if (replacements.length > 0) {
+    const replacementNote =
+      `\n\n📝 **Note**: I've replaced ${replacements.length} exercise(s) with alternatives from your knowledge base to ensure all recommendations are based on your uploaded materials:` +
+      replacements
+        .map((r) => `\n• "${r.original}" → "${r.replacement}"`)
+        .join("");
+
+    modifiedResponse += replacementNote;
+  }
+
+  return modifiedResponse;
+}
+
+/**
+ * Find the best exercise replacement using highest KB relevance score
+ */
+function findBestExerciseReplacement(
+  invalidExercise: string,
+  validExercises: string[],
+  exerciseToChunkMap: Map<string, KnowledgeContext>
+): string | null {
+  // Simple muscle group mapping for better replacements
+  const muscleGroups = {
+    chest: ["chest", "pec", "press", "fly"],
+    back: [
+      "back",
+      "lat",
+      "row",
+      "pull",
+      "chest supported",
+      "lats",
+      "upper back",
+      "trapezius",
+      "rhomboids",
+      "pulldown",
+    ],
+    legs: [
+      "leg",
+      "squat",
+      "deadlift",
+      "quad",
+      "hamstring",
+      "glute",
+      "adductors",
+      "hip",
+      "calves",
+    ],
+    shoulders: [
+      "shoulder",
+      "delt",
+      "press",
+      "raise",
+      "side delts",
+      "front delts",
+      "rear delts",
+      "reverse fly",
+    ],
+    arms: [
+      "arm",
+      "bicep",
+      "tricep",
+      "curl",
+      "extension",
+      "pushdown",
+      "forearm",
+      "wrist flexors",
+      "wrist extensors",
+    ],
+  };
+
+  // Determine target muscle group of invalid exercise
+  let targetMuscleGroup = "general";
+  for (const [group, keywords] of Object.entries(muscleGroups)) {
+    if (
+      keywords.some((keyword) =>
+        invalidExercise.toLowerCase().includes(keyword)
+      )
+    ) {
+      targetMuscleGroup = group;
+      break;
+    }
+  }
+
+  // Filter valid exercises to same muscle group if possible
+  const sameGroupExercises = validExercises.filter((valid) => {
+    if (targetMuscleGroup === "general") return true;
+    return muscleGroups[targetMuscleGroup as keyof typeof muscleGroups].some(
+      (keyword) => valid.toLowerCase().includes(keyword)
+    );
+  });
+
+  if (sameGroupExercises.length === 0) {
+    return validExercises.length > 0 ? validExercises[0] : null;
+  }
+
+  // Pick the exercise whose KB chunk has the highest score
+  let bestExercise = sameGroupExercises[0];
+  let bestScore = -Infinity;
+
+  for (const ex of sameGroupExercises) {
+    const chunk = exerciseToChunkMap.get(ex);
+    if (chunk && chunk.score > bestScore) {
+      bestScore = chunk.score;
+      bestExercise = ex;
+    }
+  }
+
+  console.log(
+    `🎯 Best replacement for "${invalidExercise}": "${bestExercise}" (score: ${bestScore})`
+  );
+  return bestExercise;
+}
+
+/**
+ * Repair malformed JSON from LLM responses
+ */
+function repairJSON(jsonString: string): Record<string, unknown> | null {
+  try {
+    // First, try direct parsing
+    return JSON.parse(jsonString);
+  } catch {
+    try {
+      // Clean the string first
+      let cleaned = jsonString.trim();
+
+      // Extract JSON from within text if needed
+      const jsonMatch = cleaned.match(/\{[\s\S]*\}/);
+      if (jsonMatch) {
+        cleaned = jsonMatch[0];
+      }
+
+      // Try to repair common issues
+      let repaired = cleaned
+        .replace(/'/g, '"') // Replace single quotes with double quotes
+        .replace(/,\s*([}\]])/g, "$1") // Remove trailing commas before } or ]
+        .replace(/([{,]\s*)(\w+):/g, '$1"$2":') // Add quotes around unquoted keys
+        .replace(/:\s*'([^']*)'/g, ': "$1"') // Replace single quotes around values
+        .trim();
+
+      // Ensure proper structure
+      if (!repaired.startsWith("{")) repaired = "{" + repaired;
+      if (!repaired.endsWith("}")) repaired = repaired + "}";
+
+      return JSON.parse(repaired);
+    } catch (error) {
+      console.error("❌ Could not repair JSON:", jsonString, "Error:", error);
+      return null;
+    }
+  }
+}
+
+/**
+ * Analyze knowledge base to determine available exercises by muscle group
+ * This helps prevent the AI from incorrectly stating limitations
+ */
+/**
+ * Enhanced exercise analysis with comprehensive detection and precise categorization
+ * This addresses the core issue where AI claimed no exercises exist despite KB containing them
+ */
+function analyzeKnowledgeBaseExercises(
+  knowledgeContext: KnowledgeContext[]
+): string {
+  if (knowledgeContext.length === 0) {
+    return "\n<exercise_availability>\nNo exercise information currently available in knowledge base.\n</exercise_availability>\n";
+  }
+
+  // Enhanced muscle group classification with precise keywords and exercise lists
+  const muscleGroups = {
+    legs: {
+      keywords: [
+        "leg",
+        "squat",
+        "deadlift",
+        "quad",
+        "hamstring",
+        "glute",
+        "calf",
+        "hip",
+        "lunge",
+      ],
+      exercises: COMPREHENSIVE_EXERCISE_LIST.filter((ex) =>
+        ["squat", "leg", "hip", "calf", "deadlift", "lunge"].some((kw) =>
+          ex.includes(kw)
+        )
+      ),
+    },
+    chest: {
+      keywords: ["chest", "pec", "bench", "press", "fly", "dip"],
+      exercises: COMPREHENSIVE_EXERCISE_LIST.filter(
+        (ex) =>
+          ["bench", "chest", "press", "fly", "pec", "dip"].some((kw) =>
+            ex.includes(kw)
+          ) &&
+          !ex.includes("leg") &&
+          !ex.includes("shoulder")
+      ),
+    },
+    back: {
+      keywords: ["back", "lat", "row", "pull"],
+      exercises: COMPREHENSIVE_EXERCISE_LIST.filter((ex) =>
+        ["lat", "row", "pull"].some((kw) => ex.includes(kw))
+      ),
+    },
+    shoulders: {
+      keywords: ["shoulder", "delt", "lateral", "rear", "front", "raise"],
+      exercises: COMPREHENSIVE_EXERCISE_LIST.filter(
+        (ex) =>
+          ["shoulder", "lateral", "rear", "front", "raise"].some((kw) =>
+            ex.includes(kw)
+          ) && !ex.includes("calf")
+      ),
+    },
+    arms: {
+      keywords: ["arm", "bicep", "tricep", "curl", "extension"],
+      exercises: COMPREHENSIVE_EXERCISE_LIST.filter(
+        (ex) =>
+          ["bicep", "tricep", "curl"].some((kw) => ex.includes(kw)) ||
+          (ex.includes("extension") &&
+            (ex.includes("tricep") || ex.includes("overhead")))
+      ),
+    },
+    core: {
+      keywords: ["core", "abs", "abdominal", "plank", "crunch"],
+      exercises: [
+        "plank",
+        "crunches",
+        "russian twist",
+        "leg raises",
+        "mountain climbers",
+      ],
+    },
+  };
+
+  const availableExercisesByGroup: Record<string, Set<string>> = {};
+  const detailedFindings: Record<string, string[]> = {};
+
+  // Initialize all muscle groups
+  Object.keys(muscleGroups).forEach((group) => {
+    availableExercisesByGroup[group] = new Set();
+    detailedFindings[group] = [];
+  });
+
+  // Enhanced extraction process for each chunk
+  for (const chunk of knowledgeContext) {
+    const chunkText = (chunk.content + " " + chunk.title).toLowerCase();
+    const allMatches = new Set<string>();
+
+    // Method 1: Enhanced pattern matching
+    for (const pattern of EXERCISE_PATTERNS) {
+      const matches = chunk.content.match(pattern);
+      if (matches) {
+        matches.forEach((match) => allMatches.add(match.toLowerCase().trim()));
+      }
+    }
+
+    // Method 2: Direct exercise name matching (most reliable)
+    COMPREHENSIVE_EXERCISE_LIST.forEach((exercise) => {
+      if (chunkText.includes(exercise.toLowerCase())) {
+        allMatches.add(exercise);
+      }
+    });
+
+    // Method 3: Contextual extraction from sentences
+    const sentences = chunk.content.split(/[.!?]+/);
+    sentences.forEach((sentence) => {
+      const sentenceLower = sentence.toLowerCase();
+      if (
+        sentenceLower.includes("exercise") ||
+        sentenceLower.includes("movement") ||
+        sentenceLower.includes("perform") ||
+        sentenceLower.includes("train")
+      ) {
+        COMPREHENSIVE_EXERCISE_LIST.forEach((exercise) => {
+          if (sentenceLower.includes(exercise.toLowerCase())) {
+            allMatches.add(exercise);
+          }
+        });
+      }
+    });
+
+    // Categorize by muscle group with enhanced precision
+    for (const [groupName, groupData] of Object.entries(muscleGroups)) {
+      let hasMatches = false;
+
+      // Check direct exercise matches first (most reliable)
+      groupData.exercises.forEach((exercise) => {
+        if (
+          allMatches.has(exercise) ||
+          allMatches.has(exercise.toLowerCase())
+        ) {
+          availableExercisesByGroup[groupName].add(exercise);
+          hasMatches = true;
+        }
+      });
+
+      // Check keyword-based matches with stricter logic
+      allMatches.forEach((exerciseName) => {
+        const matchesKeywords = groupData.keywords.some((keyword) => {
+          // More precise matching to avoid false positives
+          if (groupName === "legs") {
+            return (
+              exerciseName.includes(keyword) &&
+              (keyword === "leg" ||
+                keyword === "squat" ||
+                keyword === "deadlift" ||
+                keyword === "quad" ||
+                keyword === "hamstring" ||
+                keyword === "glute" ||
+                keyword === "calf" ||
+                keyword === "hip" ||
+                keyword === "lunge")
+            );
+          } else if (groupName === "chest") {
+            return (
+              exerciseName.includes(keyword) &&
+              !exerciseName.includes("leg") &&
+              !exerciseName.includes("shoulder")
+            );
+          } else {
+            return exerciseName.includes(keyword);
+          }
+        });
+
+        if (matchesKeywords) {
+          availableExercisesByGroup[groupName].add(exerciseName);
+          hasMatches = true;
+        }
+      });
+
+      if (hasMatches) {
+        detailedFindings[groupName].push(chunk.title);
+      }
+    }
+  }
+
+  // Generate comprehensive summary with clear guidance for AI
+  let summary = "\n<exercise_availability>\n";
+  summary += "🔍 COMPREHENSIVE EXERCISE ANALYSIS (Enhanced Detection):\n\n";
+
+  Object.entries(availableExercisesByGroup).forEach(([group, exercises]) => {
+    const exerciseList = Array.from(exercises);
+    if (exerciseList.length > 0) {
+      summary += `✅ ${group.toUpperCase()}: ${
+        exerciseList.length
+      } exercises available\n`;
+      summary += `   Primary exercises: ${exerciseList.slice(0, 5).join(", ")}${
+        exerciseList.length > 5 ? ", and more..." : ""
+      }\n`;
+      summary += `   KB sources: ${detailedFindings[group]
+        .slice(0, 2)
+        .join(", ")}${
+        detailedFindings[group].length > 2 ? ", and more..." : ""
+      }\n\n`;
+    } else {
+      summary += `❌ ${group.toUpperCase()}: No exercises detected in current KB context\n\n`;
+    }
+  });
+
+  summary +=
+    "🎯 CRITICAL FOR AI: Only claim exercise limitations for muscle groups marked with ❌ above.\n";
+  summary +=
+    "📚 For groups marked with ✅, you have comprehensive exercise options available from your knowledge base.\n";
+  summary +=
+    "⚠️ NEVER claim 'no exercises available' for muscle groups that show ✅ - this is factually incorrect.\n";
+  summary += "</exercise_availability>\n";
+
+  return summary;
+}
+
+/**
+ * Strengthen knowledge base adherence in responses that may be too generic
+ */
+function strengthenKBAdherence(
+  responseText: string,
+  knowledgeContext: KnowledgeContext[],
+  userQuery: string
+): string {
+  console.log("🔧 Analyzing KB adherence strength...");
+
+  // Check for generic fitness advice that doesn't reference KB
+  const genericPhrases = [
+    /generally speaking/gi,
+    /typically/gi,
+    /most experts recommend/gi,
+    /common recommendation/gi,
+    /standard approach/gi,
+    /in general/gi,
+  ];
+
+  let hasGenericPhrases = false;
+  genericPhrases.forEach((phrase) => {
+    if (phrase.test(responseText)) {
+      hasGenericPhrases = true;
+    }
+  });
+
+  // Check if response lacks specific KB references
+  const hasKBReferences = knowledgeContext.some(
+    (chunk) =>
+      responseText
+        .toLowerCase()
+        .includes(chunk.title.toLowerCase().substring(0, 20)) ||
+      responseText.includes("knowledge base") ||
+      responseText.includes("based on the guides") ||
+      responseText.includes("according to")
+  );
+
+  if (hasGenericPhrases && !hasKBReferences && knowledgeContext.length > 0) {
+    console.log("⚠️ Weak KB adherence detected - strengthening response");
+
+    // Add strong KB adherence footer
+    const kbStrengthening = `\n\n🔬 **Evidence-Based Recommendation**: This guidance is specifically derived from your uploaded knowledge base materials, including: "${knowledgeContext[0].title}" and related scientific guides. Unlike generic fitness advice, these recommendations are backed by the evidence-based protocols you've provided.`;
+
+    // Add reminder about KB-only exercise selection for hypertrophy
+    if (/\b(exercise|workout|training)\b/i.test(userQuery)) {
+      const exerciseReminder = `\n\n📋 **Exercise Selection Note**: All exercise recommendations are strictly limited to those found in your knowledge base to ensure they align with your evidence-based training philosophy.`;
+      return responseText + kbStrengthening + exerciseReminder;
+    }
+
+    return responseText + kbStrengthening;
+  }
+
+  return responseText;
+}
+
+/**
+ * Extract critical programming principles from knowledge base context
+ */
+function extractProgrammingPrinciples(
+  knowledgeContext: KnowledgeContext[]
+): string | null {
+  if (knowledgeContext.length === 0) return null;
+
+  let principles = "";
+
+  // Look for rep range information
+  const repRangeRegex =
+    /(?:rep(?:s|etition)?|range).*?(?:5-10|6-12|8-12|5-8|6-10).*?(?:RIR|reps in reserve|RPE|failure)/gi;
+  const setVolumeRegex =
+    /(?:sets?|volume).*?(?:per|each).*?(?:muscle|week|session)/gi;
+  const frequencyRegex =
+    /(?:frequency|times?).*?(?:per week|weekly|every \d+ hours?)/gi;
+
+  knowledgeContext.forEach((chunk) => {
+    const content = chunk.content;
+
+    // Extract rep range principles
+    const repMatches = content.match(repRangeRegex);
+    if (repMatches) {
+      repMatches.forEach((match) => {
+        if (!principles.includes(match.substring(0, 50))) {
+          principles += `REP RANGES: ${match.trim()}\n`;
+        }
+      });
+    }
+
+    // Extract set volume principles
+    const setMatches = content.match(setVolumeRegex);
+    if (setMatches) {
+      setMatches.forEach((match) => {
+        if (!principles.includes(match.substring(0, 50))) {
+          principles += `SET VOLUME: ${match.trim()}\n`;
+        }
+      });
+    }
+
+    // Extract frequency principles
+    const freqMatches = content.match(frequencyRegex);
+    if (freqMatches) {
+      freqMatches.forEach((match) => {
+        if (!principles.includes(match.substring(0, 50))) {
+          principles += `FREQUENCY: ${match.trim()}\n`;
+        }
+      });
+    }
+
+    // Look for specific programming rules
+    if (
+      content.toLowerCase().includes("mandatory") ||
+      content.toLowerCase().includes("essential")
+    ) {
+      const mandatoryRegex =
+        /(?:mandatory|essential).*?(?:exercise|movement).*?(?:for|to).*?(?:development|growth)/gi;
+      const mandatoryMatches = content.match(mandatoryRegex);
+      if (mandatoryMatches) {
+        mandatoryMatches.forEach((match) => {
+          if (!principles.includes(match.substring(0, 50))) {
+            principles += `MANDATORY: ${match.trim()}\n`;
+          }
+        });
+      }
+    }
+  });
+
+  return principles.trim() || null;
+}
+
+/**
+ * Detect if the user is asking to continue a previous exercise/workout discussion
+ */
+function isContinuingExerciseDiscussion(
+  userMessage: string,
+  conversationHistory: ConversationMessage[]
+): boolean {
+  // Check if user message indicates continuation (more specific keywords)
+  const continuationKeywords =
+    /\b(continue|finish|complete|keep going|go on|rest of|show me the rest|what's next)\b/i;
+  const messageIndicatesContinuation = continuationKeywords.test(userMessage);
+
+  if (!messageIndicatesContinuation) {
+    return false;
+  }
+
+  // Check if recent conversation history contains exercise/workout content
+  const recentMessages = conversationHistory.slice(-6); // Check last 6 messages
+  const exerciseKeywords =
+    /\b(exercise|workout|training|program|sets|reps|muscle|chest|back|legs|arms|shoulders|squat|press|row|curl|extension|fly|raise|deadlift)\b/i;
+
+  return recentMessages.some(
+    (msg) => msg.role === "model" && exerciseKeywords.test(msg.content)
+  );
+}
+
 function formatContextForPrompt(
   profile: UserProfileData | null,
   memory: ClientMemory | null,
-  knowledgeContext: KnowledgeContext[]
+  knowledgeContext: KnowledgeContext[],
+  userMessage: string = "",
+  conversationHistory: ConversationMessage[] = []
 ): string {
   let contextString = "### CONTEXTUAL INFORMATION ###\n\n";
 
@@ -60,25 +1285,72 @@ function formatContextForPrompt(
     contextString += "\n</user_profile>\n\n";
   }
 
-  if (memory && Object.keys(memory).length > 1) { // Check if memory has more than just the id/userId
+  if (memory && Object.keys(memory).length > 1) {
+    // Check if memory has more than just the id/userId
     contextString += "<long_term_memory>\n";
     contextString += JSON.stringify(memory, null, 2);
     contextString += "\n</long_term_memory>\n\n";
   }
 
+  // Check if this is a continuation of an exercise discussion
+  const isContinuationMessage = isContinuingExerciseDiscussion(
+    userMessage,
+    conversationHistory
+  );
+
   if (knowledgeContext.length > 0) {
     contextString += "<knowledge_base_context>\n";
-    contextString += "This is your source of truth. Synthesize your answer from these scientifically-backed guides:\n";
+    contextString +=
+      "This is your SINGLE SOURCE OF TRUTH for all hypertrophy recommendations. STRICT COMPLIANCE REQUIRED:\n\n";
+
+    // Add extracted programming principles at the top
+    const programmingPrinciples =
+      extractProgrammingPrinciples(knowledgeContext);
+    if (programmingPrinciples) {
+      contextString +=
+        "=== CRITICAL PROGRAMMING PRINCIPLES (MUST FOLLOW) ===\n";
+      contextString += programmingPrinciples + "\n\n";
+    }
+
+    contextString += "=== KNOWLEDGE BASE CONTENT ===\n";
     knowledgeContext.forEach((chunk, index) => {
-      contextString += `--- Guide Chunk ${index + 1}: ${chunk.title} (Relevance Score: ${chunk.score.toFixed(2)}) ---\n`;
+      contextString += `--- Guide Chunk ${index + 1}: ${
+        chunk.title
+      } (Relevance Score: ${chunk.score.toFixed(2)}) ---\n`;
       contextString += `${chunk.content}\n`;
     });
+    contextString += "\n=== END KNOWLEDGE BASE ===\n";
+    contextString +=
+      "REMINDER: Use ONLY the exercises, rep ranges, and set volumes specified above. Do not deviate from these evidence-based guidelines.\n";
     contextString += "</knowledge_base_context>\n";
+
+    // Add enhanced exercise availability analysis
+    contextString += analyzeKnowledgeBaseExercises(knowledgeContext);
   } else {
-    contextString += "<knowledge_base_context>\nNo specific information was found in the knowledge base for this query. You MUST inform the user of this and use your general expertise as a fallback.\n</knowledge_base_context>\n";
+    if (isContinuationMessage) {
+      // For continuation messages, provide a softer fallback that doesn't claim total lack of exercises
+      contextString +=
+        "<knowledge_base_context>\nNo specific information was found in the knowledge base for this continuation query. However, you may refer to exercises from your general knowledge base that were previously discussed in this conversation.\n</knowledge_base_context>\n";
+
+      // Add a special note for continuation
+      contextString += "\n<continuation_context>\n";
+      contextString +=
+        "IMPORTANT: This appears to be a continuation of a previous exercise/workout discussion. ";
+      contextString +=
+        "You may reference exercises and programs you've previously mentioned in this conversation. ";
+      contextString +=
+        "Do NOT claim you lack exercise knowledge if you were just providing exercises moments ago.\n";
+      contextString += "</continuation_context>\n";
+    } else {
+      contextString +=
+        "<knowledge_base_context>\nNo specific information was found in the knowledge base for this query. You MUST inform the user of this and use your general expertise as a fallback.\n</knowledge_base_context>\n";
+
+      // Add empty exercise availability
+      contextString += analyzeKnowledgeBaseExercises([]);
+    }
   }
 
-  contextString += "### END CONTEXTUAL INFORMATION ###"
+  contextString += "### END CONTEXTUAL INFORMATION ###";
   return contextString;
 }
 
@@ -86,14 +1358,17 @@ function formatContextForPrompt(
  * Formats conversation history for the Gemini API.
  */
 function formatConversationHistory(history: ConversationMessage[]): Content[] {
-    return history.map(msg => ({
-        role: msg.role,
-        parts: [{ text: msg.content }]
-    }));
+  return history.map((msg) => ({
+    role: msg.role,
+    parts: [{ text: msg.content }],
+  }));
 }
 
-
-async function updateMemory(userId: string, userMessage: string, aiResponse: string): Promise<void> {
+async function updateMemory(
+  userId: string,
+  userMessage: string,
+  aiResponse: string
+): Promise<void> {
   const memoryPrompt = `
     Analyze the following user message and AI response.
     Your task is to identify and extract any new, lasting, and important information about the user that should be saved to their long-term memory.
@@ -103,27 +1378,37 @@ async function updateMemory(userId: string, userMessage: string, aiResponse: str
     **User Message:** "${userMessage}"
     **AI Response:** "${aiResponse}"
 
+    IMPORTANT: Respond ONLY with a valid JSON object. No additional text or explanations.
     If you found new information to save, provide it as a JSON object with one or more of the following keys: 'newGoals', 'newPreferences', 'newInjuries', 'otherNotes'.
     Each key should be an array of strings.
     If no new, lasting information is present, respond with an empty JSON object {}.
   `;
-  
+
   try {
-    const model = genAI.getGenerativeModel({ model: "gemini-1.5-flash-latest" });
+    const model = genAI.getGenerativeModel({
+  model: "gemini-2.5-flash",
+    });
     const result = await model.generateContent(memoryPrompt);
     const text = result.response.text().trim();
-    
-    if (text.startsWith('{') && text.endsWith('}')) {
-      const parsedMemory = JSON.parse(text) as MemoryUpdate;
-      
-      const hasNewInfo = Object.values(parsedMemory).some(value => Array.isArray(value) && value.length > 0);
+
+    // Use enhanced JSON repair
+    const parsedMemory = repairJSON(text);
+
+    if (parsedMemory) {
+      const hasNewInfo = Object.values(parsedMemory).some(
+        (value) => Array.isArray(value) && value.length > 0
+      );
 
       if (hasNewInfo) {
         console.log(`🧠 Updating memory for user ${userId}:`, parsedMemory);
-        await updateClientMemory(userId, parsedMemory);
+        await updateClientMemory(userId, parsedMemory as MemoryUpdate);
       } else {
         console.log(`🧠 No new lasting memory found for user ${userId}.`);
       }
+    } else {
+      console.log(
+        `🧠 Could not parse memory update response for user ${userId}`
+      );
     }
   } catch (error) {
     console.error("Error updating client memory:", error);
@@ -134,60 +1419,240 @@ export async function generateChatResponse(
   userId: string,
   conversationHistory: ConversationMessage[],
   newUserMessage: string,
-  selectedModel?: 'flash' | 'pro'
+  selectedModel?: "flash" | "pro"
 ): Promise<AiResponse> {
   try {
-    console.log("🚀 generateChatResponse called", { userId, messageLength: newUserMessage.length });
-    
+    console.log("🚀 generateChatResponse called", {
+      userId,
+      messageLength: newUserMessage.length,
+    });
+
     // 1. Fetch AI Configuration and User Data in parallel
     console.log("📊 Fetching AI config and user data...");
     const [config, userProfile, clientMemory, userData] = await Promise.all([
       getAIConfiguration(),
       fetchUserProfile(userId),
       prisma.clientMemory.findUnique({ where: { userId } }),
-      prisma.user.findUnique({ 
+      prisma.user.findUnique({
         where: { id: userId },
-        select: { plan: true }
-      })
+        select: { plan: true },
+      }),
     ]);
-    
-    console.log("✅ Data fetched successfully", { 
-      hasConfig: !!config, 
-      hasProfile: !!userProfile, 
-      hasMemory: !!clientMemory, 
-      userPlan: userData?.plan 
+
+    console.log("✅ Data fetched successfully", {
+      hasConfig: !!config,
+      hasProfile: !!userProfile,
+      hasMemory: !!clientMemory,
+      userPlan: userData?.plan,
     });
 
-    // 2. Fetch High-Quality Knowledge from Vector DB using the new logic
-    console.log(`📚 Fetching KB context with threshold: ${config.ragSimilarityThreshold}`);
-    const knowledgeContext = await fetchKnowledgeContext(
+    // 2. Enhanced Knowledge Context Fetching for Workout Programming
+    console.log(
+      `📚 Fetching KB context with base threshold: ${config.ragSimilarityThreshold}`
+    );
+    const optimizedThreshold = optimizeSimilarityThreshold(
       newUserMessage,
-      config.ragMaxChunks,
       config.ragSimilarityThreshold
     );
-    console.log(`📚 Retrieved ${knowledgeContext.length} knowledge chunks.`);
 
-    // 3. Construct the full prompt for Gemini
-    console.log("🔨 Constructing prompt...");
-    const systemInstruction = config.systemPrompt;
-    const formattedContext = formatContextForPrompt(userProfile, clientMemory, knowledgeContext);
+    // Check if this is a workout/program request requiring comprehensive KB coverage
+    const isWorkoutProgramming =
+      /\b(workout|program|routine|training|split|plan|exercise|muscle)\b/i.test(
+        newUserMessage
+      );
 
-    const fullSystemPrompt = `${systemInstruction}\n\n${formattedContext}`;
-    console.log(`📝 System prompt length: ${fullSystemPrompt.length} chars`);
+    let knowledgeContext: KnowledgeContext[] = [];
 
-    // 5. Determine which model to use based on user selection and plan
+    if (isWorkoutProgramming) {
+      console.log(
+        "🏋️ Detected workout programming request - fetching comprehensive KB context"
+      );
+
+      // For workout programming, fetch broader context with multiple queries
+      const programmingQueries = [
+        newUserMessage, // Original query
+        "rep ranges hypertrophy muscle growth", // Rep range info
+        "sets volume per muscle group", // Set volume guidelines
+        "exercise selection machines cables", // Exercise selection principles
+        "training frequency split", // Frequency guidelines
+      ];
+
+      const allContexts: KnowledgeContext[] = [];
+      for (const query of programmingQueries) {
+        const context = await getEnhancedKnowledgeContext(
+          query,
+          Math.floor(config.ragMaxChunks / programmingQueries.length), // Distribute chunks across queries
+          Math.max(0.05, optimizedThreshold - 0.1), // Lower threshold for comprehensive coverage
+          config
+        );
+        allContexts.push(...context);
+      }
+
+      // Deduplicate by content similarity and take best chunks
+      const uniqueContexts = new Map<string, KnowledgeContext>();
+      allContexts.forEach((chunk) => {
+        const key = `${chunk.id}-${chunk.title}`;
+        if (
+          !uniqueContexts.has(key) ||
+          chunk.score > uniqueContexts.get(key)!.score
+        ) {
+          uniqueContexts.set(key, chunk);
+        }
+      });
+
+      knowledgeContext = Array.from(uniqueContexts.values())
+        .sort((a, b) => b.score - a.score)
+        .slice(0, config.ragMaxChunks);
+
+      console.log(
+        `📚 Comprehensive KB retrieval: ${knowledgeContext.length} unique chunks from ${allContexts.length} total`
+      );
+    } else {
+      // Standard single-query retrieval for non-programming requests
+      knowledgeContext = await getEnhancedKnowledgeContext(
+        newUserMessage,
+        config.ragMaxChunks,
+        optimizedThreshold,
+        config
+      );
+    }
+
+    console.log(
+      `📚 Retrieved ${knowledgeContext.length} knowledge chunks with optimized threshold: ${optimizedThreshold}`
+    );
+
+    // === DIVERSITY ENFORCEMENT: Ensure multi-muscle coverage to avoid false "no exercises" claims ===
+    try {
+      const MUSCLE_KEYWORDS: Record<string, string[]> = {
+        chest: ["chest", "pector"],
+        back: ["back", "lat", "row"],
+        shoulders: ["shoulder", "deltoid", "overhead", "lateral raise"],
+        biceps: ["bicep", "curl"],
+        triceps: ["tricep", "pushdown", "extension"],
+        quads: [
+          "quad",
+          "quadricep",
+          "leg press",
+          "leg extension",
+          "hack squat",
+        ],
+        hamstrings: ["hamstring", "leg curl", "romanian deadlift", "rdl"],
+        glutes: ["glute", "hip thrust"],
+        calves: ["calf", "calves", "calf raise"],
+        core: ["ab", "core", "crunch", "plank"],
+      };
+
+      const presentMuscles = new Set<string>();
+      const lowerContent = knowledgeContext.map((k) => k.content.toLowerCase());
+      for (const [muscle, tokens] of Object.entries(MUSCLE_KEYWORDS)) {
+        if (lowerContent.some((c) => tokens.some((t) => c.includes(t)))) {
+          presentMuscles.add(muscle);
+        }
+      }
+
+      // If we are clearly in a workout programming scenario, enforce diversity
+      const isProgramming =
+        /program|workout|split|upper|lower|push|pull|legs|hypertrophy/i.test(
+          newUserMessage
+        );
+      if (isProgramming) {
+        const missing = Object.keys(MUSCLE_KEYWORDS).filter(
+          (m) => !presentMuscles.has(m)
+        );
+        // Only attempt supplementation if we have fewer than half the muscle groups represented
+        if (presentMuscles.size < 4 && missing.length > 0) {
+          console.log(
+            `⚠️  Low muscle coverage detected (have ${
+              presentMuscles.size
+            }, missing: ${missing.join(
+              ", "
+            )}) – running supplemental keyword fetch.`
+          );
+          // Lightweight direct DB keyword fetch (not embedding) to pull at least one chunk per missing group
+          const supplemental: KnowledgeContext[] = [];
+          for (const muscle of missing.slice(0, 4)) {
+            // cap to avoid token explosion
+            try {
+              const firstToken = MUSCLE_KEYWORDS[muscle][0];
+              const rows = await prisma.knowledgeChunk.findMany({
+                where: {
+                  content: { contains: firstToken, mode: "insensitive" },
+                  knowledgeItem: { status: "READY" },
+                },
+                take: 1,
+                include: { knowledgeItem: { select: { title: true } } },
+              });
+              if (rows.length) {
+                supplemental.push({
+                  id: rows[0].id,
+                  title: rows[0].knowledgeItem.title,
+                  content: rows[0].content,
+                  score: 0.35, // below normal threshold but explicitly injected
+                });
+              }
+            } catch (e) {
+              console.log(`Supplemental fetch failed for ${muscle}:`, e);
+            }
+          }
+          if (supplemental.length) {
+            // Merge (avoid duplicates by id)
+            const existingIds = new Set(knowledgeContext.map((k) => k.id));
+            supplemental.forEach((s) => {
+              if (!existingIds.has(s.id)) knowledgeContext.push(s);
+            });
+            console.log(
+              `✅ Added ${supplemental.length} supplemental muscle coverage chunks.`
+            );
+          }
+        }
+      }
+    } catch (divErr) {
+      console.log("Muscle diversity enforcement error (non-fatal):", divErr);
+    }
+
+    // 3. Calculate token budget and optimize content
+    console.log("🔨 Optimizing content for token budget...");
+    const tokenBudget = calculateTokenBudget(config.maxTokens);
+    const formattedContext = formatContextForPrompt(
+      userProfile,
+      clientMemory,
+      knowledgeContext,
+      newUserMessage,
+      conversationHistory
+    );
+
+    const { optimizedSystem, optimizedContext, optimizedHistory } =
+      await optimizeContentForTokens(
+        config.systemPrompt,
+        formattedContext,
+        conversationHistory,
+        tokenBudget,
+        config,
+        clientMemory
+      );
+
+    const fullSystemPrompt = `${optimizedSystem}\n\n${optimizedContext}`;
+    console.log(
+      `📝 Optimized prompt - System: ${estimateTokens(
+        optimizedSystem
+      )} tokens, Context: ${estimateTokens(optimizedContext)} tokens`
+    );
+
+    // 4. Determine which model to use based on user selection and plan
     let modelName: string;
     if (selectedModel) {
       // User has selected a specific model
-      if (selectedModel === 'pro') {
+      if (selectedModel === "pro") {
         // User wants PRO model - check if they have PRO plan
-        if (userData?.plan === 'PRO') {
+        if (userData?.plan === "PRO") {
           modelName = config.proModelName;
           console.log(`🎯 Using user-selected PRO model: ${modelName}`);
         } else {
           // User doesn't have PRO plan, fallback to flash model
           modelName = config.freeModelName;
-          console.log(`⚠️ User selected PRO model but doesn't have PRO plan, using Flash model: ${modelName}`);
+          console.log(
+            `⚠️ User selected PRO model but doesn't have PRO plan, using Flash model: ${modelName}`
+          );
         }
       } else {
         // User selected flash model
@@ -196,81 +1661,141 @@ export async function generateChatResponse(
       }
     } else {
       // No specific model selected, use plan-based default
-      modelName = userData?.plan === 'PRO' ? config.proModelName : config.freeModelName;
-      console.log(`🔄 Using plan-based model: ${modelName} (plan: ${userData?.plan || 'FREE'})`);
+      modelName =
+        userData?.plan === "PRO" ? config.proModelName : config.freeModelName;
+      console.log(
+        `🔄 Using plan-based model: ${modelName} (plan: ${
+          userData?.plan || "FREE"
+        })`
+      );
     }
 
     console.log(`🤖 Using model: ${modelName}`);
-    const model = genAI.getGenerativeModel({ 
+    const model = genAI.getGenerativeModel({
       model: modelName,
       systemInstruction: {
         role: "system",
-        parts: [{ text: fullSystemPrompt }]
+        parts: [{ text: fullSystemPrompt }],
       },
-      tools: [{
-        functionDeclarations: functionDeclarations
-      }]
+      tools: [
+        {
+          functionDeclarations: functionDeclarations,
+        },
+      ],
     });
-    
+
     const generationConfig: GenerationConfig = {
       temperature: config.temperature,
       topP: config.topP,
       topK: config.topK,
       maxOutputTokens: config.maxTokens,
     };
-    
-    const formattedHistory = formatConversationHistory(conversationHistory);
-    const chat = model.startChat({ history: formattedHistory, generationConfig });
-    
+
+    const formattedHistory = formatConversationHistory(optimizedHistory);
+    const chat = model.startChat({
+      history: formattedHistory,
+      generationConfig,
+    });
+
     console.log("🔄 Sending request to Gemini...");
     const result = await chat.sendMessage(newUserMessage);
-    
+
     // Handle function calls if present
     let finalResponse = result.response;
+    let requiresConfirmation = false;
+    let conflictData: Record<string, unknown> | undefined;
     const functionCalls = result.response.functionCalls();
-    
+
     if (functionCalls && functionCalls.length > 0) {
       console.log(`🛠️ Processing ${functionCalls.length} function calls...`);
-      
+
       const functionResponses: Part[] = [];
-      
+
       for (const functionCall of functionCalls) {
         const { name, args } = functionCall;
         console.log(`📞 Calling function: ${name}`, args);
-        
+
         try {
           let functionResult: Record<string, unknown> = {};
-          
-          if (name === 'updateClientProfile') {
+
+          if (name === "updateClientProfile") {
             await handleProfileUpdate(userId, args as EnhancedMemoryUpdate);
-            functionResult = { success: true, message: 'Profile updated successfully' };
-          } else if (name === 'detectProfileConflict') {
-            const conflictHandled = await handleConflictDetection(userId, args as Parameters<typeof handleConflictDetection>[1]);
-            functionResult = { 
-              conflictDetected: true, 
+            functionResult = {
+              success: true,
+              message: "Profile updated successfully",
+            };
+          } else if (name === "detectProfileConflict") {
+            const conflictHandled = await handleConflictDetection(
+              userId,
+              args as Parameters<typeof handleConflictDetection>[1]
+            );
+            const conflictArgs = args as Record<string, unknown>;
+            requiresConfirmation = conflictArgs.resolutionNeeded as boolean;
+            conflictData = conflictArgs;
+
+            // If resolutionNeeded is not explicitly set but conflict type suggests it needs resolution
+            if (
+              !requiresConfirmation &&
+              conflictArgs.conflictType &&
+              [
+                "goal_conflict",
+                "experience_mismatch",
+                "training_frequency",
+              ].includes(conflictArgs.conflictType as string)
+            ) {
+              requiresConfirmation = true;
+              conflictData = { ...conflictArgs, resolutionNeeded: true };
+            }
+
+            console.log("🔍 Conflict detection details:", {
+              requiresConfirmation,
+              conflictData,
+              conflictHandled,
+            });
+
+            // EARLY RETURN: Don't continue processing if confirmation is needed
+            if (requiresConfirmation) {
+              console.log(
+                "⚠️ Conflict detected - returning early for user confirmation"
+              );
+              const confirmationPrompt =
+                generateConflictConfirmationPrompt(conflictData);
+              console.log("Generated confirmation prompt:", confirmationPrompt);
+              return {
+                content: confirmationPrompt,
+                citations: knowledgeContext,
+                requiresConfirmation: true,
+                conflictData,
+              };
+            }
+
+            functionResult = {
+              conflictDetected: true,
               handled: conflictHandled,
-              requiresUserConfirmation: (args as Record<string, unknown>).resolutionNeeded 
+              requiresUserConfirmation: false,
             };
           }
-          
+
           functionResponses.push({
             functionResponse: {
               name: functionCall.name,
-              response: functionResult
-            }
+              response: functionResult,
+            },
           });
-          
         } catch (error) {
           console.error(`❌ Error executing function ${name}:`, error);
           functionResponses.push({
             functionResponse: {
               name: functionCall.name,
-              response: { error: 'Function execution failed', message: error?.toString() }
-            }
+              response: {
+                error: "Function execution failed",
+                message: error?.toString(),
+              },
+            },
           });
         }
       }
-      
+
       // Send function responses back to the model for final response
       if (functionResponses.length > 0) {
         console.log("🔄 Sending function responses back to model...");
@@ -278,36 +1803,66 @@ export async function generateChatResponse(
         finalResponse = followUpResult.response;
       }
     }
-    
-    const aiContent = finalResponse.text();
+
+    let aiContent = finalResponse.text();
     console.log(`✅ Gemini response received: ${aiContent.length} chars`);
-    
+
     if (aiContent.length === 0) {
       console.error("❌ EMPTY RESPONSE FROM GEMINI!");
     }
-    
-    // 4. Asynchronously update memory without blocking the response
+
+    // 5. Enhanced Post-processing: Comprehensive Workout Programming Validation
+    console.log(
+      "🔍 Validating exercise compliance and programming adherence..."
+    );
+    aiContent = await validateExerciseCompliance(aiContent, knowledgeContext);
+
+    // Additional validation for workout programming
+    if (isWorkoutProgramming) {
+      console.log(
+        "🏋️ Applying comprehensive workout programming validation..."
+      );
+      aiContent = await validateWorkoutProgramming(
+        aiContent,
+        knowledgeContext,
+        newUserMessage
+      );
+
+      // Check for weak KB adherence and strengthen if needed
+      if (knowledgeContext.length > 0) {
+        aiContent = strengthenKBAdherence(
+          aiContent,
+          knowledgeContext,
+          newUserMessage
+        );
+      }
+    }
+
+    // 6. Asynchronously update memory without blocking the response
     updateMemory(userId, newUserMessage, aiContent).catch(console.error);
-    
-    // 5. Return the response and citations
-    console.log("🎯 Returning response with citations");
+
+    // 7. Return the response with enhanced data
+    console.log("🎯 Returning response with citations and metadata");
     return {
       content: aiContent,
-      citations: knowledgeContext
+      citations: knowledgeContext,
+      requiresConfirmation,
+      conflictData,
     };
-
   } catch (error) {
     console.error("❌ Error in generateChatResponse:", error);
     if (error instanceof Error) {
       console.error("❌ Error details:", {
         name: error.name,
         message: error.message,
-        stack: error.stack
+        stack: error.stack,
       });
     } else {
       console.error("❌ Unknown error type:", typeof error, error);
     }
-    throw new Error("I'm sorry, I encountered an error while generating a response. Please try again.");
+    throw new Error(
+      "I'm sorry, I encountered an error while generating a response. Please try again."
+    );
   }
 }
 
@@ -331,23 +1886,30 @@ export async function sendToGeminiWithCitations(
   _imageBuffers?: Buffer[],
   _imageMimeTypes?: string[],
   _userPlan?: string,
-  selectedModel?: 'flash' | 'pro'
+  selectedModel?: "flash" | "pro"
 ): Promise<AiResponse> {
   // Convert the conversation format
-  const convertedHistory: ConversationMessage[] = conversationHistory.map(msg => ({
-    role: msg.role === 'assistant' ? 'model' : 'user',
-    content: msg.content
-  }));
-  
+  const convertedHistory: ConversationMessage[] = conversationHistory.map(
+    (msg) => ({
+      role: msg.role === "assistant" ? "model" : "user",
+      content: msg.content,
+    })
+  );
+
   // Get the last user message
   const lastUserMessage = conversationHistory[conversationHistory.length - 1];
-  const newUserMessage = lastUserMessage?.content || '';
-  
-  return generateChatResponse(userId, convertedHistory.slice(0, -1), newUserMessage, selectedModel);
+  const newUserMessage = lastUserMessage?.content || "";
+
+  return generateChatResponse(
+    userId,
+    convertedHistory.slice(0, -1),
+    newUserMessage,
+    selectedModel
+  );
 }
 
 /**
- * Legacy function for sending to Gemini 
+ * Legacy function for sending to Gemini
  * @deprecated Use generateChatResponse instead
  */
 export async function sendToGemini(
@@ -355,19 +1917,25 @@ export async function sendToGemini(
   userId?: string
 ): Promise<string> {
   // Convert the conversation format
-  const convertedHistory: ConversationMessage[] = conversationHistory.map(msg => ({
-    role: msg.role === 'assistant' ? 'model' : 'user',
-    content: msg.content
-  }));
-  
+  const convertedHistory: ConversationMessage[] = conversationHistory.map(
+    (msg) => ({
+      role: msg.role === "assistant" ? "model" : "user",
+      content: msg.content,
+    })
+  );
+
   // Get the last user message
   const lastUserMessage = conversationHistory[conversationHistory.length - 1];
-  const newUserMessage = lastUserMessage?.content || '';
-  
+  const newUserMessage = lastUserMessage?.content || "";
+
   // Use a default userId if not provided
-  const defaultUserId = userId || 'test-user';
-  
-  const response = await generateChatResponse(defaultUserId, convertedHistory.slice(0, -1), newUserMessage);
+  const defaultUserId = userId || "test-user";
+
+  const response = await generateChatResponse(
+    defaultUserId,
+    convertedHistory.slice(0, -1),
+    newUserMessage
+  );
   return response.content;
 }
 
@@ -375,6 +1943,8 @@ export async function sendToGemini(
  * Legacy function for formatting conversation
  * @deprecated This is now handled internally in generateChatResponse
  */
-export function formatConversationForGemini(history: LegacyMessage[]): LegacyMessage[] {
+export function formatConversationForGemini(
+  history: LegacyMessage[]
+): LegacyMessage[] {
   return history; // Return as-is for compatibility
 }

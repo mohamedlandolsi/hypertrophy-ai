@@ -69,21 +69,22 @@ model Message {
 }
 
 model KnowledgeItem {
-  id        String           @id @default(cuid())
-  title     String
-  type      KnowledgeType
-  content   String?
-  fileName  String?
-  fileSize  Int?
-  filePath  String?
-  mimeType  String?
-  status    ProcessingStatus @default(PROCESSING)
-  category  String?          @default("General")
-  createdAt DateTime         @default(now())
-  updatedAt DateTime         @updatedAt
-  userId    String
-  chunks    KnowledgeChunk[]
-  user      User             @relation(fields: [userId], references: [id], onDelete: Cascade)
+  id                    String                  @id @default(cuid())
+  title                 String
+  type                  KnowledgeType
+  content               String?
+  fileName              String?
+  fileSize              Int?
+  filePath              String?
+  mimeType              String?
+  status                ProcessingStatus        @default(PROCESSING)
+  createdAt             DateTime                @default(now())
+  updatedAt             DateTime                @updatedAt
+  userId                String
+  category              String?                 @default("General")
+  chunks                KnowledgeChunk[]
+  user                  User                    @relation(fields: [userId], references: [id], onDelete: Cascade)
+  KnowledgeItemCategory KnowledgeItemCategory[]
 }
 
 model ClientMemory {
@@ -172,6 +173,47 @@ model AIConfiguration {
   toolEnforcementMode       String   @default("AUTO")
 }
 
+model Exercise {
+  id           String              @id
+  name         String              @unique
+  muscleGroup  ExerciseMuscleGroup
+  description  String?
+  instructions String?
+  equipment    String[]
+  category     ExerciseCategory    @default(APPROVED)
+  isActive     Boolean             @default(true)
+  difficulty   ExerciseDifficulty  @default(INTERMEDIATE)
+  createdAt    DateTime            @default(now())
+  updatedAt    DateTime
+
+  @@index([category])
+  @@index([isActive])
+  @@index([muscleGroup, category])
+  @@index([muscleGroup])
+}
+
+model KnowledgeCategory {
+  id                    String                  @id
+  name                  String                  @unique
+  description           String?
+  createdAt             DateTime                @default(now())
+  updatedAt             DateTime
+  KnowledgeItemCategory KnowledgeItemCategory[]
+}
+
+model KnowledgeItemCategory {
+  id                  String            @id
+  knowledgeItemId     String
+  knowledgeCategoryId String
+  createdAt           DateTime          @default(now())
+  KnowledgeCategory   KnowledgeCategory @relation(fields: [knowledgeCategoryId], references: [id], onDelete: Cascade)
+  KnowledgeItem       KnowledgeItem     @relation(fields: [knowledgeItemId], references: [id], onDelete: Cascade)
+
+  @@unique([knowledgeItemId, knowledgeCategoryId])
+  @@index([knowledgeCategoryId])
+  @@index([knowledgeItemId])
+}
+
 enum Role {
   USER
   ASSISTANT
@@ -206,4 +248,31 @@ enum ActivityLevel {
   MODERATE
   ACTIVE
   VERY_ACTIVE
+}
+
+enum ExerciseCategory {
+  APPROVED
+  PENDING
+  DEPRECATED
+}
+
+enum ExerciseDifficulty {
+  BEGINNER
+  INTERMEDIATE
+  ADVANCED
+}
+
+enum ExerciseMuscleGroup {
+  CHEST
+  BACK
+  SHOULDERS
+  BICEPS
+  TRICEPS
+  FOREARMS
+  ABS
+  GLUTES
+  QUADRICEPS
+  HAMSTRINGS
+  ADDUCTORS
+  CALVES
 }

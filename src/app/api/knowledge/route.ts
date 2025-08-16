@@ -32,10 +32,19 @@ export async function GET(request: NextRequest) {
       create: { id: user.id }
     });
 
-    // Fetch knowledge items for the user
+    // Fetch knowledge items for the user with categories
     const knowledgeItems = await prisma.knowledgeItem.findMany({
       where: {
         userId: user.id,
+      },
+      include: {
+        KnowledgeItemCategory: {
+          include: {
+            KnowledgeCategory: {
+              select: { id: true, name: true }
+            }
+          }
+        }
       },
       orderBy: {
         createdAt: 'desc'

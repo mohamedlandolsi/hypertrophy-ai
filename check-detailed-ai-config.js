@@ -37,12 +37,12 @@ async function checkAIConfigDetails() {
       await prisma.aIConfiguration.update({
         where: { id: 'singleton' },
         data: { 
-          freeModelName: 'gemini-1.5-flash',
-          proModelName: 'gemini-1.5-pro'
+          freeModelName: 'gemini-2.5-flash',
+          proModelName: 'gemini-2.5-pro'
         }
       });
       
-      console.log('✅ Model names updated: Free=gemini-1.5-flash, Pro=gemini-1.5-pro');
+  console.log('✅ Model names updated: Free=gemini-2.5-flash, Pro=gemini-2.5-pro');
     }
 
     // Check if the system prompt encourages knowledge synthesis

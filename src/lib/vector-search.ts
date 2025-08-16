@@ -35,15 +35,23 @@ async function getEmbedding(query: string): Promise<number[]> {
  * @param query - The user's message/question.
  * @param maxChunks - The maximum number of chunks to return.
  * @param similarityThreshold - The minimum similarity score for a chunk to be considered relevant.
+ * @param categoryIds - Optional array of category IDs to filter results to specific categories.
  * @returns A promise that resolves to an array of KnowledgeContext objects.
  */
 export async function fetchKnowledgeContext(
     query: string,
     maxChunks: number,
     similarityThreshold: number,
+    categoryIds?: string[]
 ): Promise<KnowledgeContext[]> {
     try {
         console.log(`🚀 Starting vector search for "${query}" with threshold ${similarityThreshold}`);
+        
+        // Always include "myths" category to check for misconceptions
+        const enhancedCategoryIds = categoryIds ? [...categoryIds] : [];
+        if (!enhancedCategoryIds.includes('myths')) {
+            enhancedCategoryIds.push('myths');
+        }
         
         // 1. Generate an embedding for the user's query
         const queryEmbedding = await getEmbedding(query);
@@ -54,19 +62,43 @@ export async function fetchKnowledgeContext(
         // Query more candidates than needed to ensure high-quality filtering
         const candidateLimit = maxChunks * 3;
         
-        const chunks = await prisma.$queryRaw`
-            SELECT
-              kc.id,
-              kc.content,
-              ki.title,
-              1 - (kc."embeddingData"::vector <=> ${embeddingStr}::vector) as score
-            FROM "KnowledgeChunk" kc
-            JOIN "KnowledgeItem" ki ON kc."knowledgeItemId" = ki.id  
-            WHERE ki.status = 'READY' 
-              AND kc."embeddingData" IS NOT NULL
-            ORDER BY kc."embeddingData"::vector <=> ${embeddingStr}::vector
-            LIMIT ${candidateLimit}
-          `;
+        let chunks;
+        
+        if (enhancedCategoryIds.length > 0) {
+            console.log(`🏷️ Including categories: ${enhancedCategoryIds.join(', ')} (myths always included)`);
+            // Query with category filtering (including myths)
+            chunks = await prisma.$queryRaw`
+                SELECT DISTINCT
+                  kc.id,
+                  kc.content,
+                  ki.title,
+                  1 - (kc."embeddingData"::vector <=> ${embeddingStr}::vector) as score
+                FROM "KnowledgeChunk" kc
+                JOIN "KnowledgeItem" ki ON kc."knowledgeItemId" = ki.id  
+                JOIN "KnowledgeItemCategory" kic ON ki.id = kic."knowledgeItemId"
+                JOIN "KnowledgeCategory" kcat ON kic."knowledgeCategoryId" = kcat.id
+                WHERE ki.status = 'READY' 
+                  AND kc."embeddingData" IS NOT NULL
+                  AND kcat.name = ANY(${enhancedCategoryIds})
+                ORDER BY kc."embeddingData"::vector <=> ${embeddingStr}::vector
+                LIMIT ${candidateLimit}
+            `;
+        } else {
+            // Query without category filtering (original behavior)
+            chunks = await prisma.$queryRaw`
+                SELECT
+                  kc.id,
+                  kc.content,
+                  ki.title,
+                  1 - (kc."embeddingData"::vector <=> ${embeddingStr}::vector) as score
+                FROM "KnowledgeChunk" kc
+                JOIN "KnowledgeItem" ki ON kc."knowledgeItemId" = ki.id  
+                WHERE ki.status = 'READY' 
+                  AND kc."embeddingData" IS NOT NULL
+                ORDER BY kc."embeddingData"::vector <=> ${embeddingStr}::vector
+                LIMIT ${candidateLimit}
+            `;
+        }
 
         const results = (chunks as Array<{
             id: string;
@@ -214,6 +246,101 @@ export async function runEmbeddingAudit() {
     chunksWithEmbeddings: chunks.filter(c => c.embeddingData).length,
     auditComplete: true
   };
+}
+
+/**
+ * Get knowledge context for specific muscle groups and workout types
+ * This function helps the AI prioritize relevant categories based on the workout context
+ */
+export async function fetchCategoryBasedKnowledge(
+  query: string,
+  muscleGroups: string[],
+  workoutType: 'hypertrophy' | 'strength' | 'endurance' = 'hypertrophy',
+  maxChunks: number = 10,
+  similarityThreshold: number = 0.7
+): Promise<KnowledgeContext[]> {
+  try {
+    console.log(`🎯 Fetching category-based knowledge for ${muscleGroups.join(', ')} (${workoutType})`);
+    
+    // Define category mappings based on workout context
+    const categoryMap: Record<string, string[]> = {
+      // Muscle-specific categories
+      'chest': ['chest', 'chest_exercises', 'pushing_movements'],
+      'back': ['back', 'back_exercises', 'pulling_movements', 'lats'],
+      'shoulders': ['shoulders', 'shoulder_exercises', 'delts', 'pressing_movements'],
+      'biceps': ['biceps', 'arm_exercises', 'elbow_flexors'],
+      'triceps': ['triceps', 'arm_exercises', 'elbow_extensors'],
+      'forearms': ['forearms', 'arm_exercises', 'grip_strength'],
+      'quadriceps': ['quadriceps', 'leg_exercises', 'thighs', 'squatting_movements'],
+      'hamstrings': ['hamstrings', 'leg_exercises', 'thighs', 'hip_hinge'],
+      'glutes': ['glutes', 'leg_exercises', 'hip_extension'],
+      'calves': ['calves', 'leg_exercises', 'lower_legs'],
+      'abs': ['abs', 'core', 'core_exercises', 'abdominals'],
+      
+      // Workout type categories
+      'hypertrophy': ['hypertrophy_programs', 'hypertrophy_principles', 'muscle_building'],
+      'strength': ['strength_training', 'powerlifting', 'max_strength'],
+      'endurance': ['endurance_training', 'cardio', 'conditioning']
+    };
+    
+    // Build category list based on muscle groups and workout type
+    const targetCategories = new Set<string>();
+    
+    // Always include myths category to check for misconceptions
+    targetCategories.add('myths');
+    
+    // Add workout type categories
+    if (categoryMap[workoutType]) {
+      categoryMap[workoutType].forEach(cat => targetCategories.add(cat));
+    }
+    
+    // Add muscle-specific categories
+    muscleGroups.forEach(muscle => {
+      const normalizedMuscle = muscle.toLowerCase().replace(/s$/, ''); // Remove plural 's'
+      if (categoryMap[normalizedMuscle]) {
+        categoryMap[normalizedMuscle].forEach(cat => targetCategories.add(cat));
+      }
+    });
+    
+    const categoryIds = Array.from(targetCategories);
+    console.log(`🔍 Searching in categories: ${categoryIds.join(', ')}`);
+    
+    // Fetch knowledge with category filtering
+    const results = await fetchKnowledgeContext(
+      query,
+      maxChunks,
+      similarityThreshold,
+      categoryIds
+    );
+    
+    // If category-specific search yields few results, fall back to general search
+    if (results.length < maxChunks / 2) {
+      console.log(`⚠️ Category search yielded only ${results.length} results, supplementing with general search`);
+      const generalResults = await fetchKnowledgeContext(
+        query,
+        maxChunks - results.length,
+        similarityThreshold
+      );
+      
+      // Combine and deduplicate results
+      const combinedResults = [...results];
+      const existingIds = new Set(results.map(r => r.id));
+      
+      generalResults.forEach(result => {
+        if (!existingIds.has(result.id)) {
+          combinedResults.push(result);
+        }
+      });
+      
+      return combinedResults;
+    }
+    
+    return results;
+  } catch (error) {
+    console.error('Error in category-based knowledge fetch:', error);
+    // Fall back to general search
+    return await fetchKnowledgeContext(query, maxChunks, similarityThreshold);
+  }
 }
 
 /**

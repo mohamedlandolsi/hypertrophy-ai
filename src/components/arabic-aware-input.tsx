@@ -22,13 +22,15 @@ export const ArabicAwareInput: React.FC<ArabicAwareInputProps> = ({
   const [direction, setDirection] = useState<'ltr' | 'rtl' | 'auto'>('ltr');
   
   useEffect(() => {
-    const textDirection = getTextDirection(value);
+    const safeValue = value || '';
+    const textDirection = getTextDirection(safeValue);
     setDirection(textDirection);
   }, [value]);
   
   const getPlaceholder = () => {
+    const safeValue = value || '';
     // If user is typing Arabic, show Arabic placeholder
-    if (direction === 'rtl' || isArabicText(value)) {
+    if (direction === 'rtl' || isArabicText(safeValue)) {
       return "اكتب رسالة للمدرب الذكي...";
     }
     return placeholder;
@@ -44,7 +46,7 @@ export const ArabicAwareInput: React.FC<ArabicAwareInputProps> = ({
       disabled={disabled}
       onKeyDown={onKeyDown}
       dir={direction}
-      lang={isArabicText(value) ? 'ar' : 'en'}
+      lang={isArabicText(value || '') ? 'ar' : 'en'}
       style={{
         unicodeBidi: direction === 'auto' ? 'plaintext' : 'normal',
         textAlign: direction === 'rtl' ? 'right' : 'left'

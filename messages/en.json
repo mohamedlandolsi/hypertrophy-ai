@@ -1494,6 +1494,11 @@
       "continue": "Continue",
       "confirm": "Confirm",
       "keyboardShortcuts": "Enter to send • Shift+Enter for new line"
+    },
+    "comingSoon": {
+      "title": "Chat Coming Soon",
+      "subtitle": "Something amazing is on the way",
+      "description": "We're working hard to bring you an incredible chat experience with your AI fitness coach. Stay tuned for updates!"
     }
   },
   "maintenance": {

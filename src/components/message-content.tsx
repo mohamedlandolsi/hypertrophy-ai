@@ -14,7 +14,7 @@ import {
 } from "@/components/ui/dialog";
 
 interface MessageContentProps {
-  content: string;
+  content: string | null | undefined;
   role: 'user' | 'assistant';
   imageData?: string | string[]; // Support both single and multiple images
   imageMimeType?: string | string[];
@@ -26,7 +26,9 @@ interface MessageContentProps {
 }
 
 export const MessageContent: React.FC<MessageContentProps> = ({ content, imageData, images }) => {
-  const formatting = getTextFormatting(content);
+  // Handle null/undefined content gracefully
+  const safeContent = content || '';
+  const formatting = getTextFormatting(safeContent);
   const [isImageDialogOpen, setIsImageDialogOpen] = useState(false);
   const [selectedImageIndex, setSelectedImageIndex] = useState(0);
   
@@ -74,7 +76,7 @@ export const MessageContent: React.FC<MessageContentProps> = ({ content, imageDa
     >
       {/* Display images if present */}
       {processedImages.length > 0 && (
-        <div className={`${content && content !== '[Image]' ? 'mb-3' : ''} w-full overflow-hidden`}>
+        <div className={`${safeContent && safeContent !== '[Image]' ? 'mb-3' : ''} w-full overflow-hidden`}>
           {processedImages.length === 1 && processedImages[0]?.data ? (
             // Single image display
             <Dialog open={isImageDialogOpen} onOpenChange={setIsImageDialogOpen}>
@@ -208,7 +210,7 @@ export const MessageContent: React.FC<MessageContentProps> = ({ content, imageDa
       )}
       
       {/* Only show text content if it exists and is not just the placeholder */}
-      {content && content !== '[Image]' && (
+      {safeContent && safeContent !== '[Image]' && (
         <div className="max-w-none">
         <ReactMarkdown
           remarkPlugins={[remarkGfm]}
@@ -342,7 +344,7 @@ export const MessageContent: React.FC<MessageContentProps> = ({ content, imageDa
           ),
         }}
       >
-        {content}
+        {safeContent}
       </ReactMarkdown>
         </div>
       )}

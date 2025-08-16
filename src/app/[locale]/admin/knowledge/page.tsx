@@ -9,6 +9,7 @@ import AdminLayout from '@/components/admin-layout';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
+import { Badge } from '@/components/ui/badge';
 import { Tabs, TabsList, TabsTrigger, TabsContent } from '@/components/ui/tabs';
 import KnowledgeProcessingMonitor from '@/components/knowledge-processing-monitor';
 import { showToast } from '@/lib/toast';
@@ -29,7 +30,8 @@ import {
   FileSpreadsheet,
   RefreshCw,
   Edit,
-  ExternalLink
+  ExternalLink,
+  Tags
 } from 'lucide-react';
 import {
   DropdownMenu,
@@ -47,6 +49,8 @@ import {
 import { Label } from '@/components/ui/label';
 import RichTextEditor from '@/components/ui/rich-text-editor';
 import SafeHtmlRenderer from '@/components/ui/safe-html-renderer';
+import CategoryManagement from '@/components/admin/category-management';
+import ItemCategoryManager from '@/components/admin/item-category-manager';
 
 // Helper function to check if HTML content is empty
 const isHtmlContentEmpty = (html: string): boolean => {
@@ -65,6 +69,12 @@ interface KnowledgeItem {
   mimeType?: string;
   createdAt: string;
   status: 'PROCESSING' | 'READY' | 'ERROR';
+  KnowledgeItemCategory?: {
+    KnowledgeCategory: {
+      id: string;
+      name: string;
+    };
+  }[];
 }
 
 export default function KnowledgePage() {
@@ -93,37 +103,47 @@ export default function KnowledgePage() {
 
   const checkAdminAccess = useCallback(async () => {
     try {
+      console.log('🔐 Checking admin access...');
       const supabase = createClient();
       const { data: { user: currentUser } } = await supabase.auth.getUser();
       
       if (!currentUser) {
+        console.log('❌ No authenticated user found, redirecting to login');
         router.push('/login');
         return;
       }
 
+      console.log('👤 Authenticated user:', currentUser.id);
       setUser(currentUser);
 
       // Verify admin access by trying to fetch admin config
+      console.log('🔍 Verifying admin access via /api/admin/config...');
       const response = await fetch('/api/admin/config');
+      console.log('📡 Admin config response status:', response.status);
+      
       if (response.status === 401) {
+        console.log('❌ Unauthorized, redirecting to login');
         router.push('/login');
         return;
       }
       if (response.status === 403) {
+        console.log('❌ Forbidden, user is not admin');
         setAdminAccessError('Access denied. Admin privileges required to access knowledge management.');
         setIsLoading(false);
         return;
       }
       if (!response.ok) {
+        console.log('❌ Admin config request failed:', response.statusText);
         setAdminAccessError('Unable to verify admin access.');
         setIsLoading(false);
         return;
       }
 
+      console.log('✅ Admin access verified, fetching knowledge items...');
       // Admin access verified, fetch knowledge items
       await fetchKnowledgeItems();
     } catch (error) {
-      console.error('Admin access check failed:', error);
+      console.error('💥 Admin access check failed:', error);
       setAdminAccessError('Access denied. Admin privileges required to access knowledge management.');
       setIsLoading(false);
     }
@@ -135,19 +155,41 @@ export default function KnowledgePage() {
   const fetchKnowledgeItems = async () => {
     setIsLoading(true);
     try {
+      console.log('🔍 Fetching knowledge items...');
       const response = await fetch('/api/knowledge');
+      console.log('📡 Knowledge API response status:', response.status);
+      
       if (response.ok) {
         const data = await response.json();
-        setKnowledgeItems(data.knowledgeItems);
+        console.log('📊 Knowledge API response data:', data);
+        console.log(`✅ Setting ${data.knowledgeItems?.length || 0} knowledge items`);
+        setKnowledgeItems(data.knowledgeItems || []);
       } else {
-        console.error('Failed to fetch knowledge items');
+        const errorText = await response.text();
+        console.error('❌ Failed to fetch knowledge items:', {
+          status: response.status,
+          statusText: response.statusText,
+          error: errorText
+        });
+        setKnowledgeItems([]);
       }
     } catch (error) {
-      console.error('Error fetching knowledge items:', error);
+      console.error('💥 Error fetching knowledge items:', error);
+      setKnowledgeItems([]);
     } finally {
       setIsLoading(false);
+      console.log('🏁 Finished fetching knowledge items');
     }
   };
+
+  // Optimized update handler that updates only the specific item
+  const handleKnowledgeItemUpdate = useCallback((updatedItem: KnowledgeItem) => {
+    setKnowledgeItems(prevItems => 
+      prevItems.map(item => 
+        item.id === updatedItem.id ? updatedItem : item
+      )
+    );
+  }, []);
 
   const handleDrag = (e: React.DragEvent) => {
     e.preventDefault();
@@ -607,7 +649,7 @@ export default function KnowledgePage() {
         {/* Upload Section */}
         <div className="mb-8">
           <Tabs defaultValue="upload" className="w-full">
-            <TabsList className="grid w-full grid-cols-2">
+            <TabsList className="grid w-full grid-cols-3">
               <TabsTrigger value="upload" className="flex items-center gap-2">
                 <Upload className="h-4 w-4" />
                 Upload Files
@@ -615,6 +657,10 @@ export default function KnowledgePage() {
               <TabsTrigger value="text" className="flex items-center gap-2">
                 <FileText className="h-4 w-4" />
                 Add Text Content
+              </TabsTrigger>
+              <TabsTrigger value="categories" className="flex items-center gap-2">
+                <Tags className="h-4 w-4" />
+                Categories
               </TabsTrigger>
             </TabsList>
             
@@ -740,6 +786,10 @@ export default function KnowledgePage() {
                   </Button>
                 </CardContent>
               </Card>
+            </TabsContent>
+            
+            <TabsContent value="categories">
+              <CategoryManagement />
             </TabsContent>
           </Tabs>
         </div>
@@ -886,8 +936,23 @@ export default function KnowledgePage() {
                             {item.status.toLowerCase()}
                           </span>
                         </div>
+                        {/* Categories Display */}
+                        {item.KnowledgeItemCategory && item.KnowledgeItemCategory.length > 0 && (
+                          <div className="flex flex-wrap gap-1 mt-2">
+                            {item.KnowledgeItemCategory.map((kic) => (
+                              <Badge key={kic.KnowledgeCategory.id} variant="outline" className="text-xs">
+                                {kic.KnowledgeCategory.name}
+                              </Badge>
+                            ))}
+                          </div>
+                        )}
                       </div>
                     </div>
+                    <div className="flex items-center gap-2">
+                      <ItemCategoryManager 
+                        item={item} 
+                        onUpdate={handleKnowledgeItemUpdate}
+                      />
                     <DropdownMenu>
                       <DropdownMenuTrigger asChild>
                         <Button variant="ghost" size="sm">
@@ -918,6 +983,7 @@ export default function KnowledgePage() {
                         </DropdownMenuItem>
                       </DropdownMenuContent>
                     </DropdownMenu>
+                    </div>
                   </div>
                 ))
               )}

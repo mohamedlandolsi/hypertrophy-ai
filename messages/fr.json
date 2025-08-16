@@ -1354,6 +1354,11 @@
       "continue": "Continuer",
       "confirm": "Confirmer",
       "keyboardShortcuts": "Entrée pour envoyer • Shift+Entrée pour nouvelle ligne"
+    },
+    "comingSoon": {
+      "title": "Chat Bientôt Disponible",
+      "subtitle": "Quelque chose d'incroyable arrive",
+      "description": "Nous travaillons dur pour vous offrir une expérience de chat incroyable avec votre coach fitness IA. Restez à l'écoute pour les mises à jour !"
     }
   },
   "privacyPolicy": {

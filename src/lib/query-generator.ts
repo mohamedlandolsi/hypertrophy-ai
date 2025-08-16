@@ -38,7 +38,7 @@ export async function generateSubQueries(userQuery: string): Promise<string[]> {
     
     // Use a fast model for query generation
     const model = genAI.getGenerativeModel({ 
-      model: 'gemini-1.5-flash-latest',
+  model: 'gemini-2.5-flash',
       generationConfig: {
         temperature: 0.3, // Lower temperature for more consistent output
         maxOutputTokens: 500, // Limit tokens for efficiency

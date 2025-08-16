@@ -60,6 +60,8 @@ import { PlanBadge } from '@/components/plan-badge';
 import { useOnlineStatus } from '@/hooks/use-online-status';
 import { UpgradeLimitDialog } from '@/components/upgrade-limit-dialog';
 import { BetaBadge } from '@/components/beta-badge';
+import MaintenanceCheck from '@/components/maintenance-check';
+import ComingSoon from '@/components/coming-soon';
 
 const ChatPage = () => {
   const t = useTranslations('ChatPage');
@@ -1136,8 +1138,21 @@ const ChatPage = () => {
     </div>
   );
 
-  // Show loading state while initializing
-  if (isInitializing) {
+  // Local state to re-check env after mount (ensures we don't lose value due to build-time replacement edge cases)
+  const [chatComingSoon, setChatComingSoon] = reactUseState<boolean | null>(null);
+
+  useEffect(() => {
+    // Read public env variable at runtime (will be inlined but we still capture it after hydration)
+    const flag = process.env.NEXT_PUBLIC_CHAT_COMING_SOON === 'true';
+    // Debug log (only once)
+    if (typeof window !== 'undefined') {
+      console.log('[ChatPage] NEXT_PUBLIC_CHAT_COMING_SOON =', process.env.NEXT_PUBLIC_CHAT_COMING_SOON, '->', flag);
+    }
+    setChatComingSoon(flag);
+  }, [setChatComingSoon]);
+
+  // Show loading state while initializing core data (but allow coming soon fast path once env known)
+  if (isInitializing && chatComingSoon !== true) {
     return (
       <FullPageLoading 
         variant="fitness" 
@@ -1147,8 +1162,20 @@ const ChatPage = () => {
     );
   }
 
+  // Gate chat page with Coming Soon overlay once we've resolved the env flag
+  if (chatComingSoon === true) {
+    return (
+      <ComingSoon
+        title={t('comingSoon.title')}
+        subtitle={t('comingSoon.subtitle')}
+        description={t('comingSoon.description')}
+      />
+    );
+  }
+
   return (
-    <div className={`flex ${isMobile ? 'mobile-chat-container' : 'h-[100dvh]'} bg-background text-foreground overflow-hidden relative animate-fade-in`}>
+    <MaintenanceCheck locale={locale}>
+      <div className={`flex ${isMobile ? 'mobile-chat-container' : 'h-[100dvh]'} bg-background text-foreground overflow-hidden relative animate-fade-in`}>
       {/* Mobile Backdrop Overlay */}
       {isMobile && isSidebarOpen && (
         <div 
@@ -2051,6 +2078,7 @@ const ChatPage = () => {
         </DialogContent>
       </Dialog>
     </div>
+    </MaintenanceCheck>
   );
 };
 

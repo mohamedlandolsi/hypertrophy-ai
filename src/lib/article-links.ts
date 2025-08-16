@@ -47,8 +47,9 @@ export function extractArticleLinks(content: string): {
 /**
  * Process message content to separate article links
  */
-export function processMessageContent(content: string) {
-  const { cleanContent, articleLinks } = extractArticleLinks(content);
+export function processMessageContent(content: string | null | undefined) {
+  const safeContent = content || '';
+  const { cleanContent, articleLinks } = extractArticleLinks(safeContent);
   
   return {
     content: cleanContent,

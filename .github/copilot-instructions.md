@@ -12,6 +12,7 @@
 - **Performance-First**: Optimized for <2s page loads with advanced caching and component optimization
 - **Next.js 15 + React 19**: Latest versions with App Router, Server Components, and React concurrent features
 - **PostgreSQL + pgvector**: Advanced vector similarity search with full-text search integration
+- **Edge Runtime Compatibility**: Middleware and API routes designed for Vercel Edge Runtime limitations
 
 ### Core Components
 - **RAG System**: Optimized pgvector + AND-based keyword search (`/src/lib/vector-search.ts`)
@@ -116,6 +117,9 @@ NEXT_PUBLIC_SITE_URL=            # Site URL for checkout redirects
 - `test-ai-integration.js` - Test Gemini API integration
 - `test-enhanced-rag.js` - Validate RAG system performance
 - `debug-lemonsqueezy-checkout.js` - Test subscription checkout flow
+- `demonstrate-free-messages-journey.js` - Test new free messages system
+- `test-maintenance-mode.js` - Verify maintenance mode functionality
+- `test-enhanced-gemini-improvements.js` - Validate new Gemini AI enhancements
 
 ### Critical Debug Script Patterns
 ```javascript
@@ -147,7 +151,31 @@ const context = await fetchRelevantKnowledge(embedding, 10, 0.05);
 const response = await generateAIResponse(query, context, userMemory);
 ```
 
-### 2. AI Configuration Enforcement (REQUIRED FOR SYSTEM TO WORK)
+### 2. Enhanced Gemini AI Integration (PRODUCTION-READY)
+```typescript
+// Token-aware prompt construction with priority system
+const budget = calculateTokenBudget(config.maxTokens);
+const { optimizedSystem, optimizedContext, optimizedHistory } = optimizeContentForTokens(
+  config.systemPrompt, formattedContext, conversationHistory, budget
+);
+
+// Exercise compliance validation - ensures KB-only recommendations
+const validatedResponse = await validateExerciseCompliance(aiContent, knowledgeContext);
+
+// Enhanced JSON repair for memory extraction
+const repairedMemory = repairJSON(geminiResponse); // Handles malformed LLM JSON
+
+// Conflict confirmation flow
+if (response.requiresConfirmation) {
+  return generateConflictConfirmationPrompt(response.conflictData);
+}
+```
+- **Token Management**: Prioritizes core directives > KB context > conversation history
+- **Exercise Validation**: Post-processes responses to flag exercises not in knowledge base
+- **Robust Memory Updates**: JSON repair handles malformed LLM responses gracefully
+- **Conflict Resolution**: Enhanced flow for handling profile conflicts with user confirmation
+
+### 3. AI Configuration Enforcement (REQUIRED FOR SYSTEM TO WORK)
 ```typescript
 // All AI operations require admin setup via getAIConfiguration() in /src/lib/gemini.ts
 const config = await getAIConfiguration(userPlan); // Throws if not configured
@@ -381,7 +409,7 @@ const { functionName } = require('./src/lib/module-name');
 - **Database Optimization**: Connection pooling settings in `.env` for scalability
 
 ### Common Issues
-- **"AI Configuration not found"** → Run `/admin` setup first
+- **"AI Configuration not found"** → Run `/admin/settings` setup first
 - **Empty knowledge responses** → Check vector embeddings with debug scripts
 - **Hydration mismatches** → Use `ClientOnly` wrapper for dynamic content
 - **Auth issues during onboarding** → Check `hasCompletedOnboarding` flag in User table
@@ -397,6 +425,8 @@ const { functionName } = require('./src/lib/module-name');
 - **Vector search performance issues** → Verify batch processing (100-chunk batches) is working
 - **Middleware conflicts** → Ensure Supabase auth and next-intl middleware are properly chained
 - **Build failures** → Run `npm run postinstall` to regenerate Prisma client
+- **Maintenance mode not working** → Set both `MAINTENANCE_MODE` and `NEXT_PUBLIC_MAINTENANCE_MODE` environment variables
+- **Edge Runtime compatibility** → Avoid Node.js specific APIs in middleware and API routes
 
 ## 📝 File Naming Conventions
 
@@ -449,6 +479,9 @@ src/
 // Check src/app/maintenance/page.tsx for maintenance page
 // Admin users can still access the system during maintenance
 // Controlled via environment variable MAINTENANCE_MODE=true
+// IMPORTANT: Must set both MAINTENANCE_MODE and NEXT_PUBLIC_MAINTENANCE_MODE
+// Client-side components use NEXT_PUBLIC_MAINTENANCE_MODE
+// API routes use MAINTENANCE_MODE (server-side)
 ```
 
 ### Free Messages System (NEW!)
