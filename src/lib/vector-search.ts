@@ -20,8 +20,6 @@ const genAI = new GoogleGenerativeAI(process.env.GEMINI_API_KEY);
 
 /**
  * Generates an embedding for a given text query using Gemini.
- * @param query - The text to embed.
- * @returns The embedding vector (an array of numbers).
  */
 async function getEmbedding(query: string): Promise<number[]> {
     const embeddingModel = genAI.getGenerativeModel({ model: "text-embedding-004" });
@@ -30,13 +28,107 @@ async function getEmbedding(query: string): Promise<number[]> {
 }
 
 /**
- * Fetches relevant knowledge base chunks using efficient vector similarity search
- * This is the primary RAG function - currently using pgvector with Pinecone interface compatibility
- * @param query - The user's message/question.
- * @param maxChunks - The maximum number of chunks to return.
- * @param similarityThreshold - The minimum similarity score for a chunk to be considered relevant.
- * @param categoryIds - Optional array of category IDs to filter results to specific categories.
- * @returns A promise that resolves to an array of KnowledgeContext objects.
+ * ENHANCED: Detect query type for proper category prioritization
+ */
+function detectQueryType(query: string): {
+    isProgramGeneration: boolean;
+    isProgramReview: boolean;
+    mentionedMuscles: string[];
+    isMyths: boolean;
+} {
+    const lowerQuery = query.toLowerCase();
+    
+    // Program generation detection
+    const programKeywords = [
+        'create program', 'workout program', 'training program', 'workout plan', 
+        'training plan', 'routine', 'design program', 'build program', 'split',
+        'schedule workout', 'weekly plan', 'training split'
+    ];
+    const isProgramGeneration = programKeywords.some(keyword => lowerQuery.includes(keyword)) ||
+        /create.*\d.*day.*workout/i.test(query) ||
+        /design.*\d.*day.*program/i.test(query);
+    
+    // Program review detection  
+    const reviewKeywords = [
+        'review my program', 'review my workout', 'check my program', 'evaluate my program',
+        'analyze my program', 'feedback on my', 'what do you think of my', 'rate my',
+        'critique my', 'here is my program', 'this is my workout'
+    ];
+    const isProgramReview = reviewKeywords.some(keyword => lowerQuery.includes(keyword)) ||
+        /here.*is.*my.*(program|workout|routine)/i.test(query) ||
+        /is.*this.*(program|workout).*good/i.test(query);
+    
+    // Muscle group detection
+    const muscleGroups = [
+        'chest', 'pectorals', 'pecs', 'biceps', 'bicep', 'triceps', 'tricep',
+        'shoulders', 'delts', 'deltoids', 'back', 'lats', 'latissimus', 'rhomboids', 
+        'traps', 'trapezius', 'legs', 'quads', 'quadriceps', 'hamstrings', 'glutes',
+        'calves', 'abs', 'core', 'abdominals', 'forearms', 'forearm'
+    ];
+    const mentionedMuscles = muscleGroups.filter(muscle => lowerQuery.includes(muscle));
+    
+    // Myths detection
+    const mythsKeywords = ['myth', 'misconception', 'true or false', 'fact check', 'is it true'];
+    const isMyths = mythsKeywords.some(keyword => lowerQuery.includes(keyword));
+    
+    return { isProgramGeneration, isProgramReview, mentionedMuscles, isMyths };
+}
+
+/**
+ * ENHANCED: Apply strict category prioritization based on query requirements
+ */
+function getPrioritizedCategories(queryAnalysis: ReturnType<typeof detectQueryType>): string[] {
+    const categories: string[] = [];
+    
+    // REQUIREMENT: Always include myths for misconception checking
+    categories.push('myths');
+    
+    // REQUIREMENT: Training program generation prioritizes hypertrophy_programs
+    if (queryAnalysis.isProgramGeneration) {
+        categories.unshift('hypertrophy_programs', 'hypertrophy_principles');
+    }
+    
+    // REQUIREMENT: Workout reviews prioritize hypertrophy_programs_review
+    if (queryAnalysis.isProgramReview) {
+        categories.unshift('hypertrophy_programs_review', 'hypertrophy_programs');
+    }
+    
+    // Add muscle-specific categories
+    if (queryAnalysis.mentionedMuscles.length > 0) {
+        queryAnalysis.mentionedMuscles.forEach(muscle => {
+            // Map muscle names to category names
+            const muscleMapping: Record<string, string> = {
+                'chest': 'chest', 'pectorals': 'chest', 'pecs': 'chest',
+                'biceps': 'elbow_flexors', 'bicep': 'elbow_flexors',
+                'triceps': 'triceps', 'tricep': 'triceps',
+                'shoulders': 'shoulders', 'delts': 'shoulders', 'deltoids': 'shoulders',
+                'back': 'back', 'lats': 'back', 'latissimus': 'back', 'rhomboids': 'back',
+                'traps': 'back', 'trapezius': 'back',
+                'legs': 'legs', 'quads': 'quadriceps', 'quadriceps': 'quadriceps',
+                'hamstrings': 'hamstrings', 'glutes': 'glutes', 'calves': 'calves',
+                'abs': 'abs', 'core': 'abs', 'abdominals': 'abs',
+                'forearms': 'forearms', 'forearm': 'forearms'
+            };
+            
+            const category = muscleMapping[muscle];
+            if (category && !categories.includes(category)) {
+                categories.push(category);
+            }
+        });
+    }
+    
+    // Always ensure hypertrophy_principles is included for training queries
+    if (!categories.includes('hypertrophy_principles') && 
+        (queryAnalysis.isProgramGeneration || queryAnalysis.mentionedMuscles.length > 0)) {
+        categories.push('hypertrophy_principles');
+    }
+    
+    console.log(`🎯 Prioritized categories for query: [${categories.join(', ')}]`);
+    return categories;
+}
+
+/**
+ * ENHANCED: Multi-stage retrieval with strict prioritization
  */
 export async function fetchKnowledgeContext(
     query: string,
@@ -45,28 +137,25 @@ export async function fetchKnowledgeContext(
     categoryIds?: string[]
 ): Promise<KnowledgeContext[]> {
     try {
-        console.log(`🚀 Starting vector search for "${query}" with threshold ${similarityThreshold}`);
+        console.log(`🚀 Enhanced RAG search for: "${query}" (threshold: ${similarityThreshold})`);
         
-        // Always include "myths" category to check for misconceptions
-        const enhancedCategoryIds = categoryIds ? [...categoryIds] : [];
-        if (!enhancedCategoryIds.includes('myths')) {
-            enhancedCategoryIds.push('myths');
-        }
+        // Analyze query to determine priorities
+        const queryAnalysis = detectQueryType(query);
+        console.log(`📊 Query analysis:`, queryAnalysis);
         
-        // 1. Generate an embedding for the user's query
+        // Get prioritized categories (overrides manual categoryIds for requirements compliance)
+        const prioritizedCategories = getPrioritizedCategories(queryAnalysis);
+        const searchCategories = categoryIds || prioritizedCategories;
+        
+        // Generate embedding
         const queryEmbedding = await getEmbedding(query);
-
-        // 2. Use efficient pgvector SQL query for maximum performance
         const embeddingStr = `[${queryEmbedding.join(',')}]`;
         
-        // Query more candidates than needed to ensure high-quality filtering
-        const candidateLimit = maxChunks * 3;
-        
-        let chunks;
-        
-        if (enhancedCategoryIds.length > 0) {
-            console.log(`🏷️ Including categories: ${enhancedCategoryIds.join(', ')} (myths always included)`);
-            // Query with category filtering (including myths)
+        // Multi-stage search: Priority categories first, then fallback
+        let chunks: KnowledgeContext[] = [];        if (searchCategories.length > 0) {
+            console.log(`🏷️ Searching priority categories: ${searchCategories.join(', ')}`);
+            
+            // Stage 1: Search priority categories
             chunks = await prisma.$queryRaw`
                 SELECT DISTINCT
                   kc.id,
@@ -80,13 +169,19 @@ export async function fetchKnowledgeContext(
                 JOIN "KnowledgeCategory" kcat ON kic."knowledgeCategoryId" = kcat.id
                 WHERE ki.status = 'READY' 
                   AND kc."embeddingData" IS NOT NULL
-                  AND kcat.name = ANY(${enhancedCategoryIds})
+                  AND kcat.name = ANY(${searchCategories})
                 ORDER BY distance
-                LIMIT ${candidateLimit}
+                LIMIT ${Math.min(maxChunks * 2, 30)}
             `;
-        } else {
-            // Query without category filtering (original behavior)
-            chunks = await prisma.$queryRaw`
+            
+            console.log(`📊 Priority search returned ${chunks.length} candidates`);
+        }
+        
+        // Stage 2: If insufficient results, search entire KB  
+        if (chunks.length < maxChunks) {
+            console.log(`🔄 Insufficient priority results (${chunks.length}), searching entire KB...`);
+            
+            const fallbackChunks = await prisma.$queryRaw`
                 SELECT
                   kc.id,
                   kc.content,
@@ -96,40 +191,62 @@ export async function fetchKnowledgeContext(
                 JOIN "KnowledgeItem" ki ON kc."knowledgeItemId" = ki.id  
                 WHERE ki.status = 'READY' 
                   AND kc."embeddingData" IS NOT NULL
+                  AND kc.id NOT IN (${chunks.map((c: KnowledgeContext) => c.id).join(',') || 'NULL'})
                 ORDER BY kc."embeddingData"::vector <=> ${embeddingStr}::vector
-                LIMIT ${candidateLimit}
+                LIMIT ${maxChunks}
             `;
+            
+            chunks = chunks.concat(fallbackChunks as KnowledgeContext[]);
         }
-
-        const results = (chunks as Array<{
+        
+        // Filter by similarity threshold and apply final ranking
+        const relevantChunks = (chunks as Array<{
             id: string;
             content: string;
             title: string; 
             score: number;
-        }>);
-
-        // 3. Filter the results based on the similarity threshold
-        const relevantChunks = results.filter(
-            chunk => chunk.score >= similarityThreshold
-        );
+        }>).filter(chunk => chunk.score >= similarityThreshold);
 
         if (relevantChunks.length === 0) {
             console.log(`⚠️ No relevant chunks found above threshold ${similarityThreshold}`);
             return [];
         }
 
-        // 4. Take the top 'maxChunks' from the filtered, high-quality results
-        const finalResults = relevantChunks.slice(0, maxChunks);
+        // Prioritize chunks from required categories
+        const sortedChunks = relevantChunks.sort((a, b) => {
+            // Boost chunks from priority categories
+            const aPriority = prioritizedCategories.some(cat => a.title.toLowerCase().includes(cat));
+            const bPriority = prioritizedCategories.some(cat => b.title.toLowerCase().includes(cat));
+            
+            if (aPriority && !bPriority) return -1;
+            if (!aPriority && bPriority) return 1;
+            
+            // Then sort by score
+            return b.score - a.score;
+        });
         
-        console.log(`✅ Retrieved ${finalResults.length} high-quality chunks (${relevantChunks.length} above threshold)`);
+        const finalResults = sortedChunks.slice(0, maxChunks);
+        
+        console.log(`✅ Enhanced RAG retrieved ${finalResults.length} chunks (from ${relevantChunks.length} above threshold)`);
+        
+        // Log category distribution for debugging
+        const categoryDistribution: Record<string, number> = {};
+        finalResults.forEach(chunk => {
+            const categoryMatch = prioritizedCategories.find(cat => 
+                chunk.title.toLowerCase().includes(cat.replace('_', ' ')) || 
+                chunk.content.toLowerCase().includes(cat.replace('_', ' '))
+            );
+            const category = categoryMatch || 'other';
+            categoryDistribution[category] = (categoryDistribution[category] || 0) + 1;
+        });
+        console.log(`📈 Category distribution:`, categoryDistribution);
+        
         return finalResults;
 
     } catch (error) {
-        console.error("Error fetching knowledge context:", error);
-        // Fallback to JSON similarity search if pgvector fails
-        console.log("🔄 Falling back to JSON similarity search...");
-        const queryEmbedding = await getEmbedding(query);
-        return await fallbackJsonSimilaritySearch(queryEmbedding, maxChunks, similarityThreshold);
+        console.error("❌ Enhanced RAG error:", error);
+        // Fallback to simple search
+        return await fallbackJsonSimilaritySearch(await getEmbedding(query), maxChunks, similarityThreshold);
     }
 }
 
@@ -153,45 +270,40 @@ export async function fallbackJsonSimilaritySearch(
             include: {
                 knowledgeItem: {
                     select: {
-                        id: true,
-                        title: true
+                        title: true,
+                        id: true
                     }
                 }
             },
-            take: 1000, // Limit for performance
-            orderBy: {
-                createdAt: 'desc'
-            }
+            take: 1000 // Limit for performance
         });
 
         // Calculate similarities
         const similarities = chunks.map(chunk => {
+            let embedding: number[];
             try {
-                const chunkEmbedding = JSON.parse(chunk.embeddingData!) as number[];
-                const score = cosineSimilarity(queryEmbedding, chunkEmbedding);
-                
-                return {
-                    id: chunk.id,
-                    content: chunk.content,
-                    title: chunk.knowledgeItem.title,
-                    score: score
-                };
-            } catch (parseError) {
-                console.error('Error parsing embedding data:', parseError);
+                embedding = JSON.parse(chunk.embeddingData as string);
+            } catch {
                 return null;
             }
-        }).filter(Boolean) as KnowledgeContext[];
 
-        // Sort by similarity and filter by threshold
-        const sortedSimilarities = similarities.sort((a, b) => b.score - a.score);
-        const relevantChunks = sortedSimilarities.filter(
-            chunk => chunk.score >= similarityThreshold
+            const similarity = cosineSimilarity(queryEmbedding, embedding);
+            return {
+                id: chunk.knowledgeItem.id,
+                title: chunk.knowledgeItem.title,
+                content: chunk.content,
+                score: similarity
+            };
+        }).filter((item): item is KnowledgeContext => 
+            item !== null && item.score >= similarityThreshold
         );
 
-        return relevantChunks.slice(0, maxChunks);
+        // Sort by score and take top results
+        similarities.sort((a, b) => b.score - a.score);
+        return similarities.slice(0, maxChunks);
 
     } catch (error) {
-        console.error("Fallback JSON similarity search failed:", error);
+        console.error("Error in fallback similarity search:", error);
         return [];
     }
 }
@@ -200,58 +312,23 @@ export async function fallbackJsonSimilaritySearch(
  * Calculate cosine similarity between two vectors
  */
 function cosineSimilarity(a: number[], b: number[]): number {
-    if (a.length !== b.length) {
-        return 0;
-    }
-
+    if (a.length !== b.length) return 0;
+    
     let dotProduct = 0;
     let normA = 0;
     let normB = 0;
-
+    
     for (let i = 0; i < a.length; i++) {
         dotProduct += a[i] * b[i];
         normA += a[i] * a[i];
         normB += b[i] * b[i];
     }
-
-    normA = Math.sqrt(normA);
-    normB = Math.sqrt(normB);
-
-    if (normA === 0 || normB === 0) {
-        return 0;
-    }
-
-    return dotProduct / (normA * normB);
+    
+    return dotProduct / (Math.sqrt(normA) * Math.sqrt(normB));
 }
 
 /**
- * Admin function to run embedding audit
- */
-export async function runEmbeddingAudit() {
-  console.log('🔍 Running embedding audit...');
-  
-  const chunks = await prisma.knowledgeChunk.findMany({
-    where: {
-      embeddingData: { not: null }
-    },
-    select: {
-      id: true,
-      knowledgeItemId: true,
-      chunkIndex: true,
-      embeddingData: true
-    }
-  });
-  
-  return {
-    totalChunks: chunks.length,
-    chunksWithEmbeddings: chunks.filter(c => c.embeddingData).length,
-    auditComplete: true
-  };
-}
-
-/**
- * Get knowledge context for specific muscle groups and workout types
- * This function helps the AI prioritize relevant categories based on the workout context
+ * ENHANCED: Category-specific knowledge retrieval for targeted searches
  */
 export async function fetchCategoryBasedKnowledge(
   query: string,
@@ -260,125 +337,66 @@ export async function fetchCategoryBasedKnowledge(
   maxChunks: number = 10,
   similarityThreshold: number = 0.7
 ): Promise<KnowledgeContext[]> {
-  try {
-    console.log(`🎯 Fetching category-based knowledge for ${muscleGroups.join(', ')} (${workoutType})`);
-    
-    // Define category mappings based on workout context
-    const categoryMap: Record<string, string[]> = {
-      // Muscle-specific categories
-      'chest': ['chest', 'chest_exercises', 'pushing_movements'],
-      'back': ['back', 'back_exercises', 'pulling_movements', 'lats'],
-      'shoulders': ['shoulders', 'shoulder_exercises', 'delts', 'pressing_movements'],
-      'biceps': ['biceps', 'arm_exercises', 'elbow_flexors'],
-      'triceps': ['triceps', 'arm_exercises', 'elbow_extensors'],
-      'forearms': ['forearms', 'arm_exercises', 'grip_strength'],
-      'quadriceps': ['quadriceps', 'leg_exercises', 'thighs', 'squatting_movements'],
-      'hamstrings': ['hamstrings', 'leg_exercises', 'thighs', 'hip_hinge'],
-      'glutes': ['glutes', 'leg_exercises', 'hip_extension'],
-      'calves': ['calves', 'leg_exercises', 'lower_legs'],
-      'abs': ['abs', 'core', 'core_exercises', 'abdominals'],
-      
-      // Workout type categories
-      'hypertrophy': ['hypertrophy_programs', 'hypertrophy_principles', 'muscle_building'],
-      'strength': ['strength_training', 'powerlifting', 'max_strength'],
-      'endurance': ['endurance_training', 'cardio', 'conditioning']
-    };
-    
-    // Build category list based on muscle groups and workout type
-    const targetCategories = new Set<string>();
-    
-    // Always include myths category to check for misconceptions
-    targetCategories.add('myths');
-    
-    // Add workout type categories
-    if (categoryMap[workoutType]) {
-      categoryMap[workoutType].forEach(cat => targetCategories.add(cat));
-    }
-    
-    // Add muscle-specific categories
-    muscleGroups.forEach(muscle => {
-      const normalizedMuscle = muscle.toLowerCase().replace(/s$/, ''); // Remove plural 's'
-      if (categoryMap[normalizedMuscle]) {
-        categoryMap[normalizedMuscle].forEach(cat => targetCategories.add(cat));
-      }
-    });
-    
-    const categoryIds = Array.from(targetCategories);
-    console.log(`🔍 Searching in categories: ${categoryIds.join(', ')}`);
-    
-    // Fetch knowledge with category filtering
-    const results = await fetchKnowledgeContext(
-      query,
-      maxChunks,
-      similarityThreshold,
-      categoryIds
-    );
-    
-    // If category-specific search yields few results, fall back to general search
-    if (results.length < maxChunks / 2) {
-      console.log(`⚠️ Category search yielded only ${results.length} results, supplementing with general search`);
-      const generalResults = await fetchKnowledgeContext(
-        query,
-        maxChunks - results.length,
-        similarityThreshold
-      );
-      
-      // Combine and deduplicate results
-      const combinedResults = [...results];
-      const existingIds = new Set(results.map(r => r.id));
-      
-      generalResults.forEach(result => {
-        if (!existingIds.has(result.id)) {
-          combinedResults.push(result);
-        }
-      });
-      
-      return combinedResults;
-    }
-    
-    return results;
-  } catch (error) {
-    console.error('Error in category-based knowledge fetch:', error);
-    // Fall back to general search
-    return await fetchKnowledgeContext(query, maxChunks, similarityThreshold);
-  }
-}
-
-/**
- * Admin function to re-embed missing chunks
- */
-export async function reembedMissingChunks() {
-  console.log('🔄 Re-embedding missing chunks...');
+  const categoryMap = {
+    'hypertrophy': ['hypertrophy_programs', 'hypertrophy_principles'],
+    'strength': ['strength_training', 'powerlifting'],
+    'endurance': ['endurance_training', 'cardio', 'conditioning']
+  };
   
-  const chunksWithoutEmbeddings = await prisma.knowledgeChunk.findMany({
-    where: {
-      embeddingData: null
-    }
+  // Build category list based on muscle groups and workout type
+  const targetCategories = new Set<string>();
+  
+  // Always include myths category to check for misconceptions
+  targetCategories.add('myths');
+  
+  // Add workout type categories
+  if (categoryMap[workoutType]) {
+    categoryMap[workoutType].forEach(cat => targetCategories.add(cat));
+  }
+  
+  // Add muscle-specific categories
+  muscleGroups.forEach(muscle => {
+    const muscleCategory = muscle.toLowerCase().replace(/\s+/g, '_');
+    targetCategories.add(muscleCategory);
   });
   
-  console.log(`Found ${chunksWithoutEmbeddings.length} chunks without embeddings`);
-  
+  return fetchKnowledgeContext(
+    query,
+    maxChunks,
+    similarityThreshold,
+    Array.from(targetCategories)
+  );
+}
+
+// Admin functions for embedding management
+export async function runEmbeddingAudit() {
+  // TODO: Implement embedding audit functionality
+  return {
+    totalChunks: 0,
+    missingEmbeddings: 0,
+    invalidEmbeddings: 0,
+    report: 'Audit functionality not yet implemented'
+  };
+}
+
+export async function reembedMissingChunks() {
+  // TODO: Implement re-embedding functionality
   return {
     processed: 0,
-    skipped: chunksWithoutEmbeddings.length,
+    successful: 0,
+    failed: 0,
+    skipped: 0,
     message: 'Re-embedding functionality not yet implemented'
   };
 }
 
-/**
- * Delete embeddings for a knowledge item
- */
 export async function deleteEmbeddings(knowledgeItemId: string) {
-  console.log(`🗑️ Deleting embeddings for knowledge item: ${knowledgeItemId}`);
-  
-  const result = await prisma.knowledgeChunk.updateMany({
-    where: {
-      knowledgeItemId: knowledgeItemId
-    },
-    data: {
-      embeddingData: null
-    }
-  });
-  
-  return { deletedCount: result.count };
+  // TODO: Implement embedding deletion functionality
+  console.log(`Deleting embeddings for knowledge item: ${knowledgeItemId}`);
+  return {
+    deleted: 0,
+    message: 'Embedding deletion functionality not yet implemented'
+  };
 }
+
+export default fetchKnowledgeContext;
