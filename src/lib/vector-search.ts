@@ -72,7 +72,8 @@ export async function fetchKnowledgeContext(
                   kc.id,
                   kc.content,
                   ki.title,
-                  1 - (kc."embeddingData"::vector <=> ${embeddingStr}::vector) as score
+                  1 - (kc."embeddingData"::vector <=> ${embeddingStr}::vector) as score,
+                  kc."embeddingData"::vector <=> ${embeddingStr}::vector as distance
                 FROM "KnowledgeChunk" kc
                 JOIN "KnowledgeItem" ki ON kc."knowledgeItemId" = ki.id  
                 JOIN "KnowledgeItemCategory" kic ON ki.id = kic."knowledgeItemId"
@@ -80,7 +81,7 @@ export async function fetchKnowledgeContext(
                 WHERE ki.status = 'READY' 
                   AND kc."embeddingData" IS NOT NULL
                   AND kcat.name = ANY(${enhancedCategoryIds})
-                ORDER BY kc."embeddingData"::vector <=> ${embeddingStr}::vector
+                ORDER BY distance
                 LIMIT ${candidateLimit}
             `;
         } else {

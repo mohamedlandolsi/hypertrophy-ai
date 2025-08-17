@@ -24,51 +24,116 @@ export interface SearchOptions {
   useReranking?: boolean;
   conversationHistory?: Array<{ role: string; content: string }>;
   strictMusclePriority?: boolean;
+  // Enhanced tuning parameters
+  useQueryTransformation?: boolean;
+  useHyDE?: boolean; // Hypothetical Document Embeddings
+  dynamicThresholdAdjustment?: boolean;
+  verboseLogging?: boolean;
+  fallbackOnLowResults?: boolean;
+  minAcceptableResults?: number;
 }
 
 /**
- * FIXED: Enhanced RAG with better muscle-specific search and stricter filtering
+ * ENHANCED: Advanced RAG with query transformation, HyDE, and dynamic tuning
  */
 export async function enhancedKnowledgeRetrieval(
   userQuery: string,
   options: SearchOptions
 ): Promise<EnhancedKnowledgeContext[]> {
   
-  console.log('🚀 Starting Enhanced RAG Retrieval v2');
-  console.log(`📝 Query: "${userQuery}"`);
-  console.log(`⚙️ Options:`, options);
-  
   const startTime = Date.now();
+  const verboseLogging = options.verboseLogging ?? true;
+  
+  if (verboseLogging) {
+    console.log('🚀 Starting Enhanced RAG Retrieval v3 (Optimized Pipeline)');
+    console.log(`📝 Original Query: "${userQuery}"`);
+    console.log(`⚙️ Search Options:`, {
+      maxChunks: options.maxChunks,
+      similarityThreshold: options.similarityThreshold,
+      useQueryTransformation: options.useQueryTransformation ?? true,
+      useHyDE: options.useHyDE ?? true,
+      dynamicThresholdAdjustment: options.dynamicThresholdAdjustment ?? true,
+      minAcceptableResults: options.minAcceptableResults ?? 3
+    });
+  }
   
   try {
-    // Step 1: Extract muscle groups and training concepts from query
+    // Step 1: Analyze query context and intent
     const queryContext = await analyzeQueryContext(userQuery);
-    console.log('🔍 Query context:', queryContext);
+    if (verboseLogging) {
+      console.log('🔍 Query Analysis:', {
+        muscleGroups: queryContext.muscleGroups,
+        trainingConcepts: queryContext.trainingConcepts,
+        requestType: `${queryContext.isWorkoutRequest ? 'Workout' : ''}${queryContext.isProgramRequest ? 'Program' : ''}${queryContext.isNutritionRequest ? 'Nutrition' : 'General'}`,
+        relevantCategories: queryContext.relevantCategories.slice(0, 5) // Show first 5
+      });
+    }
     
-    // Step 2: Generate multiple search strategies
-    const searchQueries = await generateComprehensiveSearchQueries(userQuery, queryContext);
-    console.log(`📚 Generated ${searchQueries.length} search queries`);
+    // Step 2: Query transformation and enhancement
+    const transformedQueries = await generateOptimizedSearchQueries(userQuery, queryContext, options);
+    if (verboseLogging) {
+      console.log(`📚 Generated ${transformedQueries.length} search queries:`, transformedQueries.slice(0, 3));
+    }
     
-    // Step 3: Execute multi-strategy search with muscle prioritization
-    const candidates = await executeMultiStrategySearch(searchQueries, options, queryContext);
-    console.log(`📊 Retrieved ${candidates.length} candidates`);
+    // Step 3: Multi-strategy search with dynamic threshold adjustment
+    let searchAttempts = 0;
+    let currentThreshold = options.similarityThreshold;
+    let candidates: EnhancedKnowledgeContext[] = [];
     
-    // Step 4: Apply strict filtering and ranking
-    const filteredResults = await applyStrictFiltering(candidates, options, queryContext);
-    console.log(`🎯 Filtered to ${filteredResults.length} high-quality results`);
+    while (searchAttempts < 3 && candidates.length < (options.minAcceptableResults ?? 3)) {
+      searchAttempts++;
+      
+      if (verboseLogging) {
+        console.log(`🔄 Search Attempt ${searchAttempts} (threshold: ${currentThreshold.toFixed(3)})`);
+      }
+      
+      const attemptCandidates = await executeAdvancedMultiSearch(
+        transformedQueries, 
+        { ...options, similarityThreshold: currentThreshold }, 
+        queryContext
+      );
+      
+      candidates = attemptCandidates;
+      
+      if (verboseLogging) {
+        console.log(`📊 Attempt ${searchAttempts} Results: ${candidates.length} candidates`);
+      }
+      
+      // Dynamic threshold adjustment if enabled and results are insufficient
+      if (options.dynamicThresholdAdjustment && candidates.length < (options.minAcceptableResults ?? 3)) {
+        currentThreshold = Math.max(0.05, currentThreshold - 0.05); // Lower threshold by 0.05
+        if (verboseLogging) {
+          console.log(`⚡ Lowering similarity threshold to ${currentThreshold.toFixed(3)} for broader search`);
+        }
+      } else {
+        break; // Sufficient results found
+      }
+    }
     
-    // Step 5: Ensure mandatory content is included
+    // Step 4: Enhanced filtering with quality metrics
+    const filteredResults = await applyAdvancedFiltering(candidates, options, queryContext);
+    if (verboseLogging) {
+      console.log(`🎯 Advanced Filtering: ${filteredResults.length} high-quality results`);
+    }
+    
+    // Step 5: Ensure mandatory content coverage
     const finalResults = await ensureMandatoryContent(filteredResults, queryContext, options);
     
     const totalTime = Date.now() - startTime;
-    console.log(`✅ Enhanced RAG v2 completed in ${totalTime}ms`);
     
-    logDetailedMetrics(finalResults, totalTime, queryContext);
+    // Step 6: Comprehensive metrics and diagnostics
+    await logAdvancedMetrics(finalResults, totalTime, queryContext, options, userQuery);
     
     return finalResults;
     
   } catch (error) {
-    console.error('❌ Enhanced RAG v2 error:', error);
+    console.error('❌ Enhanced RAG v3 Pipeline Error:', error);
+    if (verboseLogging) {
+      console.error('Error details:', {
+        message: error instanceof Error ? error.message : 'Unknown error',
+        stack: error instanceof Error ? error.stack : undefined
+      });
+    }
     return [];
   }
 }
@@ -189,56 +254,325 @@ function extractExerciseKeywords(query: string): string[] {
 }
 
 /**
- * FIXED: Generate more comprehensive and specific search queries
+ * ENHANCED: Generate optimized search queries with transformation techniques
  */
-async function generateComprehensiveSearchQueries(
+async function generateOptimizedSearchQueries(
   originalQuery: string,
-  context: { 
-    muscleGroups: string[]; 
-    trainingConcepts: string[]; 
-    exerciseKeywords: string[];
-    isWorkoutRequest: boolean;
-    isProgramRequest: boolean;
-    isNutritionRequest: boolean;
-    relevantCategories: string[];
-  }
+  context: any,
+  options: SearchOptions
 ): Promise<string[]> {
-  
   const queries = [originalQuery];
   
-  // Add muscle-specific queries
-  context.muscleGroups.forEach(muscle => {
-    queries.push(`${muscle} training hypertrophy`);
-    queries.push(`${muscle} exercises muscle growth`);
-    queries.push(`${muscle} workout programming`);
-  });
-  
-  // Add concept-specific queries
-  context.trainingConcepts.forEach(concept => {
-    queries.push(`${concept} muscle hypertrophy`);
-    queries.push(`${originalQuery} ${concept}`);
-  });
-  
-  // Add exercise-specific queries
-  context.exerciseKeywords.forEach(exercise => {
-    queries.push(`${exercise} technique form`);
-    queries.push(`${exercise} hypertrophy sets reps`);
-  });
-  
-  // Add mandatory training principle queries
-  if (context.isWorkoutRequest) {
-    queries.push('workout programming principles');
-    queries.push('hypertrophy training guidelines');
-    queries.push('muscle building rep ranges');
-    queries.push('training volume frequency');
+  // Base query transformations
+  if (options.useQueryTransformation ?? true) {
+    // Add muscle-specific variations
+    context.muscleGroups.forEach((muscle: string) => {
+      queries.push(`${muscle} training hypertrophy exercises`);
+      queries.push(`${muscle} workout programming guidelines`);
+      queries.push(`how to train ${muscle} for muscle growth`);
+    });
+    
+    // Add concept-focused queries
+    context.trainingConcepts.forEach((concept: string) => {
+      queries.push(`${concept} principles for hypertrophy`);
+      queries.push(`${originalQuery} ${concept}`);
+    });
+    
+    // Add intent-based transformations
+    if (context.isWorkoutRequest) {
+      queries.push('workout structure programming principles');
+      queries.push('training program design guidelines');
+      queries.push('exercise selection criteria hypertrophy');
+    }
+    
+    if (context.isProgramRequest) {
+      queries.push('program periodization muscle building');
+      queries.push('training split recommendations');
+      queries.push('volume frequency progression');
+    }
   }
   
-  // Remove duplicates and limit
+  // HyDE (Hypothetical Document Embeddings) implementation
+  if (options.useHyDE ?? true) {
+    try {
+      const hydeQuery = await generateHypotheticalAnswer(originalQuery, context);
+      if (hydeQuery) {
+        queries.unshift(hydeQuery); // Add at beginning for priority
+      }
+    } catch (error) {
+      console.warn('⚠️ HyDE generation failed, continuing without it:', error);
+    }
+  }
+  
+  // Remove duplicates and limit to reasonable number
   return [...new Set(queries)].slice(0, 8);
 }
 
 /**
- * FIXED: Execute multiple search strategies with better prioritization
+ * ENHANCED: Generate hypothetical ideal answer for HyDE technique
+ */
+async function generateHypotheticalAnswer(query: string, context: any): Promise<string | null> {
+  try {
+    // Generate a hypothetical ideal answer that would contain the information we're looking for
+    let hypotheticalContent = '';
+    
+    if (context.isWorkoutRequest) {
+      hypotheticalContent = `A comprehensive ${context.muscleGroups.join(' and ')} workout program designed for hypertrophy should include specific exercises, rep ranges of 5-10 repetitions, set volumes of 2-4 sets per muscle group, and rest periods of 2-5 minutes between sets. The program should emphasize progressive overload and proper exercise selection based on biomechanics and muscle activation patterns.`;
+    } else if (context.isProgramRequest) {
+      hypotheticalContent = `An effective hypertrophy training program incorporates proper training frequency, exercise selection, volume progression, and recovery protocols. The program should address ${context.muscleGroups.join(', ')} development through evidence-based training methods and periodization strategies.`;
+    } else {
+      // Generate based on training concepts
+      hypotheticalContent = `Training guidance for ${context.trainingConcepts.join(' and ')} should address proper implementation, scientific rationale, and practical application for muscle hypertrophy and strength development.`;
+    }
+    
+    return hypotheticalContent;
+  } catch (error) {
+    console.error('HyDE generation error:', error);
+    return null;
+  }
+}
+
+/**
+ * ENHANCED: Advanced multi-strategy search with improved categorization
+ */
+async function executeAdvancedMultiSearch(
+  queries: string[],
+  options: SearchOptions,
+  context: any
+): Promise<EnhancedKnowledgeContext[]> {
+  const allCandidates: EnhancedKnowledgeContext[] = [];
+  
+  // Strategy 1: Priority-based categorical search
+  if (context.isWorkoutRequest || context.isProgramRequest) {
+    const priorityCategories = ['hypertrophy_programs', 'hypertrophy_principles'];
+    
+    for (const query of queries) {
+      const priorityResults = await performEnhancedVectorSearch(
+        query, 
+        Math.ceil(options.maxChunks * 0.7),
+        priorityCategories
+      );
+      
+      priorityResults.forEach(result => {
+        result.isHighRelevance = true;
+        result.source = 'priority' as any;
+      });
+      
+      allCandidates.push(...priorityResults);
+    }
+  }
+  
+  // Strategy 2: Muscle-specific targeted search
+  if (context.muscleGroups.length > 0) {
+    for (const muscle of context.muscleGroups) {
+      const muscleResults = await performMuscleSpecificSearch(muscle, options);
+      allCandidates.push(...muscleResults);
+    }
+  }
+  
+  // Strategy 3: Specialized parameter search for key training variables
+  for (const query of queries) {
+    const specializedResults = await searchSpecificTrainingParameters(query, context);
+    allCandidates.push(...specializedResults);
+  }
+  
+  // Strategy 4: Broad categorical search if insufficient results
+  if (allCandidates.length < options.maxChunks) {
+    for (const query of queries) {
+      const broadResults = await performEnhancedVectorSearch(
+        query,
+        options.maxChunks,
+        context.relevantCategories.length > 0 ? context.relevantCategories : undefined
+      );
+      allCandidates.push(...broadResults);
+    }
+  }
+  
+  // Strategy 5: Keyword-based fallback search
+  if (allCandidates.length < (options.minAcceptableResults ?? 3)) {
+    for (const query of queries) {
+      const keywordResults = await performStrictKeywordSearch(query, options.maxChunks);
+      allCandidates.push(...keywordResults);
+    }
+  }
+  
+  return deduplicateAndRank(allCandidates, options);
+}
+
+/**
+ * ENHANCED: Advanced filtering with quality assessment
+ */
+async function applyAdvancedFiltering(
+  candidates: EnhancedKnowledgeContext[],
+  options: SearchOptions,
+  context: any
+): Promise<EnhancedKnowledgeContext[]> {
+  
+  // Step 1: Basic threshold filtering
+  let filtered = candidates.filter(candidate => {
+    const score = candidate.similarity || candidate.keywordScore || 0;
+    return score >= options.similarityThreshold;
+  });
+  
+  // Step 2: Content quality assessment
+  filtered = filtered.filter(candidate => {
+    // Filter out very short or low-quality content
+    const contentLength = candidate.content.trim().length;
+    const hasSubstantiveContent = contentLength > 50; // Minimum content length
+    
+    // Check for meaningful training-related content
+    const trainingKeywords = /\b(exercise|training|workout|rep|set|muscle|hypertrophy|program)\b/gi;
+    const hasTrainingContent = trainingKeywords.test(candidate.content);
+    
+    return hasSubstantiveContent && hasTrainingContent;
+  });
+  
+  // Step 3: Muscle group relevance boosting
+  if (context.muscleGroups.length > 0) {
+    filtered = filtered.map(candidate => {
+      const titleLower = candidate.title.toLowerCase();
+      const contentLower = candidate.content.toLowerCase();
+      
+      let relevanceBoost = 0;
+      context.muscleGroups.forEach((muscle: string) => {
+        if (titleLower.includes(muscle) || contentLower.includes(muscle)) {
+          relevanceBoost += 0.15; // Smaller boost to avoid over-prioritization
+          candidate.isHighRelevance = true;
+        }
+      });
+      
+      if (relevanceBoost > 0) {
+        candidate.similarity = (candidate.similarity || 0) + relevanceBoost;
+      }
+      
+      return candidate;
+    });
+  }
+  
+  // Step 4: Training concept relevance
+  context.trainingConcepts.forEach((concept: string) => {
+    filtered = filtered.map(candidate => {
+      if (candidate.content.toLowerCase().includes(concept)) {
+        candidate.similarity = (candidate.similarity || 0) + 0.1;
+        candidate.isHighRelevance = true;
+      }
+      return candidate;
+    });
+  });
+  
+  // Step 5: Re-sort by enhanced relevance scores
+  filtered.sort((a, b) => {
+    const scoreA = a.similarity || a.keywordScore || 0;
+    const scoreB = b.similarity || b.keywordScore || 0;
+    return scoreB - scoreA;
+  });
+  
+  // Step 6: Ensure diversity in results (avoid all results from same document)
+  const diverseResults: EnhancedKnowledgeContext[] = [];
+  const seenDocuments = new Set<string>();
+  const maxPerDocument = Math.max(2, Math.floor(options.maxChunks / 3));
+  
+  for (const candidate of filtered) {
+    const docCount = Array.from(seenDocuments).filter(doc => doc === candidate.knowledgeId).length;
+    if (docCount < maxPerDocument) {
+      diverseResults.push(candidate);
+      seenDocuments.add(candidate.knowledgeId);
+    }
+  }
+  
+  return diverseResults.slice(0, options.maxChunks);
+}
+
+/**
+ * ENHANCED: Advanced metrics and diagnostics logging
+ */
+async function logAdvancedMetrics(
+  results: EnhancedKnowledgeContext[],
+  timeMs: number,
+  context: any,
+  options: SearchOptions,
+  originalQuery: string
+): Promise<void> {
+  if (!options.verboseLogging) return;
+  
+  console.log('\n📊 ===== ENHANCED RAG PIPELINE DIAGNOSTICS =====');
+  console.log(`🎯 Query: "${originalQuery}"`);
+  console.log(`⏱️  Total Retrieval Time: ${timeMs}ms`);
+  console.log(`📄 Total Results Retrieved: ${results.length}/${options.maxChunks}`);
+  
+  // Quality Metrics
+  const highRelevanceCount = results.filter(r => r.isHighRelevance).length;
+  const averageSimilarity = results.length > 0 
+    ? (results.reduce((sum, r) => sum + (r.similarity || 0), 0) / results.length).toFixed(3)
+    : '0.000';
+  
+  console.log(`✨ High Relevance Results: ${highRelevanceCount}/${results.length} (${((highRelevanceCount/results.length)*100).toFixed(1)}%)`);
+  console.log(`📈 Average Similarity Score: ${averageSimilarity}`);
+  
+  // Source Distribution Analysis
+  const sourceDistribution = results.reduce((dist, result) => {
+    const source = result.title.split(' ')[0] || 'Unknown';
+    dist[source] = (dist[source] || 0) + 1;
+    return dist;
+  }, {} as Record<string, number>);
+  
+  console.log(`📚 Source Distribution:`, sourceDistribution);
+  
+  // Document Diversity
+  const uniqueDocuments = new Set(results.map(r => r.knowledgeId)).size;
+  console.log(`📖 Document Diversity: ${uniqueDocuments} unique documents`);
+  
+  // Context Analysis
+  console.log(`🔍 Query Analysis Results:`);
+  console.log(`   - Muscle Groups: ${context.muscleGroups.join(', ') || 'None'}`);
+  console.log(`   - Training Concepts: ${context.trainingConcepts.join(', ') || 'None'}`);
+  console.log(`   - Request Type: ${context.isWorkoutRequest ? 'Workout' : ''}${context.isProgramRequest ? 'Program' : ''}${context.isNutritionRequest ? 'Nutrition' : 'General'}`);
+  console.log(`   - Relevant Categories: ${context.relevantCategories.slice(0, 5).join(', ')}`);
+  
+  // Quality Assessment
+  const qualityThresholds = {
+    excellent: 0.8,
+    good: 0.6,
+    acceptable: 0.4,
+    poor: 0.2
+  };
+  
+  const qualityDistribution = {
+    excellent: results.filter(r => (r.similarity || 0) >= qualityThresholds.excellent).length,
+    good: results.filter(r => (r.similarity || 0) >= qualityThresholds.good && (r.similarity || 0) < qualityThresholds.excellent).length,
+    acceptable: results.filter(r => (r.similarity || 0) >= qualityThresholds.acceptable && (r.similarity || 0) < qualityThresholds.good).length,
+    poor: results.filter(r => (r.similarity || 0) < qualityThresholds.acceptable).length
+  };
+  
+  console.log(`🎨 Quality Distribution:`, qualityDistribution);
+  
+  // Top Results Preview
+  console.log(`🔝 Top 3 Results:`);
+  results.slice(0, 3).forEach((result, i) => {
+    console.log(`   ${i + 1}. "${result.title}" (Score: ${(result.similarity || 0).toFixed(3)}, ${result.isHighRelevance ? 'HIGH' : 'NORMAL'} relevance)`);
+    console.log(`      Preview: ${result.content.substring(0, 120)}...`);
+  });
+  
+  // Performance Warnings
+  if (timeMs > 3000) {
+    console.log(`⚠️  PERFORMANCE WARNING: Retrieval took ${timeMs}ms (>3s threshold)`);
+  }
+  
+  if (results.length < (options.minAcceptableResults ?? 3)) {
+    console.log(`⚠️  QUALITY WARNING: Only ${results.length} results found (minimum: ${options.minAcceptableResults ?? 3})`);
+    console.log(`   Recommendations: Lower similarity threshold or add more diverse content to knowledge base`);
+  }
+  
+  if (parseFloat(averageSimilarity) < 0.3) {
+    console.log(`⚠️  RELEVANCE WARNING: Low average similarity (${averageSimilarity})`);
+    console.log(`   Recommendations: Check query phrasing or consider query transformation techniques`);
+  }
+  
+  console.log(`========================================\n`);
+}
+
+/**
+ * ENHANCED: Execute multiple search strategies with better prioritization
  */
 async function executeMultiStrategySearch(
   queries: string[],
@@ -246,87 +580,8 @@ async function executeMultiStrategySearch(
   context: any
 ): Promise<EnhancedKnowledgeContext[]> {
   
-  const allCandidates: EnhancedKnowledgeContext[] = [];
-  
-  // NEW: PRIORITY 0 - Specialized search for specific training parameters to prevent hallucination
-  const specializedResults = await searchSpecificTrainingParameters(queries[0], context);
-  if (specializedResults.length > 0) {
-    allCandidates.push(...specializedResults);
-    console.log(`✓ Added ${specializedResults.length} specialized training parameter results`);
-  }
-  
-  // CRITICAL: Priority-based search - Hypertrophy categories FIRST
-  if (context.isWorkoutRequest || context.isProgramRequest) {
-    const priorityCategories = ['hypertrophy_programs', 'hypertrophy_principles'];
-    
-    // Strategy 1: PRIORITY search in hypertrophy categories
-    await Promise.all(queries.map(async (query) => {
-      const priorityResults = await performEnhancedVectorSearch(
-        query, 
-        Math.ceil(options.maxChunks * 0.7), // 70% of results from priority categories
-        priorityCategories
-      );
-      // Mark as high priority
-      priorityResults.forEach(result => {
-        result.isHighRelevance = true;
-        result.source = 'priority' as any;
-      });
-      allCandidates.push(...priorityResults);
-    }));
-    
-    // Only search other categories if we don't have enough results
-    if (allCandidates.length < options.maxChunks * 0.5) {
-      // Strategy 2: Muscle-specific search with remaining categories
-      const remainingCategories = context.relevantCategories.filter(
-        (cat: string) => !priorityCategories.includes(cat)
-      );
-      
-      if (remainingCategories.length > 0) {
-        await Promise.all(queries.map(async (query) => {
-          const muscleResults = await performEnhancedVectorSearch(
-            query, 
-            Math.ceil(options.maxChunks * 0.3), // 30% from other categories
-            remainingCategories
-          );
-          allCandidates.push(...muscleResults);
-        }));
-      }
-    }
-  } else {
-    // For non-workout queries, use standard category-filtered search
-    await Promise.all(queries.map(async (query) => {
-      const vectorResults = await performEnhancedVectorSearch(
-        query, 
-        options.maxChunks * 2,
-        context.relevantCategories.length > 0 ? context.relevantCategories : undefined
-      );
-      allCandidates.push(...vectorResults);
-    }));
-  }
-  
-  // Strategy 3: Muscle-specific prioritized search (for targeting specific muscles)
-  if (context.muscleGroups.length > 0 && options.strictMusclePriority) {
-    for (const muscle of context.muscleGroups) {
-      const muscleResults = await performMuscleSpecificSearch(muscle, options);
-      allCandidates.push(...muscleResults);
-    }
-  }
-  
-  // Strategy 4: Keyword search with AND logic (only if we need more results)
-  if (allCandidates.length < options.maxChunks) {
-    await Promise.all(queries.map(async (query) => {
-      const keywordResults = await performStrictKeywordSearch(query, options.maxChunks);
-      allCandidates.push(...keywordResults);
-    }));
-  }
-  
-  // Strategy 5: Title-based search for guides
-  if (context.isWorkoutRequest) {
-    const guideResults = await searchTrainingGuides(context);
-    allCandidates.push(...guideResults);
-  }
-  
-  return deduplicateAndRank(allCandidates, options);
+  // Delegate to the advanced version
+  return await executeAdvancedMultiSearch(queries, options, context);
 }
 
 /**
@@ -748,7 +1003,7 @@ function deduplicateAndRank(
 }
 
 /**
- * FIXED: Apply stricter filtering with better thresholds
+ * ENHANCED: Apply stricter filtering with better thresholds
  */
 async function applyStrictFiltering(
   candidates: EnhancedKnowledgeContext[],
@@ -756,48 +1011,8 @@ async function applyStrictFiltering(
   context: any
 ): Promise<EnhancedKnowledgeContext[]> {
   
-  // Step 1: Apply basic thresholds
-  let filtered = candidates.filter(candidate => {
-    const score = candidate.similarity || candidate.keywordScore || 0;
-    return score >= options.similarityThreshold;
-  });
-  
-  // Step 2: Boost muscle-specific content
-  if (context.muscleGroups.length > 0) {
-    filtered = filtered.map(candidate => {
-      const titleLower = candidate.title.toLowerCase();
-      const contentLower = candidate.content.toLowerCase();
-      
-      let boost = 0;
-      context.muscleGroups.forEach((muscle: string) => {
-        if (titleLower.includes(muscle) || contentLower.includes(muscle)) {
-          boost += 0.2;
-        }
-      });
-      
-      if (boost > 0) {
-        candidate.similarity += boost;
-        candidate.isHighRelevance = true;
-      }
-      
-      return candidate;
-    });
-  }
-  
-  // Step 3: Re-sort after boosting
-  filtered.sort((a, b) => {
-    const scoreA = a.similarity || a.keywordScore || 0;
-    const scoreB = b.similarity || b.keywordScore || 0;
-    return scoreB - scoreA;
-  });
-  
-  // Step 4: Ensure minimum quality
-  const highQuality = filtered.filter(candidate => {
-    const score = candidate.similarity || candidate.keywordScore || 0;
-    return score >= 0.4; // Minimum quality threshold
-  });
-  
-  return highQuality.slice(0, options.maxChunks);
+  // Delegate to the advanced version
+  return await applyAdvancedFiltering(candidates, options, context);
 }
 
 /**
@@ -862,37 +1077,21 @@ async function ensureMandatoryContent(
 }
 
 /**
- * FIXED: More detailed logging
+ * ENHANCED: More detailed logging with performance insights
  */
 function logDetailedMetrics(
   results: EnhancedKnowledgeContext[], 
   timeMs: number, 
   context: any
 ): void {
-  console.log('📊 Enhanced RAG v2 Detailed Metrics:');
-  console.log(`   ⏱️  Total time: ${timeMs}ms`);
-  console.log(`   📄 Results: ${results.length}`);
-  console.log(`   🎯 High relevance: ${results.filter(r => r.isHighRelevance).length}`);
-  console.log(`   🔍 Context detected:`, {
-    muscles: context.muscleGroups,
-    concepts: context.trainingConcepts,
-    isWorkout: context.isWorkoutRequest
-  });
-  
-  const sourceDistribution = results.reduce((dist, result) => {
-    const source = result.title.split(' ')[0] || 'Unknown';
-    dist[source] = (dist[source] || 0) + 1;
-    return dist;
-  }, {} as Record<string, number>);
-  
-  console.log(`   📚 Source distribution:`, sourceDistribution);
-  console.log(`   📈 Avg similarity: ${(results.reduce((sum, r) => sum + (r.similarity || 0), 0) / results.length).toFixed(3)}`);
-  
-  // Log top 3 results for debugging
-  console.log('   🔝 Top results:');
-  results.slice(0, 3).forEach((result, i) => {
-    console.log(`      ${i + 1}. ${result.title} (${(result.similarity || 0).toFixed(3)}) - ${result.content.substring(0, 100)}...`);
-  });
+  // Create minimal options for advanced logging
+  const options: SearchOptions = { 
+    maxChunks: results.length,
+    similarityThreshold: 0.1,
+    highRelevanceThreshold: 0.7,
+    verboseLogging: true 
+  };
+  logAdvancedMetrics(results, timeMs, context, options, 'Legacy call').catch(console.error);
 }
 
 export default enhancedKnowledgeRetrieval;

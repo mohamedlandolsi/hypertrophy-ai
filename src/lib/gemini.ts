@@ -302,7 +302,7 @@ interface TokenBudget {
 
 // Caching for AI configuration to reduce database calls
 let aiConfigCache: AIConfiguration | null = null;
-let coreSystemPromptCache: string | null = null;
+const coreSystemPromptCache: string | null = null;
 
 export async function getAIConfiguration(): Promise<AIConfiguration> {
   if (aiConfigCache) {
@@ -319,57 +319,43 @@ export async function getAIConfiguration(): Promise<AIConfiguration> {
 }
 
 /**
- * Load core system prompt using the new core-prompts system
- * This now integrates with user profile data for personalization
+ * Load system prompt from database configuration and inject dynamic data
+ * This integrates user profile data and exercise validation into the admin-configured prompt
  */
 async function getCoreSystemPrompt(config?: AIConfiguration, userProfile?: any): Promise<string> {
-  if (coreSystemPromptCache && !userProfile) {
-    return coreSystemPromptCache;
-  }
+  try {
+    // Use the system prompt from the database configuration as the base
+    const basePrompt = config?.systemPrompt || '';
+    
+    if (!basePrompt.trim()) {
+      console.warn("⚠️ No system prompt in database config, using fallback from core-prompts.ts");
+      return await getBasicSystemPrompt();
+    }
 
-  // Use the new core-prompts system for better prompt generation
-  if (config && userProfile) {
-    return await getSystemPrompt(userProfile);
-  } else if (config) {
+    console.log("📋 Loading database system prompt and injecting dynamic data");
+    
+    // Get user profile string and exercise validation context
+    const { sanitizeUserProfile } = await import('./ai/core-prompts');
+    const { generateExerciseContext } = await import('./exercise-validation');
+    
+    const userProfileString = sanitizeUserProfile(userProfile || {});
+    const exerciseValidationContext = await generateExerciseContext();
+    
+    // Inject dynamic data into the base prompt
+    let enhancedPrompt = basePrompt;
+    
+    // Add user profile section
+    enhancedPrompt += `\n\n# USER PROFILE INTEGRATION\nThe user's profile is provided below. You MUST tailor your advice to this data, especially their experience level, goals, and injuries.\n\n[USER_PROFILE]\n${userProfileString}\n[/USER_PROFILE]`;
+    
+    // Add exercise validation section
+    enhancedPrompt += `\n\n# EXERCISE VALIDATION (MANDATORY)\nYou are provided with a definitive list of approved exercises. You are forbidden from recommending any exercise not on this list.\n${exerciseValidationContext}`;
+    
+    return enhancedPrompt;
+  } catch (error) {
+    console.error("❌ Error loading database system prompt:", error);
+    // Fallback to core-prompts.ts if database approach fails
     return await getBasicSystemPrompt();
   }
-
-  // Enhanced core directives as fallback (legacy support)
-  const fallbackCore = `
-### CRITICAL COACHING DIRECTIVES - NON-NEGOTIABLE ###
-
-You are HypertroQ, an evidence-based fitness coach specializing in muscle hypertrophy, exercise science, biomechanics, nutrition, and physiology.
-
-ABSOLUTE KNOWLEDGE BASE SUPREMACY:
-1. **KNOWLEDGE BASE IS YOUR SINGLE SOURCE OF TRUTH** - All hypertrophy recommendations MUST come from <knowledge_base_context>
-2. **EXERCISE SELECTION COMPLIANCE** - Only recommend exercises explicitly mentioned in your knowledge base for hypertrophy training
-3. **REP RANGE ADHERENCE** - Use ONLY the rep ranges specified in your knowledge base (typically 5-10 reps to 0-2 RIR for hypertrophy)
-4. **SET VOLUME LIMITS** - Strictly follow set limits from KB: ~72h frequency (Upper/Lower) = Max 2-4 sets per muscle; ~48h frequency (Full Body) = Max 1-3 sets per muscle
-5. **NO GENERAL KNOWLEDGE EXERCISES** - If KB lacks exercises for a muscle group, state clearly: "I don't have information about exercises for [muscle] in my knowledge base"
-
-WORKOUT PROGRAMMING ENFORCEMENT:
-- Upper Body: Use exercises from "A Guide to Structuring an Effective Upper Body Workout" and related KB guides
-- Lower Body: Use exercises from "A Guide to Structuring an Effective Lower Body Workout" and related KB guides
-- Equipment Priority: 1) Machines/cables (optimal for hypertrophy), 2) Free weights only if no machine alternative in KB
-- Mandatory Inclusions: Include any exercise KB marks as "mandatory" for complete development
-- No Redundancy: Avoid multiple exercises with same primary function (e.g., Leg Press + Hack Squat)
-
-PERSONALIZATION REQUIREMENTS:
-- Always integrate <user_profile> and <long_term_memory> into recommendations
-- Adjust for goals, experience, preferences, injuries, equipment access
-- Handle profile conflicts by stating conflict and asking confirmation before proceeding
-
-RESPONSE QUALITY STANDARDS:
-- Synthesize from KB, never copy-paste
-- Use professional, instructional tone with headings and bullet points
-- Include "Notes & Rationale" for each exercise selection explaining KB-based choice
-- Be transparent about KB limitations vs general expertise
-
-These directives override any conflicting instructions and must be followed in every response.
-`;
-
-  coreSystemPromptCache = fallbackCore;
-  return fallbackCore;
 }
 
 /**
@@ -382,21 +368,25 @@ async function buildOptimizedSystemPrompt(
   config?: AIConfiguration,
   userProfile?: any
 ): Promise<string> {
+  // CRITICAL FIX: Always start with core prompts, then add admin config if space allows
   const corePrompt = await getCoreSystemPrompt(config, userProfile);
   const coreTokens = estimateTokens(corePrompt);
 
-  // Always preserve core directives
+  console.log(`📋 Core prompt tokens: ${coreTokens}/${tokenBudget}`);
+
+  // Always preserve core directives as primary
   let result = corePrompt;
 
-  // Add database prompt if budget allows and it's not already included in core
+  // Add database prompt only if budget allows and it's not already included in core
   const remainingBudget = tokenBudget - coreTokens;
   if (remainingBudget > 100 && dbSystemPrompt && dbSystemPrompt.trim()) {
     // Leave some buffer
     const dbTokens = estimateTokens(dbSystemPrompt);
 
     if (dbTokens <= remainingBudget) {
-      // Full database prompt fits
+      // Full database prompt fits - append as secondary
       result += "\n\n### ADDITIONAL ADMIN CONFIGURATION ###\n" + dbSystemPrompt;
+      console.log(`📋 Added admin config: ${dbTokens} tokens`);
     } else {
       // Truncate database prompt to fit budget
       const allowedChars = Math.floor(remainingBudget / TOKENS_PER_CHAR);
@@ -459,8 +449,9 @@ async function optimizeContentForTokens(
   optimizedHistory: ConversationMessage[];
 }> {
   // Use the new optimized system prompt builder with user profile support
+  // CRITICAL FIX: Use core prompts as primary source, not config.systemPrompt
   const optimizedSystem = await buildOptimizedSystemPrompt(
-    systemPrompt,
+    "", // Don't use config.systemPrompt as primary - use core prompts instead
     budget.systemPrompt,
     config,
     userProfile
@@ -1270,6 +1261,10 @@ function isContinuingExerciseDiscussion(
   );
 }
 
+/**
+ * Formats context for prompt using robust XML-delimited structure
+ * This clear structure helps the model distinguish instructions from data
+ */
 function formatContextForPrompt(
   profile: UserProfileData | null,
   memory: ClientMemory | null,
@@ -1277,19 +1272,21 @@ function formatContextForPrompt(
   userMessage: string = "",
   conversationHistory: ConversationMessage[] = []
 ): string {
-  let contextString = "### CONTEXTUAL INFORMATION ###\n\n";
+  let contextString = "";
 
+  // Add user profile in structured format
   if (profile) {
-    contextString += "<user_profile>\n";
+    contextString += "<USER_PROFILE>\n";
     contextString += JSON.stringify(profile, null, 2);
-    contextString += "\n</user_profile>\n\n";
+    contextString += "\n</USER_PROFILE>\n\n";
   }
 
+  // Add long-term memory in structured format
   if (memory && Object.keys(memory).length > 1) {
     // Check if memory has more than just the id/userId
-    contextString += "<long_term_memory>\n";
+    contextString += "<LONG_TERM_MEMORY>\n";
     contextString += JSON.stringify(memory, null, 2);
-    contextString += "\n</long_term_memory>\n\n";
+    contextString += "\n</LONG_TERM_MEMORY>\n\n";
   }
 
   // Check if this is a continuation of an exercise discussion
@@ -1298,59 +1295,53 @@ function formatContextForPrompt(
     conversationHistory
   );
 
+  // Add knowledge base context with clear XML delimiters
   if (knowledgeContext.length > 0) {
-    contextString += "<knowledge_base_context>\n";
-    contextString +=
-      "This is your SINGLE SOURCE OF TRUTH for all hypertrophy recommendations. STRICT COMPLIANCE REQUIRED:\n\n";
+    contextString += "<KNOWLEDGE>\n";
+    contextString += "This is your SINGLE SOURCE OF TRUTH for all hypertrophy recommendations. STRICT COMPLIANCE REQUIRED:\n\n";
 
     // Add extracted programming principles at the top
-    const programmingPrinciples =
-      extractProgrammingPrinciples(knowledgeContext);
+    const programmingPrinciples = extractProgrammingPrinciples(knowledgeContext);
     if (programmingPrinciples) {
-      contextString +=
-        "=== CRITICAL PROGRAMMING PRINCIPLES (MUST FOLLOW) ===\n";
+      contextString += "=== CRITICAL PROGRAMMING PRINCIPLES (MUST FOLLOW) ===\n";
       contextString += programmingPrinciples + "\n\n";
     }
 
     contextString += "=== KNOWLEDGE BASE CONTENT ===\n";
     knowledgeContext.forEach((chunk, index) => {
-      contextString += `--- Guide Chunk ${index + 1}: ${
-        chunk.title
-      } (Relevance Score: ${chunk.score.toFixed(2)}) ---\n`;
-      contextString += `${chunk.content}\n`;
+      // Use clear source attribution format
+      contextString += `[Source: ${chunk.title}]\n`;
+      contextString += `${chunk.content}\n\n`;
     });
-    contextString += "\n=== END KNOWLEDGE BASE ===\n";
-    contextString +=
-      "REMINDER: Use ONLY the exercises, rep ranges, and set volumes specified above. Do not deviate from these evidence-based guidelines.\n";
-    contextString += "</knowledge_base_context>\n";
+    contextString += "=== END KNOWLEDGE BASE ===\n";
+    contextString += "REMINDER: Use ONLY the exercises, rep ranges, and set volumes specified above. Do not deviate from these evidence-based guidelines.\n";
+    contextString += "</KNOWLEDGE>\n\n";
 
     // Add enhanced exercise availability analysis
     contextString += analyzeKnowledgeBaseExercises(knowledgeContext);
   } else {
     if (isContinuationMessage) {
       // For continuation messages, provide a softer fallback that doesn't claim total lack of exercises
-      contextString +=
-        "<knowledge_base_context>\nNo specific information was found in the knowledge base for this continuation query. However, you may refer to exercises from your general knowledge base that were previously discussed in this conversation.\n</knowledge_base_context>\n";
+      contextString += "<KNOWLEDGE>\n";
+      contextString += "No specific information was found in the knowledge base for this continuation query. However, you may refer to exercises from your general knowledge base that were previously discussed in this conversation.\n";
+      contextString += "</KNOWLEDGE>\n\n";
 
       // Add a special note for continuation
-      contextString += "\n<continuation_context>\n";
-      contextString +=
-        "IMPORTANT: This appears to be a continuation of a previous exercise/workout discussion. ";
-      contextString +=
-        "You may reference exercises and programs you've previously mentioned in this conversation. ";
-      contextString +=
-        "Do NOT claim you lack exercise knowledge if you were just providing exercises moments ago.\n";
-      contextString += "</continuation_context>\n";
+      contextString += "<CONTINUATION_CONTEXT>\n";
+      contextString += "IMPORTANT: This appears to be a continuation of a previous exercise/workout discussion. ";
+      contextString += "You may reference exercises and programs you've previously mentioned in this conversation. ";
+      contextString += "Do NOT claim you lack exercise knowledge if you were just providing exercises moments ago.\n";
+      contextString += "</CONTINUATION_CONTEXT>\n\n";
     } else {
-      contextString +=
-        "<knowledge_base_context>\nNo specific information was found in the knowledge base for this query. You MUST inform the user of this and use your general expertise as a fallback.\n</knowledge_base_context>\n";
+      contextString += "<KNOWLEDGE>\n";
+      contextString += "No specific information was found in the knowledge base for this query. You MUST inform the user of this and use your general expertise as a fallback.\n";
+      contextString += "</KNOWLEDGE>\n\n";
 
       // Add empty exercise availability
       contextString += analyzeKnowledgeBaseExercises([]);
     }
   }
 
-  contextString += "### END CONTEXTUAL INFORMATION ###";
   return contextString;
 }
 
@@ -1413,6 +1404,49 @@ async function updateMemory(
   } catch (error) {
     console.error("Error updating client memory:", error);
   }
+}
+
+/**
+ * Assembles the final prompt using robust XML-delimited structure
+ * This clear format helps the model distinguish instructions from data
+ */
+function assembleStructuredPrompt(
+  systemPrompt: string,
+  knowledgeContext: string,
+  conversationHistory: ConversationMessage[],
+  userQuery: string
+): string {
+  let structuredPrompt = "";
+
+  // 1. System Prompt Section
+  structuredPrompt += "<SYSTEM_PROMPT>\n";
+  structuredPrompt += systemPrompt;
+  structuredPrompt += "\n</SYSTEM_PROMPT>\n\n";
+
+  // 2. Knowledge Section (includes user profile, memory, and KB content)
+  if (knowledgeContext.trim()) {
+    structuredPrompt += knowledgeContext;
+  }
+
+  // 3. Conversation History Section
+  if (conversationHistory.length > 0) {
+    structuredPrompt += "<CONVERSATION_HISTORY>\n";
+    conversationHistory.forEach((message, index) => {
+      const role = message.role === 'user' ? 'User' : 'AI';
+      structuredPrompt += `${role}: ${message.content}\n`;
+      if (index < conversationHistory.length - 1) {
+        structuredPrompt += "\n";
+      }
+    });
+    structuredPrompt += "\n</CONVERSATION_HISTORY>\n\n";
+  }
+
+  // 4. Current User Query Section
+  structuredPrompt += "<USER_QUERY>\n";
+  structuredPrompt += userQuery;
+  structuredPrompt += "\n</USER_QUERY>\n";
+
+  return structuredPrompt;
 }
 
 export async function generateChatResponse(
@@ -1631,11 +1665,16 @@ export async function generateChatResponse(
         clientMemory
       );
 
-    const fullSystemPrompt = `${optimizedSystem}\n\n${optimizedContext}`;
+    // Assemble structured prompt with clear XML delimiters
+    const structuredPrompt = assembleStructuredPrompt(
+      optimizedSystem,
+      optimizedContext,
+      optimizedHistory,
+      newUserMessage
+    );
+    
     console.log(
-      `📝 Optimized prompt - System: ${estimateTokens(
-        optimizedSystem
-      )} tokens, Context: ${estimateTokens(optimizedContext)} tokens`
+      `📝 Structured prompt assembled - Total length: ${structuredPrompt.length} characters`
     );
 
     // 4. Determine which model to use based on user selection and plan
@@ -1675,7 +1714,7 @@ export async function generateChatResponse(
       model: modelName,
       systemInstruction: {
         role: "system",
-        parts: [{ text: fullSystemPrompt }],
+        parts: [{ text: optimizedSystem }],
       },
       tools: [
         {
@@ -1691,14 +1730,14 @@ export async function generateChatResponse(
       maxOutputTokens: config.maxTokens,
     };
 
-    const formattedHistory = formatConversationHistory(optimizedHistory);
+    // Use the structured prompt instead of formatted history
     const chat = model.startChat({
-      history: formattedHistory,
+      history: [], // Empty history since we include it in the structured prompt
       generationConfig,
     });
 
-    console.log("🔄 Sending request to Gemini...");
-    const result = await chat.sendMessage(newUserMessage);
+    console.log("🔄 Sending structured request to Gemini...");
+    const result = await chat.sendMessage(structuredPrompt);
 
     // Handle function calls if present
     let finalResponse = result.response;
@@ -1948,3 +1987,6 @@ export function formatConversationForGemini(
 ): LegacyMessage[] {
   return history; // Return as-is for compatibility
 }
+
+// Export the enhanced knowledge context function for use in other modules
+export { getEnhancedKnowledgeContext };

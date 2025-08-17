@@ -205,17 +205,17 @@ export default function AdminSettingsPage() {
 
               {/* System Prompt */}
               <div className="space-y-2">
-                <Label htmlFor="systemPrompt">Additional System Instructions</Label>
+                <Label htmlFor="systemPrompt">System Prompt</Label>
                 <Textarea
                   id="systemPrompt"
                   value={config.systemPrompt}
                   onChange={(e) => updateConfig('systemPrompt', e.target.value)}
-                  placeholder="Enter additional instructions for the AI (these will be combined with core HypertroQ directives)..."
-                  rows={6}
-                  className="resize-none"
+                  placeholder="Enter the master system prompt for the AI..."
+                  rows={12}
+                  className="resize-y font-mono text-sm"
                 />
-                <p className="text-sm text-gray-500">
-                  These additional instructions will be combined with the core HypertroQ coaching directives and user profile personalization. The core system handles Knowledge Base compliance, citation requirements, and user personalization automatically.
+                <p className="text-sm text-muted-foreground">
+                  This is the core system prompt that defines the AI&apos;s behavior, personality, and response patterns. User profile data and exercise validation are automatically injected at runtime.
                 </p>
               </div>
 
@@ -292,13 +292,13 @@ export default function AdminSettingsPage() {
                     <Input
                       id="ragSimilarityThreshold"
                       type="number"
-                      min={0.1}
+                      min={0.01}
                       max={1.0}
                       step={0.01}
                       value={config.ragSimilarityThreshold}
                       onChange={(e) => updateConfig('ragSimilarityThreshold', parseFloat(e.target.value))}
                     />
-                    <p className="text-xs text-gray-500">Minimum relevance score (0.1-1.0)</p>
+                    <p className="text-xs text-gray-500">Minimum relevance score (0.01-1.0)</p>
                   </div>
                   
                   <div className="space-y-2">
@@ -319,13 +319,13 @@ export default function AdminSettingsPage() {
                     <Input
                       id="ragHighRelevanceThreshold"
                       type="number"
-                      min={0.1}
+                      min={0.01}
                       max={1.0}
                       step={0.01}
                       value={config.ragHighRelevanceThreshold}
                       onChange={(e) => updateConfig('ragHighRelevanceThreshold', parseFloat(e.target.value))}
                     />
-                    <p className="text-xs text-gray-500">Threshold for marking content as highly relevant</p>
+                    <p className="text-xs text-gray-500">Threshold for marking content as highly relevant (0.01-1.0)</p>
                   </div>
                 </div>
               </div>

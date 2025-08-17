@@ -4,7 +4,7 @@ import { prisma } from '@/lib/prisma';
 import { GoogleGenerativeAI, SchemaType, FunctionCallingMode, FunctionDeclaration } from '@google/generative-ai';
 import { getSystemPrompt } from '@/lib/ai/core-prompts';
 import { fetchKnowledgeContext } from '@/lib/vector-search';
-import { generateWorkoutProgram, detectWorkoutProgramIntent } from '@/lib/ai/workout-program-generator';
+import { generateWorkoutProgram, detectWorkoutProgramIntent, detectProgramReviewIntent } from '@/lib/ai/workout-program-generator';
 import { 
   ApiErrorHandler, 
   ValidationError, 
@@ -425,6 +425,15 @@ export async function POST(request: NextRequest) {
       console.log("📚 Step 3: Executing Standard RAG Pipeline...");
       let knowledgeChunks: KnowledgeChunk[] = [];
 
+      // Check for Program Review Intent (Priority Category Inclusion)
+      let categoryIds: string[] | undefined = undefined;
+      const isProgramReviewRequest = detectProgramReviewIntent(trimmedMessage);
+      
+      if (isProgramReviewRequest) {
+        console.log("📋 Detected program review request - including hypertrophy_programs_review category...");
+        categoryIds = ['hypertrophy_programs_review'];
+      }
+
       // 9. Implement Strict Muscle Priority Logic
       if (config.strictMusclePriority) {
         console.log("💪 Step 4: Checking Strict Muscle Priority...");
@@ -448,7 +457,8 @@ export async function POST(request: NextRequest) {
         const vectorResults = await fetchKnowledgeContext(
           trimmedMessage,
           config.ragMaxChunks,
-          config.ragSimilarityThreshold
+          config.ragSimilarityThreshold,
+          categoryIds  // Pass category IDs for program review filtering
         );
         
         // Convert to KnowledgeChunk format

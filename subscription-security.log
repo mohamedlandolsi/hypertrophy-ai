@@ -1326,3 +1326,177 @@ Found 0 PRO users without valid subscriptions
 Total expired subscriptions processed: 0
 Total PRO users downgraded: 0
 Total actions: 0
+🔒 STARTING SUBSCRIPTION SECURITY CHECK
+==========================================
+Timestamp: 2025-08-16T22:00:02.883Z
+[dotenv@17.2.1] injecting env (23) from .env -- tip: 🔐 encrypt with Dotenvx: https://dotenvx.com
+📊 Checking subscription security...
+🚀 SUBSCRIPTION SECURITY JOB STARTED
+=====================================
+
+🔒 STARTING SUBSCRIPTION SECURITY CHECK
+==========================================
+Timestamp: 2025-08-17T09:00:04.052Z
+[dotenv@17.2.1] injecting env (23) from .env -- tip: 🔐 prevent committing .env to code: https://dotenvx.com/precommit
+📊 Checking subscription security...
+🚀 SUBSCRIPTION SECURITY JOB STARTED
+=====================================
+
+Found 0 expired active subscriptions
+✅ Database connection: OK
+✅ Environment variables: OK
+[dotenv@17.2.1] injecting env (0) from .env -- tip: ⚙️  load multiple .env files with { path: ['.env.local', '.env'] }
+📊 Checking subscription security...
+Found 0 PRO users without valid subscriptions
+
+✅ No security issues found - all subscriptions are valid
+
+✅ Subscription security check completed successfully
+
+📈 FINAL SUMMARY:
+Total expired subscriptions processed: 0
+Total PRO users downgraded: 0
+Total actions: 0
+🔒 STARTING SUBSCRIPTION SECURITY CHECK
+==========================================
+Timestamp: 2025-08-17T10:00:02.313Z
+[dotenv@17.2.1] injecting env (23) from .env -- tip: 🛠️  run anywhere with `dotenvx run -- yourcommand`
+📊 Checking subscription security...
+🚀 SUBSCRIPTION SECURITY JOB STARTED
+=====================================
+
+✅ Database connection: OK
+✅ Environment variables: OK
+[dotenv@17.2.1] injecting env (0) from .env -- tip: ⚙️  override existing env vars with { override: true }
+📊 Checking subscription security...
+❌ Error during subscription security check: PrismaClientInitializationError: 
+Invalid `prisma.subscription.findMany()` invocation:
+
+
+Can't reach database server at `aws-0-eu-central-1.pooler.supabase.com:6543`
+
+Please make sure your database server is running at `aws-0-eu-central-1.pooler.supabase.com:6543`.
+    at Zn.handleRequestError (D:\MyProject\hypertrophy-ai\hypertrophy-ai-nextjs\node_modules\@prisma\client\runtime\library.js:121:7759)
+    at Zn.handleAndLogRequestError (D:\MyProject\hypertrophy-ai\hypertrophy-ai-nextjs\node_modules\@prisma\client\runtime\library.js:121:6784)
+    at Zn.request (D:\MyProject\hypertrophy-ai\hypertrophy-ai-nextjs\node_modules\@prisma\client\runtime\library.js:121:6491)
+    at async l (D:\MyProject\hypertrophy-ai\hypertrophy-ai-nextjs\node_modules\@prisma\client\runtime\library.js:130:9778)
+    at async runSubscriptionSecurityCheck (D:\MyProject\hypertrophy-ai\hypertrophy-ai-nextjs\subscription-security-job.js:28:40) {
+  clientVersion: '6.9.0',
+  errorCode: undefined,
+  retryable: undefined
+}
+🔒 STARTING SUBSCRIPTION SECURITY CHECK
+==========================================
+Timestamp: 2025-08-17T11:00:02.998Z
+[dotenv@17.2.1] injecting env (23) from .env -- tip: ⚙️  specify custom .env file path with { path: '/custom/path/.env' }
+📊 Checking subscription security...
+🚀 SUBSCRIPTION SECURITY JOB STARTED
+=====================================
+
+✅ Database connection: OK
+✅ Environment variables: OK
+[dotenv@17.2.1] injecting env (0) from .env -- tip: ⚙️  override existing env vars with { override: true }
+📊 Checking subscription security...
+Found 0 expired active subscriptions
+Found 0 PRO users without valid subscriptions
+
+✅ No security issues found - all subscriptions are valid
+
+✅ Subscription security check completed successfully
+
+📈 FINAL SUMMARY:
+Total expired subscriptions processed: 0
+Total PRO users downgraded: 0
+Total actions: 0
+🔒 STARTING SUBSCRIPTION SECURITY CHECK
+==========================================
+Timestamp: 2025-08-17T12:00:04.351Z
+[dotenv@17.2.1] injecting env (23) from .env -- tip: ⚙️  enable debug logging with { debug: true }
+📊 Checking subscription security...
+🚀 SUBSCRIPTION SECURITY JOB STARTED
+=====================================
+
+Found 0 expired active subscriptions
+✅ Database connection: OK
+✅ Environment variables: OK
+[dotenv@17.2.1] injecting env (0) from .env -- tip: ⚙️  enable debug logging with { debug: true }
+📊 Checking subscription security...
+Found 0 PRO users without valid subscriptions
+
+✅ No security issues found - all subscriptions are valid
+
+✅ Subscription security check completed successfully
+
+📈 FINAL SUMMARY:
+Total expired subscriptions processed: 0
+Total PRO users downgraded: 0
+Total actions: 0
+🔒 STARTING SUBSCRIPTION SECURITY CHECK
+==========================================
+Timestamp: 2025-08-17T13:00:02.465Z
+[dotenv@17.2.1] injecting env (23) from .env -- tip: ⚙️  load multiple .env files with { path: ['.env.local', '.env'] }
+📊 Checking subscription security...
+🚀 SUBSCRIPTION SECURITY JOB STARTED
+=====================================
+
+✅ Database connection: OK
+✅ Environment variables: OK
+Found 0 expired active subscriptions
+[dotenv@17.2.1] injecting env (0) from .env -- tip: 🔐 prevent committing .env to code: https://dotenvx.com/precommit
+📊 Checking subscription security...
+Found 0 PRO users without valid subscriptions
+
+✅ No security issues found - all subscriptions are valid
+
+✅ Subscription security check completed successfully
+
+📈 FINAL SUMMARY:
+Total expired subscriptions processed: 0
+Total PRO users downgraded: 0
+Total actions: 0
+🔒 STARTING SUBSCRIPTION SECURITY CHECK
+==========================================
+Timestamp: 2025-08-17T15:00:02.174Z
+[dotenv@17.2.1] injecting env (23) from .env -- tip: 📡 observe env with Radar: https://dotenvx.com/radar
+📊 Checking subscription security...
+🚀 SUBSCRIPTION SECURITY JOB STARTED
+=====================================
+
+✅ Database connection: OK
+✅ Environment variables: OK
+[dotenv@17.2.1] injecting env (0) from .env -- tip: 📡 observe env with Radar: https://dotenvx.com/radar
+📊 Checking subscription security...
+Found 0 expired active subscriptions
+Found 0 PRO users without valid subscriptions
+
+✅ No security issues found - all subscriptions are valid
+
+✅ Subscription security check completed successfully
+
+📈 FINAL SUMMARY:
+Total expired subscriptions processed: 0
+Total PRO users downgraded: 0
+Total actions: 0
+🔒 STARTING SUBSCRIPTION SECURITY CHECK
+==========================================
+Timestamp: 2025-08-17T16:00:02.158Z
+[dotenv@17.2.1] injecting env (23) from .env -- tip: 🔐 encrypt with Dotenvx: https://dotenvx.com
+📊 Checking subscription security...
+🚀 SUBSCRIPTION SECURITY JOB STARTED
+=====================================
+
+Found 0 expired active subscriptions
+✅ Database connection: OK
+✅ Environment variables: OK
+[dotenv@17.2.1] injecting env (0) from .env -- tip: ⚙️  override existing env vars with { override: true }
+📊 Checking subscription security...
+Found 0 PRO users without valid subscriptions
+
+✅ No security issues found - all subscriptions are valid
+
+✅ Subscription security check completed successfully
+
+📈 FINAL SUMMARY:
+Total expired subscriptions processed: 0
+Total PRO users downgraded: 0
+Total actions: 0

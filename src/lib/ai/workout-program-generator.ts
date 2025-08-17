@@ -2,7 +2,8 @@
 
 import { GoogleGenerativeAI } from '@google/generative-ai';
 import { getSystemPrompt } from './core-prompts';
-import { fetchKnowledgeContext } from '../vector-search';
+import { getEnhancedKnowledgeContext } from '../gemini';
+import { getAIConfiguration } from '../gemini';
 
 // Initialize Gemini client
 if (!process.env.GEMINI_API_KEY) {
@@ -93,6 +94,114 @@ export function detectWorkoutProgramIntent(prompt: string): boolean {
   const hasPatternMatch = patternMatches.some(pattern => pattern.test(prompt));
   
   return hasExactMatch || hasPatternMatch;
+}
+
+/**
+ * Detect program/workout review intent in user prompt
+ */
+export function detectProgramReviewIntent(prompt: string): boolean {
+  const lowerPrompt = prompt.toLowerCase();
+  
+  // Keywords that indicate the user is presenting their own program for review
+  const reviewKeywords = [
+    'review my program',
+    'review my workout',
+    'review my routine',
+    'check my program',
+    'check my workout', 
+    'check my routine',
+    'evaluate my program',
+    'evaluate my workout',
+    'evaluate my routine',
+    'analyze my program',
+    'analyze my workout',
+    'analyze my routine',
+    'feedback on my program',
+    'feedback on my workout',
+    'feedback on my routine',
+    'give me feedback on my',
+    'what do you think of my program',
+    'what do you think of my workout',
+    'what do you think of my routine',
+    'thoughts on my program',
+    'thoughts on my workout',
+    'thoughts on my routine',
+    'rate my program',
+    'rate my workout',
+    'rate my routine',
+    'critique my program',
+    'critique my workout',
+    'critique my routine'
+  ];
+  
+  // Check for exact keyword matches
+  const hasExactMatch = reviewKeywords.some(keyword => lowerPrompt.includes(keyword));
+  
+  // Pattern-based detection for program presentation
+  const reviewPatterns = [
+    // Common patterns for presenting programs
+    /here.*is.*my.*program/i,
+    /here.*is.*my.*workout/i,
+    /here.*is.*my.*routine/i,
+    /this.*is.*my.*program/i,
+    /this.*is.*my.*workout/i,
+    /this.*is.*my.*routine/i,
+    /my.*current.*program/i,
+    /my.*current.*workout/i,
+    /my.*current.*routine/i,
+    /i.*am.*doing.*this.*program/i,
+    /i.*am.*doing.*this.*workout/i,
+    /i.*am.*following.*this.*program/i,
+    /currently.*doing.*this.*program/i,
+    /currently.*doing.*this.*workout/i,
+    /is.*this.*program.*good/i,
+    /is.*this.*workout.*good/i,
+    /is.*this.*routine.*good/i,
+    /does.*this.*program.*look.*good/i,
+    /does.*this.*workout.*look.*good/i
+  ];
+  
+  const hasPatternMatch = reviewPatterns.some(pattern => pattern.test(prompt));
+  
+  // Additional check: if prompt contains structured workout data (multiple exercises, sets/reps patterns)
+  const hasWorkoutStructure = checkForWorkoutStructure(prompt);
+  
+  return hasExactMatch || hasPatternMatch || hasWorkoutStructure;
+}
+
+/**
+ * Check if the prompt contains structured workout data indicating program presentation
+ */
+function checkForWorkoutStructure(prompt: string): boolean {
+  // Count exercise-like patterns (exercise names with sets/reps)
+  const exercisePatterns = [
+    /\d+\s*x\s*\d+/g, // "3x10", "4 x 8", etc.
+    /\d+\s*sets?\s*of\s*\d+/gi, // "3 sets of 10"
+    /\d+\s*reps?/gi, // "10 reps"
+    /\d+\s*sets?/gi, // "3 sets"
+  ];
+  
+  let exerciseIndicators = 0;
+  exercisePatterns.forEach(pattern => {
+    const matches = prompt.match(pattern);
+    if (matches) {
+      exerciseIndicators += matches.length;
+    }
+  });
+  
+  // Check for common exercise names (basic detection)
+  const commonExercises = [
+    'squat', 'deadlift', 'bench press', 'row', 'pull up', 'pullup', 'push up', 'pushup',
+    'curl', 'extension', 'raise', 'press', 'fly', 'dip', 'lunge', 'calf raise',
+    'lat pulldown', 'overhead press', 'shoulder press', 'chest press', 'leg press'
+  ];
+  
+  const exerciseCount = commonExercises.filter(exercise => 
+    prompt.toLowerCase().includes(exercise)
+  ).length;
+  
+  // If we have multiple set/rep patterns AND multiple exercises, likely a program
+  return exerciseIndicators >= 3 && exerciseCount >= 2;
 }
 
 /**
@@ -201,12 +310,15 @@ async function performMultiQueryRAG(
   console.log(`   - Original prompt: 1`);
   
   // Execute all searches in parallel for performance
+  const aiConfig = await getAIConfiguration();
+  
   const searchPromises = allQueries.map(async (query) => {
     try {
-      const results = await fetchKnowledgeContext(
+      const results = await getEnhancedKnowledgeContext(
         query,
         2, // Top 2 chunks per query
-        (config.ragSimilarityThreshold as number) || 0.05
+        (config.ragSimilarityThreshold as number) || 0.05,
+        aiConfig
       );
       
       return {
@@ -298,6 +410,10 @@ function formatProgramGenerationContext(searchResults: WorkoutProgramContext[]):
 /**
  * Create specialized program designer prompt
  */
+/**
+ * Creates a structured prompt using XML delimiters for clear separation
+ * This format helps the model distinguish instructions from data
+ */
 function createProgramDesignerPrompt(
   baseSystemPrompt: string,
   userPrompt: string,
@@ -362,11 +478,23 @@ You are now in Program Designer Mode. The user has requested a full workout prog
 
 Now, create a comprehensive workout program based on the user's request and the provided knowledge base context.`;
 
-  return `${baseSystemPrompt}${programDesignerInstructions}
+  // Assemble structured prompt using XML delimiters
+  let structuredPrompt = "";
+  
+  structuredPrompt += "<SYSTEM_PROMPT>\n";
+  structuredPrompt += baseSystemPrompt;
+  structuredPrompt += programDesignerInstructions;
+  structuredPrompt += "\n</SYSTEM_PROMPT>\n\n";
+  
+  structuredPrompt += "<KNOWLEDGE>\n";
+  structuredPrompt += knowledgeContext;
+  structuredPrompt += "\n</KNOWLEDGE>\n\n";
+  
+  structuredPrompt += "<USER_QUERY>\n";
+  structuredPrompt += userPrompt;
+  structuredPrompt += "\n</USER_QUERY>\n";
 
-${knowledgeContext}
-
-User Request: ${userPrompt}`;
+  return structuredPrompt;
 }
 
 /**
@@ -402,7 +530,7 @@ export async function generateWorkoutProgram(
     
     console.log(`🔨 Program designer prompt assembled: ${fullPrompt.length} characters`);
     
-    // 5. Call Gemini API with higher token limit for program generation
+    // 5. Call Gemini API with structured prompt
     const modelName = getGeminiModelName(selectedModel, config);
     const model = genAI.getGenerativeModel({
       model: modelName,
@@ -414,12 +542,15 @@ export async function generateWorkoutProgram(
       }
     });
 
+    // Use minimal conversation history and send structured prompt
     const chat = model.startChat({
-      history: conversationHistory.slice(-5).map(msg => ({
+      history: conversationHistory.slice(-3).map(msg => ({
         role: msg.role === 'USER' ? 'user' : 'model',
         parts: [{ text: msg.content }]
-      })) // Keep recent context but not too much
-    });    console.log("🤖 Calling Gemini API for program generation...");
+      })) // Keep only recent context
+    });
+
+    console.log("🤖 Calling Gemini API with structured prompt for program generation...");
     
     const result = await chat.sendMessage([{ text: fullPrompt }]);
     const response = await result.response;
