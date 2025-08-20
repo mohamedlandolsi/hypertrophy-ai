@@ -2,6 +2,7 @@
 
 import { GoogleGenerativeAI } from '@google/generative-ai';
 import { prisma } from './prisma';
+import { queryRelatedEntities } from './knowledge-graph';
 
 // Define the structure of our knowledge context
 export interface KnowledgeContext {
@@ -397,6 +398,528 @@ export async function deleteEmbeddings(knowledgeItemId: string) {
     deleted: 0,
     message: 'Embedding deletion functionality not yet implemented'
   };
+}
+
+/**
+ * AND-based keyword search using PostgreSQL full-text search
+ * 
+ * @param query - User query to search for
+ * @param limit - Maximum number of results to return
+ * @returns Promise<KnowledgeContext[]>
+ */
+export async function performAndKeywordSearch(
+  query: string,
+  limit: number = 10
+): Promise<KnowledgeContext[]> {
+  try {
+    // Clean and prepare search terms for AND logic
+    const searchTerms = query
+      .toLowerCase()
+      .replace(/[^\w\s]/g, ' ')
+      .split(' ')
+      .filter(term => term.length > 2)
+      .filter(term => !['the', 'and', 'for', 'with', 'how', 'what', 'can', 'will', 'are', 'is'].includes(term))
+      .join(' & '); // PostgreSQL AND syntax for precise results
+    
+    if (!searchTerms) {
+      console.log('⚠️ No valid search terms extracted from query');
+      return [];
+    }
+    
+    console.log(`🔍 AND keyword search: "${searchTerms}"`);
+    
+    // Use PostgreSQL to_tsvector and to_tsquery for full-text search
+    const chunks = await prisma.$queryRaw`
+      SELECT 
+        kc.id,
+        kc.content,
+        ki.title,
+        ts_rank(to_tsvector('english', kc.content), to_tsquery('english', ${searchTerms})) as score
+      FROM "KnowledgeChunk" kc
+      JOIN "KnowledgeItem" ki ON kc."knowledgeItemId" = ki.id
+      WHERE ki.status = 'READY'
+        AND to_tsvector('english', kc.content) @@ to_tsquery('english', ${searchTerms})
+      ORDER BY score DESC
+      LIMIT ${limit}
+    `;
+    
+    return (chunks as Array<{
+      id: string;
+      content: string;
+      title: string;
+      score: number;
+    }>).map(chunk => ({
+      id: chunk.id,
+      content: chunk.content,
+      title: chunk.title,
+      score: chunk.score
+    }));
+    
+  } catch (error) {
+    console.error('❌ Keyword search error:', error);
+    return [];
+  }
+}
+
+/**
+ * Extract relevant keywords from query using simple tokenization
+ * 
+ * @param query - User query
+ * @returns Array of important keywords
+ */
+function extractKeywords(query: string): string[] {
+  try {
+    // Tokenize the query
+    const tokens = query
+      .toLowerCase()
+      .split(/[^a-zA-Z0-9]+/)
+      .filter(token => token.length > 0);
+    
+    // Remove stop words
+    const stopWords = new Set([
+      'the', 'and', 'or', 'but', 'in', 'on', 'at', 'to', 'for', 'of', 'with',
+      'by', 'from', 'up', 'about', 'into', 'through', 'during', 'before', 
+      'after', 'above', 'below', 'between', 'among', 'is', 'am', 'are', 'was',
+      'were', 'be', 'been', 'being', 'have', 'has', 'had', 'do', 'does', 'did',
+      'will', 'would', 'could', 'should', 'may', 'might', 'must', 'can', 'how',
+      'what', 'when', 'where', 'why', 'who', 'which', 'that', 'this', 'these',
+      'those', 'i', 'you', 'he', 'she', 'it', 'we', 'they', 'me', 'him', 'her',
+      'us', 'them', 'my', 'your', 'his', 'her', 'its', 'our', 'their'
+    ]);
+    
+    // Filter tokens
+    const keywords = tokens
+      .filter((token: string) => token.length > 2)
+      .filter((token: string) => !stopWords.has(token))
+      .filter((token: string) => !/^\d+$/.test(token)); // Remove pure numbers
+    
+    // Remove duplicates and return
+    return [...new Set(keywords)];
+  } catch (error) {
+    console.error('❌ Keyword extraction error:', error);
+    return [];
+  }
+}
+
+/**
+ * Graph-based search using Neo4j knowledge graph
+ * 
+ * @param query - User query to search for entities and relationships
+ * @param maxChunks - Maximum number of chunks to return
+ * @returns Promise<KnowledgeContext[]>
+ */
+export async function graphSearch(
+  query: string,
+  maxChunks: number = 10
+): Promise<KnowledgeContext[]> {
+  try {
+    console.log(`🕸️ Starting graph search for: "${query}"`);
+    
+    // Extract potential entity names from the query
+    const entities = extractEntitiesFromQuery(query);
+    console.log(`🏷️ Extracted potential entities: [${entities.join(', ')}]`);
+    
+    if (entities.length === 0) {
+      console.log('⚠️ No entities extracted from query, skipping graph search');
+      return [];
+    }
+    
+    // Search for related entities in the knowledge graph
+    const relatedEntitiesPromises = entities.map(async (entity) => {
+      try {
+        const related = await queryRelatedEntities(entity, 5);
+        return { entity, related };
+      } catch (error) {
+        console.warn(`⚠️ Failed to query related entities for "${entity}":`, error);
+        return { entity, related: [] };
+      }
+    });
+    
+    const relatedEntitiesResults = await Promise.all(relatedEntitiesPromises);
+    
+    // Collect all related entity names for content search
+    const allRelatedEntities = new Set<string>();
+    relatedEntitiesResults.forEach(({ entity, related }) => {
+      allRelatedEntities.add(entity);
+      related.forEach(rel => {
+        if (rel.name) {
+          allRelatedEntities.add(rel.name);
+        }
+      });
+    });
+    
+    console.log(`🔗 Found ${allRelatedEntities.size} related entities from graph`);
+    
+    if (allRelatedEntities.size === 0) {
+      return [];
+    }
+    
+    // Build search query from related entities
+    const graphEntityQuery = Array.from(allRelatedEntities)
+      .slice(0, 10) // Limit to prevent too long queries
+      .join(' ');
+    
+    console.log(`🔍 Graph-enhanced query: "${graphEntityQuery}"`);
+    
+    // Search knowledge chunks using graph-enhanced query
+    const searchTerms = graphEntityQuery
+      .toLowerCase()
+      .replace(/[^\w\s]/g, ' ')
+      .split(' ')
+      .filter(term => term.length > 2)
+      .filter(term => !['the', 'and', 'for', 'with', 'how', 'what', 'can', 'will', 'are', 'is'].includes(term))
+      .join(' | '); // PostgreSQL OR syntax for broad coverage
+    
+    if (!searchTerms) {
+      console.log('⚠️ No valid search terms from graph entities');
+      return [];
+    }
+    
+    // Query knowledge chunks with graph-derived terms
+    const chunks = await prisma.$queryRaw`
+      SELECT 
+        kc.id,
+        kc.content,
+        ki.title,
+        ts_rank(to_tsvector('english', kc.content), to_tsquery('english', ${searchTerms})) as score
+      FROM "KnowledgeChunk" kc
+      JOIN "KnowledgeItem" ki ON kc."knowledgeItemId" = ki.id
+      WHERE ki.status = 'READY'
+        AND to_tsvector('english', kc.content) @@ to_tsquery('english', ${searchTerms})
+      ORDER BY score DESC
+      LIMIT ${maxChunks}
+    `;
+    
+    const results = (chunks as Array<{
+      id: string;
+      content: string;
+      title: string;
+      score: number;
+    }>).map(chunk => ({
+      id: chunk.id,
+      content: chunk.content,
+      title: chunk.title,
+      score: chunk.score * 0.9 // Slightly lower weight than direct searches
+    }));
+    
+    console.log(`✅ Graph search returned ${results.length} results`);
+    return results;
+    
+  } catch (error) {
+    console.error('❌ Graph search error:', error);
+    return [];
+  }
+}
+
+/**
+ * Extract potential entity names from query text
+ * 
+ * @param query - User query
+ * @returns Array of potential entity names
+ */
+function extractEntitiesFromQuery(query: string): string[] {
+  try {
+    // Common fitness/exercise entities and variations
+    const fitnessEntities = [
+      // Exercises
+      'squat', 'deadlift', 'bench press', 'overhead press', 'row', 'pull-up', 'chin-up',
+      'lat pulldown', 'dip', 'push-up', 'lunge', 'leg press', 'leg curl', 'leg extension',
+      'bicep curl', 'tricep extension', 'lateral raise', 'face pull', 'hip thrust',
+      'romanian deadlift', 'bulgarian split squat', 'barbell row', 'dumbbell row',
+      'incline press', 'decline press', 'cable fly', 'pec deck', 'machine press',
+      
+      // Muscle groups
+      'chest', 'back', 'shoulders', 'biceps', 'triceps', 'legs', 'quadriceps', 'hamstrings',
+      'glutes', 'calves', 'abs', 'core', 'forearms', 'delts', 'lats', 'traps',
+      'pectorals', 'deltoids', 'latissimus', 'trapezius', 'rhomboids',
+      
+      // Training concepts
+      'hypertrophy', 'strength', 'endurance', 'power', 'volume', 'intensity', 'frequency',
+      'progressive overload', 'time under tension', 'rest pause', 'drop set', 'superset',
+      'compound', 'isolation', 'concentric', 'eccentric', 'isometric', 'rep range',
+      'periodization', 'deload', 'recovery', 'protein synthesis', 'muscle building',
+      
+      // Equipment
+      'barbell', 'dumbbell', 'kettlebell', 'cable', 'machine', 'bands', 'bodyweight',
+      
+      // Nutrition
+      'protein', 'carbs', 'carbohydrates', 'fats', 'calories', 'macros', 'creatine',
+      'whey', 'casein', 'amino acids', 'supplements', 'nutrition', 'diet'
+    ];
+    
+    const queryLower = query.toLowerCase();
+    const foundEntities: string[] = [];
+    
+    // Find entities mentioned in the query
+    fitnessEntities.forEach(entity => {
+      if (queryLower.includes(entity)) {
+        foundEntities.push(entity);
+      }
+    });
+    
+    // Also extract multi-word phrases that might be entities
+    const words = queryLower
+      .replace(/[^\w\s]/g, ' ')
+      .split(' ')
+      .filter(word => word.length > 3);
+    
+    // Look for compound terms
+    for (let i = 0; i < words.length - 1; i++) {
+      const twoWord = `${words[i]} ${words[i + 1]}`;
+      if (fitnessEntities.includes(twoWord)) {
+        foundEntities.push(twoWord);
+      }
+      
+      if (i < words.length - 2) {
+        const threeWord = `${words[i]} ${words[i + 1]} ${words[i + 2]}`;
+        if (fitnessEntities.includes(threeWord)) {
+          foundEntities.push(threeWord);
+        }
+      }
+    }
+    
+    // Remove duplicates and return
+    return [...new Set(foundEntities)];
+    
+  } catch (error) {
+    console.error('❌ Entity extraction error:', error);
+    return [];
+  }
+}
+
+/**
+ * Calculate TF-IDF scores for better keyword relevance
+ */
+async function calculateKeywordRelevance(keywords: string[]): Promise<Array<{keyword: string, score: number}>> {
+  try {
+    // Simple TF calculation for the query
+    const queryTermFreq: Record<string, number> = {};
+    keywords.forEach(keyword => {
+      queryTermFreq[keyword] = (queryTermFreq[keyword] || 0) + 1;
+    });
+    
+    // Get document frequency for IDF calculation
+    const keywordScores = await Promise.all(
+      keywords.map(async (keyword) => {
+        try {
+          // Count documents containing this keyword
+          const docCount = await prisma.knowledgeChunk.count({
+            where: {
+              content: {
+                contains: keyword,
+                mode: 'insensitive'
+              },
+              knowledgeItem: {
+                status: 'READY'
+              }
+            }
+          });
+          
+          // Simple TF-IDF calculation
+          const tf = queryTermFreq[keyword];
+          const totalDocs = await prisma.knowledgeChunk.count({
+            where: {
+              knowledgeItem: {
+                status: 'READY'
+              }
+            }
+          });
+          
+          const idf = Math.log((totalDocs + 1) / (docCount + 1));
+          const score = tf * idf;
+          
+          return { keyword, score };
+        } catch (error) {
+          console.warn(`Error calculating relevance for keyword "${keyword}":`, error);
+          return { keyword, score: 0 };
+        }
+      })
+    );
+    
+    return keywordScores.sort((a, b) => b.score - a.score);
+  } catch (error) {
+    console.error('❌ Keyword relevance calculation error:', error);
+    return keywords.map(keyword => ({ keyword, score: 1 }));
+  }
+}
+
+/**
+ * Hybrid search combining vector similarity, keyword matching, and graph search
+ * 
+ * @param query - User query
+ * @param maxChunks - Maximum number of chunks to return
+ * @param similarityThreshold - Minimum similarity threshold for vector search
+ * @param categoryIds - Optional category filtering
+ * @param config - AI Configuration for Graph RAG settings
+ * @returns Promise<KnowledgeContext[]>
+ */
+export async function hybridSearch(
+  query: string,
+  maxChunks: number = 10,
+  similarityThreshold: number = 0.3,
+  categoryIds?: string[],
+  config?: { enableGraphRAG?: boolean; graphSearchWeight?: number }
+): Promise<KnowledgeContext[]> {
+  try {
+    console.log(`🔄 Starting Graph RAG hybrid search for: "${query}"`);
+    console.log(`📊 Parameters: maxChunks=${maxChunks}, threshold=${similarityThreshold}`);
+    
+    // Check if Graph RAG is enabled
+    const enableGraphRAG = config?.enableGraphRAG ?? true;
+    const graphSearchWeight = config?.graphSearchWeight ?? 0.9;
+    
+    console.log(`🕸️ Graph RAG enabled: ${enableGraphRAG}, weight: ${graphSearchWeight}`);
+    
+    // Extract and analyze keywords
+    const keywords = extractKeywords(query);
+    console.log(`🏷️ Extracted keywords: [${keywords.join(', ')}]`);
+    
+    // Calculate keyword relevance scores
+    const keywordRelevance = await calculateKeywordRelevance(keywords);
+    console.log(`📈 Top keywords by relevance: [${keywordRelevance.slice(0, 5).map(k => `${k.keyword}:${k.score.toFixed(2)}`).join(', ')}]`);
+    
+    // Prepare search promises for parallel execution
+    const searchPromises = [];
+    
+    // 1. Vector search
+    searchPromises.push(
+      fetchKnowledgeContext(query, Math.ceil(maxChunks * 0.6), similarityThreshold, categoryIds)
+        .then(results => ({ source: 'vector', results }))
+        .catch(error => {
+          console.warn('Vector search failed:', error);
+          return { source: 'vector', results: [] };
+        })
+    );
+    
+    // 2. Keyword search  
+    searchPromises.push(
+      performAndKeywordSearch(query, Math.ceil(maxChunks * 0.4))
+        .then(results => ({ source: 'keyword', results }))
+        .catch(error => {
+          console.warn('Keyword search failed:', error);
+          return { source: 'keyword', results: [] };
+        })
+    );
+    
+    // 3. Graph search (conditional on configuration)
+    if (enableGraphRAG) {
+      searchPromises.push(
+        graphSearch(query, Math.ceil(maxChunks * 0.4))
+          .then(results => ({ source: 'graph', results }))
+          .catch(error => {
+            console.warn('Graph search failed:', error);
+            return { source: 'graph', results: [] };
+          })
+      );
+    }
+    
+    // 4. Enhanced keyword search with top relevant terms
+    if (keywordRelevance.length > 0) {
+      const topKeywords = keywordRelevance.slice(0, 3).map(k => k.keyword).join(' ');
+      searchPromises.push(
+        performAndKeywordSearch(topKeywords, Math.ceil(maxChunks * 0.3))
+          .then(results => ({ source: 'enhanced_keyword', results }))
+          .catch(error => {
+            console.warn('Enhanced keyword search failed:', error);
+            return { source: 'enhanced_keyword', results: [] };
+          })
+      );
+    }
+    
+    // Execute all searches in parallel
+    const searchResults = await Promise.all(searchPromises);
+    
+    // Combine and deduplicate results
+    const combinedResults = new Map<string, KnowledgeContext & { sources: string[], hybridScore: number }>();
+    
+    searchResults.forEach(({ source, results }) => {
+      console.log(`📊 ${source} search returned ${results.length} results`);
+      
+      results.forEach((result, index) => {
+        const existing = combinedResults.get(result.id);
+        
+        if (existing) {
+          // Update existing result
+          existing.sources.push(source);
+          
+          // Boost score for multi-source results with source-specific weights
+          const sourceBonus = source === 'vector' ? 0.15 : 
+                            source === 'graph' ? 0.12 * graphSearchWeight : 
+                            source === 'keyword' ? 0.08 : 0.05;
+          const positionBonus = Math.max(0, (results.length - index) / results.length * 0.1);
+          existing.hybridScore += sourceBonus + positionBonus;
+          
+          // Take the best score from either search
+          existing.score = Math.max(existing.score, result.score);
+        } else {
+          // Add new result with source-specific weighting
+          const baseScore = result.score;
+          const sourceWeight = source === 'vector' ? 1.0 : 
+                              source === 'graph' ? graphSearchWeight : 
+                              source === 'keyword' ? 0.8 : 0.6;
+          const positionBonus = Math.max(0, (results.length - index) / results.length * 0.1);
+          
+          combinedResults.set(result.id, {
+            ...result,
+            sources: [source],
+            hybridScore: baseScore * sourceWeight + positionBonus
+          });
+        }
+      });
+    });
+    
+    // Convert to array and sort by hybrid score
+    const finalResults = Array.from(combinedResults.values())
+      .sort((a, b) => {
+        // Boost results that appear in multiple sources, especially graph + vector
+        const aHasGraph = a.sources.includes('graph');
+        const bHasGraph = b.sources.includes('graph');
+        const aHasVector = a.sources.includes('vector');
+        const bHasVector = b.sources.includes('vector');
+        
+        // Priority boost for graph + vector combination (only if graph RAG enabled)
+        if (enableGraphRAG && aHasGraph && aHasVector && !(bHasGraph && bHasVector)) return -1;
+        if (enableGraphRAG && bHasGraph && bHasVector && !(aHasGraph && aHasVector)) return 1;
+        
+        // Priority boost for multiple sources
+        if (a.sources.length > b.sources.length) return -1;
+        if (b.sources.length > a.sources.length) return 1;
+        
+        // Then sort by hybrid score
+        return b.hybridScore - a.hybridScore;
+      })
+      .slice(0, maxChunks)
+      .map(({ hybridScore, ...result }) => ({
+        ...result,
+        score: hybridScore // Use hybrid score as final score
+      }));
+    
+    console.log(`✅ Graph RAG hybrid search complete: ${finalResults.length} final results`);
+    console.log(`📈 Score distribution: min=${Math.min(...finalResults.map(r => r.score)).toFixed(3)}, max=${Math.max(...finalResults.map(r => r.score)).toFixed(3)}`);
+    
+    // Log source distribution for debugging
+    const sourceDistribution: Record<string, number> = {};
+    Array.from(combinedResults.values()).forEach(result => {
+      result.sources.forEach(source => {
+        sourceDistribution[source] = (sourceDistribution[source] || 0) + 1;
+      });
+    });
+    console.log(`🔗 Source distribution:`, sourceDistribution);
+    
+    return finalResults;
+    
+  } catch (error) {
+    console.error('❌ Graph RAG hybrid search error:', error);
+    
+    // Fallback to vector search only
+    console.log('🔄 Falling back to vector search only...');
+    try {
+      return await fetchKnowledgeContext(query, maxChunks, similarityThreshold, categoryIds);
+    } catch (fallbackError) {
+      console.error('❌ Fallback search also failed:', fallbackError);
+      return [];
+    }
+  }
 }
 
 export default fetchKnowledgeContext;

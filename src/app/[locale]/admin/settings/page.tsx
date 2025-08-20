@@ -30,6 +30,8 @@ interface AIConfiguration {
   enableWebSearch: boolean;
   toolEnforcementMode: string;
   strictMusclePriority: boolean;
+  enableGraphRAG: boolean;
+  graphSearchWeight: number;
   createdAt: string;
   updatedAt: string;
 }
@@ -326,6 +328,42 @@ export default function AdminSettingsPage() {
                       onChange={(e) => updateConfig('ragHighRelevanceThreshold', parseFloat(e.target.value))}
                     />
                     <p className="text-xs text-gray-500">Threshold for marking content as highly relevant (0.01-1.0)</p>
+                  </div>
+                </div>
+
+                {/* Graph RAG Configuration */}
+                <div className="space-y-4 border-t pt-4">
+                  <h4 className="text-md font-medium">Graph RAG Settings</h4>
+                  <p className="text-sm text-gray-600">Configure the knowledge graph enhanced retrieval system</p>
+                  
+                  <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                    <div className="flex flex-row items-center justify-between rounded-lg border p-4">
+                      <div className="space-y-0.5">
+                        <Label className="text-base">Enable Graph RAG</Label>
+                        <p className="text-sm text-gray-500">
+                          Use Neo4j knowledge graph for enhanced contextual retrieval
+                        </p>
+                      </div>
+                      <Switch
+                        checked={config.enableGraphRAG}
+                        onCheckedChange={(checked) => updateConfig('enableGraphRAG', checked)}
+                      />
+                    </div>
+                    
+                    <div className="space-y-2">
+                      <Label htmlFor="graphSearchWeight">Graph Search Weight</Label>
+                      <Input
+                        id="graphSearchWeight"
+                        type="number"
+                        min={0.1}
+                        max={1.0}
+                        step={0.1}
+                        value={config.graphSearchWeight}
+                        onChange={(e) => updateConfig('graphSearchWeight', parseFloat(e.target.value))}
+                        disabled={!config.enableGraphRAG}
+                      />
+                      <p className="text-xs text-gray-500">Weight for graph search results (0.1-1.0)</p>
+                    </div>
                   </div>
                 </div>
               </div>

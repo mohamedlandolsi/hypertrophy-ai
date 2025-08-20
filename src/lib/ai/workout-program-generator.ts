@@ -5,7 +5,7 @@
 
 // src/lib/ai/workout-program-generator.ts
 import { GoogleGenerativeAI } from '@google/generative-ai';
-import { getSystemPrompt } from './core-prompts';
+import { getContextQASystemPrompt } from './core-prompts';
 import { getEnhancedKnowledgeContext } from '../gemini';
 import { getAIConfiguration } from '../gemini';
 
@@ -420,16 +420,16 @@ export async function generateWorkoutProgram(
   try {
     console.log("🏋️ Starting enhanced workout program generation...");
     
-    // 1. Generate base system prompt with user profile
-    const baseSystemPrompt = await getSystemPrompt(userProfile);
-    
-    // 2. Perform multi-query RAG
+    // 1. Perform multi-query RAG first to get context
     const searchResults = await performMultiQueryRAG(userPrompt, config);
     
-    // 3. Format comprehensive knowledge context
+    // 2. Format comprehensive knowledge context
     const knowledgeContext = formatProgramGenerationContext(searchResults);
     
     console.log(`📚 Knowledge context prepared: ${knowledgeContext.length} characters`);
+    
+    // 3. Generate Context-QA system prompt with workout program focus
+    const baseSystemPrompt = await getContextQASystemPrompt(userProfile);
     
     // 4. Create enhanced program designer prompt
     const fullPrompt = createProgramDesignerPrompt(

@@ -2,9 +2,9 @@ import { NextRequest, NextResponse } from 'next/server';
 import { createClient } from '@/lib/supabase/server';
 import { prisma } from '@/lib/prisma';
 import { GoogleGenerativeAI, SchemaType, FunctionCallingMode, FunctionDeclaration } from '@google/generative-ai';
-import { getSystemPrompt } from '@/lib/ai/core-prompts';
-import { fetchKnowledgeContext } from '@/lib/vector-search';
-import { generateWorkoutProgram, detectWorkoutProgramIntent, detectProgramReviewIntent } from '@/lib/ai/workout-program-generator';
+import { getContextQASystemPrompt } from '@/lib/ai/core-prompts';
+import { rewriteFitnessQuery } from '@/lib/query-rewriting';
+import { generateWorkoutProgram, detectWorkoutProgramIntent } from '@/lib/ai/workout-program-generator';
 import { 
   ApiErrorHandler, 
   ValidationError, 
@@ -36,6 +36,15 @@ if (!process.env.GEMINI_API_KEY) {
   throw new Error("GEMINI_API_KEY environment variable is not set.");
 }
 const genAI = new GoogleGenerativeAI(process.env.GEMINI_API_KEY);
+
+/**
+ * Generate embedding for query using Gemini
+ */
+async function getEmbedding(query: string): Promise<number[]> {
+  const embeddingModel = genAI.getGenerativeModel({ model: "text-embedding-004" });
+  const result = await embeddingModel.embedContent(query);
+  return result.embedding.values;
+}
 
 /**
  * Map UI model selection to actual Gemini model names
@@ -327,11 +336,9 @@ export async function POST(request: NextRequest) {
 
     console.log(`✅ Configuration loaded - Knowledge Base: ${config.useKnowledgeBase}, Strict Muscle Priority: ${config.strictMusclePriority}`);
 
-    // 6. Generate System Prompt
-    console.log("🎯 Step 2: Generating System Prompt...");
+    // 6. Generate Basic System Prompt (will be enhanced after knowledge retrieval)
+    console.log("🎯 Step 2: Preparing System Prompt...");
     const profileObject = userProfile?.clientMemory || {};
-    const systemPrompt: string = await getSystemPrompt(profileObject);
-    console.log(`✅ System prompt generated (${systemPrompt.length} characters)`);
 
     // 7. Check for Workout Program Intent (Multi-Query RAG)
     const isWorkoutProgramRequest = detectWorkoutProgramIntent(trimmedMessage);
@@ -425,15 +432,6 @@ export async function POST(request: NextRequest) {
       console.log("📚 Step 3: Executing Standard RAG Pipeline...");
       let knowledgeChunks: KnowledgeChunk[] = [];
 
-      // Check for Program Review Intent (Priority Category Inclusion)
-      let categoryIds: string[] | undefined = undefined;
-      const isProgramReviewRequest = detectProgramReviewIntent(trimmedMessage);
-      
-      if (isProgramReviewRequest) {
-        console.log("📋 Detected program review request - including hypertrophy_programs_review category...");
-        categoryIds = ['hypertrophy_programs_review'];
-      }
-
       // 9. Implement Strict Muscle Priority Logic
       if (config.strictMusclePriority) {
         console.log("💪 Step 4: Checking Strict Muscle Priority...");
@@ -451,22 +449,65 @@ export async function POST(request: NextRequest) {
         }
       }
 
-      // 9. Perform Standard Vector Search (if needed)
+      // 9. Perform Vector Search using SQL function (if needed)
       if (knowledgeChunks.length === 0) {
-        console.log("🔍 Step 5: Performing Standard Vector Search...");
-        const vectorResults = await fetchKnowledgeContext(
-          trimmedMessage,
-          config.ragMaxChunks,
-          config.ragSimilarityThreshold,
-          categoryIds  // Pass category IDs for program review filtering
-        );
+        console.log("🔍 Step 5: Performing Vector Search using match_document_sections...");
         
-        // Convert to KnowledgeChunk format
-        knowledgeChunks = vectorResults.map(result => ({
-          id: result.id,
-          content: result.content,
-          knowledgeItem: { title: result.title }
-        }));
+        // Rewrite query for enhanced search results
+        console.log("✍️ Rewriting query for better search results...");
+        const queryRewriteResult = await rewriteFitnessQuery(trimmedMessage);
+        
+        let searchQuery = trimmedMessage;
+        if (queryRewriteResult.success && queryRewriteResult.rewrittenQuery) {
+          searchQuery = queryRewriteResult.rewrittenQuery;
+          console.log(`🔄 Query rewritten: "${trimmedMessage}" → "${searchQuery}"`);
+          if (queryRewriteResult.additionalKeywords.length > 0) {
+            console.log(`🏷️ Additional keywords: ${queryRewriteResult.additionalKeywords.join(', ')}`);
+          }
+        } else {
+          console.log(`⚠️ Query rewrite failed, using original: ${queryRewriteResult.error || 'Unknown error'}`);
+        }
+        
+        try {
+          // Generate embedding for the search query
+          console.log("🧠 Generating embedding for search query...");
+          const queryEmbedding = await getEmbedding(searchQuery);
+          const embeddingString = JSON.stringify(queryEmbedding);
+          
+          // Call the SQL function using Supabase RPC
+          console.log("🔍 Calling match_document_sections SQL function...");
+          const supabase = await createClient();
+          const { data: searchResults, error: rpcError } = await supabase.rpc('match_document_sections', {
+            query_embedding: embeddingString,
+            match_threshold: config.ragSimilarityThreshold,
+            match_count: config.ragMaxChunks
+          });
+          
+          if (rpcError) {
+            console.error("❌ Error calling match_document_sections:", rpcError);
+            throw new Error(`SQL function error: ${rpcError.message}`);
+          }
+          
+          // Convert SQL results to KnowledgeChunk format
+          knowledgeChunks = (searchResults || []).map((result: {
+            id: string;
+            content: string;
+            title: string;
+            similarity: number;
+          }) => ({
+            id: result.id,
+            content: result.content,
+            knowledgeItem: { title: result.title }
+          }));
+          
+          console.log(`🎯 SQL vector search returned ${knowledgeChunks.length} results`);
+          
+        } catch (error) {
+          console.error("❌ Error in SQL vector search:", error);
+          // Fallback to empty results rather than crashing
+          knowledgeChunks = [];
+          console.log("⚠️ Continuing with empty knowledge context due to search error");
+        }
       }
 
       // Format knowledge context
@@ -475,6 +516,11 @@ export async function POST(request: NextRequest) {
     } else {
       console.log("⏭️ Step 3-5: Skipping RAG (Knowledge Base disabled)");
     }
+
+    // 9.5. Generate Context-QA System Prompt
+    console.log("🎯 Step 6: Generating Context-QA System Prompt...");
+    const systemPrompt: string = await getContextQASystemPrompt(profileObject);
+    console.log(`✅ Context-QA system prompt generated (${systemPrompt.length} characters)`);
 
     // 10. Get Conversation History
     let existingMessages: Array<{ role: string; content: string }> = [];
@@ -505,21 +551,35 @@ export async function POST(request: NextRequest) {
       chatId = newChat.id;
     }
 
-    // 11. Assemble Final Prompt for Gemini
-    console.log("🔨 Step 6: Assembling Final Prompt...");
+    // 11. Assemble Context-QA Structured Prompt for Gemini
+    console.log("🔨 Step 7: Assembling Context-QA Structured Prompt...");
     
     const conversationHistory = formatConversationHistory(existingMessages);
     
-    // Build the complete prompt structure
-    let fullPrompt = systemPrompt;
-    
-    if (knowledgeContext) {
-      fullPrompt += `\n\n${knowledgeContext}`;
-    }
-    
-    fullPrompt += `\n\nUser: ${trimmedMessage}`;
+    // Build Context-QA structured prompt
+    let fullPrompt = `[INSTRUCTIONS]
+${systemPrompt}
+[/INSTRUCTIONS]
 
-    console.log(`✅ Final prompt assembled (${fullPrompt.length} characters)`);
+[KNOWLEDGE]
+${knowledgeContext || 'No specific knowledge was retrieved for this query. Use your general fitness expertise.'}
+[/KNOWLEDGE]`;
+
+    if (conversationHistory) {
+      fullPrompt += `
+
+[CONVERSATION HISTORY]
+${conversationHistory}
+[/CONVERSATION HISTORY]`;
+    }
+
+    fullPrompt += `
+
+[QUESTION]
+${trimmedMessage}
+[/QUESTION]`;
+
+    console.log(`✅ Context-QA structured prompt assembled (${fullPrompt.length} characters)`);
 
     // 12. Save User Message
     const userMessage = await prisma.message.create({

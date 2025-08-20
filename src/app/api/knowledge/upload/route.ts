@@ -8,6 +8,7 @@ import {
   canUserCreateKnowledgeItem, 
   incrementUserUploadCount 
 } from '@/lib/subscription';
+import { buildKnowledgeGraph } from '@/lib/knowledge-graph';
 
 interface ProcessFileRequest {
   filePath: string;
@@ -161,6 +162,15 @@ export async function POST(request: NextRequest) {
         });
 
         console.log(`✅ Successfully processed: ${fileName} (${processingResult.chunksCreated} chunks, ${processingResult.embeddingsGenerated} embeddings)`);
+        
+        // Build knowledge graph asynchronously (don't block response)
+        if (content && content.trim().length > 100) {
+          console.log('🕸️ Building knowledge graph asynchronously...');
+          buildKnowledgeGraph(content, knowledgeItem.id).catch(error => {
+            console.error('❌ Knowledge graph building failed:', error);
+            // Log error but don't fail the upload
+          });
+        }
         
         // Increment user's upload count for subscription tracking
         try {

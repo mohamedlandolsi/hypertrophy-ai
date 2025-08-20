@@ -1,0 +1,3 @@
+-- AlterTable
+ALTER TABLE "AIConfiguration" ADD COLUMN     "enableGraphRAG" BOOLEAN NOT NULL DEFAULT true,
+ADD COLUMN     "graphSearchWeight" DOUBLE PRECISION NOT NULL DEFAULT 0.9;

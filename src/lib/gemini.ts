@@ -11,6 +11,7 @@ import {
 import { prisma } from "./prisma";
 import { updateClientMemory, type MemoryUpdate } from "./client-memory";
 import { fetchKnowledgeContext, type KnowledgeContext } from "./vector-search";
+import { fetchEnhancedKnowledgeContext, type EnhancedKnowledgeContext } from "./enhanced-knowledge-search";
 import {
   fetchUserProfile,
   type UserProfileData,
@@ -68,9 +69,17 @@ async function getEnhancedKnowledgeContext(
     console.warn("⚠️ Enhanced RAG failed, using fallback:", enhancedError);
   }
 
-  // Fallback to original system
-  console.log("🔄 Using original fetchKnowledgeContext...");
-  return await fetchKnowledgeContext(query, maxChunks, threshold);
+  // Fallback to enhanced SQL-based search
+  console.log("🔄 Using enhanced SQL-based fetchEnhancedKnowledgeContext...");
+  const enhancedResults = await fetchEnhancedKnowledgeContext(query, maxChunks, threshold);
+  
+  // Convert EnhancedKnowledgeContext to KnowledgeContext format
+  return enhancedResults.map((result) => ({
+    id: result.id,
+    title: result.title,
+    content: result.content,
+    score: result.score,
+  }));
 }
 
 /**

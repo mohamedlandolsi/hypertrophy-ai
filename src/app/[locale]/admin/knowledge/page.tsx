@@ -273,9 +273,16 @@ export default function KnowledgePage() {
           }
 
           console.log(`📤 File uploaded to storage: ${file.name}`);
+          
+          // Update toast to show processing state
+          showToast.dismiss(uploadToast);
+          const processingToast = showToast.processing(
+            'Processing Document', 
+            `Using Edge Function to process ${file.name}...`
+          );
 
-          // Step 3: Process the uploaded file
-          const processResponse = await fetch('/api/knowledge/upload', {
+          // Step 3: Process the file using Edge Function
+          const processResponse = await fetch('/api/knowledge/process-with-edge', {
             method: 'POST',
             headers: {
               'Content-Type': 'application/json',
@@ -283,35 +290,34 @@ export default function KnowledgePage() {
             body: JSON.stringify({
               filePath: filePath,
               fileName: file.name,
-              fileSize: file.size,
               mimeType: file.type,
             }),
           });
 
-          showToast.dismiss(uploadToast);
+          showToast.dismiss(processingToast);
 
           if (processResponse.ok) {
             const data = await processResponse.json();
-            console.log(`✅ File processed successfully: ${file.name}`, data);
+            console.log(`✅ File processed successfully with Edge Function: ${file.name}`, data);
             
-            if (data.knowledgeItem?.processingResult) {
-              showToast.uploadSuccess(
-                file.name,
-                data.knowledgeItem.processingResult.chunksCreated,
-                data.knowledgeItem.processingResult.embeddingsGenerated
+            // Show enhanced success toast with Edge Function details
+            if (data.result) {
+              showToast.success(
+                '🚀 Edge Function Processing Complete',
+                `${file.name}: ${data.result.chunksCreated} chunks, ${data.result.embeddingsGenerated} embeddings in ${data.result.processingTime}ms`
               );
             } else {
-              showToast.success(tToasts('fileUploadSuccessTitle'), tToasts('fileUploadSuccessText', { fileName: file.name }));
+              showToast.success('File Processed Successfully', `${file.name} has been processed using Edge Function`);
             }
             
-            results.push(data.knowledgeItem);
+            results.push(data.knowledgeItem || { fileName: file.name });
           } else {
             const errorData = await processResponse.json();
-            console.error(`❌ Processing failed for ${file.name}:`, errorData.error);
-            throw new Error(errorData.error || 'Failed to process file');
+            console.error(`❌ Edge Function processing failed for ${file.name}:`, errorData.error);
+            throw new Error(errorData.error || 'Edge Function processing failed');
           }
         } catch (fileError) {
-          console.error(`❌ Error uploading ${file.name}:`, fileError);
+          console.error(`❌ Error processing ${file.name}:`, fileError);
           showToast.dismiss(uploadToast);
           showToast.uploadError(file.name, (fileError as Error).message);
           errors.push({ fileName: file.name, error: (fileError as Error).message });
@@ -326,14 +332,22 @@ export default function KnowledgePage() {
       // Clear selected files
       setSelectedFiles([]);
       
-      // Show summary
-      if (results.length > 0) {
-        console.log(`🎉 Upload completed. Successfully processed ${results.length} file(s), failed ${errors.length} file(s)`);
+      // Show summary with Edge Function details
+      if (results.length > 0 && errors.length === 0) {
+        showToast.success(
+          '🎉 All Files Processed', 
+          `Successfully processed ${results.length} file(s) using Supabase Edge Functions`
+        );
+      } else if (results.length > 0 && errors.length > 0) {
+        showToast.warning(
+          'Partial Success', 
+          `Processed ${results.length} file(s), failed ${errors.length} file(s)`
+        );
       }
       
     } catch (error) {
       console.error('❌ Upload process error:', error);
-      showToast.networkError('upload files');
+      showToast.networkError('process files with Edge Function');
     } finally {
       setIsUploading(false);
     }
@@ -716,6 +730,17 @@ export default function KnowledgePage() {
                   {selectedFiles.length > 0 && (
                     <div className="space-y-2">
                       <Label className="text-sm font-medium">Selected Files:</Label>
+                      {isUploading && (
+                        <div className="p-3 bg-blue-50 border border-blue-200 rounded-lg">
+                          <div className="flex items-center gap-2 text-blue-700">
+                            <div className="animate-spin rounded-full h-4 w-4 border-2 border-blue-600 border-t-transparent"></div>
+                            <span className="text-sm font-medium">Processing files with Supabase Edge Function...</span>
+                          </div>
+                          <p className="text-xs text-blue-600 mt-1">
+                            Files are being uploaded, chunked, and embedded. This may take a few moments.
+                          </p>
+                        </div>
+                      )}
                       {selectedFiles.map((file, index) => (
                         <div key={index} className="flex items-center justify-between p-2 bg-muted rounded-lg">
                           <div className="flex items-center">
@@ -739,7 +764,14 @@ export default function KnowledgePage() {
                         disabled={isUploading}
                         className="w-full"
                       >
-                        {isUploading ? 'Uploading...' : `Upload ${selectedFiles.length} File(s)`}
+                        {isUploading ? (
+                          <div className="flex items-center gap-2">
+                            <div className="animate-spin rounded-full h-4 w-4 border-2 border-white border-t-transparent"></div>
+                            Processing with Edge Function...
+                          </div>
+                        ) : (
+                          `Upload ${selectedFiles.length} File(s)`
+                        )}
                       </Button>
                     </div>
                   )}
@@ -782,7 +814,14 @@ export default function KnowledgePage() {
                     disabled={isUploading || isHtmlContentEmpty(textInput) || !textTitle.trim()}
                     className="w-full"
                   >
-                    {isUploading ? 'Adding...' : 'Add to Knowledge Base'}
+                    {isUploading ? (
+                      <div className="flex items-center gap-2">
+                        <div className="animate-spin rounded-full h-4 w-4 border-2 border-white border-t-transparent"></div>
+                        Adding...
+                      </div>
+                    ) : (
+                      'Add to Knowledge Base'
+                    )}
                   </Button>
                 </CardContent>
               </Card>

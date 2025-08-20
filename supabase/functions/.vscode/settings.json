@@ -1,0 +1,7 @@
+{
+  "typescript.preferences.includePackageJsonAutoImports": "off",
+  "typescript.validate.enable": false,
+  "deno.enable": true,
+  "deno.lint": true,
+  "deno.unstable": true
+}

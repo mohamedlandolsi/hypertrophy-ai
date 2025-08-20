@@ -31,179 +31,54 @@
 - **AI/ML**: Google Gemini API (v0.24.1) for chat and embeddings
 - **UI**: Radix UI + Tailwind CSS + shadcn/ui components
 - **Payments**: LemonSqueezy for subscription management
-- **File Processing**: Mammoth (Word), pdf-parse, with Supabase Storage
-- **Animations**: Framer Motion for enhanced UX interactions
-- **Rich Text**: TipTap editor for knowledge management
+# Copilot instructions — Hypertrophy AI (concise)
 
-## 🔧 RAG Pipeline Performance Fixes
+This file gives AI coding agents the minimum, high-value project knowledge needed to be productive immediately.
 
-### Critical Retrieval Improvements (Recently Optimized)
-- **Eliminated Batch Limits**: pgvector SQL searches full database, not batched JSON fallback
-- **AND-Based Keywords**: PostgreSQL full-text search with `&` logic for precision 
-- **Query Translation Fix**: Non-English queries translated to English for vector search compatibility
-- **Simplified Pipeline**: Disabled multi-query/hybrid for reliability and speed
-- **Performance**: <1000ms retrieval time, searches all chunks simultaneously
-- **Optimized Thresholds**: Configurable similarity thresholds (recommended: 0.05-0.1) via AI Configuration
-- **Keyword Dominance**: 80% keyword weight, 20% vector weight for specific muscle group queries
+Key assumptions for agents
+- Repo uses Next.js (App Router) + TypeScript, Prisma + PostgreSQL (pgvector) and Supabase for auth/storage.
+- AI features are gated by an admin `AIConfiguration` singleton — many flows will throw if it is missing.
 
-### Multi-Language RAG Support
-```typescript
-// CRITICAL: Knowledge base is in English, queries may be Arabic/French
-// System automatically translates for vector search, responds in original language
+Quick checklist for any edit
+- Verify `AIConfiguration` usage in `src/lib/gemini.ts` before changing AI flows.
+- When touching DB schema run: `npm run postinstall` then `npx prisma migrate dev` (dev DB only).
+- Run `npm run lint` and `npm run build` after changes; debug scripts live at repo root (e.g. `check-ai-config.js`).
 
-// Arabic query: "أعطيني تمارين" 
-// → Translates to: "give me exercises"
-// → Searches English knowledge base
-// → Responds in Arabic with retrieved context
+Important files & patterns (open these first)
+- `src/lib/gemini.ts` — central AI integration; calls getAIConfiguration(), embeddings, chat generation.
+- `src/lib/vector-search.ts` — RAG retrieval (pgvector + AND-keyword search). Use `fetchRelevantKnowledge` and `performAndKeywordSearch`.
+- `src/lib/client-memory.ts` — user memory extraction and JSON repair heuristics.
+- `src/lib/subscription.ts` & `src/lib/lemonsqueezy.ts` — server-side usage limits and payment webhook handling.
+- `src/lib/supabase/*` — server & client Supabase helpers; API routes expect SSR auth (`createClient()` patterns).
+- `src/app/[locale]/` — i18n App Router layout; Arabic RTL support handled by `src/lib/text-formatting.ts`.
+- `prisma/schema.prisma` — single-row `AIConfiguration` and `User.freeMessagesRemaining` behavior are important conventions.
 
-if (isArabic) {
-  userQuery = await translateQueryToEnglish(originalQuery, 'arabic');
-}
-```
+Concrete, repo-specific rules for agents
+- Do not introduce guest chat flows — authentication is enforced in API routes. See pattern in API route handlers that call `createClient()` then `supabase.auth.getUser()`.
+- AI behavior: code must preserve the admin-only singleton check (throwing on missing config is intentional).
+- Embeddings are stored as JSON arrays (768 dims). When generating/updating embeddings use existing helpers in `src/lib/gemini.ts`/`src/lib/vector-search.ts`.
+- Middleware and API routes aim for Edge runtime compatibility—avoid Node-only APIs in those files (`src/middleware.ts`, `src/app/api/*/route.ts`).
 
-### Usage Pattern
-```typescript
-// 1. Use efficient vector search for semantic matching
-const vectorResults = await fetchRelevantKnowledge(embedding, 10, 0.3);
+Commands & quick scripts
+- Dev server: `npm run dev` (or `npm run dev:turbo` for turbopack).
+- Build: `npm run build` (runs Prisma generate + Next build).
+- Prisma dev: `npx prisma migrate dev` and view DB: `npx prisma studio`.
+- Postinstall (important after package changes or Prisma edits): `npm run postinstall`.
+- Helpful debug scripts (repo root): `check-ai-config.js`, `debug-rag-system.js`, `test-ai-integration.js`.
 
-// 2. Use AND keyword search for exact term matching  
-const keywordResults = await performAndKeywordSearch(query, 10);
+Examples to follow
+- Vector search usage: call `fetchRelevantKnowledge(queryEmbedding.embedding, topK, threshold)` — thresholds controlled by AIConfiguration.
+- Keyword AND search: `performAndKeywordSearch(query, 10)` and merge results with vector hits; avoid complex hybrid searches.
 
-// 3. Combine results as needed (avoid complex hybrid for now)
-const combined = [...vectorResults, ...keywordResults];
-```
+When changing public behavior
+- Add or update small tests or a debug script replicating the flow (e.g., a debug file under repo root). Run it and commit it with the change.
 
-## 🚀 Essential Development Workflows
+If you need more context
+- Open `src/lib/*` first. If AI fails at runtime, check `AIConfiguration` in the DB and run `node check-ai-config.js`.
 
-### Critical Commands
-```bash
-npm run dev              # Development server
-npm run dev:turbo        # Development with turbopack (faster builds)
-npm run build           # Prisma generate + Next.js production build
-npx prisma migrate dev  # Apply schema changes with migration name
-npx prisma studio       # Visual database browser
-npm run postinstall     # Generate Prisma client (auto-run after install)
-npm run lint            # ESLint validation
-npm start               # Production server
-```
+Feedback requested
+- Tell me which section feels incomplete or which file you'd like a short example for, and I'll iterate.
 
-### Must-Have Environment Variables
-```bash
-# Core Services (Required)
-NEXT_PUBLIC_SUPABASE_URL=        # Supabase project URL
-NEXT_PUBLIC_SUPABASE_ANON_KEY=   # Public key for client-side
-SUPABASE_SERVICE_ROLE_KEY=       # Server-side admin operations
-GEMINI_API_KEY=                  # Google Gemini API for AI/embeddings
-DATABASE_URL=                    # PostgreSQL connection string
-DIRECT_URL=                      # Direct DB connection (for migrations)
-
-# Subscription System (LemonSqueezy)
-LEMONSQUEEZY_API_KEY=            # API key for payment processing
-LEMONSQUEEZY_STORE_ID=           # Store identifier
-LEMONSQUEEZY_PRO_MONTHLY_VARIANT_ID=    # Monthly subscription variant
-LEMONSQUEEZY_PRO_YEARLY_VARIANT_ID=     # Yearly subscription variant  
-LEMONSQUEEZY_WEBHOOK_SECRET=     # Webhook signature verification
-NEXT_PUBLIC_SITE_URL=            # Site URL for checkout redirects
-```
-
-### Essential Debug Scripts (Run from project root)
-- `check-ai-config.js` - Validate AI configuration setup (run this first!)
-- `debug-rag-system.js` - Test vector search and context retrieval
-- `find-users.js` - Get actual user IDs for testing
-- `create-admin.js` - Create admin user accounts
-- `check-user-plan.js` - Verify individual user subscription status
-- `test-performance-optimizations.js` - Validate chat performance enhancements
-- `comprehensive-debug.js` - Complete system flow debugging
-- `test-ai-integration.js` - Test Gemini API integration
-- `test-enhanced-rag.js` - Validate RAG system performance
-- `debug-lemonsqueezy-checkout.js` - Test subscription checkout flow
-- `demonstrate-free-messages-journey.js` - Test new free messages system
-- `test-maintenance-mode.js` - Verify maintenance mode functionality
-- `test-enhanced-gemini-improvements.js` - Validate new Gemini AI enhancements
-
-### Critical Debug Script Patterns
-```javascript
-// All debug scripts use CommonJS (require/module.exports)
-const { PrismaClient } = require('@prisma/client');
-const { functionName } = require('./src/lib/module-name');
-
-// Execute from project root: node script-name.js
-// Scripts are designed for immediate troubleshooting
-// Use environment variables from .env automatically
-```
-
-## 📋 Critical Project Patterns
-
-### 1. Data Flow Architecture
-```typescript
-// User Message → Authentication → Subscription Check → AI Config → RAG Retrieval → Gemini API → Response
-// Each step has mandatory validation and error handling
-
-// RAG Pipeline Flow:
-const userQuery = "exercises for shoulders";
-// 1. Query translation (if non-English)
-const translatedQuery = await translateQueryToEnglish(userQuery, 'arabic');
-// 2. Generate embeddings via Gemini
-const embedding = await generateEmbeddings(translatedQuery);
-// 3. Vector search + keyword search in parallel
-const context = await fetchRelevantKnowledge(embedding, 10, 0.05);
-// 4. Inject context into AI prompt with user memory
-const response = await generateAIResponse(query, context, userMemory);
-```
-
-### 2. Enhanced Gemini AI Integration (PRODUCTION-READY)
-```typescript
-// Token-aware prompt construction with priority system
-const budget = calculateTokenBudget(config.maxTokens);
-const { optimizedSystem, optimizedContext, optimizedHistory } = optimizeContentForTokens(
-  config.systemPrompt, formattedContext, conversationHistory, budget
-);
-
-// Exercise compliance validation - ensures KB-only recommendations
-const validatedResponse = await validateExerciseCompliance(aiContent, knowledgeContext);
-
-// Enhanced JSON repair for memory extraction
-const repairedMemory = repairJSON(geminiResponse); // Handles malformed LLM JSON
-
-// Conflict confirmation flow
-if (response.requiresConfirmation) {
-  return generateConflictConfirmationPrompt(response.conflictData);
-}
-```
-- **Token Management**: Prioritizes core directives > KB context > conversation history
-- **Exercise Validation**: Post-processes responses to flag exercises not in knowledge base
-- **Robust Memory Updates**: JSON repair handles malformed LLM responses gracefully
-- **Conflict Resolution**: Enhanced flow for handling profile conflicts with user confirmation
-
-### 3. AI Configuration Enforcement (REQUIRED FOR SYSTEM TO WORK)
-```typescript
-// All AI operations require admin setup via getAIConfiguration() in /src/lib/gemini.ts
-const config = await getAIConfiguration(userPlan); // Throws if not configured
-```
-- **First-time setup**: Visit `/admin/settings` to configure AI system prompts and models
-- **Admin access required**: Only users with `role: 'admin'` can configure the system
-- **Singleton pattern**: Single row with `id: 'singleton'` in `AIConfiguration` table
-- **No fallbacks**: System will fail if configuration is missing (by design)
-
-### 3. API Route Authentication Pattern
-```typescript
-export async function POST(request: NextRequest) {
-  const context = ApiErrorHandler.createContext(request);
-  
-  try {
-    // ALWAYS authenticate first
-    const supabase = await createClient();
-    const { data: { user } } = await supabase.auth.getUser();
-    
-    if (!user) {
-      return NextResponse.json(
-        { error: 'Authentication required', message: 'Please log in to send messages' },
-        { status: 401 }
-      );
-    }
-    
-    // Handle both JSON and FormData (for image uploads)
-    const contentType = request.headers.get('content-type');
     let body, imageFile;
     
     if (contentType?.includes('multipart/form-data')) {

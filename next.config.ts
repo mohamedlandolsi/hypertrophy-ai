@@ -9,20 +9,20 @@ const nextConfig: NextConfig = {
   experimental: {
     optimizePackageImports: ['@radix-ui/react-icons', 'lucide-react', '@radix-ui/react-dialog'],
   },
-  // Configure API routes for large file uploads
-  async rewrites() {
-    return [];
-  },
-  // Increase the limit for API routes to handle large image uploads
-  async redirects() {
-    return [];
-  },
+  // Exclude Supabase functions from Next.js compilation
   webpack: (config, { isServer }) => {
     if (isServer) {
       // Ensure pdf-parse works on the server side
       config.externals = config.externals || [];
       config.externals.push('canvas');
     }
+    
+    // Ignore Supabase functions directory
+    config.watchOptions = {
+      ...config.watchOptions,
+      ignored: ['**/supabase/functions/**', '**/node_modules/**']
+    };
+    
     return config;
   },
   // PWA Configuration and Security Headers

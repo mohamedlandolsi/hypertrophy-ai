@@ -6,7 +6,8 @@
  */
 
 import { extractTextFromFile } from './file-processor';
-import { chunkFitnessContent, validateChunks, cleanText, type TextChunk } from './text-chunking';
+import { validateChunks, cleanText, type TextChunk } from './text-chunking';
+import { fitnessSemanticChunking } from './semantic-chunking';
 import { generateEmbeddingsBatch } from './vector-embeddings';
 import { prisma } from './prisma';
 
@@ -33,6 +34,31 @@ const DEFAULT_PROCESSING_OPTIONS: ProcessingOptions = {
   chunkOverlap: 100,   // Updated to improved chunking parameters
   batchSize: 10
 };
+
+/**
+ * Convert semantic chunks to TextChunk format expected by the system
+ */
+function convertToTextChunks(semanticChunks: string[], originalText: string): TextChunk[] {
+  const chunks: TextChunk[] = [];
+  let currentPosition = 0;
+  
+  for (let i = 0; i < semanticChunks.length; i++) {
+    const chunkContent = semanticChunks[i];
+    const startChar = originalText.indexOf(chunkContent, currentPosition);
+    const endChar = startChar + chunkContent.length;
+    
+    chunks.push({
+      content: chunkContent,
+      index: i,
+      startChar: startChar >= 0 ? startChar : currentPosition,
+      endChar: startChar >= 0 ? endChar : currentPosition + chunkContent.length
+    });
+    
+    currentPosition = endChar;
+  }
+  
+  return chunks;
+}
 
 /**
  * Process a file with chunking and embedding generation
@@ -107,9 +133,12 @@ export async function processFileWithEmbeddings(
     const cleanedText = cleanText(extractedText);
     console.log(`✨ Text cleaned (${cleanedText.length} characters after cleaning)`);
 
-    // Step 2: Chunk the cleaned text
-    console.log(`📄 Chunking text...`);
-    const chunks = chunkFitnessContent(cleanedText);
+    // Step 2: Chunk the cleaned text using semantic chunking
+    console.log(`📄 Chunking text with semantic analysis...`);
+    const semanticChunks = fitnessSemanticChunking(cleanedText);
+    
+    // Convert semantic chunks to TextChunk format
+    const chunks = convertToTextChunks(semanticChunks, cleanedText);
     
     if (chunks.length === 0) {
       errors.push('Text chunking failed - no chunks were created');

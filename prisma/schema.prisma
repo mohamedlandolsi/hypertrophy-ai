@@ -171,6 +171,8 @@ model AIConfiguration {
   freeModelName             String   @default("gemini-2.5-flash")
   proModelName              String   @default("gemini-2.5-pro")
   toolEnforcementMode       String   @default("AUTO")
+  enableGraphRAG            Boolean  @default(true)
+  graphSearchWeight         Float    @default(0.9)
 }
 
 model Exercise {
