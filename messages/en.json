@@ -193,6 +193,7 @@
     "googleAuthUnexpectedError": "An unexpected error occurred with Google authentication",
     "consentRequired": "You must consent to data processing to create an account."
   },
+  
   "ResetPasswordPage": {
     "title": "Reset Password",
     "subtitle": "Enter your email address and we'll send you a link to reset your password.",
@@ -998,7 +999,8 @@
       "privacyPolicy": "For more details, please see our {link}.",
       "privacyPolicyLink": "full privacy policy"
     },
-    "checkbox": "I consent to the processing of my personal data for the purposes stated above and confirm that I have read and understood the privacy policy.",
+  "checkbox": "I consent to the processing of my personal data for the purposes stated above and confirm that I have read and understood the privacy policy.",
+  "checkboxSimple": "I agree to the Privacy Policy",
     "required": "Required to continue",
     "version": "Version {version}",
     "agreement": "I understand and agree to the processing of my personal data as outlined in the Privacy Policy",

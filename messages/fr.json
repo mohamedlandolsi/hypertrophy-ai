@@ -193,6 +193,7 @@
     "googleAuthUnexpectedError": "Une erreur inattendue s'est produite avec l'authentification Google",
     "consentRequired": "Vous devez consentir au traitement des données pour créer un compte."
   },
+  
   "ResetPasswordPage": {
     "title": "Réinitialiser le mot de passe",
     "subtitle": "Entrez votre adresse email et nous vous enverrons un lien pour réinitialiser votre mot de passe.",

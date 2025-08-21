@@ -38,6 +38,35 @@ if (!process.env.GEMINI_API_KEY) {
 const genAI = new GoogleGenerativeAI(process.env.GEMINI_API_KEY);
 
 /**
+ * Validate image file signature (magic bytes) for security
+ */
+function validateImageSignature(buffer: Buffer, mimeType: string): boolean {
+  if (buffer.length < 4) return false;
+  
+  const signature = buffer.subarray(0, 4);
+  const hex = signature.toString('hex').toUpperCase();
+  
+  // Check common image signatures
+  switch (mimeType.toLowerCase()) {
+    case 'image/jpeg':
+    case 'image/jpg':
+      return hex.startsWith('FFD8FF');
+    case 'image/png':
+      return hex === '89504E47';
+    case 'image/gif':
+      return hex.startsWith('47494638'); // GIF87a or GIF89a
+    case 'image/webp':
+      // WebP files start with 'RIFF' and contain 'WEBP'
+      if (buffer.length < 12) return false;
+      const riff = buffer.subarray(0, 4).toString('ascii');
+      const webp = buffer.subarray(8, 12).toString('ascii');
+      return riff === 'RIFF' && webp === 'WEBP';
+    default:
+      return false;
+  }
+}
+
+/**
  * Generate embedding for query using Gemini
  */
 async function getEmbedding(query: string): Promise<number[]> {
@@ -279,14 +308,42 @@ export async function POST(request: NextRequest) {
         selectedModel: formData.get('selectedModel') as string
       };
       
-      // Process uploaded images
+      // Process uploaded images with enhanced security
       for (let i = 0; i < 5; i++) {
         const imageFile = formData.get(`image_${i}`) as File | null;
         if (imageFile) {
-          console.log(`📷 Processing image ${i + 1}: ${imageFile.name}`);
+          console.log(`📷 Processing image ${i + 1}: ${imageFile.name} (${imageFile.type})`);
+          
+          // Enhanced security validation
+          const maxFileSize = 20 * 1024 * 1024; // 20MB limit
+          const allowedTypes = ['image/jpeg', 'image/jpg', 'image/png', 'image/gif', 'image/webp'];
+          
+          // Check file size
+          if (imageFile.size > maxFileSize) {
+            console.warn(`⚠️ Image ${i + 1} too large: ${imageFile.size} bytes (max: ${maxFileSize})`);
+            continue;
+          }
+          
+          // Check file type
+          if (!allowedTypes.includes(imageFile.type.toLowerCase())) {
+            console.warn(`⚠️ Image ${i + 1} unsupported type: ${imageFile.type}`);
+            continue;
+          }
+          
+          // Additional security: Check file signature (magic bytes)
+          const buffer = Buffer.from(await imageFile.arrayBuffer());
+          const isValidImage = validateImageSignature(buffer, imageFile.type);
+          
+          if (!isValidImage) {
+            console.warn(`⚠️ Image ${i + 1} failed signature validation`);
+            continue;
+          }
+          
           imageFiles.push(imageFile);
-          imageBuffers.push(Buffer.from(await imageFile.arrayBuffer()));
+          imageBuffers.push(buffer);
           imageMimeTypes.push(imageFile.type);
+          
+          console.log(`✅ Image ${i + 1} validated and processed successfully`);
         }
       }
     } else {
@@ -581,18 +638,26 @@ ${trimmedMessage}
 
     console.log(`✅ Context-QA structured prompt assembled (${fullPrompt.length} characters)`);
 
-    // 12. Save User Message
+    // 12. Save User Message with Enhanced Image Support
     const userMessage = await prisma.message.create({
       data: {
-        content: trimmedMessage || (imageBuffers.length > 0 ? '[Image]' : ''),
+        content: trimmedMessage || (imageBuffers.length > 0 ? `[${imageBuffers.length} Image${imageBuffers.length > 1 ? 's' : ''}]` : ''),
         role: 'USER',
         chatId: chatId as string,
-        imageData: imageBuffers.length > 0 ? Buffer.concat(imageBuffers).toString('base64') : null,
-        imageMimeType: imageMimeTypes[0] || null,
+        // Store multiple images as JSON array for better structure
+        imageData: imageBuffers.length > 0 ? JSON.stringify(
+          imageBuffers.map((buffer, index) => ({
+            data: buffer.toString('base64'),
+            mimeType: imageMimeTypes[index] || 'image/jpeg',
+            size: buffer.length,
+            index: index
+          }))
+        ) : null,
+        imageMimeType: imageBuffers.length > 0 ? JSON.stringify(imageMimeTypes) : null,
       }
     });
 
-    // 13. Call Gemini API with Tool Calling
+    // 13. Call Gemini API with Tool Calling and Image Support
     console.log("🤖 Step 7: Calling Gemini API with Profile Management Tools...");
     
     const modelName = getGeminiModelName(typeof selectedModel === 'string' ? selectedModel : '', config);
@@ -608,13 +673,56 @@ ${trimmedMessage}
       toolConfig: { functionCallingConfig: { mode: FunctionCallingMode.AUTO } }
     });
 
-    // Create chat and send message
+    // Create chat and send message with image support
     const chat = model.startChat({
       history: conversationHistory
     });
 
-    // For now, just send the text. Image handling can be added back later
-    const result = await chat.sendMessage(fullPrompt);
+    // Prepare message content with images
+    let messageContent: (string | { text: string } | { inlineData: { data: string; mimeType: string } })[];
+    
+    if (imageBuffers.length > 0) {
+      console.log(`📷 Processing ${imageBuffers.length} image(s) for AI analysis`);
+      
+      // Security validation for images
+      const maxImageSize = 20 * 1024 * 1024; // 20MB per image
+      const allowedMimeTypes = ['image/jpeg', 'image/png', 'image/gif', 'image/webp'];
+      
+      // Start with text content
+      messageContent = [{ text: fullPrompt }];
+      
+      // Add each image
+      for (let i = 0; i < imageBuffers.length && i < 5; i++) { // Limit to 5 images
+        const buffer = imageBuffers[i];
+        const mimeType = imageMimeTypes[i];
+        
+        // Security checks
+        if (buffer.length > maxImageSize) {
+          console.warn(`⚠️ Image ${i + 1} exceeds size limit (${buffer.length} bytes), skipping`);
+          continue;
+        }
+        
+        if (!allowedMimeTypes.includes(mimeType)) {
+          console.warn(`⚠️ Image ${i + 1} has unsupported mime type (${mimeType}), skipping`);
+          continue;
+        }
+        
+        // Add image to message content
+        messageContent.push({
+          inlineData: {
+            data: buffer.toString('base64'),
+            mimeType: mimeType
+          }
+        });
+        
+        console.log(`✅ Added image ${i + 1} (${mimeType}, ${(buffer.length / 1024).toFixed(1)}KB)`);
+      }
+    } else {
+      // Text-only message
+      messageContent = [{ text: fullPrompt }];
+    }
+
+    const result = await chat.sendMessage(messageContent);
     const response = await result.response;
 
     // Check if the response contains tool calls
