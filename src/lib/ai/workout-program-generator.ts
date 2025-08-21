@@ -350,9 +350,18 @@ function formatProgramGenerationContext(searchResults: WorkoutProgramContext[]):
 function createProgramDesignerPrompt(
   baseSystemPrompt: string,
   userPrompt: string,
-  knowledgeContext: string
+  knowledgeContext: string,
+  hypertrophyInstructions?: string
 ): string {
-  const programDesignerInstructions = `
+  // Add hypertrophy instructions to the system prompt if provided
+  const hypertrophySection = hypertrophyInstructions ? `
+
+## HYPERTROPHY TRAINING GUIDELINES FROM ADMIN CONFIGURATION
+${hypertrophyInstructions}
+
+` : '';
+
+  const programDesignerInstructions = `${hypertrophySection}
 
 # TASK: Workout Program Generation with Strict Requirements
 
@@ -366,9 +375,8 @@ function createProgramDesignerPrompt(
    - Multiple exercises for same muscle: distribute sets within range
 
 3. **Exercise Selection Compliance**:
-   - ONLY use exercises from knowledge base context
+   - ONLY use exercises from knowledge base context for hypertrophy programs
    - Prioritize machines and cables for stability
-   - No exercises outside KB-approved list
 
 4. **Mandatory Table Format** (DO NOT specify sets/reps for individual exercises):
 | Exercise | Notes |
@@ -388,7 +396,7 @@ function createProgramDesignerPrompt(
 - Provide general volume recommendations in program introduction (not per exercise)
 - Include overall rep ranges and rest periods as program-wide guidance
 - Focus exercise table on movement selection and technique notes only
-- Give total session volume targets (e.g., "aim for 12-20 total sets per session")
+- Give total session volume targets (e.g., "aim for 10-20 total sets per session")
 - Explain frequency patterns (e.g., "train each muscle 2x per week")
 
 Create a comprehensive, evidence-based program following these strict requirements.`;
@@ -431,16 +439,21 @@ export async function generateWorkoutProgram(
     // 3. Generate Context-QA system prompt with workout program focus
     const baseSystemPrompt = await getContextQASystemPrompt(userProfile);
     
-    // 4. Create enhanced program designer prompt
+    // 4. Get hypertrophy training instructions from config
+    const hypertrophyInstructions = config.hypertrophyInstructions as string || '';
+    console.log(`💪 Hypertrophy instructions included: ${hypertrophyInstructions ? 'Yes' : 'No'}`);
+    
+    // 5. Create enhanced program designer prompt with hypertrophy instructions
     const fullPrompt = createProgramDesignerPrompt(
       baseSystemPrompt,
       userPrompt,
-      knowledgeContext
+      knowledgeContext,
+      hypertrophyInstructions
     );
     
-    console.log(`🔨 Enhanced program designer prompt assembled`);
+    console.log(`🔨 Enhanced program designer prompt assembled with hypertrophy guidance`);
     
-    // 5. Call Gemini API
+    // 6. Call Gemini API
     const modelName = getGeminiModelName(selectedModel, config);
     const model = genAI.getGenerativeModel({
       model: modelName,

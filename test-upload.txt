@@ -1,6 +1,0 @@
-This is a test text file for the knowledge base.
-
-It contains basic fitness information:
-- Progressive overload is key
-- Consistency beats perfection
-- Recovery is as important as training

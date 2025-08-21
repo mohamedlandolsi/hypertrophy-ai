@@ -32,6 +32,7 @@ interface AIConfiguration {
   strictMusclePriority: boolean;
   enableGraphRAG: boolean;
   graphSearchWeight: number;
+  hypertrophyInstructions: string;
   createdAt: string;
   updatedAt: string;
 }
@@ -405,6 +406,30 @@ export default function AdminSettingsPage() {
                     />
                     <Label htmlFor="enableWebSearch">Enable Web Search</Label>
                   </div>
+                </div>
+              </div>
+
+              {/* Hypertrophy Training Instructions */}
+              <div className="space-y-4">
+                <h3 className="text-lg font-medium">Hypertrophy Training Instructions</h3>
+                <p className="text-sm text-gray-600">
+                  Special instructions that get applied when the AI generates workout programs or training plans for muscle hypertrophy
+                </p>
+                
+                <div className="space-y-2">
+                  <Label htmlFor="hypertrophyInstructions">Training Program Generation Guidelines</Label>
+                  <Textarea
+                    id="hypertrophyInstructions"
+                    placeholder="Enter specific instructions for hypertrophy workout generation..."
+                    value={config.hypertrophyInstructions}
+                    onChange={(e) => updateConfig('hypertrophyInstructions', e.target.value)}
+                    rows={12}
+                    className="min-h-[300px] font-mono text-sm"
+                  />
+                  <p className="text-xs text-gray-500">
+                    These instructions will be automatically added to the AI context when it detects a request for training program generation.
+                    Use markdown formatting for better structure.
+                  </p>
                 </div>
               </div>
 

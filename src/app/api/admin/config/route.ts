@@ -150,7 +150,8 @@ export async function POST(request: NextRequest) {
       useClientMemory,
       enableWebSearch,
       toolEnforcementMode,
-      strictMusclePriority
+      strictMusclePriority,
+      hypertrophyInstructions
     } = body;
 
     // Validate required fields and constraints
@@ -256,7 +257,8 @@ export async function POST(request: NextRequest) {
       useClientMemory: Boolean(useClientMemory),
       enableWebSearch: Boolean(enableWebSearch),
       ...(toolEnforcementMode !== undefined && { toolEnforcementMode: toolEnforcementMode.trim() }),
-      ...(strictMusclePriority !== undefined && { strictMusclePriority: Boolean(strictMusclePriority) })
+      ...(strictMusclePriority !== undefined && { strictMusclePriority: Boolean(strictMusclePriority) }),
+      ...(hypertrophyInstructions !== undefined && { hypertrophyInstructions: hypertrophyInstructions.trim() })
     };
 
     const config = await prisma.aIConfiguration.upsert({
