@@ -412,3 +412,84 @@ export async function generateMemorySummary(userId: string): Promise<string> {
   
   return sections.length > 0 ? sections.join('\n') : 'No client information stored yet.';
 }
+
+/**
+ * Get complete user profile for enhanced AI context
+ */
+export async function getCompleteUserProfile(userId: string) {
+  const memory = await prisma.clientMemory.findUnique({
+    where: { userId },
+    select: {
+      id: true,
+      userId: true,
+      name: true,
+      age: true,
+      gender: true,
+      height: true,
+      weight: true,
+      bodyFatPercentage: true,
+      trainingExperience: true,
+      trainingStructureType: true,
+      weeklyTrainingDays: true,
+      trainingCycle: true,
+      customCyclePattern: true,
+      preferredTrainingStyle: true,
+      trainingSchedule: true,
+      availableTime: true,
+      activityLevel: true,
+      primaryGoal: true,
+      secondaryGoals: true,
+      targetWeight: true,
+      targetBodyFat: true,
+      goalDeadline: true,
+      motivation: true,
+      injuries: true,
+      limitations: true,
+      medications: true,
+      allergies: true,
+      dietaryPreferences: true,
+      foodDislikes: true,
+      supplementsUsed: true,
+      sleepHours: true,
+      stressLevel: true,
+      workSchedule: true,
+      gymAccess: true,
+      homeGym: true,
+      equipmentAvailable: true,
+      gymBudget: true,
+      currentBench: true,
+      currentSquat: true,
+      currentDeadlift: true,
+      currentOHP: true,
+      preferredLanguage: true,
+      communicationStyle: true,
+      coachingNotes: true,
+      createdAt: true,
+      updatedAt: true,
+    }
+  });
+
+  return memory;
+}
+
+/**
+ * Get full chat history for a conversation
+ */
+export async function getFullChatHistory(chatId: string) {
+  const chat = await prisma.chat.findUnique({
+    where: { id: chatId },
+    include: {
+      messages: {
+        orderBy: { createdAt: 'asc' },
+        select: {
+          id: true,
+          content: true,
+          role: true,
+          createdAt: true,
+        }
+      }
+    }
+  });
+
+  return chat?.messages || [];
+}

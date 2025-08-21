@@ -6,6 +6,13 @@ import { getContextQASystemPrompt } from '@/lib/ai/core-prompts';
 import { rewriteFitnessQuery } from '@/lib/query-rewriting';
 import { generateWorkoutProgram, detectWorkoutProgramIntent } from '@/lib/ai/workout-program-generator';
 import { 
+  extractProfileInformation,
+  extractImportantMemory,
+  saveProfileExtractions,
+  saveConversationMemories,
+  getCompleteUserContext
+} from '@/lib/ai/memory-extractor';
+import { 
   ApiErrorHandler, 
   ValidationError, 
   AuthenticationError,
@@ -377,14 +384,15 @@ export async function POST(request: NextRequest) {
       );
     }
 
-    // 5. Fetch Configuration and User Data
-    console.log("📋 Step 1: Fetching AI Configuration and User Data...");
-    const [config, userProfile] = await Promise.all([
+    // 5. Fetch Configuration and Complete User Data
+    console.log("📋 Step 1: Fetching AI Configuration and Complete User Data...");
+    const [config, userProfile, userContext] = await Promise.all([
       prisma.aIConfiguration.findFirst(),
       prisma.user.findUnique({
         where: { id: user.id },
         include: { clientMemory: true }
-      })
+      }),
+      getCompleteUserContext(user.id)
     ]);
 
     if (!config) {
@@ -392,10 +400,18 @@ export async function POST(request: NextRequest) {
     }
 
     console.log(`✅ Configuration loaded - Knowledge Base: ${config.useKnowledgeBase}, Strict Muscle Priority: ${config.strictMusclePriority}`);
+    console.log(`✅ User context loaded - Profile fields: ${Object.keys(userContext.profile).length}, Memories: ${userContext.memories.length}`);
 
-    // 6. Generate Basic System Prompt (will be enhanced after knowledge retrieval)
-    console.log("🎯 Step 2: Preparing System Prompt...");
+    // 6. Generate Enhanced System Prompt (will be enhanced after knowledge retrieval)
+    console.log("🎯 Step 2: Preparing Enhanced System Prompt with User Context...");
     const profileObject = userProfile?.clientMemory || {};
+    
+    // Add conversation memories to profile context
+    const enhancedProfileObject = {
+      ...profileObject,
+      conversationMemories: userContext.memories,
+      profileCompleteness: Object.values(userContext.profile).filter(v => v !== null && v !== undefined).length
+    };
 
     // 7. Check for Workout Program Intent (Multi-Query RAG)
     const isWorkoutProgramRequest = detectWorkoutProgramIntent(trimmedMessage);
@@ -404,20 +420,19 @@ export async function POST(request: NextRequest) {
       console.log("🏋️ Detected workout program request - using specialized multi-query RAG...");
       
       try {
-        // Get conversation history for context
+        // Get full conversation history for context (not limited)
         let conversationHistory: Array<{ role: string; content: string }> = [];
         if (conversationId) {
           const chat = await prisma.chat.findUnique({
             where: { id: conversationId, userId: user.id },
             include: {
               messages: {
-                orderBy: { createdAt: 'desc' },
-                take: 10
+                orderBy: { createdAt: 'asc' }, // Get all messages in chronological order
               }
             }
           });
           if (chat) {
-            conversationHistory = chat.messages.reverse().map((msg: { role: string; content: string }) => ({
+            conversationHistory = chat.messages.map((msg: { role: string; content: string }) => ({
               role: msg.role,
               content: msg.content
             }));
@@ -428,7 +443,7 @@ export async function POST(request: NextRequest) {
         const programResult = await generateWorkoutProgram(
           trimmedMessage,
           config,
-          profileObject,
+          enhancedProfileObject, // Use enhanced profile with memories
           conversationHistory,
           typeof selectedModel === 'string' ? selectedModel : undefined // Pass selected model to workout program generation
         );
@@ -574,25 +589,38 @@ export async function POST(request: NextRequest) {
       console.log("⏭️ Step 3-5: Skipping RAG (Knowledge Base disabled)");
     }
 
-    // 9.5. Generate Context-QA System Prompt
-    console.log("🎯 Step 6: Generating Context-QA System Prompt...");
-    const systemPrompt: string = await getContextQASystemPrompt(profileObject);
-    console.log(`✅ Context-QA system prompt generated (${systemPrompt.length} characters)`);
+    // 9.5. Generate Enhanced Context-QA System Prompt with Full User Context
+    console.log("🎯 Step 6: Generating Enhanced Context-QA System Prompt with User Context...");
+    const systemPrompt: string = await getContextQASystemPrompt(enhancedProfileObject);
+    console.log(`✅ Enhanced context-QA system prompt generated (${systemPrompt.length} characters)`);
+    
+    // Add conversation memories to the prompt if available
+    let memoryContext = '';
+    if (userContext.memories.length > 0) {
+      const importantMemories = userContext.memories
+        .filter(memory => memory.importance >= 7)
+        .slice(0, 10) // Top 10 most important memories
+        .map(memory => `- ${memory.category}: ${memory.information}`)
+        .join('\n');
+      
+      if (importantMemories) {
+        memoryContext = `\n\nIMPORTANT USER CONTEXT TO REMEMBER:\n${importantMemories}\n`;
+      }
+    }
 
-    // 10. Get Conversation History
+    // 10. Get Full Conversation History (for complete context)
     let existingMessages: Array<{ role: string; content: string }> = [];
     if (conversationId) {
       const chat = await prisma.chat.findUnique({
         where: { id: conversationId, userId: user.id },
         include: {
           messages: {
-            orderBy: { createdAt: 'desc' },
-            take: 20
+            orderBy: { createdAt: 'asc' }, // Changed to asc and removed take limit for full history
           }
         }
       });
       if (chat) {
-        existingMessages = chat.messages.reverse();
+        existingMessages = chat.messages;
       }
     }
 
@@ -608,14 +636,14 @@ export async function POST(request: NextRequest) {
       chatId = newChat.id;
     }
 
-    // 11. Assemble Context-QA Structured Prompt for Gemini
-    console.log("🔨 Step 7: Assembling Context-QA Structured Prompt...");
+    // 11. Assemble Enhanced Context-QA Structured Prompt for Gemini
+    console.log("🔨 Step 7: Assembling Enhanced Context-QA Structured Prompt...");
     
     const conversationHistory = formatConversationHistory(existingMessages);
     
-    // Build Context-QA structured prompt
+    // Build Enhanced Context-QA structured prompt
     let fullPrompt = `[INSTRUCTIONS]
-${systemPrompt}
+${systemPrompt}${memoryContext}
 [/INSTRUCTIONS]
 
 [KNOWLEDGE]
@@ -636,7 +664,7 @@ ${conversationHistory}
 ${trimmedMessage}
 [/QUESTION]`;
 
-    console.log(`✅ Context-QA structured prompt assembled (${fullPrompt.length} characters)`);
+    console.log(`✅ Enhanced Context-QA structured prompt assembled (${fullPrompt.length} characters)`);
 
     // 12. Save User Message with Enhanced Image Support
     const userMessage = await prisma.message.create({
@@ -779,6 +807,43 @@ ${trimmedMessage}
         chatId: chatId as string,
       }
     });
+
+    // 14.5. Extract and Save Profile Information & Memories (Background Process)
+    console.log("🧠 Step 8: Extracting and saving profile information and memories...");
+    try {
+      // Extract profile information from the conversation
+      const profileExtractions = await extractProfileInformation(
+        trimmedMessage,
+        aiContent,
+        user.id
+      );
+
+      // Extract important conversation memories
+      const memoryExtractions = await extractImportantMemory(
+        trimmedMessage,
+        aiContent,
+        user.id
+      );
+
+      // Save extractions to database (run in background, don't wait)
+      if (profileExtractions.length > 0) {
+        saveProfileExtractions(user.id, profileExtractions).catch(error => {
+          console.error('❌ Background profile extraction save failed:', error);
+        });
+        console.log(`✅ Extracted ${profileExtractions.length} profile updates`);
+      }
+
+      if (memoryExtractions.length > 0) {
+        saveConversationMemories(user.id, memoryExtractions).catch(error => {
+          console.error('❌ Background memory extraction save failed:', error);
+        });
+        console.log(`✅ Extracted ${memoryExtractions.length} conversation memories`);
+      }
+
+    } catch (error) {
+      // Don't fail the entire request if memory extraction fails
+      console.error('❌ Memory extraction error (non-critical):', error);
+    }
 
     // 15. Increment Message Count
     await incrementUserMessageCount();
