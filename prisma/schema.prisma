@@ -45,10 +45,10 @@ model User {
   userCoachChats         CoachChat[]     @relation("UserCoachChats")
   coachCoachChats        CoachChat[]     @relation("CoachCoachChats")
   sentCoachMessages      CoachMessage[]
-  
+
   // Training program relations
-  userPurchases          UserPurchase[]
-  userPrograms           UserProgram[]
+  userPurchases UserPurchase[]
+  userPrograms  UserProgram[]
 
   @@index([lastMessageReset])
   @@index([lastUploadReset])
@@ -66,16 +66,16 @@ model Chat {
 }
 
 model CoachChat {
-  id            String         @id @default(cuid())
-  title         String?
-  createdAt     DateTime       @default(now())
-  updatedAt     DateTime       @updatedAt
-  userId        String         // User who initiated the chat
-  coachId       String         // Coach assigned to the chat
-  status        CoachChatStatus @default(ACTIVE)
-  user          User           @relation("UserCoachChats", fields: [userId], references: [id])
-  coach         User           @relation("CoachCoachChats", fields: [coachId], references: [id])
-  messages      CoachMessage[]
+  id        String          @id @default(cuid())
+  title     String?
+  createdAt DateTime        @default(now())
+  updatedAt DateTime        @updatedAt
+  userId    String // User who initiated the chat
+  coachId   String // Coach assigned to the chat
+  status    CoachChatStatus @default(ACTIVE)
+  user      User            @relation("UserCoachChats", fields: [userId], references: [id])
+  coach     User            @relation("CoachCoachChats", fields: [coachId], references: [id])
+  messages  CoachMessage[]
 
   @@index([userId])
   @@index([coachId])
@@ -87,7 +87,7 @@ model CoachMessage {
   id          String    @id @default(cuid())
   createdAt   DateTime  @default(now())
   content     String
-  senderId    String    // User ID of who sent the message
+  senderId    String // User ID of who sent the message
   coachChatId String
   isRead      Boolean   @default(false)
   sender      User      @relation(fields: [senderId], references: [id])
@@ -260,76 +260,127 @@ model KnowledgeItemCategory {
 
 // Training Program Models
 model TrainingProgram {
-  id              String           @id @default(cuid())
-  name            Json             // Multilingual: {"en": "Upper/Lower", "ar": "علوي/سفلي", "fr": "Haut/Bas"}
-  description     Json             // Multilingual description
-  price           Int              // Price in cents
-  lemonSqueezyId  String           @unique
-  isActive        Boolean          @default(true)
-  createdAt       DateTime         @default(now())
-  updatedAt       DateTime         @updatedAt
-  
+  id             String  @id @default(cuid())
+  name           Json // Multilingual: {"en": "Upper/Lower", "ar": "علوي/سفلي", "fr": "Haut/Bas"}
+  description    Json // Multilingual description
+  price          Int // Price in cents
+  lemonSqueezyId String  @unique
+  isActive       Boolean @default(true)
+
+  // Program Structure Fields
+  programType       String @default("Upper/Lower") // "Upper/Lower", "FB EOD", "Anterior/Posterior", "PPL x UL", "Upper/Lower x5"
+  difficulty        String @default("INTERMEDIATE")
+  estimatedDuration Int    @default(12) // Duration in weeks
+  sessionCount      Int    @default(4) // Number of sessions per week
+
+  // Interactive Features
+  hasInteractiveBuilder Boolean @default(true)
+  allowsCustomization   Boolean @default(true)
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
   // Relations
-  programGuide    ProgramGuide?
-  workoutTemplates WorkoutTemplate[]
-  userPurchases   UserPurchase[]
-  userPrograms    UserProgram[]
+  programGuide      ProgramGuide?
+  workoutTemplates  WorkoutTemplate[]
+  userPurchases     UserPurchase[]
+  userPrograms      UserProgram[]
+  programCategories ProgramCategory[]
+  exerciseTemplates ExerciseTemplate[]
 
   @@index([isActive])
   @@index([lemonSqueezyId])
+  @@index([programType])
 }
 
 model ProgramGuide {
-  id                String         @id @default(cuid())
-  trainingProgramId String         @unique
-  content           Json           // Multilingual content: {"en": {...}, "ar": {...}, "fr": {...}}
-  createdAt         DateTime       @default(now())
-  updatedAt         DateTime       @updatedAt
-  
+  id                String   @id @default(cuid())
+  trainingProgramId String   @unique
+  content           Json // Multilingual content: {"en": {...}, "ar": {...}, "fr": {...}}
+  createdAt         DateTime @default(now())
+  updatedAt         DateTime @updatedAt
+
   // Relations
-  trainingProgram   TrainingProgram @relation(fields: [trainingProgramId], references: [id], onDelete: Cascade)
+  trainingProgram TrainingProgram @relation(fields: [trainingProgramId], references: [id], onDelete: Cascade)
 }
 
 model WorkoutTemplate {
-  id                   String         @id @default(cuid())
+  id                   String   @id @default(cuid())
   trainingProgramId    String
-  name                 Json           // Multilingual: {"en": "Upper Body A", "ar": "الجزء العلوي أ", "fr": "Haut du Corps A"}
-  order                Int            // Order within the program
-  requiredMuscleGroups String[]       // Array of required muscle groups for this workout
-  createdAt            DateTime       @default(now())
-  updatedAt            DateTime       @updatedAt
-  
+  name                 Json // Multilingual: {"en": "Upper Body A", "ar": "الجزء العلوي أ", "fr": "Haut du Corps A"}
+  order                Int // Order within the program
+  requiredMuscleGroups String[] // Array of required muscle groups for this workout
+  createdAt            DateTime @default(now())
+  updatedAt            DateTime @updatedAt
+
   // Relations
-  trainingProgram      TrainingProgram @relation(fields: [trainingProgramId], references: [id], onDelete: Cascade)
+  trainingProgram TrainingProgram @relation(fields: [trainingProgramId], references: [id], onDelete: Cascade)
 
   @@index([trainingProgramId])
   @@index([trainingProgramId, order])
 }
 
 model TrainingExercise {
-  id                   String                @id @default(cuid())
-  name                 Json                  // Multilingual: {"en": "Bench Press", "ar": "ضغط البنش", "fr": "Développé Couché"}
-  primaryMuscleGroup   String
+  id                    String   @id @default(cuid())
+  name                  Json // Multilingual: {"en": "Bench Press", "ar": "ضغط البنش", "fr": "Développé Couché"}
+  primaryMuscleGroup    String
   secondaryMuscleGroups String[]
-  type                 String               // 'Compound', 'Isolation', 'Unilateral'
-  createdAt            DateTime              @default(now())
-  updatedAt            DateTime              @updatedAt
+  type                  String // 'Compound', 'Isolation', 'Unilateral'
+  createdAt             DateTime @default(now())
+  updatedAt             DateTime @updatedAt
 
   @@index([primaryMuscleGroup])
   @@index([type])
 }
 
+// New models for enhanced program management
+model ProgramCategory {
+  id                String              @id @default(cuid())
+  trainingProgramId String
+  categoryType      ProgramCategoryType
+  configuration     Json // Category-specific settings: exercise focus, session length, etc.
+  createdAt         DateTime            @default(now())
+  updatedAt         DateTime            @updatedAt
+
+  // Relations
+  trainingProgram TrainingProgram @relation(fields: [trainingProgramId], references: [id], onDelete: Cascade)
+
+  @@index([trainingProgramId])
+  @@index([categoryType])
+  @@map("ProgramCategories")
+}
+
+model ExerciseTemplate {
+  id                String              @id @default(cuid())
+  trainingProgramId String
+  muscleGroup       String // Primary muscle group
+  exerciseType      ExerciseType // COMPOUND, ISOLATION, UNILATERAL
+  categoryType      ProgramCategoryType // Which category this template applies to
+  priority          Int // Priority within muscle group (1 = highest)
+  volume            Json // Volume guidelines: {"sets": [3,4], "reps": [8,12], "restPeriod": 120}
+  alternatives      String[] // Array of alternative exercise IDs
+  createdAt         DateTime            @default(now())
+  updatedAt         DateTime            @updatedAt
+
+  // Relations
+  trainingProgram TrainingProgram @relation(fields: [trainingProgramId], references: [id], onDelete: Cascade)
+
+  @@index([trainingProgramId])
+  @@index([muscleGroup])
+  @@index([categoryType])
+}
+
 model UserPurchase {
-  id                String         @id @default(cuid())
+  id                String   @id @default(cuid())
   userId            String
   trainingProgramId String
-  purchaseDate      DateTime       @default(now())
-  createdAt         DateTime       @default(now())
-  updatedAt         DateTime       @updatedAt
-  
+  purchaseDate      DateTime @default(now())
+  createdAt         DateTime @default(now())
+  updatedAt         DateTime @updatedAt
+
   // Relations
-  user              User           @relation(fields: [userId], references: [id], onDelete: Cascade)
-  trainingProgram   TrainingProgram @relation(fields: [trainingProgramId], references: [id], onDelete: Cascade)
+  user            User            @relation(fields: [userId], references: [id], onDelete: Cascade)
+  trainingProgram TrainingProgram @relation(fields: [trainingProgramId], references: [id], onDelete: Cascade)
 
   @@unique([userId, trainingProgramId])
   @@index([userId])
@@ -337,17 +388,17 @@ model UserPurchase {
 }
 
 model UserProgram {
-  id                String           @id @default(cuid())
+  id                String              @id @default(cuid())
   userId            String
   trainingProgramId String
-  category          String           // 'Minimalist', 'Essentialist', 'Maximalist'
-  configuration     Json             // Stores mapping of workout templates to selected exercise IDs
-  createdAt         DateTime         @default(now())
-  updatedAt         DateTime         @updatedAt
-  
+  categoryType      ProgramCategoryType // 'MINIMALIST', 'ESSENTIALIST', 'MAXIMALIST'
+  configuration     Json // Stores mapping of workout templates to selected exercise IDs
+  createdAt         DateTime            @default(now())
+  updatedAt         DateTime            @updatedAt
+
   // Relations
-  user              User             @relation(fields: [userId], references: [id], onDelete: Cascade)
-  trainingProgram   TrainingProgram  @relation(fields: [trainingProgramId], references: [id], onDelete: Cascade)
+  user            User            @relation(fields: [userId], references: [id], onDelete: Cascade)
+  trainingProgram TrainingProgram @relation(fields: [trainingProgramId], references: [id], onDelete: Cascade)
 
   @@index([userId])
   @@index([trainingProgramId])
@@ -423,7 +474,7 @@ enum ExerciseMuscleGroup {
   CALVES
 }
 
-enum ProgramCategory {
+enum ProgramCategoryType {
   MINIMALIST
   ESSENTIALIST
   MAXIMALIST

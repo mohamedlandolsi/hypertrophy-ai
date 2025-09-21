@@ -41,13 +41,13 @@ export interface MissingMuscleGroup {
 export type ProgramConfiguration = Record<string, string[]>; // workoutTemplateId -> exerciseIds[]
 
 // Category types based on the schema
-export type ProgramCategory = 'Minimalist' | 'Essentialist' | 'Maximalist';
+export type ProgramCategory = 'MINIMALIST' | 'ESSENTIALIST' | 'MAXIMALIST';
 
 // Exercise limits per category
 const EXERCISE_LIMITS: Record<ProgramCategory, { min: number; max: number }> = {
-  'Minimalist': { min: 3, max: 4 },
-  'Essentialist': { min: 4, max: 6 },
-  'Maximalist': { min: 6, max: 8 },
+  'MINIMALIST': { min: 3, max: 4 },
+  'ESSENTIALIST': { min: 4, max: 6 },
+  'MAXIMALIST': { min: 6, max: 8 },
 };
 
 export interface ProgramBuilderState {
@@ -89,7 +89,7 @@ const useProgramBuilderStore = create<ProgramBuilderState>()(
       // Initial state
       program: null,
       exercises: [],
-      selectedCategory: 'Essentialist',
+      selectedCategory: 'ESSENTIALIST',
       configuration: {},
       isLoading: false,
       isSaving: false,

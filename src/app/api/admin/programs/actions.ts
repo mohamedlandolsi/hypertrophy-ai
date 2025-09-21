@@ -4,60 +4,89 @@ import { revalidatePath } from 'next/cache';
 import { createClient } from '@/lib/supabase/server';
 import { prisma } from '@/lib/prisma';
 import { z } from 'zod';
+import { programCreationSchema } from '@/lib/validations/program-creation';
 
-// Validation Schemas
-const MultilingualTextSchema = z.object({
-  en: z.string().min(1, 'English text is required'),
-  ar: z.string().min(1, 'Arabic text is required'),
-  fr: z.string().min(1, 'French text is required'),
-});
-
-const WorkoutTemplateSchema = z.object({
-  name: MultilingualTextSchema,
-  order: z.number().min(1, 'Order must be at least 1'),
-  requiredMuscleGroups: z.array(z.string()).min(1, 'At least one muscle group is required'),
-});
-
-const ProgramGuideSchema = z.object({
-  content: z.object({
-    en: z.object({
-      structure: z.string().min(10, 'Structure section must be at least 10 characters'),
-      exerciseSelection: z.string().min(10, 'Exercise selection section is required'),
-      volumeAdjustment: z.string().min(10, 'Volume adjustment section is required'),
-      beginnerGuidelines: z.string().min(10, 'Beginner guidelines section is required'),
-    }),
-    ar: z.object({
-      structure: z.string().min(10, 'Structure section must be at least 10 characters'),
-      exerciseSelection: z.string().min(10, 'Exercise selection section is required'),
-      volumeAdjustment: z.string().min(10, 'Volume adjustment section is required'),
-      beginnerGuidelines: z.string().min(10, 'Beginner guidelines section is required'),
-    }),
-    fr: z.object({
-      structure: z.string().min(10, 'Structure section must be at least 10 characters'),
-      exerciseSelection: z.string().min(10, 'Exercise selection section is required'),
-      volumeAdjustment: z.string().min(10, 'Volume adjustment section is required'),
-      beginnerGuidelines: z.string().min(10, 'Beginner guidelines section is required'),
-    }),
-  }),
-});
-
-const CreateTrainingProgramSchema = z.object({
-  name: MultilingualTextSchema,
-  description: MultilingualTextSchema,
-  price: z.number().min(0, 'Price must be non-negative'),
-  lemonSqueezyId: z.string().min(1, 'LemonSqueezy ID is required'),
-  programGuide: ProgramGuideSchema,
-  workoutTemplates: z.array(WorkoutTemplateSchema).min(1, 'At least one workout template is required'),
-});
-
+// Update schema for partial updates
 const UpdateTrainingProgramSchema = z.object({
   id: z.string().cuid('Invalid program ID'),
-  name: MultilingualTextSchema.optional(),
-  description: MultilingualTextSchema.optional(),
+  name: z.object({
+    en: z.string().min(1, 'English text is required'),
+    ar: z.string().min(1, 'Arabic text is required'),
+    fr: z.string().min(1, 'French text is required'),
+  }).optional(),
+  description: z.object({
+    en: z.string().min(1, 'English text is required'),
+    ar: z.string().min(1, 'Arabic text is required'),
+    fr: z.string().min(1, 'French text is required'),
+  }).optional(),
   price: z.number().min(0, 'Price must be non-negative').optional(),
   lemonSqueezyId: z.string().min(1, 'LemonSqueezy ID is required').optional(),
-  programGuide: ProgramGuideSchema.optional(),
-  workoutTemplates: z.array(WorkoutTemplateSchema).optional(),
+  programType: z.enum([
+    'Upper/Lower',
+    'FB EOD',
+    'Anterior/Posterior',
+    'PPL x UL',
+    'Upper/Lower x5'
+  ]).optional(),
+  difficulty: z.enum(['BEGINNER', 'INTERMEDIATE', 'ADVANCED']).optional(),
+  estimatedDuration: z.number().min(1).max(52).optional(),
+  sessionCount: z.number().min(1).max(7).optional(),
+  hasInteractiveBuilder: z.boolean().optional(),
+  allowsCustomization: z.boolean().optional(),
+  isActive: z.boolean().optional(),
+  programGuide: z.object({
+    introduction: z.object({
+      en: z.string().min(1, 'English text is required'),
+      ar: z.string().min(1, 'Arabic text is required'),
+      fr: z.string().min(1, 'French text is required'),
+    }),
+    structure: z.object({
+      en: z.string().min(1, 'English text is required'),
+      ar: z.string().min(1, 'Arabic text is required'),
+      fr: z.string().min(1, 'French text is required'),
+    }),
+    exerciseSelection: z.object({
+      en: z.string().min(1, 'English text is required'),
+      ar: z.string().min(1, 'Arabic text is required'),
+      fr: z.string().min(1, 'French text is required'),
+    }),
+    volumeAdjustment: z.object({
+      en: z.string().min(1, 'English text is required'),
+      ar: z.string().min(1, 'Arabic text is required'),
+      fr: z.string().min(1, 'French text is required'),
+    }),
+    beginnerGuidelines: z.object({
+      en: z.string().min(1, 'English text is required'),
+      ar: z.string().min(1, 'Arabic text is required'),
+      fr: z.string().min(1, 'French text is required'),
+    }),
+    progressionPlan: z.object({
+      en: z.string().min(1, 'English text is required'),
+      ar: z.string().min(1, 'Arabic text is required'),
+      fr: z.string().min(1, 'French text is required'),
+    }),
+    faq: z.array(z.object({
+      question: z.object({
+        en: z.string().min(1, 'English text is required'),
+        ar: z.string().min(1, 'Arabic text is required'),
+        fr: z.string().min(1, 'French text is required'),
+      }),
+      answer: z.object({
+        en: z.string().min(1, 'English text is required'),
+        ar: z.string().min(1, 'Arabic text is required'),
+        fr: z.string().min(1, 'French text is required'),
+      }),
+    })).default([]),
+  }).optional(),
+  workoutTemplates: z.array(z.object({
+    name: z.object({
+      en: z.string().min(1, 'English text is required'),
+      ar: z.string().min(1, 'Arabic text is required'),
+      fr: z.string().min(1, 'French text is required'),
+    }),
+    order: z.number().min(1),
+    requiredMuscleGroups: z.array(z.string()).min(1, 'At least one muscle group is required'),
+  })).optional(),
 });
 
 // Helper function to check admin access
@@ -90,13 +119,13 @@ function revalidateCaches() {
 /**
  * Create a new training program with associated guide and workout templates
  */
-export async function createTrainingProgram(formData: z.infer<typeof CreateTrainingProgramSchema>) {
+export async function createTrainingProgram(formData: z.infer<typeof programCreationSchema>) {
   try {
     // Validate admin access
     await checkAdminAccess();
 
     // Validate input data
-    const validatedData = CreateTrainingProgramSchema.parse(formData);
+    const validatedData = programCreationSchema.parse(formData);
 
     // Check if lemonSqueezyId is unique
     const existingProgram = await prisma.trainingProgram.findUnique({
@@ -116,6 +145,12 @@ export async function createTrainingProgram(formData: z.infer<typeof CreateTrain
           description: validatedData.description,
           price: validatedData.price,
           lemonSqueezyId: validatedData.lemonSqueezyId,
+          programType: validatedData.programType,
+          estimatedDuration: validatedData.estimatedDuration,
+          sessionCount: validatedData.sessionCount,
+          difficulty: validatedData.difficulty || 'INTERMEDIATE',
+          hasInteractiveBuilder: validatedData.hasInteractiveBuilder ?? true,
+          allowsCustomization: validatedData.allowsCustomization ?? true,
         },
       });
 
@@ -123,7 +158,7 @@ export async function createTrainingProgram(formData: z.infer<typeof CreateTrain
       await tx.programGuide.create({
         data: {
           trainingProgramId: trainingProgram.id,
-          content: validatedData.programGuide.content,
+          content: validatedData.programGuide,
         },
       });
 
@@ -210,10 +245,10 @@ export async function updateTrainingProgram(formData: z.infer<typeof UpdateTrain
       if (validatedData.programGuide) {
         await tx.programGuide.upsert({
           where: { trainingProgramId: validatedData.id },
-          update: { content: validatedData.programGuide.content },
+          update: { content: validatedData.programGuide },
           create: {
             trainingProgramId: validatedData.id,
-            content: validatedData.programGuide.content,
+            content: validatedData.programGuide,
           },
         });
       }

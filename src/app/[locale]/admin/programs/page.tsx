@@ -28,6 +28,13 @@ interface TrainingProgramWithDetails {
   isActive: boolean;
   createdAt: Date;
   updatedAt: Date;
+  // New fields from enhanced schema (optional for backward compatibility)
+  programType?: string;
+  difficulty?: string;
+  estimatedDuration?: number;
+  sessionCount?: number;
+  hasInteractiveBuilder?: boolean;
+  allowsCustomization?: boolean;
   _count: {
     userPurchases: number;
     userPrograms: number;

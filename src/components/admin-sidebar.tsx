@@ -18,7 +18,8 @@ import {
   Users,
   BarChart3,
   FileText,
-  MessageSquare
+  MessageSquare,
+  Dumbbell
 } from 'lucide-react';
 
 interface AdminSidebarProps {
@@ -31,6 +32,12 @@ const adminNavItems = [
     href: '/admin',
     icon: LayoutDashboard,
     description: 'Overview and analytics'
+  },
+  {
+    title: 'Training Programs',
+    href: '/admin/programs',
+    icon: Dumbbell,
+    description: 'Manage training programs and workouts'
   },
   {
     title: 'AI Configuration',

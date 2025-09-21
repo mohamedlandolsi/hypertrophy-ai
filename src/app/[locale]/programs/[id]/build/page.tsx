@@ -45,9 +45,9 @@ function ExerciseSelect({
   const isValid = isWorkoutValid(workoutTemplateId);
 
   const categoryLimits = {
-    'Minimalist': { min: 3, max: 4 },
-    'Essentialist': { min: 4, max: 6 },
-    'Maximalist': { min: 6, max: 8 },
+    'MINIMALIST': { min: 3, max: 4 },
+    'ESSENTIALIST': { min: 4, max: 6 },
+    'MAXIMALIST': { min: 6, max: 8 },
   };
 
   const limits = categoryLimits[selectedCategory];
@@ -198,6 +198,11 @@ export default function ProgramBuilderPage() {
   const programId = params.id as string;
   
   const [isInitializing, setIsInitializing] = useState(true);
+
+  // Helper function to format category names for display
+  const formatCategoryName = (category: ProgramCategory) => {
+    return category.toLowerCase().replace(/^\w/, c => c.toUpperCase());
+  };
   
   const {
     program,
@@ -253,7 +258,7 @@ export default function ProgramBuilderPage() {
         
         // Load existing configuration if available
         if (existingConfiguration) {
-          setSelectedCategory(existingConfiguration.category as ProgramCategory);
+          setSelectedCategory(existingConfiguration.categoryType as ProgramCategory);
           // Set configuration directly without triggering category reset
           const config = existingConfiguration.configuration as Record<string, string[]>;
           Object.entries(config).forEach(([workoutId, exerciseIds]) => {
@@ -288,7 +293,7 @@ export default function ProgramBuilderPage() {
     try {
       const result = await saveUserProgram({
         trainingProgramId: program.id,
-        category: selectedCategory,
+        categoryType: selectedCategory,
         configuration,
       });
 
@@ -351,16 +356,18 @@ export default function ProgramBuilderPage() {
                 onValueChange={(value) => setSelectedCategory(value as ProgramCategory)}
               >
                 <SelectTrigger className="w-full">
-                  <SelectValue placeholder="Select training category" />
+                  <SelectValue placeholder="Select training category">
+                    {selectedCategory && formatCategoryName(selectedCategory)}
+                  </SelectValue>
                 </SelectTrigger>
                 <SelectContent>
-                  <SelectItem value="Minimalist">
+                  <SelectItem value="MINIMALIST">
                     Minimalist (3-4 exercises per workout)
                   </SelectItem>
-                  <SelectItem value="Essentialist">
+                  <SelectItem value="ESSENTIALIST">
                     Essentialist (4-6 exercises per workout)
                   </SelectItem>
-                  <SelectItem value="Maximalist">
+                  <SelectItem value="MAXIMALIST">
                     Maximalist (6-8 exercises per workout)
                   </SelectItem>
                 </SelectContent>

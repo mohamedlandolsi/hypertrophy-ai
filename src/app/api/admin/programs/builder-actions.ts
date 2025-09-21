@@ -19,7 +19,7 @@ async function createAuditTrail(eventType: string, userId: string, data: Record<
 // Validation schemas
 const SaveUserProgramSchema = z.object({
   trainingProgramId: z.string().cuid(),
-  category: z.enum(['Minimalist', 'Essentialist', 'Maximalist']),
+  categoryType: z.enum(['MINIMALIST', 'ESSENTIALIST', 'MAXIMALIST']),
   configuration: z.record(z.string(), z.array(z.string())), // workoutTemplateId -> exerciseIds[]
 });
 
@@ -95,7 +95,7 @@ export async function getProgramBuilderData(programId: string) {
       },
       select: {
         id: true,
-        category: true,
+        categoryType: true,
         configuration: true,
       },
     });
@@ -209,7 +209,7 @@ export async function saveUserProgram(data: z.infer<typeof SaveUserProgramSchema
       userProgram = await prisma.userProgram.update({
         where: { id: existingUserProgram.id },
         data: {
-          category: validatedData.category,
+          categoryType: validatedData.categoryType,
           configuration: validatedData.configuration,
           updatedAt: new Date(),
         },
@@ -220,7 +220,7 @@ export async function saveUserProgram(data: z.infer<typeof SaveUserProgramSchema
         data: {
           userId: user.id,
           trainingProgramId: validatedData.trainingProgramId,
-          category: validatedData.category,
+          categoryType: validatedData.categoryType,
           configuration: validatedData.configuration,
         },
       });
@@ -230,7 +230,7 @@ export async function saveUserProgram(data: z.infer<typeof SaveUserProgramSchema
     await createAuditTrail('user_program_saved', user.id, {
       userProgramId: userProgram.id,
       trainingProgramId: validatedData.trainingProgramId,
-      category: validatedData.category,
+      categoryType: validatedData.categoryType,
       exerciseCount: allExerciseIds.length,
       workoutCount: configWorkoutIds.length,
     });
@@ -277,7 +277,7 @@ export async function getUserProgramConfiguration(programId: string) {
       },
       select: {
         id: true,
-        category: true,
+        categoryType: true,
         configuration: true,
         createdAt: true,
         updatedAt: true,
