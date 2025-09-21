@@ -89,11 +89,43 @@ export default function UserManagementPage() {
   const [isLoading, setIsLoading] = useState(true);
   const [searchTerm, setSearchTerm] = useState('');
   const [selectedRole, setSelectedRole] = useState<'all' | 'user' | 'admin'>('all');
+  const [adminAccessError, setAdminAccessError] = useState<string | null>(null);
   
   // Grant PRO Plan Dialog state
   const [grantProDialogOpen, setGrantProDialogOpen] = useState(false);
   const [selectedUserForPro, setSelectedUserForPro] = useState<UserProfile | null>(null);
   const [adminApiWarning, setAdminApiWarning] = useState<string | null>(null);
+
+  const checkAdminAccess = useCallback(async () => {
+    try {
+      // Verify admin access using dedicated check-status endpoint
+      const response = await fetch('/api/admin/check-status');
+      
+      if (!response.ok) {
+        const data = await response.json().catch(() => ({}));
+        const errorMessage = data.error || 'Access denied. Admin privileges required.';
+        setAdminAccessError(errorMessage);
+        setIsLoading(false);
+        return false;
+      }
+      
+      const data = await response.json();
+      
+      if (!data.isAdmin) {
+        const errorMessage = data.error || 'Access denied. Admin privileges required.';
+        setAdminAccessError(errorMessage);
+        setIsLoading(false);
+        return false;
+      }
+
+      return true;
+    } catch (error) {
+      console.error('Admin access check failed:', error);
+      setAdminAccessError('Access denied. Admin privileges required.');
+      setIsLoading(false);
+      return false;
+    }
+  }, []);
 
   const filterUsers = useCallback(() => {
     let filtered = users;
@@ -179,9 +211,16 @@ export default function UserManagementPage() {
   }, []);
 
   useEffect(() => {
-    fetchUsers();
-    fetchStats();
-  }, [fetchUsers, fetchStats]);
+    const initializeAdminPage = async () => {
+      const hasAccess = await checkAdminAccess();
+      if (hasAccess) {
+        fetchUsers();
+        fetchStats();
+      }
+    };
+    
+    initializeAdminPage();
+  }, [checkAdminAccess, fetchUsers, fetchStats]);
 
   useEffect(() => {
     filterUsers();
@@ -265,6 +304,23 @@ export default function UserManagementPage() {
           message="Loading User Management"
           description="Fetching user data and statistics"
         />
+      </AdminLayout>
+    );
+  }
+
+  if (adminAccessError) {
+    return (
+      <AdminLayout>
+        <div className="flex items-center justify-center min-h-[60vh]">
+          <div className="text-center max-w-md mx-auto p-6">
+            <UserX className="h-12 w-12 text-destructive mx-auto mb-4" />
+            <h2 className="text-xl font-semibold mb-2">Access Denied</h2>
+            <p className="text-muted-foreground mb-6">{adminAccessError}</p>
+            <Button onClick={() => window.history.back()} variant="outline">
+              Go Back
+            </Button>
+          </div>
+        </div>
       </AdminLayout>
     );
   }

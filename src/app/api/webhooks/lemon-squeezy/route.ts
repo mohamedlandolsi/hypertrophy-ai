@@ -190,6 +190,11 @@ export async function POST(request: NextRequest) {
       case 'subscription_past_due':
         await handleSubscriptionDeactivated(data, meta);
         break;
+      
+      // NEW: Handle one-time training program purchases
+      case 'order_created':
+        await handleOrderCreated(data, meta);
+        break;
         
       default:
         logger.info('Unhandled webhook event type', { ...context, eventType });
@@ -200,6 +205,198 @@ export async function POST(request: NextRequest) {
   } catch (error) {
     return ApiErrorHandler.handleError(error, context);
   }
+}
+
+// NEW: Handle order_created events for training program purchases
+async function handleOrderCreated(orderData: {
+  id: string;
+  attributes: {
+    user_email?: string;
+    status: string;
+    total: number;
+    currency: string;
+    first_order_item?: {
+      product_id?: string;
+      variant_id?: string;
+      product_name?: string;
+    };
+    order_items?: Array<{
+      product_id?: string;
+      variant_id?: string;
+      product_name?: string;
+    }>;
+  };
+}, meta: {
+  test_mode: boolean;
+  event_name: string;
+  webhook_id: string;
+  custom_data?: Record<string, unknown>;
+}) {
+  const {
+    id: orderId,
+    attributes: {
+      user_email,
+      status,
+      total,
+      currency,
+      first_order_item,
+      order_items
+    }
+  } = orderData;
+
+  logger.info('Processing order_created event', { 
+    orderId, 
+    user_email, 
+    status, 
+    total, 
+    currency 
+  });
+
+  // Only process completed/paid orders
+  if (status !== 'paid') {
+    logger.info('Skipping order - not paid', { orderId, status });
+    return;
+  }
+
+  // Get product ID from first order item or order items array
+  const productId = first_order_item?.product_id || 
+                   (order_items && order_items[0]?.product_id);
+
+  if (!productId) {
+    logger.error('No product ID found in order', undefined, { order_id: orderId });
+    throw new ValidationError('Product ID not found in order data');
+  }
+
+  // Check if this is a subscription product (skip if it is - handled by subscription events)
+  const subscriptionProductIds = [
+    process.env.LEMONSQUEEZY_PRO_MONTHLY_PRODUCT_ID,
+    process.env.LEMONSQUEEZY_PRO_YEARLY_PRODUCT_ID
+  ].filter(Boolean);
+
+  if (subscriptionProductIds.includes(productId)) {
+    logger.info('Skipping order - subscription product handled by subscription events', { 
+      order_id: orderId, 
+      product_id: productId 
+    });
+    return;
+  }
+
+  // Check if this is a training program purchase
+  const trainingProgram = await prisma.trainingProgram.findUnique({
+    where: { lemonSqueezyId: productId },
+    select: { 
+      id: true, 
+      name: true, 
+      price: true,
+      isActive: true 
+    }
+  });
+
+  if (!trainingProgram) {
+    logger.info('Product not found in training programs', { order_id: orderId, product_id: productId });
+    return;
+  }
+
+  if (!trainingProgram.isActive) {
+    logger.error('Attempt to purchase inactive training program', undefined, { 
+      order_id: orderId, 
+      product_id: productId, 
+      program_id: trainingProgram.id 
+    });
+    throw new ValidationError('Training program is not active');
+  }
+
+  // Find user by email
+  if (!user_email) {
+    logger.error('No user email in order data', undefined, { order_id: orderId });
+    throw new ValidationError('User email not found in order data');
+  }
+
+  // Look up user by email in Supabase auth
+  const user = await prisma.user.findFirst({
+    where: {
+      id: {
+        // We need to find the user by their Supabase auth email
+        // Since we don't store email in our User table, we'll use the custom_data user_id if available
+        // or we'll need to implement email lookup via Supabase
+        in: meta.custom_data?.user_id ? [meta.custom_data.user_id as string] : []
+      }
+    },
+    select: { id: true }
+  });
+
+  // If no user found via custom_data, we might need to implement email lookup
+  // For now, we'll require user_id in custom_data
+  const userId = meta.custom_data?.user_id as string;
+  
+  if (!userId || !user) {
+    logger.error('User not found for training program purchase', undefined, { 
+      order_id: orderId, 
+      user_email, 
+      user_id: userId,
+      product_id: productId 
+    });
+    throw new ValidationError('User not found for training program purchase. User must be logged in during purchase.');
+  }
+
+  // Validate purchase amount matches training program price
+  const expectedPriceCents = trainingProgram.price;
+  const orderTotalCents = Math.round(total * 100); // Convert to cents
+
+  if (orderTotalCents !== expectedPriceCents) {
+    logger.error('Order total does not match training program price', undefined, {
+      order_id: orderId,
+      order_total: orderTotalCents,
+      expected_price: expectedPriceCents,
+      program_id: trainingProgram.id
+    });
+    throw new ValidationError('Order total does not match training program price');
+  }
+
+  // Check if user already owns this program
+  const existingPurchase = await prisma.userPurchase.findUnique({
+    where: {
+      userId_trainingProgramId: {
+        userId: userId,
+        trainingProgramId: trainingProgram.id
+      }
+    }
+  });
+
+  if (existingPurchase) {
+    logger.info('User already owns this training program', {
+      order_id: orderId,
+      user_id: userId,
+      program_id: trainingProgram.id,
+      existing_purchase_date: existingPurchase.purchaseDate
+    });
+    return; // Don't create duplicate purchase
+  }
+
+  // Create UserPurchase record
+  await prisma.userPurchase.create({
+    data: {
+      userId: userId,
+      trainingProgramId: trainingProgram.id,
+      purchaseDate: new Date()
+    }
+  });
+
+  // Create audit trail
+  await createAuditTrail('training_program_purchased', userId, {
+    ...orderData,
+    trainingProgramId: trainingProgram.id,
+    trainingProgramName: trainingProgram.name
+  });
+
+  logger.info('Training program purchase completed successfully', {
+    order_id: orderId,
+    user_id: userId,
+    program_id: trainingProgram.id,
+    program_name: trainingProgram.name,
+    price: trainingProgram.price,
+    user_email
+  });
 }
 
 async function handleSubscriptionActivated(subscriptionData: {

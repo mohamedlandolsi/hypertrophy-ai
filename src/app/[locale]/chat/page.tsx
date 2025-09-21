@@ -4,7 +4,7 @@ import React from 'react';
 import { createClient } from '@/lib/supabase/client';
 import { useEffect, useState as reactUseState, useRef, useCallback, useMemo } from 'react';
 import { Button } from '@/components/ui/button';
-import { Settings, MessageSquare, Send, ChevronLeft, Menu, User, LogOut, Database, Trash2, Loader2, Image as ImageIcon, Crown } from 'lucide-react';
+import { Settings, MessageSquare, Send, ChevronLeft, Menu, User, LogOut, Database, Trash2, Loader2, Image as ImageIcon, Crown, Users } from 'lucide-react';
 import Link from 'next/link';
 import Image from 'next/image';
 import { ThemeToggle } from '@/components/theme-toggle';
@@ -1229,6 +1229,20 @@ const ChatPage = () => {
                 <MessageSquare className="mr-3 h-5 w-5" />
                 {t('sidebar.newChat')}
               </Button>
+
+              {/* Chat with real coach - Only for PRO users */}
+              {user && userPlan?.plan === 'PRO' && (
+                <Button 
+                  variant="outline" 
+                  asChild
+                  className="w-full justify-start h-11 border-amber-500/20 hover:bg-amber-50 hover:border-amber-500/40 dark:hover:bg-amber-950/20 hover-lift font-medium" 
+                >
+                  <Link href={`/${locale}/coach-chat`}>
+                    <Users className="mr-3 h-5 w-5 text-amber-600 dark:text-amber-400" />
+                    <span className="text-amber-700 dark:text-amber-300">{t('sidebar.chatWithCoach')}</span>
+                  </Link>
+                </Button>
+              )}
 
               {/* Admin Navigation - Only for Admins */}
               {user && userRole === 'admin' && (

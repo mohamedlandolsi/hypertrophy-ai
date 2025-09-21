@@ -30,13 +30,15 @@ export async function GET() {
       
       return NextResponse.json({
         success: true,
-        role: newUser.role
+        role: newUser.role,
+        user: { id: user.id }
       });
     }
 
     return NextResponse.json({
       success: true,
-      role: dbUser.role
+      role: dbUser.role,
+      user: { id: user.id }
     });
 
   } catch (error) {

@@ -116,25 +116,32 @@ export default function KnowledgePage() {
       console.log('👤 Authenticated user:', currentUser.id);
       setUser(currentUser);
 
-      // Verify admin access by trying to fetch admin config
-      console.log('🔍 Verifying admin access via /api/admin/config...');
-      const response = await fetch('/api/admin/config');
-      console.log('📡 Admin config response status:', response.status);
+      // Verify admin access using dedicated check-status endpoint
+      console.log('🔍 Verifying admin access via /api/admin/check-status...');
+      const response = await fetch('/api/admin/check-status');
+      console.log('📡 Admin check response status:', response.status);
       
-      if (response.status === 401) {
-        console.log('❌ Unauthorized, redirecting to login');
-        router.push('/login');
-        return;
-      }
-      if (response.status === 403) {
-        console.log('❌ Forbidden, user is not admin');
-        setAdminAccessError('Access denied. Admin privileges required to access knowledge management.');
-        setIsLoading(false);
-        return;
-      }
       if (!response.ok) {
-        console.log('❌ Admin config request failed:', response.statusText);
-        setAdminAccessError('Unable to verify admin access.');
+        const data = await response.json().catch(() => ({}));
+        if (response.status === 401) {
+          console.log('❌ Unauthorized, redirecting to login');
+          router.push('/login');
+          return;
+        } else {
+          console.log('❌ Admin access denied');
+          const errorMessage = data.error || 'Access denied. Admin privileges required to access knowledge management.';
+          setAdminAccessError(errorMessage);
+          setIsLoading(false);
+          return;
+        }
+      }
+      
+      const data = await response.json();
+      
+      if (!data.isAdmin) {
+        console.log('❌ User is not admin');
+        const errorMessage = data.error || 'Access denied. Admin privileges required to access knowledge management.';
+        setAdminAccessError(errorMessage);
         setIsLoading(false);
         return;
       }

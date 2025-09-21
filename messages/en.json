@@ -4,6 +4,7 @@
     "chat": "Chat",
     "pricing": "Pricing",
     "profile": "Profile",
+    "programs": "Programs",
     "admin": "Admin",
     "logout": "Logout",
     "login": "Login",
@@ -1345,6 +1346,7 @@
       "header": "HypertroQ",
       "subheader": "AI Fitness Coach",
       "newChat": "New Chat",
+      "chatWithCoach": "Chat with Real Coach",
       "adminTools": "ADMIN TOOLS",
       "knowledgeBase": "Knowledge Base",
       "aiConfig": "AI Configuration",
@@ -1501,6 +1503,36 @@
       "title": "Chat Coming Soon",
       "subtitle": "Something amazing is on the way",
       "description": "We're working hard to bring you an incredible chat experience with your AI fitness coach. Stay tuned for updates!"
+    }
+  },
+  "CoachChatPage": {
+    "title": "Chat with Real Coach",
+    "subtitle": "Connect with certified fitness professionals",
+    "selectCoach": "Select a Coach",
+    "selectCoachDescription": "Choose a certified coach to start your personalized coaching session.",
+    "chooseCoach": "Choose a coach...",
+    "startChat": "Start Chat",
+    "noCoachesAvailable": "No coaches available at the moment.",
+    "noCoachesSubtext": "Please check back later or contact support.",
+    "backToAiChat": "Back to AI Chat",
+    "online": "Online",
+    "offline": "Offline",
+    "active": "Active",
+    "closed": "Closed",
+    "pending": "Pending",
+    "typeMessage": "Type your message...",
+    "startConversation": "Start your conversation with the coach",
+    "proRequired": {
+      "title": "PRO Feature",
+      "description": "Chat with real coaches is available exclusively for PRO users.",
+      "benefits": {
+        "title": "Upgrade to PRO to get:",
+        "coaching": "Direct access to certified fitness coaches",
+        "advice": "Personalized advice and form checks", 
+        "support": "Real-time coaching support",
+        "unlimited": "Unlimited AI model access"
+      },
+      "upgradeToPro": "Upgrade to PRO"
     }
   },
   "maintenance": {

@@ -2,7 +2,7 @@
 
 import Link from 'next/link';
 import Image from 'next/image';
-import { Menu, User, MessageSquare, Settings, LogOut, LayoutDashboard, UserCircle, Crown } from 'lucide-react';
+import { Menu, User, MessageSquare, Settings, LogOut, LayoutDashboard, UserCircle, Crown, Dumbbell, BookOpen } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Sheet, SheetContent, SheetTrigger, SheetClose, SheetTitle } from '@/components/ui/sheet';
 import { useState, useEffect } from 'react';
@@ -27,6 +27,7 @@ import { useRouter, usePathname } from 'next/navigation';
 import LanguageSwitcher from '@/components/language-switcher';
 import { useTranslations } from 'next-intl';
 import { BetaBadge } from '@/components/beta-badge';
+import { CoachInboxNotification } from '@/components/coach-inbox-notification';
 
 const Navbar = () => {
   const [isMobileMenuOpen, setIsMobileMenuOpen] = useState(false);
@@ -125,7 +126,9 @@ const Navbar = () => {
   const navLinks = [
     { href: `/${locale}/pricing`, label: t('pricing'), icon: Crown },
     ...(user ? [{ href: `/${locale}/profile`, label: t('profile'), icon: UserCircle }] : []),
+    ...(user ? [{ href: `/${locale}/programs`, label: t('programs'), icon: BookOpen }] : []),
     { href: `/${locale}/chat`, label: t('chat'), icon: MessageSquare },
+    ...(userRole?.split(',').map(r => r.trim()).includes('coach') ? [{ href: `/${locale}/coach-inbox`, label: 'Coach Inbox', icon: MessageSquare }] : []),
     ...(userRole === 'admin' ? [{ href: `/${locale}/admin`, label: t('dashboard'), icon: LayoutDashboard }] : []),
   ];
 
@@ -171,10 +174,11 @@ const Navbar = () => {
           {isLoadingUser ? (
             <div className="h-9 w-9 rounded-full bg-muted animate-pulse" /> // Placeholder for loading state
           ) : user ? (
-              // Logged-in state: Language switcher, theme toggle, and avatar dropdown (desktop only)
+              // Logged-in state: Language switcher, theme toggle, coach inbox (if coach), and avatar dropdown (desktop only)
               <div className="hidden md:flex items-center space-x-2 rtl:space-x-reverse">
                 <LanguageSwitcher />
                 <ThemeToggle />
+                <CoachInboxNotification />
                 <DropdownMenu>
                   <DropdownMenuTrigger asChild>
                     <Button variant="ghost" className="relative h-9 w-9 rounded-full">
@@ -201,12 +205,20 @@ const Navbar = () => {
                       </Link>
                     </DropdownMenuItem>
                     {userRole === 'admin' && (
-                      <DropdownMenuItem asChild>
-                        <Link href={`/${locale}/admin/settings`} className="flex items-center w-full">
-                          <Settings className="me-2 h-4 w-4" />
-                          <span>{t('aiConfiguration')}</span>
-                        </Link>
-                      </DropdownMenuItem>
+                      <>
+                        <DropdownMenuItem asChild>
+                          <Link href={`/${locale}/admin/programs`} className="flex items-center w-full">
+                            <Dumbbell className="me-2 h-4 w-4" />
+                            <span>Manage Programs</span>
+                          </Link>
+                        </DropdownMenuItem>
+                        <DropdownMenuItem asChild>
+                          <Link href={`/${locale}/admin/settings`} className="flex items-center w-full">
+                            <Settings className="me-2 h-4 w-4" />
+                            <span>{t('aiConfiguration')}</span>
+                          </Link>
+                        </DropdownMenuItem>
+                      </>
                     )}
                     <DropdownMenuSeparator />
                     <DropdownMenuItem onClick={handleLogout} className="flex items-center w-full cursor-pointer">
@@ -293,14 +305,24 @@ const Navbar = () => {
                         
                         {/* User Menu Items */}
                         {userRole === 'admin' && (
-                          <SheetClose asChild>
-                            <Button variant="outline" className="w-full justify-start h-12 px-4" asChild>
-                              <Link href={`/${locale}/admin/settings`}>
-                                <Settings className="me-2 h-4 w-4" />
-                                {t('aiConfiguration')}
-                              </Link>
-                            </Button>
-                          </SheetClose>
+                          <>
+                            <SheetClose asChild>
+                              <Button variant="outline" className="w-full justify-start h-12 px-4" asChild>
+                                <Link href={`/${locale}/admin/programs`}>
+                                  <Dumbbell className="me-2 h-4 w-4" />
+                                  Manage Programs
+                                </Link>
+                              </Button>
+                            </SheetClose>
+                            <SheetClose asChild>
+                              <Button variant="outline" className="w-full justify-start h-12 px-4" asChild>
+                                <Link href={`/${locale}/admin/settings`}>
+                                  <Settings className="me-2 h-4 w-4" />
+                                  {t('aiConfiguration')}
+                                </Link>
+                              </Button>
+                            </SheetClose>
+                          </>
                         )}
                         <SheetClose asChild>
                           <Button variant="outline" className="w-full justify-start h-12 px-4" onClick={async () => { await handleLogout(); setIsMobileMenuOpen(false);}}>

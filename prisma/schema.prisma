@@ -41,6 +41,14 @@ model User {
   clientMemory           ClientMemory?
   knowledgeItems         KnowledgeItem[]
   subscription           Subscription?
+  // Coach chat relations
+  userCoachChats         CoachChat[]     @relation("UserCoachChats")
+  coachCoachChats        CoachChat[]     @relation("CoachCoachChats")
+  sentCoachMessages      CoachMessage[]
+  
+  // Training program relations
+  userPurchases          UserPurchase[]
+  userPrograms           UserProgram[]
 
   @@index([lastMessageReset])
   @@index([lastUploadReset])
@@ -55,6 +63,39 @@ model Chat {
   userId    String
   user      User      @relation(fields: [userId], references: [id])
   messages  Message[]
+}
+
+model CoachChat {
+  id            String         @id @default(cuid())
+  title         String?
+  createdAt     DateTime       @default(now())
+  updatedAt     DateTime       @updatedAt
+  userId        String         // User who initiated the chat
+  coachId       String         // Coach assigned to the chat
+  status        CoachChatStatus @default(ACTIVE)
+  user          User           @relation("UserCoachChats", fields: [userId], references: [id])
+  coach         User           @relation("CoachCoachChats", fields: [coachId], references: [id])
+  messages      CoachMessage[]
+
+  @@index([userId])
+  @@index([coachId])
+  @@index([status])
+  @@index([createdAt])
+}
+
+model CoachMessage {
+  id          String    @id @default(cuid())
+  createdAt   DateTime  @default(now())
+  content     String
+  senderId    String    // User ID of who sent the message
+  coachChatId String
+  isRead      Boolean   @default(false)
+  sender      User      @relation(fields: [senderId], references: [id])
+  coachChat   CoachChat @relation(fields: [coachChatId], references: [id], onDelete: Cascade)
+
+  @@index([coachChatId])
+  @@index([senderId])
+  @@index([createdAt])
 }
 
 model Message {
@@ -217,9 +258,111 @@ model KnowledgeItemCategory {
   @@index([knowledgeItemId])
 }
 
+// Training Program Models
+model TrainingProgram {
+  id              String           @id @default(cuid())
+  name            Json             // Multilingual: {"en": "Upper/Lower", "ar": "علوي/سفلي", "fr": "Haut/Bas"}
+  description     Json             // Multilingual description
+  price           Int              // Price in cents
+  lemonSqueezyId  String           @unique
+  isActive        Boolean          @default(true)
+  createdAt       DateTime         @default(now())
+  updatedAt       DateTime         @updatedAt
+  
+  // Relations
+  programGuide    ProgramGuide?
+  workoutTemplates WorkoutTemplate[]
+  userPurchases   UserPurchase[]
+  userPrograms    UserProgram[]
+
+  @@index([isActive])
+  @@index([lemonSqueezyId])
+}
+
+model ProgramGuide {
+  id                String         @id @default(cuid())
+  trainingProgramId String         @unique
+  content           Json           // Multilingual content: {"en": {...}, "ar": {...}, "fr": {...}}
+  createdAt         DateTime       @default(now())
+  updatedAt         DateTime       @updatedAt
+  
+  // Relations
+  trainingProgram   TrainingProgram @relation(fields: [trainingProgramId], references: [id], onDelete: Cascade)
+}
+
+model WorkoutTemplate {
+  id                   String         @id @default(cuid())
+  trainingProgramId    String
+  name                 Json           // Multilingual: {"en": "Upper Body A", "ar": "الجزء العلوي أ", "fr": "Haut du Corps A"}
+  order                Int            // Order within the program
+  requiredMuscleGroups String[]       // Array of required muscle groups for this workout
+  createdAt            DateTime       @default(now())
+  updatedAt            DateTime       @updatedAt
+  
+  // Relations
+  trainingProgram      TrainingProgram @relation(fields: [trainingProgramId], references: [id], onDelete: Cascade)
+
+  @@index([trainingProgramId])
+  @@index([trainingProgramId, order])
+}
+
+model TrainingExercise {
+  id                   String                @id @default(cuid())
+  name                 Json                  // Multilingual: {"en": "Bench Press", "ar": "ضغط البنش", "fr": "Développé Couché"}
+  primaryMuscleGroup   String
+  secondaryMuscleGroups String[]
+  type                 String               // 'Compound', 'Isolation', 'Unilateral'
+  createdAt            DateTime              @default(now())
+  updatedAt            DateTime              @updatedAt
+
+  @@index([primaryMuscleGroup])
+  @@index([type])
+}
+
+model UserPurchase {
+  id                String         @id @default(cuid())
+  userId            String
+  trainingProgramId String
+  purchaseDate      DateTime       @default(now())
+  createdAt         DateTime       @default(now())
+  updatedAt         DateTime       @updatedAt
+  
+  // Relations
+  user              User           @relation(fields: [userId], references: [id], onDelete: Cascade)
+  trainingProgram   TrainingProgram @relation(fields: [trainingProgramId], references: [id], onDelete: Cascade)
+
+  @@unique([userId, trainingProgramId])
+  @@index([userId])
+  @@index([trainingProgramId])
+}
+
+model UserProgram {
+  id                String           @id @default(cuid())
+  userId            String
+  trainingProgramId String
+  category          String           // 'Minimalist', 'Essentialist', 'Maximalist'
+  configuration     Json             // Stores mapping of workout templates to selected exercise IDs
+  createdAt         DateTime         @default(now())
+  updatedAt         DateTime         @updatedAt
+  
+  // Relations
+  user              User             @relation(fields: [userId], references: [id], onDelete: Cascade)
+  trainingProgram   TrainingProgram  @relation(fields: [trainingProgramId], references: [id], onDelete: Cascade)
+
+  @@index([userId])
+  @@index([trainingProgramId])
+  @@index([userId, trainingProgramId])
+}
+
 enum Role {
   USER
   ASSISTANT
+}
+
+enum CoachChatStatus {
+  ACTIVE
+  CLOSED
+  PENDING
 }
 
 enum KnowledgeType {
@@ -278,4 +421,37 @@ enum ExerciseMuscleGroup {
   HAMSTRINGS
   ADDUCTORS
   CALVES
+}
+
+enum ProgramCategory {
+  MINIMALIST
+  ESSENTIALIST
+  MAXIMALIST
+}
+
+enum ExerciseType {
+  COMPOUND
+  ISOLATION
+  UNILATERAL
+}
+
+enum TrainingMuscleGroup {
+  CHEST
+  BACK
+  SHOULDERS
+  BICEPS
+  TRICEPS
+  FOREARMS
+  ABS
+  GLUTES
+  QUADRICEPS
+  HAMSTRINGS
+  ADDUCTORS
+  CALVES
+  TRAPS
+  LATS
+  RHOMBOIDS
+  REAR_DELTS
+  MIDDLE_DELTS
+  FRONT_DELTS
 }

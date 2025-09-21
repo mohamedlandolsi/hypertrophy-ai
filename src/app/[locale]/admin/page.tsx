@@ -85,24 +85,24 @@ export default function AdminDashboard() {
         return;
       }
 
-      // Verify admin access
-      const response = await fetch('/api/admin/config');
+      // Verify admin access using dedicated check-status endpoint
+      const response = await fetch('/api/admin/check-status');
+      
       if (response.status === 401) {
         router.push('/login');
         return;
       }
-      if (response.status === 403) {
-        setAdminAccessError('Access denied. Admin privileges required to access the dashboard.');
-        setLoading(false);
-        return;
-      }
-      if (!response.ok) {
-        setAdminAccessError('Unable to verify admin access.');
+      
+      const data = await response.json();
+      
+      if (!response.ok || !data.isAdmin) {
+        const errorMessage = data.error || 'Access denied. Admin privileges required to access the dashboard.';
+        setAdminAccessError(errorMessage);
         setLoading(false);
         return;
       }
 
-      // Fetch dashboard stats
+      // Admin access confirmed, fetch dashboard stats
       await fetchDashboardStats();
     } catch (error) {
       console.error('Admin access check failed:', error);
