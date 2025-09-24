@@ -4,18 +4,19 @@ import { useEffect, useState } from 'react';
 import { useParams, useRouter } from 'next/navigation';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
-import { Alert, AlertDescription, AlertTitle } from '@/components/ui/alert';
+import { Alert, AlertDescription } from '@/components/ui/alert';
 import { Badge } from '@/components/ui/badge';
 import { Separator } from '@/components/ui/separator';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
-import { Checkbox } from '@/components/ui/checkbox';
-import { AlertTriangle, CheckCircle, Loader2, Save, RotateCcw } from 'lucide-react';
+import { AlertTriangle, Loader2, Save, RotateCcw } from 'lucide-react';
 import { toast } from 'sonner';
 import useProgramBuilderStore, { 
   type ProgramCategory, 
   type TrainingExercise 
 } from '@/stores/program-builder-store';
 import { getProgramBuilderData, saveUserProgram } from '@/app/api/admin/programs/builder-actions';
+import EnhancedExerciseSelector from '@/components/program-builder/enhanced-exercise-selector';
+import ProgramScheduling from '@/components/program-builder/program-scheduling';
 
 interface ExerciseSelectProps {
   workoutTemplateId: string;
@@ -34,6 +35,7 @@ function ExerciseSelect({
     configuration,
     selectedCategory,
     toggleExerciseForWorkout,
+    setWorkoutExercises,
     canAddMoreExercises,
     getTotalSelectedExercisesCount,
     isWorkoutValid,
@@ -52,111 +54,118 @@ function ExerciseSelect({
 
   const limits = categoryLimits[selectedCategory];
 
+  const handleApplyTemplate = (exerciseIds: string[]) => {
+    setWorkoutExercises(workoutTemplateId, exerciseIds);
+  };
+
   return (
-    <Card className="mb-6">
-      <CardHeader>
-        <div className="flex items-center justify-between">
-          <div>
-            <CardTitle className="text-lg">{workoutName}</CardTitle>
-            <CardDescription>
-              Required muscle groups: {requiredMuscleGroups.join(', ')}
-            </CardDescription>
-          </div>
-          <div className="flex items-center gap-2">
-            <Badge variant={isValid ? "default" : "destructive"}>
-              {selectedCount}/{limits.max} exercises
-            </Badge>
-            {isValid && <CheckCircle className="h-5 w-5 text-green-500" />}
-          </div>
-        </div>
-      </CardHeader>
-      <CardContent>
-        <div className="grid gap-4 md:grid-cols-2">
-          {availableExercises.map((exercise) => {
-            const isSelected = selectedExerciseIds.includes(exercise.id);
-            const canSelect = canAddMore || isSelected;
-            
-            return (
-              <div
-                key={exercise.id}
-                className={`flex items-center space-x-3 p-3 rounded-lg border ${
-                  isSelected ? 'bg-primary/5 border-primary' : 'border-border'
-                } ${!canSelect ? 'opacity-50' : 'hover:bg-muted/50 cursor-pointer'}`}
-                onClick={() => canSelect && toggleExerciseForWorkout(workoutTemplateId, exercise.id)}
-              >
-                <Checkbox
-                  checked={isSelected}
-                  disabled={!canSelect}
-                  onChange={() => {}} // Handled by div onClick
-                />
-                <div className="flex-1 min-w-0">
-                  <div className="text-sm font-medium">
-                    {exercise.name.en || Object.values(exercise.name)[0]}
-                  </div>
-                  <div className="text-xs text-muted-foreground">
-                    {exercise.primaryMuscleGroup}
-                    {exercise.secondaryMuscleGroups.length > 0 && 
-                      ` + ${exercise.secondaryMuscleGroups.join(', ')}`
-                    }
-                  </div>
-                  <Badge variant="outline" className="text-xs mt-1">
-                    {exercise.type}
-                  </Badge>
-                </div>
-              </div>
-            );
-          })}
-        </div>
-        
-        {selectedCount < limits.min && (
-          <Alert className="mt-4">
-            <AlertTriangle className="h-4 w-4" />
-            <AlertTitle>Minimum exercises required</AlertTitle>
-            <AlertDescription>
-              Select at least {limits.min} exercises for this workout (currently {selectedCount}).
-            </AlertDescription>
-          </Alert>
-        )}
-      </CardContent>
-    </Card>
+    <EnhancedExerciseSelector
+      workoutTemplateId={workoutTemplateId}
+      workoutName={workoutName}
+      requiredMuscleGroups={requiredMuscleGroups}
+      availableExercises={availableExercises}
+      selectedExerciseIds={selectedExerciseIds}
+      onToggleExercise={(exerciseId) => toggleExerciseForWorkout(workoutTemplateId, exerciseId)}
+      onApplyTemplate={handleApplyTemplate}
+      canAddMore={canAddMore}
+      isValid={isValid}
+      selectedCount={selectedCount}
+      maxCount={limits.max}
+    />
   );
 }
 
 function VolumeAnalysisSidebar() {
-  const { getMuscleGroupVolumes, getMissingMuscleGroups } = useProgramBuilderStore();
+  const program = useProgramBuilderStore(state => state.program);
+  const getWeeklyVolumeAnalysis = useProgramBuilderStore(state => state.getWeeklyVolumeAnalysis);
   
-  const volumes = getMuscleGroupVolumes();
-  const missingMuscleGroups = getMissingMuscleGroups();
+  const weeklyAnalysis = getWeeklyVolumeAnalysis();
+
+  if (!program) return null;
 
   return (
-    <div className="space-y-6">
+    <div className="space-y-4">
+      {/* Program Overview */}
       <Card>
-        <CardHeader>
-          <CardTitle className="text-lg">Training Volume Analysis</CardTitle>
+        <CardHeader className="pb-3">
+          <CardTitle className="text-lg">Program Overview</CardTitle>
           <CardDescription>
-            Volume distribution across muscle groups
+            Overall program statistics and balance
           </CardDescription>
         </CardHeader>
         <CardContent>
-          <div className="space-y-3">
-            {volumes
+          <div className="grid grid-cols-2 gap-4 mb-4">
+            <div className="text-center">
+              <div className="text-2xl font-bold text-blue-600">{weeklyAnalysis.totalWorkouts}</div>
+              <div className="text-xs text-muted-foreground">Workouts</div>
+            </div>
+            <div className="text-center">
+              <div className="text-2xl font-bold text-green-600">{weeklyAnalysis.totalExercises}</div>
+              <div className="text-xs text-muted-foreground">Exercises</div>
+            </div>
+          </div>
+
+          {/* Training Balance */}
+          <div className="space-y-2">
+            <div className="text-sm font-medium">Exercise Balance</div>
+            <div className="flex gap-1 flex-wrap">
+              <Badge variant="secondary" className="text-xs">
+                C: {weeklyAnalysis.trainingBalance.compoundRatio}%
+              </Badge>
+              <Badge variant="secondary" className="text-xs">
+                I: {weeklyAnalysis.trainingBalance.isolationRatio}%
+              </Badge>
+              <Badge variant="secondary" className="text-xs">
+                U: {weeklyAnalysis.trainingBalance.unilateralRatio}%
+              </Badge>
+            </div>
+          </div>
+        </CardContent>
+      </Card>
+
+      {/* Weekly Muscle Volume */}
+      <Card>
+        <CardHeader className="pb-3">
+          <CardTitle className="text-lg">Weekly Volume</CardTitle>
+          <CardDescription>
+            Total weekly training volume by muscle group
+          </CardDescription>
+        </CardHeader>
+        <CardContent>
+          <div className="space-y-2">
+            {weeklyAnalysis.weeklyVolume
               .filter(volume => volume.totalSets > 0)
               .sort((a, b) => b.totalSets - a.totalSets)
               .map((volume) => (
                 <div key={volume.muscleGroup} className="flex justify-between items-center">
-                  <span className="text-sm font-medium">{volume.muscleGroup}</span>
-                  <div className="flex items-center gap-2">
-                    <span className="text-xs text-muted-foreground">
-                      {volume.directSets}D + {volume.indirectSets}I
+                  <div className="flex items-center gap-2 min-w-0 flex-1">
+                    <span className="text-sm font-medium truncate">
+                      {volume.muscleGroup.charAt(0) + volume.muscleGroup.slice(1).toLowerCase()}
                     </span>
-                    <Badge variant="outline">
-                      {volume.totalSets} sets
+                    <Badge 
+                      variant="outline" 
+                      className={`text-xs ${
+                        volume.volumeLoad === 'LOW' ? 'border-yellow-300 text-yellow-800' :
+                        volume.volumeLoad === 'MODERATE' ? 'border-green-300 text-green-800' :
+                        volume.volumeLoad === 'HIGH' ? 'border-blue-300 text-blue-800' :
+                        'border-red-300 text-red-800'
+                      }`}
+                    >
+                      {volume.volumeLoad}
                     </Badge>
+                  </div>
+                  <div className="text-right">
+                    <div className="text-sm font-medium">
+                      {volume.totalSets.toFixed(1)}
+                    </div>
+                    <div className="text-xs text-muted-foreground">
+                      {volume.directSets}d+{volume.indirectSets.toFixed(1)}i
+                    </div>
                   </div>
                 </div>
               ))}
             
-            {volumes.filter(v => v.totalSets > 0).length === 0 && (
+            {weeklyAnalysis.weeklyVolume.filter(v => v.totalSets > 0).length === 0 && (
               <p className="text-sm text-muted-foreground text-center py-4">
                 No exercises selected yet
               </p>
@@ -165,26 +174,50 @@ function VolumeAnalysisSidebar() {
         </CardContent>
       </Card>
 
-      {missingMuscleGroups.length > 0 && (
+      {/* Muscle Coverage Alerts */}
+      {(weeklyAnalysis.muscleGroupCoverage.missing.length > 0 ||
+        weeklyAnalysis.muscleGroupCoverage.underTrained.length > 0 ||
+        weeklyAnalysis.muscleGroupCoverage.overTrained.length > 0) && (
         <Card>
-          <CardHeader>
-            <CardTitle className="text-lg text-destructive">Missing Muscle Groups</CardTitle>
+          <CardHeader className="pb-3">
+            <CardTitle className="text-lg">Training Alerts</CardTitle>
             <CardDescription>
-              Required muscle groups not covered by selected exercises
+              Issues requiring attention
             </CardDescription>
           </CardHeader>
-          <CardContent>
-            <div className="space-y-3">
-              {missingMuscleGroups.map((missing) => (
-                <Alert key={missing.workoutTemplateId} variant="destructive">
-                  <AlertTriangle className="h-4 w-4" />
-                  <AlertTitle>{missing.workoutName}</AlertTitle>
-                  <AlertDescription>
-                    Missing: {missing.missingMuscleGroups.join(', ')}
-                  </AlertDescription>
-                </Alert>
-              ))}
-            </div>
+          <CardContent className="space-y-3">
+            {weeklyAnalysis.muscleGroupCoverage.missing.length > 0 && (
+              <Alert className="border-red-200 bg-red-50">
+                <AlertTriangle className="h-4 w-4 text-red-600" />
+                <AlertDescription className="text-red-800 text-sm">
+                  <span className="font-medium">Missing:</span>{' '}
+                  {weeklyAnalysis.muscleGroupCoverage.missing.slice(0, 2).join(', ')}
+                  {weeklyAnalysis.muscleGroupCoverage.missing.length > 2 && ` +${weeklyAnalysis.muscleGroupCoverage.missing.length - 2}`}
+                </AlertDescription>
+              </Alert>
+            )}
+
+            {weeklyAnalysis.muscleGroupCoverage.underTrained.length > 0 && (
+              <Alert className="border-yellow-200 bg-yellow-50">
+                <AlertTriangle className="h-4 w-4 text-yellow-600" />
+                <AlertDescription className="text-yellow-800 text-sm">
+                  <span className="font-medium">Low volume:</span>{' '}
+                  {weeklyAnalysis.muscleGroupCoverage.underTrained.slice(0, 2).join(', ')}
+                  {weeklyAnalysis.muscleGroupCoverage.underTrained.length > 2 && ` +${weeklyAnalysis.muscleGroupCoverage.underTrained.length - 2}`}
+                </AlertDescription>
+              </Alert>
+            )}
+
+            {weeklyAnalysis.muscleGroupCoverage.overTrained.length > 0 && (
+              <Alert className="border-red-200 bg-red-50">
+                <AlertTriangle className="h-4 w-4 text-red-600" />
+                <AlertDescription className="text-red-800 text-sm">
+                  <span className="font-medium">High volume:</span>{' '}
+                  {weeklyAnalysis.muscleGroupCoverage.overTrained.slice(0, 2).join(', ')}
+                  {weeklyAnalysis.muscleGroupCoverage.overTrained.length > 2 && ` +${weeklyAnalysis.muscleGroupCoverage.overTrained.length - 2}`}
+                </AlertDescription>
+              </Alert>
+            )}
           </CardContent>
         </Card>
       )}
@@ -209,11 +242,13 @@ export default function ProgramBuilderPage() {
     exercises,
     selectedCategory,
     configuration,
+    schedule,
     isLoading,
     isSaving,
     setProgram,
     setExercises,
     setSelectedCategory,
+    setSchedule,
     setIsLoading,
     setIsSaving,
     setWorkoutExercises,
@@ -374,6 +409,13 @@ export default function ProgramBuilderPage() {
               </Select>
             </CardContent>
           </Card>
+
+          {/* Program Scheduling */}
+          <ProgramScheduling
+            totalWorkouts={program.workoutTemplates.length}
+            currentSchedule={schedule}
+            onScheduleChange={setSchedule}
+          />
 
           <Separator />
 

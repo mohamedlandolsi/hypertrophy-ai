@@ -6,24 +6,18 @@ import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { Alert, AlertDescription, AlertTitle } from '@/components/ui/alert';
-import { ArrowLeft, Save, Eye, AlertTriangle } from 'lucide-react';
+import { Progress } from '@/components/ui/progress';
+import { Badge } from '@/components/ui/badge';
+import { ArrowLeft, Save, Eye, AlertTriangle, CheckCircle, Clock, AlertCircle, ChevronLeft, ChevronRight } from 'lucide-react';
 import Link from 'next/link';
 import { toast } from 'sonner';
 
 import { BasicInfoForm } from '@/components/admin/program-creation/basic-info-form';
-
-// Placeholder component for now
-const PlaceholderForm = ({ title, description }: { title: string; description: string }) => (
-  <Card>
-    <CardHeader>
-      <CardTitle>{title}</CardTitle>
-      <CardDescription>{description}</CardDescription>
-    </CardHeader>
-    <CardContent>
-      <p className="text-muted-foreground">This form section is coming soon...</p>
-    </CardContent>
-  </Card>
-);
+import { ProgramContentEditor } from '@/components/admin/program-creation/program-content-editor';
+import { ProgramStructureForm } from '@/components/admin/program-creation/program-structure-form';
+import { CategoryConfigurationForm } from '@/components/admin/program-creation/category-configuration-form';
+import { WorkoutTemplatesForm } from '@/components/admin/program-creation/workout-templates-form';
+import { ExerciseTemplatesForm } from '@/components/admin/program-creation/exercise-templates-form';
 
 export default function CreateProgramPage() {
   const [isSubmitting, setIsSubmitting] = useState(false);
@@ -35,10 +29,10 @@ export default function CreateProgramPage() {
       name: { en: '', ar: '', fr: '' },
       description: { en: '', ar: '', fr: '' },
       price: 0,
-      programType: 'Upper/Lower',
-      difficulty: 'INTERMEDIATE',
-      estimatedDuration: 12,
+      structureType: 'weekly' as 'weekly' | 'cyclic',
       sessionCount: 4,
+      trainingDays: 3,
+      restDays: 1,
       hasInteractiveBuilder: true,
       allowsCustomization: true,
       categories: [],
@@ -58,14 +52,70 @@ export default function CreateProgramPage() {
     mode: 'onChange',
   });
 
-  const { handleSubmit, formState: { errors, isValid }, getValues } = methods;
+  const { handleSubmit, formState: { errors, isValid }, getValues, watch } = methods;
+
+  // Watch form values to track completion
+  const formValues = watch();
+
+  // Calculate tab completion status
+  const getTabCompletionStatus = (tabId: string) => {
+    switch (tabId) {
+      case 'basic-info':
+        return formValues.name?.en && formValues.description?.en && formValues.price > 0;
+      case 'structure':
+        return formValues.structureType && (
+          (formValues.structureType === 'weekly' && formValues.sessionCount > 0) ||
+          (formValues.structureType === 'cyclic' && formValues.trainingDays > 0 && formValues.restDays > 0)
+        );
+      case 'categories':
+        return formValues.categories?.length > 0;
+      case 'workouts':
+        return formValues.workoutTemplates?.length > 0;
+      case 'exercises':
+        return formValues.exerciseTemplates?.length > 0;
+      case 'content':
+        return formValues.programGuide?.introduction?.en && formValues.programGuide?.structure?.en;
+      default:
+        return false;
+    }
+  };
+
+  // Calculate overall progress
+  const completionProgress = () => {
+    const completed = tabs.filter(tab => getTabCompletionStatus(tab.id)).length;
+    return Math.round((completed / tabs.length) * 100);
+  };
+
+  // Navigation helpers
+  const navigateToNextTab = () => {
+    const currentIndex = tabs.findIndex(tab => tab.id === activeTab);
+    if (currentIndex < tabs.length - 1) {
+      setActiveTab(tabs[currentIndex + 1].id);
+    }
+  };
+
+  const navigateToPrevTab = () => {
+    const currentIndex = tabs.findIndex(tab => tab.id === activeTab);
+    if (currentIndex > 0) {
+      setActiveTab(tabs[currentIndex - 1].id);
+    }
+  };
+
+  const canNavigateNext = () => {
+    const currentIndex = tabs.findIndex(tab => tab.id === activeTab);
+    return currentIndex < tabs.length - 1;
+  };
+
+  const canNavigatePrev = () => {
+    const currentIndex = tabs.findIndex(tab => tab.id === activeTab);
+    return currentIndex > 0;
+  };
 
   // eslint-disable-next-line @typescript-eslint/no-explicit-any
   const onSubmit = async (data: any) => {
     setIsSubmitting(true);
     try {
       console.log('Creating program with data:', data);
-      toast.success('Training program creation started!');
       // TODO: Implement actual API call
       // router.push(`/admin/programs/${result.id}`);
     } catch (error) {
@@ -77,12 +127,42 @@ export default function CreateProgramPage() {
   };
 
   const tabs = [
-    { id: 'basic-info', label: 'Basic Info', component: BasicInfoForm },
-    { id: 'structure', label: 'Program Structure', component: () => <PlaceholderForm title="Program Structure" description="Configure the workout structure and program flow" /> },
-    { id: 'categories', label: 'Category Config', component: () => <PlaceholderForm title="Category Configuration" description="Set up minimalist, essentialist, and maximalist program variants" /> },
-    { id: 'workouts', label: 'Workout Templates', component: () => <PlaceholderForm title="Workout Templates" description="Define workout sessions and muscle group assignments" /> },
-    { id: 'exercises', label: 'Exercise Templates', component: () => <PlaceholderForm title="Exercise Templates" description="Configure exercise selection rules and volume guidelines" /> },
-    { id: 'guide', label: 'Program Guide', component: () => <PlaceholderForm title="Program Guide Content" description="Create comprehensive program guides with multilingual support" /> },
+    { 
+      id: 'basic-info', 
+      label: 'Basic Info', 
+      component: BasicInfoForm,
+      description: 'Program details'
+    },
+    { 
+      id: 'structure', 
+      label: 'Program Structure', 
+      component: ProgramStructureForm,
+      description: 'Workout flow'
+    },
+    { 
+      id: 'categories', 
+      label: 'Category Config', 
+      component: CategoryConfigurationForm,
+      description: 'Program variants'
+    },
+    { 
+      id: 'workouts', 
+      label: 'Workout Templates', 
+      component: WorkoutTemplatesForm,
+      description: 'Session design'
+    },
+    { 
+      id: 'exercises', 
+      label: 'Exercise Templates', 
+      component: ExerciseTemplatesForm,
+      description: 'Exercise rules'
+    },
+    { 
+      id: 'content', 
+      label: 'Content Editor', 
+      component: () => <ProgramContentEditor isLoading={isSubmitting} />,
+      description: 'Program guides'
+    },
   ];
 
   if (isPreviewMode) {
@@ -122,10 +202,8 @@ export default function CreateProgramPage() {
               </div>
               
               <div className="grid grid-cols-2 gap-4 text-sm">
-                <div><span className="font-medium">Type:</span> {data.programType}</div>
-                <div><span className="font-medium">Difficulty:</span> {data.difficulty}</div>
-                <div><span className="font-medium">Duration:</span> {data.estimatedDuration} weeks</div>
-                <div><span className="font-medium">Sessions/week:</span> {data.sessionCount}</div>
+                <div><span className="font-medium">Structure:</span> {data.structureType === 'weekly' ? `Weekly (${data.sessionCount} sessions/week)` : `Cyclic (${data.trainingDays} training, ${data.restDays} rest days)`}</div>
+                <div><span className="font-medium">Categories:</span> {data.categories?.join(', ') || 'None selected'}</div>
                 <div><span className="font-medium">Price:</span> ${(data.price / 100).toFixed(2)}</div>
                 <div><span className="font-medium">Status:</span> {data.isActive ? 'Active' : 'Inactive'}</div>
               </div>
@@ -154,6 +232,17 @@ export default function CreateProgramPage() {
                 <p className="text-muted-foreground">
                   Create a comprehensive, interactive training program with multilingual support
                 </p>
+                <div className="flex items-center space-x-4 mt-2">
+                  <div className="flex items-center space-x-2">
+                    <Progress value={completionProgress()} className="w-32" />
+                    <span className="text-sm text-muted-foreground">
+                      {completionProgress()}% complete
+                    </span>
+                  </div>
+                  <Badge variant={completionProgress() === 100 ? "default" : "secondary"}>
+                    {tabs.filter(tab => getTabCompletionStatus(tab.id)).length}/{tabs.length} sections
+                  </Badge>
+                </div>
               </div>
             </div>
             <div className="flex space-x-2">
@@ -162,13 +251,14 @@ export default function CreateProgramPage() {
                 variant="outline"
                 onClick={() => setIsPreviewMode(true)}
                 className="flex items-center space-x-2"
+                disabled={completionProgress() < 50}
               >
                 <Eye className="h-4 w-4" />
                 <span>Preview</span>
               </Button>
               <Button
                 type="submit"
-                disabled={!isValid || isSubmitting}
+                disabled={!isValid || isSubmitting || completionProgress() < 80}
                 className="flex items-center space-x-2"
               >
                 <Save className="h-4 w-4" />
@@ -205,17 +295,78 @@ export default function CreateProgramPage() {
             </CardHeader>
             <CardContent>
               <Tabs value={activeTab} onValueChange={setActiveTab} className="space-y-6">
-                <TabsList className="grid w-full grid-cols-6">
-                  {tabs.map((tab) => (
-                    <TabsTrigger key={tab.id} value={tab.id} className="text-xs">
-                      {tab.label}
-                    </TabsTrigger>
-                  ))}
+                <TabsList className="grid w-full grid-cols-6 h-auto p-1">
+                  {tabs.map((tab) => {
+                    const isCompleted = getTabCompletionStatus(tab.id);
+                    const isActive = activeTab === tab.id;
+                    return (
+                      <TabsTrigger 
+                        key={tab.id} 
+                        value={tab.id} 
+                        className={`text-xs flex flex-col items-center space-y-1 p-3 h-auto relative ${
+                          isCompleted ? 'bg-green-50 border-green-200' : ''
+                        }`}
+                      >
+                        <div className="flex items-center space-x-1">
+                          {isCompleted ? (
+                            <CheckCircle className="h-3 w-3 text-green-600" />
+                          ) : isActive ? (
+                            <Clock className="h-3 w-3 text-blue-600" />
+                          ) : (
+                            <AlertCircle className="h-3 w-3 text-gray-400" />
+                          )}
+                          <span className={isCompleted ? 'text-green-700' : ''}>{tab.label}</span>
+                        </div>
+                        <span className="text-xs text-muted-foreground text-center leading-tight">
+                          {tab.description}
+                        </span>
+                      </TabsTrigger>
+                    );
+                  })}
                 </TabsList>
 
                 {tabs.map((tab) => (
                   <TabsContent key={tab.id} value={tab.id} className="space-y-6">
+                    <div className="flex items-center justify-between mb-4">
+                      <div>
+                        <h3 className="text-lg font-semibold">{tab.label}</h3>
+                        <p className="text-sm text-muted-foreground">{tab.description}</p>
+                      </div>
+                      <Badge variant={getTabCompletionStatus(tab.id) ? "default" : "outline"}>
+                        {getTabCompletionStatus(tab.id) ? "Complete" : "In Progress"}
+                      </Badge>
+                    </div>
+                    
                     <tab.component />
+                    
+                    {/* Tab Navigation */}
+                    <div className="flex items-center justify-between pt-6 border-t">
+                      <Button
+                        type="button"
+                        variant="outline"
+                        onClick={navigateToPrevTab}
+                        disabled={!canNavigatePrev()}
+                        className="flex items-center space-x-2"
+                      >
+                        <ChevronLeft className="h-4 w-4" />
+                        <span>Previous</span>
+                      </Button>
+                      
+                      <div className="text-sm text-muted-foreground">
+                        Step {tabs.findIndex(t => t.id === activeTab) + 1} of {tabs.length}
+                      </div>
+                      
+                      <Button
+                        type="button"
+                        variant="outline"
+                        onClick={navigateToNextTab}
+                        disabled={!canNavigateNext()}
+                        className="flex items-center space-x-2"
+                      >
+                        <span>Next</span>
+                        <ChevronRight className="h-4 w-4" />
+                      </Button>
+                    </div>
                   </TabsContent>
                 ))}
               </Tabs>

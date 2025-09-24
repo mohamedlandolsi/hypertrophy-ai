@@ -24,17 +24,17 @@ interface TrainingProgramWithDetails {
     fr: string;
   };
   price: number;
-  lemonSqueezyId: string;
+  lemonSqueezyId: string | null;
   isActive: boolean;
   createdAt: Date;
   updatedAt: Date;
-  // New fields from enhanced schema (optional for backward compatibility)
-  programType?: string;
-  difficulty?: string;
-  estimatedDuration?: number;
-  sessionCount?: number;
-  hasInteractiveBuilder?: boolean;
-  allowsCustomization?: boolean;
+  // New structure fields
+  structureType: string;
+  sessionCount: number;
+  trainingDays: number;
+  restDays: number;
+  hasInteractiveBuilder: boolean;
+  allowsCustomization: boolean;
   _count: {
     userPurchases: number;
     userPrograms: number;

@@ -264,14 +264,14 @@ model TrainingProgram {
   name           Json // Multilingual: {"en": "Upper/Lower", "ar": "علوي/سفلي", "fr": "Haut/Bas"}
   description    Json // Multilingual description
   price          Int // Price in cents
-  lemonSqueezyId String  @unique
+  lemonSqueezyId String? @unique
   isActive       Boolean @default(true)
 
   // Program Structure Fields
-  programType       String @default("Upper/Lower") // "Upper/Lower", "FB EOD", "Anterior/Posterior", "PPL x UL", "Upper/Lower x5"
-  difficulty        String @default("INTERMEDIATE")
-  estimatedDuration Int    @default(12) // Duration in weeks
-  sessionCount      Int    @default(4) // Number of sessions per week
+  structureType String  @default("weekly") // "weekly" or "cyclic"
+  sessionCount  Int     @default(4) // Number of sessions per week (for weekly) or total sessions (for cyclic)
+  trainingDays  Int     @default(3) // Training days in cyclic structure
+  restDays      Int     @default(1) // Rest days in cyclic structure
 
   // Interactive Features
   hasInteractiveBuilder Boolean @default(true)
@@ -290,7 +290,7 @@ model TrainingProgram {
 
   @@index([isActive])
   @@index([lemonSqueezyId])
-  @@index([programType])
+  @@index([structureType])
 }
 
 model ProgramGuide {

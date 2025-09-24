@@ -69,19 +69,13 @@ export const programCreationSchema = z.object({
   name: multilingualContentSchema,
   description: multilingualContentSchema,
   price: z.number().min(0, 'Price must be positive').max(999999, 'Price too high'),
-  lemonSqueezyId: z.string().min(1, 'LemonSqueezy ID is required'),
+  lemonSqueezyId: z.string().min(1, 'LemonSqueezy ID is required').optional(),
   
-  // Program structure
-  programType: z.enum([
-    'Upper/Lower',
-    'FB EOD',
-    'Anterior/Posterior',
-    'PPL x UL',
-    'Upper/Lower x5'
-  ]),
-  difficulty: z.enum(['BEGINNER', 'INTERMEDIATE', 'ADVANCED']).default('INTERMEDIATE'),
-  estimatedDuration: z.number().min(1, 'Duration must be at least 1 week').max(52, 'Duration cannot exceed 52 weeks'),
-  sessionCount: z.number().min(1, 'At least 1 session per week').max(7, 'Maximum 7 sessions per week'),
+  // Training structure
+  structureType: z.enum(['weekly', 'cyclic']).default('weekly'),
+  sessionCount: z.number().min(1, 'At least 1 session per week').max(7, 'Maximum 7 sessions per week').optional(),
+  trainingDays: z.number().min(1, 'At least 1 training day').max(6, 'Maximum 6 training days').optional(),
+  restDays: z.number().min(1, 'At least 1 rest day').max(3, 'Maximum 3 rest days').optional(),
   
   // Interactive features
   hasInteractiveBuilder: z.boolean().default(true),

@@ -41,10 +41,16 @@ interface TrainingProgramWithDetails {
   name: Record<string, string>; // JSON field for multilingual names
   description: Record<string, string>; // JSON field for multilingual descriptions
   price: number;
-  lemonSqueezyId: string;
+  lemonSqueezyId: string | null;
   isActive: boolean;
   createdAt: Date;
   updatedAt: Date;
+  structureType: string;
+  sessionCount: number;
+  trainingDays: number;
+  restDays: number;
+  hasInteractiveBuilder: boolean;
+  allowsCustomization: boolean;
   _count: {
     userPurchases: number;
     userPrograms: number;

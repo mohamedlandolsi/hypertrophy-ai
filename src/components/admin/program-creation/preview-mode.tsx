@@ -26,16 +26,10 @@ export function PreviewMode({ data }: PreviewModeProps) {
             
             <div className="grid grid-cols-2 gap-4 text-sm">
               <div>
-                <span className="font-medium">Type:</span> {data.programType}
+                <span className="font-medium">Structure:</span> {data.structureType === 'weekly' ? `Weekly (${data.sessionCount} sessions/week)` : `Cyclic (${data.trainingDays} training, ${data.restDays} rest days)`}
               </div>
               <div>
-                <span className="font-medium">Difficulty:</span> {data.difficulty}
-              </div>
-              <div>
-                <span className="font-medium">Duration:</span> {data.estimatedDuration} weeks
-              </div>
-              <div>
-                <span className="font-medium">Sessions/week:</span> {data.sessionCount}
+                <span className="font-medium">Categories:</span> {data.categories?.join(', ') || 'None selected'}
               </div>
               <div>
                 <span className="font-medium">Price:</span> ${(data.price / 100).toFixed(2)}
