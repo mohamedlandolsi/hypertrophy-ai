@@ -25,61 +25,27 @@ const UpdateTrainingProgramSchema = z.object({
   sessionCount: z.number().min(1).max(7).optional(),
   trainingDays: z.number().min(1).max(7).optional(),
   restDays: z.number().min(1).max(7).optional(),
+  weeklySchedule: z.object({
+    monday: z.string().optional(),
+    tuesday: z.string().optional(),
+    wednesday: z.string().optional(),
+    thursday: z.string().optional(),
+    friday: z.string().optional(),
+    saturday: z.string().optional(),
+    sunday: z.string().optional(),
+  }).optional(),
   hasInteractiveBuilder: z.boolean().optional(),
   allowsCustomization: z.boolean().optional(),
   isActive: z.boolean().optional(),
-  programGuide: z.object({
-    introduction: z.object({
-      en: z.string().min(1, 'English text is required'),
-      ar: z.string().min(1, 'Arabic text is required'),
-      fr: z.string().min(1, 'French text is required'),
-    }),
-    structure: z.object({
-      en: z.string().min(1, 'English text is required'),
-      ar: z.string().min(1, 'Arabic text is required'),
-      fr: z.string().min(1, 'French text is required'),
-    }),
-    exerciseSelection: z.object({
-      en: z.string().min(1, 'English text is required'),
-      ar: z.string().min(1, 'Arabic text is required'),
-      fr: z.string().min(1, 'French text is required'),
-    }),
-    volumeAdjustment: z.object({
-      en: z.string().min(1, 'English text is required'),
-      ar: z.string().min(1, 'Arabic text is required'),
-      fr: z.string().min(1, 'French text is required'),
-    }),
-    beginnerGuidelines: z.object({
-      en: z.string().min(1, 'English text is required'),
-      ar: z.string().min(1, 'Arabic text is required'),
-      fr: z.string().min(1, 'French text is required'),
-    }),
-    progressionPlan: z.object({
-      en: z.string().min(1, 'English text is required'),
-      ar: z.string().min(1, 'Arabic text is required'),
-      fr: z.string().min(1, 'French text is required'),
-    }),
-    faq: z.array(z.object({
-      question: z.object({
-        en: z.string().min(1, 'English text is required'),
-        ar: z.string().min(1, 'Arabic text is required'),
-        fr: z.string().min(1, 'French text is required'),
-      }),
-      answer: z.object({
-        en: z.string().min(1, 'English text is required'),
-        ar: z.string().min(1, 'Arabic text is required'),
-        fr: z.string().min(1, 'French text is required'),
-      }),
-    })).default([]),
-  }).optional(),
   workoutTemplates: z.array(z.object({
-    name: z.object({
-      en: z.string().min(1, 'English text is required'),
-      ar: z.string().min(1, 'Arabic text is required'),
-      fr: z.string().min(1, 'French text is required'),
-    }),
-    order: z.number().min(1),
-    requiredMuscleGroups: z.array(z.string()).min(1, 'At least one muscle group is required'),
+    id: z.string(),
+    name: z.string().min(1, 'Workout name is required'),
+    muscleGroups: z.array(z.string()).default([]),
+    exercises: z.array(z.object({
+      id: z.string(),
+      targetedMuscle: z.enum(['CHEST', 'BACK', 'SHOULDERS', 'BICEPS', 'TRICEPS', 'FOREARMS', 'ABS', 'GLUTES', 'QUADRICEPS', 'HAMSTRINGS', 'ADDUCTORS', 'CALVES']).optional(),
+      selectedExercise: z.string().optional(),
+    })).default([]),
   })).optional(),
 });
 
@@ -143,26 +109,23 @@ export async function createTrainingProgram(formData: z.infer<typeof programCrea
           sessionCount: validatedData.sessionCount,
           trainingDays: validatedData.trainingDays,
           restDays: validatedData.restDays,
+          weeklySchedule: validatedData.weeklySchedule,
           hasInteractiveBuilder: validatedData.hasInteractiveBuilder ?? true,
           allowsCustomization: validatedData.allowsCustomization ?? true,
         },
       });
 
-      // Create the program guide
-      await tx.programGuide.create({
-        data: {
-          trainingProgramId: trainingProgram.id,
-          content: validatedData.programGuide,
-        },
-      });
-
       // Create workout templates
       await tx.workoutTemplate.createMany({
-        data: validatedData.workoutTemplates.map((template) => ({
+        data: validatedData.workoutTemplates.map((template, index) => ({
           trainingProgramId: trainingProgram.id,
-          name: template.name,
-          order: template.order,
-          requiredMuscleGroups: template.requiredMuscleGroups,
+          name: {
+            en: template.name,
+            ar: template.name, // For now, use the same name for all languages
+            fr: template.name,
+          },
+          order: index + 1, // Use index as order since we removed it from form
+          requiredMuscleGroups: template.muscleGroups, // Use muscleGroups instead of requiredMuscleGroups
         })),
       });
 
@@ -201,7 +164,6 @@ export async function updateTrainingProgram(formData: z.infer<typeof UpdateTrain
     const existingProgram = await prisma.trainingProgram.findUnique({
       where: { id: validatedData.id },
       include: {
-        programGuide: true,
         workoutTemplates: true,
       },
     });
@@ -229,23 +191,19 @@ export async function updateTrainingProgram(formData: z.infer<typeof UpdateTrain
       if (validatedData.description) updateData.description = validatedData.description;
       if (validatedData.price !== undefined) updateData.price = validatedData.price;
       if (validatedData.lemonSqueezyId) updateData.lemonSqueezyId = validatedData.lemonSqueezyId;
+      if (validatedData.structureType) updateData.structureType = validatedData.structureType;
+      if (validatedData.sessionCount !== undefined) updateData.sessionCount = validatedData.sessionCount;
+      if (validatedData.trainingDays !== undefined) updateData.trainingDays = validatedData.trainingDays;
+      if (validatedData.restDays !== undefined) updateData.restDays = validatedData.restDays;
+      if (validatedData.weeklySchedule) updateData.weeklySchedule = validatedData.weeklySchedule;
+      if (validatedData.hasInteractiveBuilder !== undefined) updateData.hasInteractiveBuilder = validatedData.hasInteractiveBuilder;
+      if (validatedData.allowsCustomization !== undefined) updateData.allowsCustomization = validatedData.allowsCustomization;
+      if (validatedData.isActive !== undefined) updateData.isActive = validatedData.isActive;
 
       const trainingProgram = await tx.trainingProgram.update({
         where: { id: validatedData.id },
         data: updateData,
       });
-
-      // Update program guide if provided
-      if (validatedData.programGuide) {
-        await tx.programGuide.upsert({
-          where: { trainingProgramId: validatedData.id },
-          update: { content: validatedData.programGuide },
-          create: {
-            trainingProgramId: validatedData.id,
-            content: validatedData.programGuide,
-          },
-        });
-      }
 
       // Update workout templates if provided
       if (validatedData.workoutTemplates) {
@@ -256,11 +214,15 @@ export async function updateTrainingProgram(formData: z.infer<typeof UpdateTrain
 
         // Create new templates
         await tx.workoutTemplate.createMany({
-          data: validatedData.workoutTemplates.map((template) => ({
+          data: validatedData.workoutTemplates.map((template, index) => ({
             trainingProgramId: validatedData.id,
-            name: template.name,
-            order: template.order,
-            requiredMuscleGroups: template.requiredMuscleGroups,
+            name: {
+              en: template.name,
+              ar: template.name, // For now, use the same name for all languages
+              fr: template.name,
+            },
+            order: index + 1, // Use index as order since we removed it from form
+            requiredMuscleGroups: template.muscleGroups, // Use muscleGroups instead of requiredMuscleGroups
           })),
         });
       }
@@ -397,7 +359,6 @@ export async function getTrainingPrograms(includeInactive = false) {
     const programs = await prisma.trainingProgram.findMany({
       where: includeInactive ? {} : { isActive: true },
       include: {
-        programGuide: true,
         workoutTemplates: {
           orderBy: { order: 'asc' },
         },
@@ -439,7 +400,6 @@ export async function getTrainingProgram(programId: string) {
     const program = await prisma.trainingProgram.findUnique({
       where: { id: programId },
       include: {
-        programGuide: true,
         workoutTemplates: {
           orderBy: { order: 'asc' },
         },

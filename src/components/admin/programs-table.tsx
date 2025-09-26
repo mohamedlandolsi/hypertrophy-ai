@@ -5,6 +5,7 @@ import Link from 'next/link';
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
 import { Switch } from '@/components/ui/switch';
+import { Prisma } from '@prisma/client';
 import {
   Table,
   TableBody,
@@ -34,12 +35,11 @@ import {
 import { MoreHorizontal, Edit, Trash2, Eye, Users, FileText } from 'lucide-react';
 import { toggleProgramStatus, deleteTrainingProgram } from '@/app/api/admin/programs/actions';
 import { showToast } from '@/lib/toast';
-import { formatCurrency } from '@/lib/currency';
 
 interface TrainingProgramWithDetails {
   id: string;
-  name: Record<string, string>; // JSON field for multilingual names
-  description: Record<string, string>; // JSON field for multilingual descriptions
+  name: Prisma.JsonValue; // JSON field for multilingual names
+  description: Prisma.JsonValue; // JSON field for multilingual descriptions
   price: number;
   lemonSqueezyId: string | null;
   isActive: boolean;
@@ -49,6 +49,7 @@ interface TrainingProgramWithDetails {
   sessionCount: number;
   trainingDays: number;
   restDays: number;
+  weeklySchedule?: Prisma.JsonValue | null;
   hasInteractiveBuilder: boolean;
   allowsCustomization: boolean;
   _count: {
@@ -148,16 +149,17 @@ export function ProgramsTable({ programs }: ProgramsTableProps) {
               <TableRow key={program.id}>
                 <TableCell className="font-medium">
                   <div>
-                    <div className="font-semibold">{program.name.en}</div>
+                    <div className="font-semibold">{(program.name as Record<string, string>)?.en || 'Untitled'}</div>
                     <div className="text-sm text-muted-foreground line-clamp-1">
-                      {program.description.en}
+                      {(program.description as Record<string, string>)?.en || 'No description'}
                     </div>
                   </div>
                 </TableCell>
                 
                 <TableCell>
-                  <div className="font-mono text-sm">
-                    {formatCurrency(program.price / 100, 'USD')}
+                  <div className="font-mono text-sm space-y-1">
+                    <div className="text-green-600">${(program.price / 100 * 0.32).toFixed(2)} USD</div>
+                    <div className="text-xs text-muted-foreground">{(program.price / 100).toFixed(2)} TND</div>
                   </div>
                 </TableCell>
                 
@@ -167,7 +169,7 @@ export function ProgramsTable({ programs }: ProgramsTableProps) {
                       checked={program.isActive}
                       onCheckedChange={() => handleStatusToggle(program)}
                       disabled={isPending}
-                      aria-label={`Toggle ${program.name.en} status`}
+                      aria-label={`Toggle ${(program.name as Record<string, string>)?.en || 'program'} status`}
                     />
                     <Badge variant={program.isActive ? 'default' : 'secondary'}>
                       {program.isActive ? 'Active' : 'Inactive'}
@@ -253,7 +255,7 @@ export function ProgramsTable({ programs }: ProgramsTableProps) {
             <AlertDialogTitle>Are you absolutely sure?</AlertDialogTitle>
             <AlertDialogDescription>
               This action cannot be undone. This will permanently delete the training program
-              &quot;{programToDelete?.name.en}&quot; and all associated data including:
+              &quot;{(programToDelete?.name as Record<string, string>)?.en || 'Unknown'}&quot; and all associated data including:
               <ul className="list-disc list-inside mt-2 space-y-1">
                 <li>Program guide content</li>
                 <li>Workout templates</li>

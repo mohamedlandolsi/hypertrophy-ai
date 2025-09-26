@@ -7,60 +7,36 @@ const multilingualContentSchema = z.object({
   fr: z.string().min(1, 'French content is required'),
 });
 
-// Volume guidelines schema
-const volumeGuidelinesSchema = z.object({
-  sets: z.array(z.number().min(1).max(10)).min(2).max(2), // [min, max]
-  reps: z.array(z.number().min(1).max(50)).min(2).max(2), // [min, max]
-  restPeriod: z.number().min(30).max(300), // seconds
-});
-
-// Exercise template schema
-const exerciseTemplateSchema = z.object({
-  muscleGroup: z.string().min(1, 'Muscle group is required'),
-  exerciseType: z.enum(['COMPOUND', 'ISOLATION', 'UNILATERAL']),
-  categoryType: z.enum(['MINIMALIST', 'ESSENTIALIST', 'MAXIMALIST']),
-  priority: z.number().min(1).max(10),
-  volume: volumeGuidelinesSchema,
-  alternatives: z.array(z.string()).default([]),
-});
-
-// Program category configuration schema
-const categoryConfigurationSchema = z.object({
-  exerciseFocus: z.enum(['COMPOUND', 'ISOLATION', 'BALANCED']),
-  sessionLength: z.enum(['SHORT', 'MODERATE', 'LONG']), // 30-45min, 45-60min, 60-90min
-  volumeApproach: z.enum(['MINIMAL', 'MODERATE', 'HIGH']),
-  exerciseSelection: z.object({
-    compoundRatio: z.number().min(0).max(100), // percentage
-    isolationRatio: z.number().min(0).max(100), // percentage
-    unilateralRatio: z.number().min(0).max(100), // percentage
-  }),
-});
-
-// Program category schema
+// Program category schema (simplified)
 const programCategorySchema = z.object({
-  categoryType: z.enum(['MINIMALIST', 'ESSENTIALIST', 'MAXIMALIST']),
-  configuration: categoryConfigurationSchema,
+  type: z.enum(['minimalist', 'essentialist', 'maximalist']),
+  description: multilingualContentSchema,
 });
 
-// Workout template schema
+// Exercise in template schema
+const exerciseInTemplateSchema = z.object({
+  id: z.string(),
+  targetedMuscle: z.enum(['CHEST', 'BACK', 'SHOULDERS', 'BICEPS', 'TRICEPS', 'FOREARMS', 'ABS', 'GLUTES', 'QUADRICEPS', 'HAMSTRINGS', 'ADDUCTORS', 'CALVES']).optional(),
+  selectedExercise: z.string().optional(),
+});
+
+// Workout template schema (updated for admin form)
 const workoutTemplateSchema = z.object({
-  name: multilingualContentSchema,
-  order: z.number().min(1),
-  requiredMuscleGroups: z.array(z.string()).min(1, 'At least one muscle group is required'),
+  id: z.string(),
+  name: z.string().min(1, 'Workout name is required'),
+  muscleGroups: z.array(z.string()).default([]),
+  exercises: z.array(exerciseInTemplateSchema).default([]),
 });
 
-// Program guide content schema
-const programGuideContentSchema = z.object({
-  introduction: multilingualContentSchema,
-  structure: multilingualContentSchema,
-  exerciseSelection: multilingualContentSchema,
-  volumeAdjustment: multilingualContentSchema,
-  beginnerGuidelines: multilingualContentSchema,
-  progressionPlan: multilingualContentSchema,
-  faq: z.array(z.object({
-    question: multilingualContentSchema,
-    answer: multilingualContentSchema,
-  })).default([]),
+// Weekly schedule schema
+const weeklyScheduleSchema = z.object({
+  monday: z.string().optional(),
+  tuesday: z.string().optional(),
+  wednesday: z.string().optional(),
+  thursday: z.string().optional(),
+  friday: z.string().optional(),
+  saturday: z.string().optional(),
+  sunday: z.string().optional(),
 });
 
 // Main program creation schema
@@ -77,6 +53,9 @@ export const programCreationSchema = z.object({
   trainingDays: z.number().min(1, 'At least 1 training day').max(6, 'Maximum 6 training days').optional(),
   restDays: z.number().min(1, 'At least 1 rest day').max(3, 'Maximum 3 rest days').optional(),
   
+  // Weekly schedule (when structureType is 'weekly')
+  weeklySchedule: weeklyScheduleSchema.optional(),
+  
   // Interactive features
   hasInteractiveBuilder: z.boolean().default(true),
   allowsCustomization: z.boolean().default(true),
@@ -87,12 +66,6 @@ export const programCreationSchema = z.object({
   // Workout templates
   workoutTemplates: z.array(workoutTemplateSchema).min(1, 'At least one workout template is required'),
   
-  // Exercise templates for each category
-  exerciseTemplates: z.array(exerciseTemplateSchema).default([]),
-  
-  // Program guide content
-  programGuide: programGuideContentSchema,
-  
   // Status
   isActive: z.boolean().default(true),
 });
@@ -100,23 +73,16 @@ export const programCreationSchema = z.object({
 // Type exports
 export type ProgramCreationInput = z.infer<typeof programCreationSchema>;
 export type MultilingualContent = z.infer<typeof multilingualContentSchema>;
-export type VolumeGuidelines = z.infer<typeof volumeGuidelinesSchema>;
-export type ExerciseTemplate = z.infer<typeof exerciseTemplateSchema>;
 export type ProgramCategory = z.infer<typeof programCategorySchema>;
 export type WorkoutTemplate = z.infer<typeof workoutTemplateSchema>;
-export type ProgramGuideContent = z.infer<typeof programGuideContentSchema>;
+export type ExerciseInTemplate = z.infer<typeof exerciseInTemplateSchema>;
+export type WeeklySchedule = z.infer<typeof weeklyScheduleSchema>;
 
 // Helper functions for form defaults
 export const getDefaultMultilingualContent = (): MultilingualContent => ({
   en: '',
   ar: '',
   fr: '',
-});
-
-export const getDefaultVolumeGuidelines = (): VolumeGuidelines => ({
-  sets: [3, 4],
-  reps: [8, 12],
-  restPeriod: 120,
 });
 
 export const getDefaultCategoryConfiguration = () => ({

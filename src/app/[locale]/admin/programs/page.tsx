@@ -84,7 +84,7 @@ async function ProgramsTableData() {
     }
   });
 
-  return <ProgramsTable programs={programs as TrainingProgramWithDetails[]} />;
+  return <ProgramsTable programs={programs as unknown as TrainingProgramWithDetails[]} />;
 }
 
 // Main page component

@@ -13,16 +13,15 @@ import Link from 'next/link';
 import { toast } from 'sonner';
 
 import { BasicInfoForm } from '@/components/admin/program-creation/basic-info-form';
-import { ProgramContentEditor } from '@/components/admin/program-creation/program-content-editor';
 import { ProgramStructureForm } from '@/components/admin/program-creation/program-structure-form';
 import { CategoryConfigurationForm } from '@/components/admin/program-creation/category-configuration-form';
 import { WorkoutTemplatesForm } from '@/components/admin/program-creation/workout-templates-form';
-import { ExerciseTemplatesForm } from '@/components/admin/program-creation/exercise-templates-form';
 
 export default function CreateProgramPage() {
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [activeTab, setActiveTab] = useState('basic-info');
   const [isPreviewMode, setIsPreviewMode] = useState(false);
+  const [savingTab, setSavingTab] = useState<string | null>(null);
 
   const methods = useForm({
     defaultValues: {
@@ -33,20 +32,19 @@ export default function CreateProgramPage() {
       sessionCount: 4,
       trainingDays: 3,
       restDays: 1,
+      weeklySchedule: {
+        monday: '',
+        tuesday: '',
+        wednesday: '',
+        thursday: '',
+        friday: '',
+        saturday: '',
+        sunday: '',
+      },
       hasInteractiveBuilder: true,
       allowsCustomization: true,
       categories: [],
       workoutTemplates: [],
-      exerciseTemplates: [],
-      programGuide: {
-        introduction: { en: '', ar: '', fr: '' },
-        structure: { en: '', ar: '', fr: '' },
-        exerciseSelection: { en: '', ar: '', fr: '' },
-        volumeAdjustment: { en: '', ar: '', fr: '' },
-        beginnerGuidelines: { en: '', ar: '', fr: '' },
-        progressionPlan: { en: '', ar: '', fr: '' },
-        faq: [],
-      },
       isActive: true,
     },
     mode: 'onChange',
@@ -71,10 +69,6 @@ export default function CreateProgramPage() {
         return formValues.categories?.length > 0;
       case 'workouts':
         return formValues.workoutTemplates?.length > 0;
-      case 'exercises':
-        return formValues.exerciseTemplates?.length > 0;
-      case 'content':
-        return formValues.programGuide?.introduction?.en && formValues.programGuide?.structure?.en;
       default:
         return false;
     }
@@ -126,6 +120,60 @@ export default function CreateProgramPage() {
     }
   };
 
+  // Save individual tab progress
+  const saveTabProgress = async (tabId: string) => {
+    setSavingTab(tabId);
+    try {
+      const currentData = getValues();
+      
+      // Create a subset of data relevant to the current tab
+      let tabData: Record<string, unknown> = {};
+      switch (tabId) {
+        case 'basic-info':
+          tabData = {
+            name: currentData.name,
+            description: currentData.description,
+            price: currentData.price,
+          };
+          break;
+        case 'structure':
+          tabData = {
+            structureType: currentData.structureType,
+            sessionCount: currentData.sessionCount,
+            trainingDays: currentData.trainingDays,
+            restDays: currentData.restDays,
+            weeklySchedule: currentData.weeklySchedule,
+          };
+          break;
+        case 'categories':
+          tabData = {
+            categories: currentData.categories,
+          };
+          break;
+        case 'workouts':
+          tabData = {
+            workoutTemplates: currentData.workoutTemplates,
+          };
+          break;
+      }
+
+      console.log(`Saving ${tabId} tab data:`, tabData);
+      
+      // TODO: Implement actual API call to save draft
+      // await saveProgramDraft(tabData, tabId);
+      
+      // Simulate API call
+      await new Promise(resolve => setTimeout(resolve, 1000));
+      
+      toast.success(`${tabs.find(t => t.id === tabId)?.label} saved successfully!`);
+    } catch (error) {
+      console.error(`Error saving ${tabId} tab:`, error);
+      toast.error(`Failed to save ${tabs.find(t => t.id === tabId)?.label}. Please try again.`);
+    } finally {
+      setSavingTab(null);
+    }
+  };
+
   const tabs = [
     { 
       id: 'basic-info', 
@@ -150,18 +198,6 @@ export default function CreateProgramPage() {
       label: 'Workout Templates', 
       component: WorkoutTemplatesForm,
       description: 'Session design'
-    },
-    { 
-      id: 'exercises', 
-      label: 'Exercise Templates', 
-      component: ExerciseTemplatesForm,
-      description: 'Exercise rules'
-    },
-    { 
-      id: 'content', 
-      label: 'Content Editor', 
-      component: () => <ProgramContentEditor isLoading={isSubmitting} />,
-      description: 'Program guides'
     },
   ];
 
@@ -204,7 +240,7 @@ export default function CreateProgramPage() {
               <div className="grid grid-cols-2 gap-4 text-sm">
                 <div><span className="font-medium">Structure:</span> {data.structureType === 'weekly' ? `Weekly (${data.sessionCount} sessions/week)` : `Cyclic (${data.trainingDays} training, ${data.restDays} rest days)`}</div>
                 <div><span className="font-medium">Categories:</span> {data.categories?.join(', ') || 'None selected'}</div>
-                <div><span className="font-medium">Price:</span> ${(data.price / 100).toFixed(2)}</div>
+                <div><span className="font-medium">Price:</span> ${(data.price / 100 * 0.32).toFixed(2)} USD (≈ {(data.price / 100).toFixed(2)} TND)</div>
                 <div><span className="font-medium">Status:</span> {data.isActive ? 'Active' : 'Inactive'}</div>
               </div>
             </div>
@@ -295,7 +331,7 @@ export default function CreateProgramPage() {
             </CardHeader>
             <CardContent>
               <Tabs value={activeTab} onValueChange={setActiveTab} className="space-y-6">
-                <TabsList className="grid w-full grid-cols-6 h-auto p-1">
+                <TabsList className="grid w-full grid-cols-4 h-auto p-1">
                   {tabs.map((tab) => {
                     const isCompleted = getTabCompletionStatus(tab.id);
                     const isActive = activeTab === tab.id;
@@ -352,8 +388,23 @@ export default function CreateProgramPage() {
                         <span>Previous</span>
                       </Button>
                       
-                      <div className="text-sm text-muted-foreground">
-                        Step {tabs.findIndex(t => t.id === activeTab) + 1} of {tabs.length}
+                      <div className="flex items-center space-x-3">
+                        <Button
+                          type="button"
+                          variant="secondary"
+                          onClick={() => saveTabProgress(activeTab)}
+                          disabled={savingTab === activeTab}
+                          className="flex items-center space-x-2"
+                        >
+                          <Save className="h-4 w-4" />
+                          <span>
+                            {savingTab === activeTab ? 'Saving...' : 'Save Progress'}
+                          </span>
+                        </Button>
+                        
+                        <div className="text-sm text-muted-foreground">
+                          Step {tabs.findIndex(t => t.id === activeTab) + 1} of {tabs.length}
+                        </div>
                       </div>
                       
                       <Button

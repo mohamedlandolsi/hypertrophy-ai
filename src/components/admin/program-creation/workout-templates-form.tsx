@@ -1,6 +1,7 @@
 'use client';
 
 import { useFormContext } from 'react-hook-form';
+import { useState, useEffect } from 'react';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Label } from '@/components/ui/label';
@@ -20,19 +21,78 @@ const muscleGroups = [
   { id: 'core', name: 'Core', color: 'bg-orange-100 text-orange-800' }
 ];
 
-const workoutTypes = [
-  'Push',
-  'Pull', 
-  'Legs',
-  'Upper',
-  'Lower',
-  'Full Body',
-  'Chest & Triceps',
-  'Back & Biceps',
-  'Shoulders',
-  'Arms',
-  'Legs & Glutes'
-];
+// ExerciseSelector component
+interface Exercise {
+  id: string;
+  name: string;
+  muscleGroup: string;
+  description?: string | null;
+  instructions?: string | null;
+  equipment: string[];
+  category: 'APPROVED' | 'PENDING' | 'DEPRECATED';
+  isActive: boolean;
+  difficulty: 'BEGINNER' | 'INTERMEDIATE' | 'ADVANCED';
+}
+
+interface ExerciseSelectorProps {
+  muscleGroup: string;
+  value: string;
+  onValueChange: (value: string) => void;
+}
+
+function ExerciseSelector({ muscleGroup, value, onValueChange }: ExerciseSelectorProps) {
+  const [exercises, setExercises] = useState<Exercise[]>([]);
+  const [loading, setLoading] = useState(false);
+
+  useEffect(() => {
+    if (!muscleGroup) {
+      setExercises([]);
+      return;
+    }
+
+    setLoading(true);
+    fetch(`/api/exercises/by-muscle-group?muscleGroup=${encodeURIComponent(muscleGroup)}`)
+      .then((response) => {
+        if (!response.ok) {
+          throw new Error('Failed to fetch exercises');
+        }
+        return response.json();
+      })
+      .then((data) => setExercises(data.exercises || []))
+      .catch((error) => {
+        console.error('Failed to fetch exercises:', error);
+        setExercises([]);
+      })
+      .finally(() => setLoading(false));
+  }, [muscleGroup]);
+
+  return (
+    <Select value={value} onValueChange={onValueChange}>
+      <SelectTrigger>
+        <SelectValue placeholder={
+          loading ? "Loading exercises..." : 
+          exercises.length === 0 ? "No exercises available" :
+          "Choose an exercise from our database"
+        } />
+      </SelectTrigger>
+      <SelectContent>
+        {loading ? (
+          <SelectItem value="_loading" disabled>Loading exercises...</SelectItem>
+        ) : exercises.length === 0 ? (
+          <SelectItem value="_empty" disabled>
+            {muscleGroup ? "No exercises found for this muscle group" : "Select a muscle group first"}
+          </SelectItem>
+        ) : (
+          exercises.map((exercise) => (
+            <SelectItem key={exercise.id} value={exercise.id}>
+              {exercise.name}
+            </SelectItem>
+          ))
+        )}
+      </SelectContent>
+    </Select>
+  );
+}
 
 export function WorkoutTemplatesForm() {
   const { watch, setValue } = useFormContext();
@@ -42,11 +102,8 @@ export function WorkoutTemplatesForm() {
     const newTemplate = {
       id: Date.now().toString(),
       name: '',
-      type: 'Push',
       muscleGroups: [],
-      estimatedDuration: 60,
-      exercises: [],
-      restPeriods: { compound: 180, isolation: 120 }
+      exercises: []
     };
     setValue('workoutTemplates', [...workoutTemplates, newTemplate]);
   };
@@ -72,6 +129,40 @@ export function WorkoutTemplatesForm() {
       : [...currentGroups, muscleGroupId];
     
     updateWorkoutTemplate(templateId, 'muscleGroups', updatedGroups);
+  };
+
+  const addExerciseToTemplate = (templateId: string) => {
+    const template = workoutTemplates.find((t: Record<string, unknown>) => t.id === templateId);
+    if (!template) return;
+
+    const newExercise = {
+      id: Date.now().toString(),
+      targetedMuscle: '',
+      selectedExercise: ''
+    };
+    
+    const currentExercises = (template.exercises as Array<Record<string, unknown>>) || [];
+    updateWorkoutTemplate(templateId, 'exercises', [...currentExercises, newExercise]);
+  };
+
+  const removeExerciseFromTemplate = (templateId: string, exerciseIndex: number) => {
+    const template = workoutTemplates.find((t: Record<string, unknown>) => t.id === templateId);
+    if (!template) return;
+
+    const currentExercises = (template.exercises as Array<Record<string, unknown>>) || [];
+    const updatedExercises = currentExercises.filter((_, index) => index !== exerciseIndex);
+    updateWorkoutTemplate(templateId, 'exercises', updatedExercises);
+  };
+
+  const updateExerciseInTemplate = (templateId: string, exerciseIndex: number, field: string, value: unknown) => {
+    const template = workoutTemplates.find((t: Record<string, unknown>) => t.id === templateId);
+    if (!template) return;
+
+    const currentExercises = (template.exercises as Array<Record<string, unknown>>) || [];
+    const updatedExercises = currentExercises.map((exercise, index) =>
+      index === exerciseIndex ? { ...exercise, [field]: value } : exercise
+    );
+    updateWorkoutTemplate(templateId, 'exercises', updatedExercises);
   };
 
   return (
@@ -127,44 +218,13 @@ export function WorkoutTemplatesForm() {
           </CardHeader>
           <CardContent className="space-y-4">
             {/* Basic Info */}
-            <div className="grid grid-cols-2 gap-4">
-              <div className="space-y-2">
-                <Label>Workout Name</Label>
-                <Input
-                  value={template.name as string || ''}
-                  onChange={(e) => updateWorkoutTemplate(template.id as string, 'name', e.target.value)}
-                  placeholder="e.g., Push Day, Upper Body"
-                />
-              </div>
-              <div className="space-y-2">
-                <Label>Workout Type</Label>
-                <Select 
-                  value={template.type as string || ''} 
-                  onValueChange={(value) => updateWorkoutTemplate(template.id as string, 'type', value)}
-                >
-                  <SelectTrigger>
-                    <SelectValue placeholder="Select workout type" />
-                  </SelectTrigger>
-                  <SelectContent>
-                    {workoutTypes.map((type) => (
-                      <SelectItem key={type} value={type}>
-                        {type}
-                      </SelectItem>
-                    ))}
-                  </SelectContent>
-                </Select>
-              </div>
-            </div>
-
             <div className="space-y-2">
-              <Label>Duration (minutes)</Label>
+              <Label>Workout Name</Label>
               <Input
-                type="number"
-                min="30"
-                max="120"
-                value={template.estimatedDuration as number || 60}
-                onChange={(e) => updateWorkoutTemplate(template.id as string, 'estimatedDuration', parseInt(e.target.value) || 60)}
-                className="max-w-32"
+                value={template.name as string || ''}
+                onChange={(e) => updateWorkoutTemplate(template.id as string, 'name', e.target.value)}
+                placeholder="e.g., Push Day, Upper Body"
+                className="max-w-md"
               />
             </div>
 
@@ -195,44 +255,88 @@ export function WorkoutTemplatesForm() {
 
             <Separator />
 
-            {/* Rest Periods */}
-            <div className="space-y-3">
-              <Label>Rest Periods</Label>
-              <div className="grid grid-cols-2 gap-4">
-                <div className="space-y-2">
-                  <Label className="text-sm">Compound Exercises (seconds)</Label>
-                  <Input
-                    type="number"
-                    min="60"
-                    max="300"
-                    value={((template.restPeriods as Record<string, number>) || {}).compound || 180}
-                    onChange={(e) => {
-                      const currentRest = (template.restPeriods as Record<string, number>) || {};
-                      updateWorkoutTemplate(template.id as string, 'restPeriods', {
-                        ...currentRest,
-                        compound: parseInt(e.target.value) || 180
-                      });
-                    }}
-                  />
-                </div>
-                <div className="space-y-2">
-                  <Label className="text-sm">Isolation Exercises (seconds)</Label>
-                  <Input
-                    type="number"
-                    min="60"
-                    max="180"
-                    value={((template.restPeriods as Record<string, number>) || {}).isolation || 120}
-                    onChange={(e) => {
-                      const currentRest = (template.restPeriods as Record<string, number>) || {};
-                      updateWorkoutTemplate(template.id as string, 'restPeriods', {
-                        ...currentRest,
-                        isolation: parseInt(e.target.value) || 120
-                      });
-                    }}
-                  />
-                </div>
+            {/* Exercise Selection */}
+            <div className="space-y-4">
+              <Label className="text-base font-semibold">Exercise Selection</Label>
+              
+              {/* Add Exercise Button */}
+              <div className="flex items-center space-x-2">
+                <Button
+                  variant="outline"
+                  size="sm"
+                  onClick={() => addExerciseToTemplate(template.id as string)}
+                >
+                  <Plus className="h-4 w-4 mr-1" />
+                  Add Exercise
+                </Button>
               </div>
+
+              {/* Exercises List */}
+              {((template.exercises as Array<Record<string, unknown>>) || []).map((exercise: Record<string, unknown>, exerciseIndex: number) => (
+                <Card key={exerciseIndex} className="p-4 border-dashed">
+                  <div className="space-y-4">
+                    <div className="space-y-2">
+                      <Label className="text-sm">Targeted Muscle</Label>
+                      <Select
+                        value={(exercise.targetedMuscle as string) || ''}
+                        onValueChange={(value) => updateExerciseInTemplate(template.id as string, exerciseIndex, 'targetedMuscle', value)}
+                      >
+                        <SelectTrigger>
+                          <SelectValue placeholder="Select muscle group" />
+                        </SelectTrigger>
+                        <SelectContent>
+                          <SelectItem value="CHEST">Chest</SelectItem>
+                          <SelectItem value="BACK">Back</SelectItem>
+                          <SelectItem value="SHOULDERS">Shoulders</SelectItem>
+                          <SelectItem value="BICEPS">Biceps</SelectItem>
+                          <SelectItem value="TRICEPS">Triceps</SelectItem>
+                          <SelectItem value="FOREARMS">Forearms</SelectItem>
+                          <SelectItem value="ABS">Abs</SelectItem>
+                          <SelectItem value="GLUTES">Glutes</SelectItem>
+                          <SelectItem value="QUADRICEPS">Quadriceps</SelectItem>
+                          <SelectItem value="HAMSTRINGS">Hamstrings</SelectItem>
+                          <SelectItem value="ADDUCTORS">Adductors</SelectItem>
+                          <SelectItem value="CALVES">Calves</SelectItem>
+                        </SelectContent>
+                      </Select>
+                    </div>
+                    
+                    <div className="space-y-2">
+                      <Label className="text-sm">Example Exercises from Database</Label>
+                      <ExerciseSelector 
+                        muscleGroup={(exercise.targetedMuscle as string) || ''}
+                        value={(exercise.selectedExercise as string) || ''}
+                        onValueChange={(value: string) => updateExerciseInTemplate(template.id as string, exerciseIndex, 'selectedExercise', value)}
+                      />
+                      <p className="text-xs text-muted-foreground">
+                        Exercise options will be filtered based on your selected muscle group
+                      </p>
+                    </div>
+                  </div>
+                  
+                  <div className="mt-3 flex justify-end">
+                    <Button
+                      variant="outline"
+                      size="sm"
+                      onClick={() => removeExerciseFromTemplate(template.id as string, exerciseIndex)}
+                      className="text-red-600 hover:text-red-700"
+                    >
+                      <Trash2 className="h-4 w-4 mr-1" />
+                      Remove Exercise
+                    </Button>
+                  </div>
+                </Card>
+              ))}
+              
+              {((template.exercises as Array<Record<string, unknown>>) || []).length === 0 && (
+                <div className="text-center py-6 text-muted-foreground border-2 border-dashed rounded-lg">
+                  <p>No exercises added yet</p>
+                  <p className="text-sm">Click &quot;Add Exercise&quot; to start building your workout</p>
+                </div>
+              )}
             </div>
+
+            <Separator />
           </CardContent>
         </Card>
       ))}
@@ -252,7 +356,7 @@ export function WorkoutTemplatesForm() {
                     <div>
                       <div className="font-medium">{(template.name as string) || `Workout ${index + 1}`}</div>
                       <div className="text-sm text-muted-foreground">
-                        {template.type as string} • {template.estimatedDuration as number}min • {((template.muscleGroups as string[]) || []).length} muscle groups
+                        {((template.exercises as Array<Record<string, unknown>>) || []).length} exercises • {((template.muscleGroups as string[]) || []).length} muscle groups
                       </div>
                     </div>
                   </div>

@@ -272,6 +272,9 @@ model TrainingProgram {
   sessionCount  Int     @default(4) // Number of sessions per week (for weekly) or total sessions (for cyclic)
   trainingDays  Int     @default(3) // Training days in cyclic structure
   restDays      Int     @default(1) // Rest days in cyclic structure
+  
+  // Weekly Schedule (when structureType is "weekly")
+  weeklySchedule Json? // {"monday": "Upper Body", "tuesday": "Lower Body", "wednesday": "", ...}
 
   // Interactive Features
   hasInteractiveBuilder Boolean @default(true)

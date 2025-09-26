@@ -11,7 +11,6 @@ import { Label } from '@/components/ui/label';
 import { Textarea } from '@/components/ui/textarea';
 import { Switch } from '@/components/ui/switch';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
-import ExerciseManagement from '@/components/admin/exercise-management';
 
 interface AIConfiguration {
   id: string;
@@ -482,9 +481,6 @@ export default function AdminSettingsPage() {
             </form>
           </CardContent>
         </Card>
-
-        {/* Exercise Management Section */}
-        <ExerciseManagement />
         </div>
       </div>
     </AdminLayout>

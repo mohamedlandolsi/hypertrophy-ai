@@ -32,7 +32,7 @@ export function PreviewMode({ data }: PreviewModeProps) {
                 <span className="font-medium">Categories:</span> {data.categories?.join(', ') || 'None selected'}
               </div>
               <div>
-                <span className="font-medium">Price:</span> ${(data.price / 100).toFixed(2)}
+                <span className="font-medium">Price:</span> ${(data.price / 100 * 0.32).toFixed(2)} USD (≈ {(data.price / 100).toFixed(2)} TND)
               </div>
               <div>
                 <span className="font-medium">Status:</span> {data.isActive ? 'Active' : 'Inactive'}

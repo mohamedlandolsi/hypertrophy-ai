@@ -31,6 +31,7 @@ export async function GET() {
       return NextResponse.json({
         success: true,
         role: newUser.role,
+        isAdmin: newUser.role === 'admin',
         user: { id: user.id }
       });
     }
@@ -38,6 +39,7 @@ export async function GET() {
     return NextResponse.json({
       success: true,
       role: dbUser.role,
+      isAdmin: dbUser.role === 'admin',
       user: { id: user.id }
     });
 

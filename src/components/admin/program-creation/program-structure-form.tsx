@@ -13,6 +13,9 @@ import type { ProgramCreationInput } from '@/lib/validations/program-creation';
 
 export function ProgramStructureForm() {
   const { register, watch, setValue, formState: { errors } } = useFormContext<ProgramCreationInput>();
+  
+  const structureType = watch('structureType');
+  const weeklySchedule = watch('weeklySchedule');
 
   return (
     <div className="space-y-6">
@@ -30,7 +33,7 @@ export function ProgramStructureForm() {
             
             <div>
               <Label htmlFor="structureType">Structure Type</Label>
-              <Select onValueChange={(value) => setValue('structureType', value as 'weekly' | 'cyclic')} defaultValue={watch('structureType') || 'weekly'}>
+              <Select onValueChange={(value) => setValue('structureType', value as 'weekly' | 'cyclic')} defaultValue={structureType || 'weekly'}>
                 <SelectTrigger className="mt-1">
                   <SelectValue placeholder="Select structure type" />
                 </SelectTrigger>
@@ -61,20 +64,51 @@ export function ProgramStructureForm() {
             </div>
 
             {watch('structureType') === 'weekly' && (
-              <div>
-                <Label htmlFor="sessionsPerWeek">Sessions per week</Label>
-                <Input 
-                  id="sessionsPerWeek"
-                  type="number"
-                  placeholder="4"
-                  min="1"
-                  max="7"
-                  {...register('sessionCount', { valueAsNumber: true })}
-                  className="mt-1"
-                />
-                {errors.sessionCount && (
-                  <p className="text-sm text-red-600 mt-1">{errors.sessionCount.message}</p>
-                )}
+              <div className="space-y-4">
+                <div>
+                  <Label htmlFor="sessionsPerWeek">Sessions per week</Label>
+                  <Input 
+                    id="sessionsPerWeek"
+                    type="number"
+                    placeholder="4"
+                    min="1"
+                    max="7"
+                    {...register('sessionCount', { valueAsNumber: true })}
+                    className="mt-1"
+                  />
+                  {errors.sessionCount && (
+                    <p className="text-sm text-red-600 mt-1">{errors.sessionCount.message}</p>
+                  )}
+                </div>
+
+                {/* Weekly Schedule */}
+                <div>
+                  <Label className="text-sm font-medium">Weekly Schedule</Label>
+                  <p className="text-xs text-muted-foreground mb-3">
+                    Assign workout session names to each day of the week (leave empty for rest days)
+                  </p>
+                  <div className="grid gap-3">
+                    {[
+                      { key: 'monday', label: 'Monday' },
+                      { key: 'tuesday', label: 'Tuesday' },
+                      { key: 'wednesday', label: 'Wednesday' },
+                      { key: 'thursday', label: 'Thursday' },
+                      { key: 'friday', label: 'Friday' },
+                      { key: 'saturday', label: 'Saturday' },
+                      { key: 'sunday', label: 'Sunday' },
+                    ].map(({ key, label }) => (
+                      <div key={key} className="flex items-center space-x-3">
+                        <div className="w-20 text-sm font-medium text-right">{label}:</div>
+                        <Input
+                          placeholder="e.g., Push Day, Upper Body A, Rest"
+                          className="flex-1"
+                          value={weeklySchedule?.[key as keyof typeof weeklySchedule] || ''}
+                          onChange={(e) => setValue(`weeklySchedule.${key}` as keyof ProgramCreationInput, e.target.value)}
+                        />
+                      </div>
+                    ))}
+                  </div>
+                </div>
               </div>
             )}
 
