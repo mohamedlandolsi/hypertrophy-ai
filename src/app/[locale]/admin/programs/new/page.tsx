@@ -1,6 +1,7 @@
 'use client';
 
 import { useState } from 'react';
+import { useRouter } from 'next/navigation';
 import { useForm, FormProvider } from 'react-hook-form';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
@@ -16,12 +17,16 @@ import { BasicInfoForm } from '@/components/admin/program-creation/basic-info-fo
 import { ProgramStructureForm } from '@/components/admin/program-creation/program-structure-form';
 import { CategoryConfigurationForm } from '@/components/admin/program-creation/category-configuration-form';
 import { WorkoutTemplatesForm } from '@/components/admin/program-creation/workout-templates-form';
+import { GuideForm } from '@/components/admin/program-creation/guide-form';
+import { AboutProgramForm } from '@/components/admin/program-creation/about-program-form';
+import { createTrainingProgram } from '@/app/api/admin/programs/actions';
 
 export default function CreateProgramPage() {
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [activeTab, setActiveTab] = useState('basic-info');
   const [isPreviewMode, setIsPreviewMode] = useState(false);
   const [savingTab, setSavingTab] = useState<string | null>(null);
+  const router = useRouter();
 
   const methods = useForm({
     defaultValues: {
@@ -45,6 +50,9 @@ export default function CreateProgramPage() {
       allowsCustomization: true,
       categories: [],
       workoutTemplates: [],
+      guideSections: [],
+      aboutContent: '',
+      thumbnailUrl: '',
       isActive: true,
     },
     mode: 'onChange',
@@ -66,9 +74,15 @@ export default function CreateProgramPage() {
           (formValues.structureType === 'cyclic' && formValues.trainingDays > 0 && formValues.restDays > 0)
         );
       case 'categories':
-        return formValues.categories?.length > 0;
+        // Check if at least one category has a description filled out
+        return formValues.categories?.length > 0 && formValues.categories.some((cat: { description?: { en?: string; ar?: string; fr?: string } }) => 
+          cat.description?.en || cat.description?.ar || cat.description?.fr
+        );
       case 'workouts':
-        return formValues.workoutTemplates?.length > 0;
+        // Check if at least one workout template exists with a name
+        return formValues.workoutTemplates?.length > 0 && formValues.workoutTemplates.some((workout: { name?: string }) => 
+          workout.name && workout.name.trim().length > 0
+        );
       default:
         return false;
     }
@@ -105,19 +119,63 @@ export default function CreateProgramPage() {
     return currentIndex > 0;
   };
 
-  // eslint-disable-next-line @typescript-eslint/no-explicit-any
-  const onSubmit = async (data: any) => {
+  // Handle intentional form submission (only from Create Program button)
+  const handleCreateProgram = async () => {
     setIsSubmitting(true);
     try {
+      const data = getValues();
       console.log('Creating program with data:', data);
-      // TODO: Implement actual API call
-      // router.push(`/admin/programs/${result.id}`);
+      
+      // Provide helpful validation guidance
+      if (!data.categories || data.categories.length === 0) {
+        toast.error('Please configure at least one category (Minimalist, Essentialist, or Maximalist) in the Category Config tab.');
+        setActiveTab('categories');
+        setIsSubmitting(false);
+        return;
+      }
+      
+      if (!data.workoutTemplates || data.workoutTemplates.length === 0) {
+        toast.error('Please add at least one workout template in the Workout Templates tab.');
+        setActiveTab('workouts');
+        setIsSubmitting(false);
+        return;
+      }
+      
+      const result = await createTrainingProgram(data);
+      
+      if (result.success) {
+        toast.success('Program created successfully!');
+        router.push(`/admin/programs`);
+      } else {
+        toast.error(result.error || 'Failed to create program');
+      }
     } catch (error) {
       console.error('Error creating program:', error);
-      toast.error('Failed to create program. Please try again.');
+      
+      // Parse validation errors if they exist
+      if (error instanceof Error && error.message.includes('validation')) {
+        try {
+          const validationErrors = JSON.parse(error.message.replace('Validation failed: ', ''));
+          const errorMessages = validationErrors.map((err: { path: string[], message: string }) => 
+            `${err.path.join('.')}: ${err.message}`
+          ).join(', ');
+          toast.error(`Validation failed: ${errorMessages}`);
+        } catch {
+          toast.error('Please complete all required fields before creating the program.');
+        }
+      } else {
+        toast.error('Failed to create program. Please try again.');
+      }
     } finally {
       setIsSubmitting(false);
     }
+  };
+
+  // Empty onSubmit to prevent accidental form submissions
+  const onSubmit = async () => {
+    // Prevent any accidental form submissions from inputs, Enter keys, etc.
+    console.log('Form submission blocked to prevent accidental validation');
+    return false;
   };
 
   // Save individual tab progress
@@ -193,11 +251,23 @@ export default function CreateProgramPage() {
       component: CategoryConfigurationForm,
       description: 'Program variants'
     },
-    { 
+    {
       id: 'workouts', 
       label: 'Workout Templates', 
       component: WorkoutTemplatesForm,
       description: 'Session design'
+    },
+    {
+      id: 'guide', 
+      label: 'Training Guide', 
+      component: GuideForm,
+      description: 'User instructions'
+    },
+    {
+      id: 'about', 
+      label: 'About Program', 
+      component: AboutProgramForm,
+      description: 'Program details'
     },
   ];
 
@@ -216,7 +286,8 @@ export default function CreateProgramPage() {
           </Button>
           <div className="flex space-x-2">
             <Button
-              onClick={() => onSubmit(data)}
+              type="button"
+              onClick={handleCreateProgram}
               disabled={!isValid || isSubmitting}
               className="flex items-center space-x-2"
             >
@@ -293,7 +364,8 @@ export default function CreateProgramPage() {
                 <span>Preview</span>
               </Button>
               <Button
-                type="submit"
+                type="button"
+                onClick={handleCreateProgram}
                 disabled={!isValid || isSubmitting || completionProgress() < 80}
                 className="flex items-center space-x-2"
               >
@@ -331,7 +403,7 @@ export default function CreateProgramPage() {
             </CardHeader>
             <CardContent>
               <Tabs value={activeTab} onValueChange={setActiveTab} className="space-y-6">
-                <TabsList className="grid w-full grid-cols-4 h-auto p-1">
+                <TabsList className="grid w-full grid-cols-6 h-auto p-1 bg-muted">
                   {tabs.map((tab) => {
                     const isCompleted = getTabCompletionStatus(tab.id);
                     const isActive = activeTab === tab.id;
@@ -339,19 +411,21 @@ export default function CreateProgramPage() {
                       <TabsTrigger 
                         key={tab.id} 
                         value={tab.id} 
-                        className={`text-xs flex flex-col items-center space-y-1 p-3 h-auto relative ${
-                          isCompleted ? 'bg-green-50 border-green-200' : ''
+                        className={`text-xs flex flex-col items-center space-y-1 p-3 h-auto relative transition-all duration-200 ${
+                          isCompleted 
+                            ? 'data-[state=active]:bg-green-100 data-[state=active]:text-green-800 data-[state=active]:border-green-300 dark:data-[state=active]:bg-green-900/20 dark:data-[state=active]:text-green-300 dark:data-[state=active]:border-green-700/50 bg-green-50/50 dark:bg-green-900/10 border-green-200/50 dark:border-green-800/30' 
+                            : 'data-[state=active]:bg-background data-[state=active]:text-foreground hover:bg-muted/80'
                         }`}
                       >
                         <div className="flex items-center space-x-1">
                           {isCompleted ? (
-                            <CheckCircle className="h-3 w-3 text-green-600" />
+                            <CheckCircle className="h-3 w-3 text-green-600 dark:text-green-400" />
                           ) : isActive ? (
-                            <Clock className="h-3 w-3 text-blue-600" />
+                            <Clock className="h-3 w-3 text-blue-600 dark:text-blue-400" />
                           ) : (
-                            <AlertCircle className="h-3 w-3 text-gray-400" />
+                            <AlertCircle className="h-3 w-3 text-muted-foreground" />
                           )}
-                          <span className={isCompleted ? 'text-green-700' : ''}>{tab.label}</span>
+                          <span className={isCompleted ? 'text-green-700 dark:text-green-300 font-medium' : 'font-medium'}>{tab.label}</span>
                         </div>
                         <span className="text-xs text-muted-foreground text-center leading-tight">
                           {tab.description}

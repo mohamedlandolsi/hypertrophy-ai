@@ -1,10 +1,10 @@
 import { z } from 'zod';
 
-// Multilingual content schema
+// Multilingual content schema - flexible for optional languages
 const multilingualContentSchema = z.object({
   en: z.string().min(1, 'English content is required'),
-  ar: z.string().min(1, 'Arabic content is required'),
-  fr: z.string().min(1, 'French content is required'),
+  ar: z.string().optional().default(''),
+  fr: z.string().optional().default(''),
 });
 
 // Program category schema (simplified)
@@ -26,6 +26,14 @@ const workoutTemplateSchema = z.object({
   name: z.string().min(1, 'Workout name is required'),
   muscleGroups: z.array(z.string()).default([]),
   exercises: z.array(exerciseInTemplateSchema).default([]),
+});
+
+// Guide section schema
+const guideSectionSchema = z.object({
+  id: z.string(),
+  title: z.string().min(1, 'Section title is required'),
+  content: z.string().min(1, 'Section content is required'),
+  order: z.number().min(1),
 });
 
 // Weekly schedule schema
@@ -66,6 +74,13 @@ export const programCreationSchema = z.object({
   // Workout templates
   workoutTemplates: z.array(workoutTemplateSchema).min(1, 'At least one workout template is required'),
   
+  // Guide sections
+  guideSections: z.array(guideSectionSchema).default([]),
+  
+  // About program
+  aboutContent: z.string().default(''),
+  thumbnailUrl: z.string().url('Must be a valid URL').optional().or(z.literal('')),
+  
   // Status
   isActive: z.boolean().default(true),
 });
@@ -77,6 +92,7 @@ export type ProgramCategory = z.infer<typeof programCategorySchema>;
 export type WorkoutTemplate = z.infer<typeof workoutTemplateSchema>;
 export type ExerciseInTemplate = z.infer<typeof exerciseInTemplateSchema>;
 export type WeeklySchedule = z.infer<typeof weeklyScheduleSchema>;
+export type GuideSection = z.infer<typeof guideSectionSchema>;
 
 // Helper functions for form defaults
 export const getDefaultMultilingualContent = (): MultilingualContent => ({

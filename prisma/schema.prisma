@@ -227,6 +227,9 @@ model Exercise {
   category     ExerciseCategory    @default(APPROVED)
   isActive     Boolean             @default(true)
   difficulty   ExerciseDifficulty  @default(INTERMEDIATE)
+  // Volume contributions for each muscle group (1.0 = direct, 0.5 = indirect)
+  // Format: { "CHEST": 1.0, "FRONT_DELTS": 0.5, "TRICEPS": 0.5 }
+  volumeContributions Json?
   createdAt    DateTime            @default(now())
   updatedAt    DateTime
 
@@ -279,6 +282,10 @@ model TrainingProgram {
   // Interactive Features
   hasInteractiveBuilder Boolean @default(true)
   allowsCustomization   Boolean @default(true)
+  
+  // About Program
+  thumbnailUrl String?
+  aboutContent String?
 
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
@@ -475,6 +482,79 @@ enum ExerciseMuscleGroup {
   HAMSTRINGS
   ADDUCTORS
   CALVES
+}
+
+// Detailed muscle groups for volume tracking
+enum VolumeTrackingMuscle {
+  // Chest
+  UPPER_CHEST
+  MIDDLE_CHEST
+  LOWER_CHEST
+  
+  // Arms - Biceps and Related
+  BICEPS
+  BRACHIALIS
+  BRACHIORADIALIS
+  
+  // Arms - Triceps
+  TRICEPS_LONG_HEAD
+  TRICEPS_MEDIAL_HEAD
+  TRICEPS_LATERAL_HEAD
+  
+  // Shoulders
+  FRONT_DELTS
+  SIDE_DELTS
+  REAR_DELTS
+  
+  // Forearms
+  WRIST_FLEXORS
+  WRIST_EXTENSORS
+  
+  // Back - Lats
+  UPPER_LATS
+  MIDDLE_LATS
+  LOWER_LATS
+  
+  // Back - Other
+  TRAPEZIUS
+  RHOMBOIDS
+  ERECTOR_SPINAE
+  
+  // Glutes
+  GLUTEUS_MAXIMUS
+  GLUTEUS_MEDIUS
+  GLUTEUS_MINIMUS
+  
+  // Adductors
+  ADDUCTOR_MAGNUS
+  OTHER_ADDUCTORS
+  
+  // Quadriceps
+  RECTUS_FEMORIS
+  VASTUS_LATERALIS
+  VASTUS_MEDIALIS
+  VASTUS_INTERMEDIUS
+  
+  // Hamstrings
+  HAMSTRINGS
+  
+  // Calves and Lower Leg
+  CALVES
+  TIBIALIS_ANTERIOR
+  
+  // Core
+  ABS
+  OBLIQUES
+  
+  // Additional muscles
+  HIP_FLEXORS
+  SERRATUS_ANTERIOR
+  PECTORALIS_MINOR
+  TERES_MAJOR
+  TERES_MINOR
+  INFRASPINATUS
+  SUPRASPINATUS
+  SUBSCAPULARIS
 }
 
 enum ProgramCategoryType {

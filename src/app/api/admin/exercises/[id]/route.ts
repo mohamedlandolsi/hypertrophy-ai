@@ -88,7 +88,8 @@ export async function PUT(request: NextRequest, { params }: { params: Promise<{ 
       equipment, 
       category, 
       isActive, 
-      difficulty 
+      difficulty,
+      volumeContributions
     } = body;
 
     // Validate required fields
@@ -123,6 +124,7 @@ export async function PUT(request: NextRequest, { params }: { params: Promise<{ 
         category: category || 'APPROVED',
         isActive: isActive !== undefined ? isActive : true,
         difficulty: difficulty || 'INTERMEDIATE',
+        volumeContributions: volumeContributions || {},
         updatedAt: new Date()
       }
     });

@@ -167,6 +167,13 @@ export function WorkoutTemplatesForm() {
 
   return (
     <div className="space-y-6">
+      <div className="bg-green-50 border border-green-200 rounded-lg p-4">
+        <h4 className="font-medium text-green-900 mb-2">Required: Add at least one workout template</h4>
+        <p className="text-sm text-green-700">
+          Click &quot;Add Workout&quot; below to create workout templates. Each template represents a training session in your program.
+        </p>
+      </div>
+      
       <div className="flex items-center justify-between">
         <div>
           <h3 className="text-lg font-semibold">Workout Templates</h3>
@@ -174,7 +181,7 @@ export function WorkoutTemplatesForm() {
             Define workout sessions for your training program
           </p>
         </div>
-        <Button onClick={addWorkoutTemplate} className="flex items-center space-x-2">
+        <Button type="button" onClick={addWorkoutTemplate} className="flex items-center space-x-2">
           <Plus className="h-4 w-4" />
           <span>Add Workout</span>
         </Button>
@@ -188,7 +195,7 @@ export function WorkoutTemplatesForm() {
             <p className="text-muted-foreground text-center mb-4">
               Create your first workout template to define the structure of your training sessions.
             </p>
-            <Button onClick={addWorkoutTemplate} className="flex items-center space-x-2">
+            <Button type="button" onClick={addWorkoutTemplate} className="flex items-center space-x-2">
               <Plus className="h-4 w-4" />
               <span>Create First Workout</span>
             </Button>
@@ -207,6 +214,7 @@ export function WorkoutTemplatesForm() {
                 </CardDescription>
               </div>
               <Button
+                type="button"
                 variant="outline"
                 size="sm"
                 onClick={() => removeWorkoutTemplate(template.id as string)}
@@ -262,6 +270,7 @@ export function WorkoutTemplatesForm() {
               {/* Add Exercise Button */}
               <div className="flex items-center space-x-2">
                 <Button
+                  type="button"
                   variant="outline"
                   size="sm"
                   onClick={() => addExerciseToTemplate(template.id as string)}
@@ -316,6 +325,7 @@ export function WorkoutTemplatesForm() {
                   
                   <div className="mt-3 flex justify-end">
                     <Button
+                      type="button"
                       variant="outline"
                       size="sm"
                       onClick={() => removeExerciseFromTemplate(template.id as string, exerciseIndex)}

@@ -87,13 +87,15 @@ export async function createTrainingProgram(formData: z.infer<typeof programCrea
     // Validate input data
     const validatedData = programCreationSchema.parse(formData);
 
-    // Check if lemonSqueezyId is unique
-    const existingProgram = await prisma.trainingProgram.findUnique({
-      where: { lemonSqueezyId: validatedData.lemonSqueezyId }
-    });
+    // Check if lemonSqueezyId is unique (only if provided)
+    if (validatedData.lemonSqueezyId) {
+      const existingProgram = await prisma.trainingProgram.findUnique({
+        where: { lemonSqueezyId: validatedData.lemonSqueezyId }
+      });
 
-    if (existingProgram) {
-      throw new Error('A program with this LemonSqueezy ID already exists');
+      if (existingProgram) {
+        throw new Error('A program with this LemonSqueezy ID already exists');
+      }
     }
 
     // Create program with associated data in a transaction

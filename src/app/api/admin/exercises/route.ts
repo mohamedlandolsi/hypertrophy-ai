@@ -128,7 +128,8 @@ export async function POST(request: NextRequest) {
       equipment, 
       category, 
       isActive, 
-      difficulty 
+      difficulty,
+      volumeContributions
     } = body;
 
     // Validate required fields
@@ -151,6 +152,7 @@ export async function POST(request: NextRequest) {
         category: category || 'APPROVED',
         isActive: isActive !== undefined ? isActive : true,
         difficulty: difficulty || 'INTERMEDIATE',
+        volumeContributions: volumeContributions || {},
         updatedAt: new Date()
       }
     });

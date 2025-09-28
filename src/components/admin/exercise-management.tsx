@@ -24,6 +24,7 @@ interface Exercise {
   category: 'APPROVED' | 'PENDING' | 'DEPRECATED';
   isActive: boolean;
   difficulty: 'BEGINNER' | 'INTERMEDIATE' | 'ADVANCED';
+  volumeContributions?: Record<string, number>;
   createdAt: string;
   updatedAt: string;
 }
@@ -37,11 +38,85 @@ interface ExerciseFormData {
   category: 'APPROVED' | 'PENDING' | 'DEPRECATED';
   isActive: boolean;
   difficulty: 'BEGINNER' | 'INTERMEDIATE' | 'ADVANCED';
+  volumeContributions: Record<string, number>;
 }
 
 const MUSCLE_GROUPS = [
   'CHEST', 'BACK', 'SHOULDERS', 'BICEPS', 'TRICEPS', 'FOREARMS',
   'ABS', 'GLUTES', 'QUADRICEPS', 'HAMSTRINGS', 'ADDUCTORS', 'CALVES'
+];
+
+// Volume tracking muscle groups with display names
+const VOLUME_MUSCLES = [
+  // Chest
+  { value: 'UPPER_CHEST', label: 'Upper Chest' },
+  { value: 'MIDDLE_CHEST', label: 'Middle Chest' },
+  { value: 'LOWER_CHEST', label: 'Lower Chest' },
+  
+  // Arms - Biceps and Related
+  { value: 'BICEPS', label: 'Biceps' },
+  { value: 'BRACHIALIS', label: 'Brachialis' },
+  { value: 'BRACHIORADIALIS', label: 'Brachioradialis' },
+  
+  // Arms - Triceps
+  { value: 'TRICEPS_LONG_HEAD', label: 'Triceps Long Head' },
+  { value: 'TRICEPS_MEDIAL_HEAD', label: 'Triceps Medial Head' },
+  { value: 'TRICEPS_LATERAL_HEAD', label: 'Triceps Lateral Head' },
+  
+  // Shoulders
+  { value: 'FRONT_DELTS', label: 'Front Delts' },
+  { value: 'SIDE_DELTS', label: 'Side Delts' },
+  { value: 'REAR_DELTS', label: 'Rear Delts' },
+  
+  // Forearms
+  { value: 'WRIST_FLEXORS', label: 'Wrist Flexors' },
+  { value: 'WRIST_EXTENSORS', label: 'Wrist Extensors' },
+  
+  // Back - Lats
+  { value: 'UPPER_LATS', label: 'Upper Lats' },
+  { value: 'MIDDLE_LATS', label: 'Middle Lats' },
+  { value: 'LOWER_LATS', label: 'Lower Lats' },
+  
+  // Back - Other
+  { value: 'TRAPEZIUS', label: 'Trapezius' },
+  { value: 'RHOMBOIDS', label: 'Rhomboids' },
+  { value: 'ERECTOR_SPINAE', label: 'Erector Spinae' },
+  
+  // Glutes
+  { value: 'GLUTEUS_MAXIMUS', label: 'Gluteus Maximus' },
+  { value: 'GLUTEUS_MEDIUS', label: 'Gluteus Medius' },
+  { value: 'GLUTEUS_MINIMUS', label: 'Gluteus Minimus' },
+  
+  // Adductors
+  { value: 'ADDUCTOR_MAGNUS', label: 'Adductor Magnus' },
+  { value: 'OTHER_ADDUCTORS', label: 'Other Adductors' },
+  
+  // Quadriceps
+  { value: 'RECTUS_FEMORIS', label: 'Rectus Femoris' },
+  { value: 'VASTUS_LATERALIS', label: 'Vastus Lateralis' },
+  { value: 'VASTUS_MEDIALIS', label: 'Vastus Medialis' },
+  { value: 'VASTUS_INTERMEDIUS', label: 'Vastus Intermedius' },
+  
+  // Hamstrings
+  { value: 'HAMSTRINGS', label: 'Hamstrings' },
+  
+  // Calves and Lower Leg
+  { value: 'CALVES', label: 'Calves' },
+  { value: 'TIBIALIS_ANTERIOR', label: 'Tibialis Anterior' },
+  
+  // Core
+  { value: 'ABS', label: 'Abs' },
+  { value: 'OBLIQUES', label: 'Obliques' },
+  
+  // Additional muscles
+  { value: 'HIP_FLEXORS', label: 'Hip Flexors' },
+  { value: 'SERRATUS_ANTERIOR', label: 'Serratus Anterior' },
+  { value: 'PECTORALIS_MINOR', label: 'Pectoralis Minor' },
+  { value: 'TERES_MAJOR', label: 'Teres Major' },
+  { value: 'TERES_MINOR', label: 'Teres Minor' },
+  { value: 'INFRASPINATUS', label: 'Infraspinatus' },
+  { value: 'SUPRASPINATUS', label: 'Supraspinatus' },
+  { value: 'SUBSCAPULARIS', label: 'Subscapularis' },
 ];
 
 const CATEGORIES = ['APPROVED', 'PENDING', 'DEPRECATED'];
@@ -55,7 +130,8 @@ const initialFormData: ExerciseFormData = {
   equipment: [],
   category: 'APPROVED',
   isActive: true,
-  difficulty: 'INTERMEDIATE'
+  difficulty: 'INTERMEDIATE',
+  volumeContributions: {}
 };
 
 export default function ExerciseManagement() {
@@ -162,7 +238,8 @@ export default function ExerciseManagement() {
       equipment: exercise.equipment,
       category: exercise.category,
       isActive: exercise.isActive,
-      difficulty: exercise.difficulty
+      difficulty: exercise.difficulty,
+      volumeContributions: exercise.volumeContributions || {}
     });
     setEquipmentInput(exercise.equipment.join(', '));
     setEditingId(exercise.id);
@@ -213,6 +290,21 @@ export default function ExerciseManagement() {
     setEditingId(null);
     setEquipmentInput('');
     setIsDialogOpen(false);
+  };
+
+  // Volume tracking helper functions
+  const updateVolumeContribution = (muscle: string, volume: number) => {
+    const newContributions = { ...formData.volumeContributions };
+    if (volume === 0) {
+      delete newContributions[muscle];
+    } else {
+      newContributions[muscle] = volume;
+    }
+    setFormData({ ...formData, volumeContributions: newContributions });
+  };
+
+  const getVolumeContribution = (muscle: string) => {
+    return formData.volumeContributions[muscle] || 0;
   };
 
   const getMuscleGroupColor = (muscleGroup: string) => {
@@ -392,6 +484,107 @@ export default function ExerciseManagement() {
                   </div>
                 </div>
 
+                {/* Volume Contributions Section */}
+                <div className="space-y-4">
+                  <div>
+                    <Label className="text-base font-medium">Volume Contributions</Label>
+                    <p className="text-sm text-muted-foreground">
+                      Set muscle volume contributions: 1.0 for direct, 0.5 for indirect, 0 for none
+                    </p>
+                  </div>
+                  
+                  <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4 max-h-60 overflow-y-auto border rounded-lg p-4">
+                    {VOLUME_MUSCLES.map(({ value, label }) => (
+                      <div key={value} className="flex items-center justify-between space-x-2">
+                        <Label htmlFor={`volume-${value}`} className="text-sm font-normal flex-grow">
+                          {label}
+                        </Label>
+                        <Select
+                          value={getVolumeContribution(value).toString()}
+                          onValueChange={(val) => updateVolumeContribution(value, parseFloat(val))}
+                        >
+                          <SelectTrigger className="w-20 h-8">
+                            <SelectValue />
+                          </SelectTrigger>
+                          <SelectContent>
+                            <SelectItem value="0">0</SelectItem>
+                            <SelectItem value="0.5">0.5</SelectItem>
+                            <SelectItem value="1">1.0</SelectItem>
+                          </SelectContent>
+                        </Select>
+                      </div>
+                    ))}
+                  </div>
+                  
+                  {/* Quick preset buttons */}
+                  <div className="flex flex-wrap gap-2">
+                    <Button
+                      type="button"
+                      variant="outline"
+                      size="sm"
+                      onClick={() => {
+                        const chestPreset = {
+                          MIDDLE_CHEST: 1.0,
+                          FRONT_DELTS: 0.5,
+                          TRICEPS_MEDIAL_HEAD: 0.5,
+                          TRICEPS_LATERAL_HEAD: 0.5
+                        };
+                        setFormData({ ...formData, volumeContributions: chestPreset });
+                      }}
+                    >
+                      Chest Press Preset
+                    </Button>
+                    <Button
+                      type="button"
+                      variant="outline"
+                      size="sm"
+                      onClick={() => {
+                        const latPreset = {
+                          UPPER_LATS: 0.5,
+                          MIDDLE_LATS: 1.0,
+                          LOWER_LATS: 0.5,
+                          RHOMBOIDS: 0.5,
+                          TRAPEZIUS: 0.5,
+                          REAR_DELTS: 0.5,
+                          BICEPS: 0.5
+                        };
+                        setFormData({ ...formData, volumeContributions: latPreset });
+                      }}
+                    >
+                      Lat Pulldown Preset
+                    </Button>
+                    <Button
+                      type="button"
+                      variant="outline"
+                      size="sm"
+                      onClick={() => {
+                        const squatPreset = {
+                          RECTUS_FEMORIS: 1.0,
+                          VASTUS_LATERALIS: 1.0,
+                          VASTUS_MEDIALIS: 1.0,
+                          VASTUS_INTERMEDIUS: 1.0,
+                          GLUTEUS_MAXIMUS: 1.0,
+                          HAMSTRINGS: 0.5,
+                          ABS: 0.5
+                        };
+                        setFormData({ ...formData, volumeContributions: squatPreset });
+                      }}
+                    >
+                      Squat Preset
+                    </Button>
+                    <Button
+                      type="button"
+                      variant="outline"
+                      size="sm"
+                      onClick={() => {
+                        setFormData({ ...formData, volumeContributions: {} });
+                      }}
+                    >
+                      Clear All
+                    </Button>
+                  </div>
+                </div>
+
                 <div className="flex items-center space-x-2">
                   <Switch
                     id="isActive"
@@ -505,6 +698,7 @@ export default function ExerciseManagement() {
                     <TableHead className="min-w-[100px]">Category</TableHead>
                     <TableHead className="min-w-[100px]">Difficulty</TableHead>
                     <TableHead className="min-w-[150px]">Equipment</TableHead>
+                    <TableHead className="min-w-[180px]">Volume Contributions</TableHead>
                     <TableHead className="min-w-[80px]">Status</TableHead>
                     <TableHead className="min-w-[120px]">Actions</TableHead>
                   </TableRow>
@@ -548,6 +742,26 @@ export default function ExerciseManagement() {
                             <Badge variant="secondary" className="text-xs">
                               +{exercise.equipment.length - 2}
                             </Badge>
+                          )}
+                        </div>
+                      </TableCell>
+                      <TableCell>
+                        <div className="max-w-[180px]">
+                          {exercise.volumeContributions && Object.keys(exercise.volumeContributions).length > 0 ? (
+                            <div className="flex flex-wrap gap-1">
+                              {Object.entries(exercise.volumeContributions).slice(0, 3).map(([muscle, volume]) => (
+                                <Badge key={muscle} variant="outline" className="text-xs">
+                                  {VOLUME_MUSCLES.find(m => m.value === muscle)?.label || muscle}: {volume}
+                                </Badge>
+                              ))}
+                              {Object.keys(exercise.volumeContributions).length > 3 && (
+                                <Badge variant="outline" className="text-xs">
+                                  +{Object.keys(exercise.volumeContributions).length - 3} more
+                                </Badge>
+                              )}
+                            </div>
+                          ) : (
+                            <span className="text-sm text-muted-foreground">No volumes set</span>
                           )}
                         </div>
                       </TableCell>

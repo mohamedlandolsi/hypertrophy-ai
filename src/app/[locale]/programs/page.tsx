@@ -5,9 +5,11 @@ import { useRouter } from 'next/navigation';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
-import { Loader2, BookOpen, Settings, Eye } from 'lucide-react';
+import { Separator } from '@/components/ui/separator';
+import { Loader2, BookOpen, Settings, Eye, ShoppingCart, Star, Calendar, DollarSign } from 'lucide-react';
 import { toast } from 'sonner';
 import { createClient } from '@/lib/supabase/client';
+import Image from 'next/image';
 
 interface TrainingProgram {
   id: string;
@@ -15,31 +17,29 @@ interface TrainingProgram {
   description: Record<string, string>;
   price: number;
   isActive: boolean;
-}
-
-interface UserPurchase {
-  id: string;
-  trainingProgramId: string;
-  purchaseDate: string;
-  trainingProgram: TrainingProgram;
-}
-
-interface UserProgram {
-  id: string;
-  trainingProgramId: string;
-  category: string;
+  thumbnailUrl?: string;
+  aboutContent?: string;
   createdAt: string;
-  trainingProgram: TrainingProgram;
+  purchaseDate?: string;
+  isOwned: boolean;
+}
+
+interface ProgramsData {
+  ownedPrograms: TrainingProgram[];
+  browsePrograms: TrainingProgram[];
+  totalPrograms: number;
+  ownedCount: number;
+  browseCount: number;
 }
 
 export default function ProgramsPage() {
-  const [userPurchases, setUserPurchases] = useState<UserPurchase[]>([]);
-  const [userPrograms, setUserPrograms] = useState<UserProgram[]>([]);
+  const [programsData, setProgramsData] = useState<ProgramsData | null>(null);
   const [isLoading, setIsLoading] = useState(true);
+  const [isAuthenticated, setIsAuthenticated] = useState(false);
   const router = useRouter();
 
   useEffect(() => {
-    async function loadUserPrograms() {
+    async function loadPrograms() {
       setIsLoading(true);
       try {
         // Check authentication
@@ -47,22 +47,31 @@ export default function ProgramsPage() {
         const { data: { user: currentUser }, error: userError } = await supabase.auth.getUser();
         
         if (userError || !currentUser) {
-          router.push('/login');
+          setIsAuthenticated(false);
+          // Still fetch programs for browse-only view
+          const response = await fetch('/api/programs');
+          if (response.ok) {
+            const data = await response.json();
+            setProgramsData({
+              ownedPrograms: [],
+              browsePrograms: data.data.browsePrograms,
+              totalPrograms: data.data.totalPrograms,
+              ownedCount: 0,
+              browseCount: data.data.browseCount
+            });
+          }
           return;
         }
 
-        // Fetch user's purchased programs
-        const purchasesResponse = await fetch('/api/user/programs/purchases');
-        if (purchasesResponse.ok) {
-          const purchasesData = await purchasesResponse.json();
-          setUserPurchases(purchasesData.purchases || []);
-        }
-
-        // Fetch user's configured programs
-        const programsResponse = await fetch('/api/user/programs/configurations');
-        if (programsResponse.ok) {
-          const programsData = await programsResponse.json();
-          setUserPrograms(programsData.programs || []);
+        setIsAuthenticated(true);
+        
+        // Fetch programs with user purchase status
+        const response = await fetch('/api/programs');
+        if (response.ok) {
+          const data = await response.json();
+          setProgramsData(data.data);
+        } else {
+          throw new Error('Failed to fetch programs');
         }
 
       } catch (error) {
@@ -73,8 +82,8 @@ export default function ProgramsPage() {
       }
     }
 
-    loadUserPrograms();
-  }, [router]);
+    loadPrograms();
+  }, []);
 
   const formatPrice = (priceInCents: number) => {
     return new Intl.NumberFormat('en-US', {
@@ -87,13 +96,101 @@ export default function ProgramsPage() {
     return new Date(dateString).toLocaleDateString();
   };
 
-  const handleBuildProgram = (programId: string) => {
-    router.push(`/programs/${programId}/build`);
+  const handleProgramClick = (program: TrainingProgram) => {
+    if (program.isOwned) {
+      // Navigate to program builder/configuration
+      router.push(`/programs/${program.id}/build`);
+    } else {
+      // Navigate to program about page
+      router.push(`/programs/${program.id}/about`);
+    }
   };
 
-  const handleViewProgram = (programId: string) => {
-    // This could navigate to a program details/view page
+  const handleViewProgram = (programId: string, event: React.MouseEvent) => {
+    event.stopPropagation();
     router.push(`/programs/${programId}`);
+  };
+
+  const ProgramCard = ({ program, showPurchaseDate = false }: { program: TrainingProgram; showPurchaseDate?: boolean }) => {
+    const programName = program.name.en || Object.values(program.name)[0] || 'Unknown Program';
+    const programDescription = program.description.en || Object.values(program.description)[0] || 'No description available';
+
+    return (
+      <Card 
+        key={program.id} 
+        className="flex flex-col cursor-pointer hover:shadow-md transition-shadow"
+        onClick={() => handleProgramClick(program)}
+      >
+        <CardHeader className="pb-2">
+          {program.thumbnailUrl && (
+            <div className="relative w-full h-32 mb-3 rounded-lg overflow-hidden bg-muted">
+              <Image
+                src={program.thumbnailUrl}
+                alt={programName}
+                fill
+                className="object-cover"
+                sizes="(max-width: 768px) 100vw, (max-width: 1200px) 50vw, 33vw"
+              />
+            </div>
+          )}
+          <div className="flex items-start justify-between">
+            <div className="flex-1">
+              <CardTitle className="text-lg line-clamp-1">{programName}</CardTitle>
+              <CardDescription className="mt-1 line-clamp-2">
+                {programDescription}
+              </CardDescription>
+            </div>
+            <Badge variant={program.isOwned ? "default" : "secondary"} className="ml-2 shrink-0">
+              {program.isOwned ? "Owned" : formatPrice(program.price)}
+            </Badge>
+          </div>
+        </CardHeader>
+        <CardContent className="flex-1 flex flex-col pt-2">
+          <div className="space-y-2 mb-4 flex-1">
+            {showPurchaseDate && program.purchaseDate && (
+              <div className="flex items-center text-sm text-muted-foreground">
+                <Calendar className="h-3 w-3 mr-1" />
+                <span>Purchased {formatDate(program.purchaseDate)}</span>
+              </div>
+            )}
+            {!program.isOwned && (
+              <div className="flex items-center text-sm">
+                <DollarSign className="h-3 w-3 mr-1 text-muted-foreground" />
+                <span className="font-medium">{formatPrice(program.price)}</span>
+              </div>
+            )}
+            <div className="flex items-center text-sm text-muted-foreground">
+              <Star className="h-3 w-3 mr-1" />
+              <span>Created {formatDate(program.createdAt)}</span>
+            </div>
+          </div>
+          
+          <div className="flex flex-col gap-2">
+            {program.isOwned ? (
+              <>
+                <Button className="w-full">
+                  <Settings className="h-4 w-4 mr-2" />
+                  Configure Program
+                </Button>
+                <Button
+                  variant="outline"
+                  onClick={(e) => handleViewProgram(program.id, e)}
+                  className="w-full"
+                >
+                  <Eye className="h-4 w-4 mr-2" />
+                  View Details
+                </Button>
+              </>
+            ) : (
+              <Button className="w-full">
+                <ShoppingCart className="h-4 w-4 mr-2" />
+                Learn More
+              </Button>
+            )}
+          </div>
+        </CardContent>
+      </Card>
+    );
   };
 
   if (isLoading) {
@@ -102,9 +199,28 @@ export default function ProgramsPage() {
         <div className="flex items-center justify-center min-h-[400px]">
           <div className="text-center">
             <Loader2 className="h-8 w-8 animate-spin mx-auto mb-4" />
-            <p className="text-muted-foreground">Loading your programs...</p>
+            <p className="text-muted-foreground">Loading programs...</p>
           </div>
         </div>
+      </div>
+    );
+  }
+
+  if (!programsData) {
+    return (
+      <div className="container mx-auto px-4 py-8">
+        <Card>
+          <CardContent className="flex flex-col items-center justify-center py-12">
+            <BookOpen className="h-12 w-12 text-muted-foreground mb-4" />
+            <h3 className="text-lg font-semibold mb-2">Unable to Load Programs</h3>
+            <p className="text-muted-foreground text-center mb-4">
+              There was an issue loading the training programs. Please try again later.
+            </p>
+            <Button onClick={() => window.location.reload()}>
+              Retry
+            </Button>
+          </CardContent>
+        </Card>
       </div>
     );
   }
@@ -112,99 +228,99 @@ export default function ProgramsPage() {
   return (
     <div className="container mx-auto px-4 py-8">
       <div className="mb-8">
-        <h1 className="text-3xl font-bold mb-2">My Training Programs</h1>
+        <h1 className="text-3xl font-bold mb-2">Training Programs</h1>
         <p className="text-muted-foreground">
-          Manage and configure your purchased training programs
+          {isAuthenticated 
+            ? "Manage your owned programs and discover new training plans" 
+            : "Discover professional training programs designed for your fitness goals"
+          }
         </p>
       </div>
 
-      {userPurchases.length === 0 ? (
-        <Card>
-          <CardContent className="flex flex-col items-center justify-center py-12">
-            <BookOpen className="h-12 w-12 text-muted-foreground mb-4" />
-            <h3 className="text-lg font-semibold mb-2">No Programs Yet</h3>
-            <p className="text-muted-foreground text-center mb-4">
-              You haven&apos;t purchased any training programs yet. Check out our available programs to get started.
-            </p>
-            <Button onClick={() => router.push('/pricing')}>
-              Browse Programs
-            </Button>
-          </CardContent>
-        </Card>
-      ) : (
-        <div className="grid gap-6 md:grid-cols-2 lg:grid-cols-3">
-          {userPurchases.map((purchase) => {
-            const program = purchase.trainingProgram;
-            const userConfig = userPrograms.find(up => up.trainingProgramId === program.id);
-            const programName = program.name.en || Object.values(program.name)[0] || 'Unknown Program';
-            const programDescription = program.description.en || Object.values(program.description)[0] || 'No description available';
+      {/* My Programs Section - Only show if authenticated and has programs */}
+      {isAuthenticated && programsData.ownedCount > 0 && (
+        <>
+          <div className="mb-6">
+            <div className="flex items-center justify-between mb-4">
+              <div>
+                <h2 className="text-2xl font-semibold">My Programs</h2>
+                <p className="text-muted-foreground">Programs you own and can configure</p>
+              </div>
+              <Badge variant="outline" className="text-sm">
+                {programsData.ownedCount} program{programsData.ownedCount !== 1 ? 's' : ''}
+              </Badge>
+            </div>
+            <div className="grid gap-6 md:grid-cols-2 lg:grid-cols-3">
+              {programsData.ownedPrograms.map((program) => (
+                <ProgramCard key={`owned-${program.id}`} program={program} showPurchaseDate={true} />
+              ))}
+            </div>
+          </div>
+          <Separator className="my-8" />
+        </>
+      )}
 
-            return (
-              <Card key={purchase.id} className="flex flex-col">
-                <CardHeader>
-                  <div className="flex items-start justify-between">
-                    <div className="flex-1">
-                      <CardTitle className="text-lg">{programName}</CardTitle>
-                      <CardDescription className="mt-1">
-                        {programDescription}
-                      </CardDescription>
-                    </div>
-                    <Badge variant={program.isActive ? "default" : "secondary"}>
-                      {program.isActive ? "Active" : "Inactive"}
-                    </Badge>
-                  </div>
-                </CardHeader>
-                <CardContent className="flex-1 flex flex-col">
-                  <div className="space-y-2 mb-4 flex-1">
-                    <div className="flex justify-between text-sm">
-                      <span className="text-muted-foreground">Purchased:</span>
-                      <span>{formatDate(purchase.purchaseDate)}</span>
-                    </div>
-                    <div className="flex justify-between text-sm">
-                      <span className="text-muted-foreground">Price:</span>
-                      <span>{formatPrice(program.price)}</span>
-                    </div>
-                    {userConfig && (
-                      <div className="flex justify-between text-sm">
-                        <span className="text-muted-foreground">Configuration:</span>
-                        <Badge variant="outline">{userConfig.category}</Badge>
-                      </div>
-                    )}
-                  </div>
-                  
-                  <div className="flex flex-col gap-2">
-                    {userConfig ? (
-                      <>
-                        <Button
-                          onClick={() => handleBuildProgram(program.id)}
-                          className="w-full"
-                        >
-                          <Settings className="h-4 w-4 mr-2" />
-                          Modify Configuration
-                        </Button>
-                        <Button
-                          variant="outline"
-                          onClick={() => handleViewProgram(program.id)}
-                          className="w-full"
-                        >
-                          <Eye className="h-4 w-4 mr-2" />
-                          View Program
-                        </Button>
-                      </>
-                    ) : (
-                      <Button
-                        onClick={() => handleBuildProgram(program.id)}
-                        className="w-full"
-                      >
-                        <Settings className="h-4 w-4 mr-2" />
-                        Build Program
-                      </Button>
-                    )}
-                  </div>
-                </CardContent>
-              </Card>
-            );
-          })}
+      {/* Browse Programs Section */}
+      <div className="mb-6">
+        <div className="flex items-center justify-between mb-4">
+          <div>
+            <h2 className="text-2xl font-semibold">
+              {isAuthenticated && programsData.ownedCount > 0 ? "Browse Programs" : "Available Programs"}
+            </h2>
+            <p className="text-muted-foreground">
+              {isAuthenticated && programsData.ownedCount > 0 
+                ? "Discover new programs to add to your collection"
+                : "Professional training programs designed for your fitness goals"
+              }
+            </p>
+          </div>
+          <Badge variant="outline" className="text-sm">
+            {programsData.browseCount} program{programsData.browseCount !== 1 ? 's' : ''}
+          </Badge>
+        </div>
+
+        {programsData.browseCount === 0 ? (
+          <Card>
+            <CardContent className="flex flex-col items-center justify-center py-12">
+              <BookOpen className="h-12 w-12 text-muted-foreground mb-4" />
+              <h3 className="text-lg font-semibold mb-2">
+                {isAuthenticated && programsData.ownedCount > 0 
+                  ? "All Programs Owned!" 
+                  : "No Programs Available"
+                }
+              </h3>
+              <p className="text-muted-foreground text-center">
+                {isAuthenticated && programsData.ownedCount > 0 
+                  ? "You already own all available training programs. Check back later for new releases!"
+                  : "There are no training programs available at the moment. Check back soon!"
+                }
+              </p>
+            </CardContent>
+          </Card>
+        ) : (
+          <div className="grid gap-6 md:grid-cols-2 lg:grid-cols-3">
+            {programsData.browsePrograms.map((program) => (
+              <ProgramCard key={`browse-${program.id}`} program={program} />
+            ))}
+          </div>
+        )}
+      </div>
+
+      {/* Not authenticated notice */}
+      {!isAuthenticated && (
+        <div className="mt-8">
+          <Card className="border-dashed">
+            <CardContent className="flex flex-col items-center justify-center py-8 text-center">
+              <BookOpen className="h-8 w-8 text-muted-foreground mb-3" />
+              <h3 className="text-lg font-semibold mb-2">Want to Purchase Programs?</h3>
+              <p className="text-muted-foreground mb-4">
+                Sign in to purchase and configure your own training programs.
+              </p>
+              <Button onClick={() => router.push('/login')}>
+                Sign In
+              </Button>
+            </CardContent>
+          </Card>
         </div>
       )}
     </div>
