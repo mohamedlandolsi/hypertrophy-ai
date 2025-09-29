@@ -38,13 +38,13 @@ export const guideSectionSchema = z.object({
 
 // Weekly schedule schema
 const weeklyScheduleSchema = z.object({
-  monday: z.string().optional(),
-  tuesday: z.string().optional(),
-  wednesday: z.string().optional(),
-  thursday: z.string().optional(),
-  friday: z.string().optional(),
-  saturday: z.string().optional(),
-  sunday: z.string().optional(),
+  day1: z.string().optional(),
+  day2: z.string().optional(),
+  day3: z.string().optional(),
+  day4: z.string().optional(),
+  day5: z.string().optional(),
+  day6: z.string().optional(),
+  day7: z.string().optional(),
 });
 
 // Program structure schema

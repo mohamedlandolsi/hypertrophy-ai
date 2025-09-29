@@ -11,6 +11,7 @@ interface CustomizationRequest {
     structureId: string;
     categoryType: 'MINIMALIST' | 'ESSENTIALIST' | 'MAXIMALIST';
     workoutConfiguration: Record<string, string[]>;
+    weeklyScheduleMapping?: Record<string, string>;
   };
 }
 
@@ -31,6 +32,8 @@ export async function POST(request: NextRequest) {
 
     const body: CustomizationRequest = await request.json();
     const { trainingProgramId, customization } = body;
+
+    console.log('Received customization:', JSON.stringify(customization, null, 2));
 
     if (!trainingProgramId || !customization) {
       return NextResponse.json({
@@ -121,6 +124,7 @@ export async function POST(request: NextRequest) {
           configuration: {
             structureId: customization.structureId,
             workoutConfiguration: customization.workoutConfiguration,
+            weeklyScheduleMapping: customization.weeklyScheduleMapping || {},
             customizedAt: new Date().toISOString()
           },
           updatedAt: new Date()
@@ -136,6 +140,7 @@ export async function POST(request: NextRequest) {
           configuration: {
             structureId: customization.structureId,
             workoutConfiguration: customization.workoutConfiguration,
+            weeklyScheduleMapping: customization.weeklyScheduleMapping || {},
             customizedAt: new Date().toISOString()
           }
         }

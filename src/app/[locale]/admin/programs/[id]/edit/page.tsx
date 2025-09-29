@@ -36,13 +36,13 @@ type EditProgramFormData = {
     trainingDays?: number;
     restDays?: number;
     weeklySchedule?: {
-      monday?: string;
-      tuesday?: string;
-      wednesday?: string;
-      thursday?: string;
-      friday?: string;
-      saturday?: string;
-      sunday?: string;
+      day1?: string;
+      day2?: string;
+      day3?: string;
+      day4?: string;
+      day5?: string;
+      day6?: string;
+      day7?: string;
     };
     order: number;
     isDefault: boolean;
@@ -160,13 +160,13 @@ export default function EditProgramPage() {
         trainingDays: 3,
         restDays: 1,
         weeklySchedule: {
-          monday: '',
-          tuesday: '',
-          wednesday: '',
-          thursday: '',
-          friday: '',
-          saturday: '',
-          sunday: '',
+          day1: '',
+          day2: '',
+          day3: '',
+          day4: '',
+          day5: '',
+          day6: '',
+          day7: '',
         },
         order: 0,
         isDefault: true,
@@ -211,13 +211,13 @@ export default function EditProgramPage() {
               trainingDays: structure.trainingDays,
               restDays: structure.restDays,
               weeklySchedule: structure.weeklySchedule || {
-                monday: '',
-                tuesday: '',
-                wednesday: '',
-                thursday: '',
-                friday: '',
-                saturday: '',
-                sunday: '',
+                day1: '',
+                day2: '',
+                day3: '',
+                day4: '',
+                day5: '',
+                day6: '',
+                day7: '',
               },
               order: structure.order,
               isDefault: structure.isDefault,
@@ -229,13 +229,13 @@ export default function EditProgramPage() {
               trainingDays: 3,
               restDays: 1,
               weeklySchedule: {
-                monday: '',
-                tuesday: '',
-                wednesday: '',
-                thursday: '',
-                friday: '',
-                saturday: '',
-                sunday: '',
+                day1: '',
+                day2: '',
+                day3: '',
+                day4: '',
+                day5: '',
+                day6: '',
+                day7: '',
               },
               order: 0,
               isDefault: true,

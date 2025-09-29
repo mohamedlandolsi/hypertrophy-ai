@@ -1,0 +1,1 @@
+ALTER TABLE "ExerciseTemplate" ADD COLUMN "name" JSONB;

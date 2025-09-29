@@ -223,34 +223,61 @@ export function ProgramStructureForm() {
                             <div>
                               <Label className="text-sm font-medium">Weekly Schedule</Label>
                               <p className="text-xs text-muted-foreground mb-3">
-                                Assign workout session names to each day (leave empty for rest days)
+                                Assign workout session names to each day or mark as rest day. Users will later map these to their preferred weekdays.
                               </p>
                               <div className="grid gap-3">
                                 {[
-                                  { key: 'monday', label: 'Monday' },
-                                  { key: 'tuesday', label: 'Tuesday' },
-                                  { key: 'wednesday', label: 'Wednesday' },
-                                  { key: 'thursday', label: 'Thursday' },
-                                  { key: 'friday', label: 'Friday' },
-                                  { key: 'saturday', label: 'Saturday' },
-                                  { key: 'sunday', label: 'Sunday' },
-                                ].map(({ key, label }) => (
-                                  <div key={key} className="flex items-center space-x-3">
-                                    <div className="w-20 text-sm font-medium text-right">{label}:</div>
-                                    <Input
-                                      placeholder="e.g., Push Day, Upper Body A, Rest"
-                                      className="flex-1"
-                                      value={weeklySchedule?.[key as keyof typeof weeklySchedule] || ''}
-                                      onChange={(e) => {
-                                        const currentSchedule = watch(`programStructures.${index}.weeklySchedule`) || {};
-                                        setValue(`programStructures.${index}.weeklySchedule` as const, {
-                                          ...currentSchedule,
-                                          [key]: e.target.value,
-                                        });
-                                      }}
-                                    />
-                                  </div>
-                                ))}
+                                  { key: 'day1', label: 'Day 1' },
+                                  { key: 'day2', label: 'Day 2' },
+                                  { key: 'day3', label: 'Day 3' },
+                                  { key: 'day4', label: 'Day 4' },
+                                  { key: 'day5', label: 'Day 5' },
+                                  { key: 'day6', label: 'Day 6' },
+                                  { key: 'day7', label: 'Day 7' },
+                                ].map(({ key, label }) => {
+                                  const currentValue = weeklySchedule?.[key as keyof typeof weeklySchedule] || '';
+                                  const isRestDay = currentValue.toLowerCase() === 'rest';
+                                  
+                                  return (
+                                    <div key={key} className="flex items-center space-x-3">
+                                      <div className="w-20 text-sm font-medium text-right">{label}:</div>
+                                      <div className="flex items-center space-x-2 flex-1">
+                                        <Input
+                                          placeholder="e.g., Push Day, Upper Body A"
+                                          className="flex-1"
+                                          value={isRestDay ? '' : currentValue}
+                                          disabled={isRestDay}
+                                          onChange={(e) => {
+                                            const currentSchedule = watch(`programStructures.${index}.weeklySchedule`) || {};
+                                            setValue(`programStructures.${index}.weeklySchedule` as const, {
+                                              ...currentSchedule,
+                                              [key]: e.target.value,
+                                            });
+                                          }}
+                                        />
+                                        <div className="flex items-center space-x-2">
+                                          <Checkbox
+                                            id={`rest-${index}-${key}`}
+                                            checked={isRestDay}
+                                            onCheckedChange={(checked) => {
+                                              const currentSchedule = watch(`programStructures.${index}.weeklySchedule`) || {};
+                                              setValue(`programStructures.${index}.weeklySchedule` as const, {
+                                                ...currentSchedule,
+                                                [key]: checked ? 'Rest' : '',
+                                              });
+                                            }}
+                                          />
+                                          <Label 
+                                            htmlFor={`rest-${index}-${key}`}
+                                            className="text-sm font-normal cursor-pointer"
+                                          >
+                                            Rest Day
+                                          </Label>
+                                        </div>
+                                      </div>
+                                    </div>
+                                  );
+                                })}
                               </div>
                             </div>
                           </div>
