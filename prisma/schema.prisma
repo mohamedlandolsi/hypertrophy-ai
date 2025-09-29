@@ -270,15 +270,6 @@ model TrainingProgram {
   lemonSqueezyId String? @unique
   isActive       Boolean @default(true)
 
-  // Program Structure Fields
-  structureType String  @default("weekly") // "weekly" or "cyclic"
-  sessionCount  Int     @default(4) // Number of sessions per week (for weekly) or total sessions (for cyclic)
-  trainingDays  Int     @default(3) // Training days in cyclic structure
-  restDays      Int     @default(1) // Rest days in cyclic structure
-  
-  // Weekly Schedule (when structureType is "weekly")
-  weeklySchedule Json? // {"monday": "Upper Body", "tuesday": "Lower Body", "wednesday": "", ...}
-
   // Interactive Features
   hasInteractiveBuilder Boolean @default(true)
   allowsCustomization   Boolean @default(true)
@@ -292,6 +283,7 @@ model TrainingProgram {
 
   // Relations
   programGuide      ProgramGuide?
+  programStructures ProgramStructure[] // Multiple structures support
   workoutTemplates  WorkoutTemplate[]
   userPurchases     UserPurchase[]
   userPrograms      UserProgram[]
@@ -300,13 +292,39 @@ model TrainingProgram {
 
   @@index([isActive])
   @@index([lemonSqueezyId])
-  @@index([structureType])
+}
+
+model ProgramStructure {
+  id                String   @id @default(cuid())
+  trainingProgramId String
+  name              Json // Multilingual name for the structure variant
+  
+  // Structure Configuration
+  structureType  String  // "weekly" or "cyclic"
+  sessionCount   Int     @default(4) // Number of sessions per week (for weekly) or total sessions (for cyclic)
+  trainingDays   Int     @default(3) // Training days in cyclic structure
+  restDays       Int     @default(1) // Rest days in cyclic structure
+  
+  // Weekly Schedule (when structureType is "weekly")
+  weeklySchedule Json? // {"monday": "Upper Body", "tuesday": "Lower Body", "wednesday": "", ...}
+  
+  order     Int      @default(0) // Order of this structure variant
+  isDefault Boolean  @default(false) // Whether this is the default structure
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  // Relations
+  trainingProgram TrainingProgram @relation(fields: [trainingProgramId], references: [id], onDelete: Cascade)
+
+  @@index([trainingProgramId])
+  @@index([trainingProgramId, order])
+  @@index([isDefault])
 }
 
 model ProgramGuide {
   id                String   @id @default(cuid())
   trainingProgramId String   @unique
-  content           Json // Multilingual content: {"en": {...}, "ar": {...}, "fr": {...}}
+  content           Json // Stored as array of guide sections: [{ id, title, content, order }]
   createdAt         DateTime @default(now())
   updatedAt         DateTime @updatedAt
 

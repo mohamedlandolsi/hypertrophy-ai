@@ -1,150 +1,299 @@
 'use client';
 
-import { useFormContext } from 'react-hook-form';
+import { useState } from 'react';
+import { useFormContext, useFieldArray } from 'react-hook-form';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Label } from '@/components/ui/label';
 import { Input } from '@/components/ui/input';
+import { Button } from '@/components/ui/button';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { Checkbox } from '@/components/ui/checkbox';
 import { Separator } from '@/components/ui/separator';
-import { Calendar, RotateCcw } from 'lucide-react';
+import { Calendar, RotateCcw, Plus, Trash2, ChevronDown, ChevronUp } from 'lucide-react';
 
-import type { ProgramCreationInput } from '@/lib/validations/program-creation';
+import type { ProgramCreationInput, ProgramStructure } from '@/lib/validations/program-creation';
 
 export function ProgramStructureForm() {
-  const { register, watch, setValue, formState: { errors } } = useFormContext<ProgramCreationInput>();
-  
-  const structureType = watch('structureType');
-  const weeklySchedule = watch('weeklySchedule');
+  const { register, watch, setValue, control } = useFormContext<ProgramCreationInput>();
+  const { fields, append, remove } = useFieldArray({
+    control,
+    name: 'programStructures',
+  });
+
+  const [expandedStructure, setExpandedStructure] = useState<number>(0);
+
+  const addNewStructure = () => {
+    const newStructure: ProgramStructure = {
+      name: { en: '', ar: '', fr: '' },
+      structureType: 'weekly',
+      sessionCount: 4,
+      trainingDays: 3,
+      restDays: 1,
+      weeklySchedule: {},
+      order: fields.length,
+      isDefault: fields.length === 0, // First structure is default
+    };
+    append(newStructure);
+    setExpandedStructure(fields.length);
+  };
+
+  const setAsDefault = (index: number) => {
+    // Set all structures to non-default, then set the selected one as default
+    fields.forEach((_, i) => {
+      setValue(`programStructures.${i}.isDefault`, i === index);
+    });
+  };
 
   return (
     <div className="space-y-6">
       <Card>
         <CardHeader>
-          <CardTitle>Program Structure & Settings</CardTitle>
-          <CardDescription>
-            Configure how your training program is structured and organized
-          </CardDescription>
-        </CardHeader>
-        <CardContent className="space-y-6">
-          {/* Training Structure */}
-          <div className="space-y-4">
-            <Label className="text-base font-semibold">Training Structure</Label>
-            
+          <div className="flex items-center justify-between">
             <div>
-              <Label htmlFor="structureType">Structure Type</Label>
-              <Select onValueChange={(value) => setValue('structureType', value as 'weekly' | 'cyclic')} defaultValue={structureType || 'weekly'}>
-                <SelectTrigger className="mt-1">
-                  <SelectValue placeholder="Select structure type" />
-                </SelectTrigger>
-                <SelectContent>
-                  <SelectItem value="weekly">
-                    <div className="flex items-center space-x-2">
-                      <Calendar className="h-4 w-4" />
-                      <div>
-                        <div className="font-medium">Weekly Structure</div>
-                        <div className="text-sm text-muted-foreground">Based on weekdays (Mon, Tue, Wed...)</div>
-                      </div>
-                    </div>
-                  </SelectItem>
-                  <SelectItem value="cyclic">
-                    <div className="flex items-center space-x-2">
-                      <RotateCcw className="h-4 w-4" />
-                      <div>
-                        <div className="font-medium">Cyclic Structure</div>
-                        <div className="text-sm text-muted-foreground">e.g., 3 days on, 1 day off, repeat</div>
-                      </div>
-                    </div>
-                  </SelectItem>
-                </SelectContent>
-              </Select>
-              <p className="text-sm text-muted-foreground mt-1">
-                Choose how the training schedule is organized
-              </p>
+              <CardTitle>Program Structures</CardTitle>
+              <CardDescription>
+                Configure multiple training structures for your program (e.g., weekly and cyclic variants)
+              </CardDescription>
             </div>
-
-            {watch('structureType') === 'weekly' && (
-              <div className="space-y-4">
-                <div>
-                  <Label htmlFor="sessionsPerWeek">Sessions per week</Label>
-                  <Input 
-                    id="sessionsPerWeek"
-                    type="number"
-                    placeholder="4"
-                    min="1"
-                    max="7"
-                    {...register('sessionCount', { valueAsNumber: true })}
-                    className="mt-1"
-                  />
-                  {errors.sessionCount && (
-                    <p className="text-sm text-red-600 mt-1">{errors.sessionCount.message}</p>
-                  )}
-                </div>
-
-                {/* Weekly Schedule */}
-                <div>
-                  <Label className="text-sm font-medium">Weekly Schedule</Label>
-                  <p className="text-xs text-muted-foreground mb-3">
-                    Assign workout session names to each day of the week (leave empty for rest days)
-                  </p>
-                  <div className="grid gap-3">
-                    {[
-                      { key: 'monday', label: 'Monday' },
-                      { key: 'tuesday', label: 'Tuesday' },
-                      { key: 'wednesday', label: 'Wednesday' },
-                      { key: 'thursday', label: 'Thursday' },
-                      { key: 'friday', label: 'Friday' },
-                      { key: 'saturday', label: 'Saturday' },
-                      { key: 'sunday', label: 'Sunday' },
-                    ].map(({ key, label }) => (
-                      <div key={key} className="flex items-center space-x-3">
-                        <div className="w-20 text-sm font-medium text-right">{label}:</div>
-                        <Input
-                          placeholder="e.g., Push Day, Upper Body A, Rest"
-                          className="flex-1"
-                          value={weeklySchedule?.[key as keyof typeof weeklySchedule] || ''}
-                          onChange={(e) => setValue(`weeklySchedule.${key}` as keyof ProgramCreationInput, e.target.value)}
-                        />
-                      </div>
-                    ))}
-                  </div>
-                </div>
-              </div>
-            )}
-
-            {watch('structureType') === 'cyclic' && (
-              <div className="grid grid-cols-2 gap-4">
-                <div>
-                  <Label htmlFor="trainingDays">Training Days</Label>
-                  <Input 
-                    id="trainingDays"
-                    type="number"
-                    placeholder="3"
-                    min="1"
-                    max="6"
-                    {...register('trainingDays', { valueAsNumber: true })}
-                    className="mt-1"
-                  />
-                  <p className="text-sm text-muted-foreground mt-1">Days of training</p>
-                </div>
-                <div>
-                  <Label htmlFor="restDays">Rest Days</Label>
-                  <Input 
-                    id="restDays"
-                    type="number"
-                    placeholder="1"
-                    min="1"
-                    max="3"
-                    {...register('restDays', { valueAsNumber: true })}
-                    className="mt-1"
-                  />
-                  <p className="text-sm text-muted-foreground mt-1">Days of rest</p>
-                </div>
-              </div>
-            )}
+            <Button type="button" onClick={addNewStructure} className="flex items-center space-x-2">
+              <Plus className="h-4 w-4" />
+              <span>Add Structure</span>
+            </Button>
           </div>
+        </CardHeader>
+        <CardContent>
+          {fields.length === 0 ? (
+            <div className="text-center py-8">
+              <p className="text-muted-foreground mb-4">No program structures defined yet.</p>
+              <Button type="button" onClick={addNewStructure}>
+                <Plus className="h-4 w-4 mr-2" />
+                Add Your First Structure
+              </Button>
+            </div>
+          ) : (
+            <div className="space-y-4">
+              {fields.map((field, index) => {
+                const structureType = watch(`programStructures.${index}.structureType`);
+                const weeklySchedule = watch(`programStructures.${index}.weeklySchedule`);
+                const isDefault = watch(`programStructures.${index}.isDefault`);
+                const isExpanded = expandedStructure === index;
 
-          <Separator />
+                return (
+                  <Card
+                    key={field.id}
+                    className={`${isDefault ? 'ring-2 ring-blue-500' : ''} ${isExpanded ? 'ring-1 ring-gray-200' : ''}`}
+                  >
+                    <CardHeader className="pb-3">
+                      <div className="flex items-center justify-between">
+                        <div className="flex items-center space-x-2">
+                          <div>
+                            <h4 className="font-medium">
+                              Structure {index + 1}
+                              {isDefault && (
+                                <span className="ml-2 inline-flex items-center px-2 py-1 rounded-full text-xs font-medium bg-blue-100 text-blue-800">
+                                  Default
+                                </span>
+                              )}
+                            </h4>
+                            <p className="text-sm text-muted-foreground">
+                              {watch(`programStructures.${index}.name.en`) || 'Unnamed structure'}
+                            </p>
+                          </div>
+                        </div>
+                        <div className="flex items-center space-x-2">
+                          {!isDefault && (
+                            <Button
+                              type="button"
+                              variant="outline"
+                              size="sm"
+                              onClick={() => setAsDefault(index)}
+                            >
+                              Set as Default
+                            </Button>
+                          )}
+                          <Button
+                            type="button"
+                            variant={isExpanded ? "outline" : "ghost"}
+                            size="sm"
+                            onClick={() => setExpandedStructure(isExpanded ? -1 : index)}
+                          >
+                            {isExpanded ? (
+                              <>
+                                <ChevronUp className="h-4 w-4 mr-1" />
+                                Collapse
+                              </>
+                            ) : (
+                              <>
+                                <ChevronDown className="h-4 w-4 mr-1" />
+                                Expand
+                              </>
+                            )}
+                          </Button>
+                          {fields.length > 1 && (
+                            <Button
+                              type="button"
+                              variant="outline"
+                              size="sm"
+                              onClick={() => remove(index)}
+                              className="text-red-600 hover:text-red-700"
+                            >
+                              <Trash2 className="h-4 w-4" />
+                            </Button>
+                          )}
+                        </div>
+                      </div>
+                    </CardHeader>
+
+                    {isExpanded && (
+                      <CardContent className="pt-0 space-y-4">
+                        {/* Structure Name */}
+                        <div className="grid grid-cols-3 gap-4">
+                          <div>
+                            <Label>Name (English)</Label>
+                            <Input
+                              placeholder="e.g., Weekly Structure"
+                              {...register(`programStructures.${index}.name.en`)}
+                            />
+                          </div>
+                          <div>
+                            <Label>Name (Arabic)</Label>
+                            <Input
+                              placeholder="e.g., هيكل أسبوعي"
+                              {...register(`programStructures.${index}.name.ar`)}
+                            />
+                          </div>
+                          <div>
+                            <Label>Name (French)</Label>
+                            <Input
+                              placeholder="e.g., Structure Hebdomadaire"
+                              {...register(`programStructures.${index}.name.fr`)}
+                            />
+                          </div>
+                        </div>
+
+                        {/* Structure Type */}
+                        <div>
+                          <Label>Structure Type</Label>
+                          <Select 
+                            onValueChange={(value) => setValue(`programStructures.${index}.structureType`, value as 'weekly' | 'cyclic')} 
+                            defaultValue={structureType || 'weekly'}
+                          >
+                            <SelectTrigger className="mt-1">
+                              <SelectValue placeholder="Select structure type" />
+                            </SelectTrigger>
+                            <SelectContent>
+                              <SelectItem value="weekly">
+                                <div className="flex items-center space-x-2">
+                                  <Calendar className="h-4 w-4" />
+                                  <div>
+                                    <div className="font-medium">Weekly Structure</div>
+                                    <div className="text-sm text-muted-foreground">Based on weekdays</div>
+                                  </div>
+                                </div>
+                              </SelectItem>
+                              <SelectItem value="cyclic">
+                                <div className="flex items-center space-x-2">
+                                  <RotateCcw className="h-4 w-4" />
+                                  <div>
+                                    <div className="font-medium">Cyclic Structure</div>
+                                    <div className="text-sm text-muted-foreground">e.g., 3 days on, 1 day off</div>
+                                  </div>
+                                </div>
+                              </SelectItem>
+                            </SelectContent>
+                          </Select>
+                        </div>
+
+                        {/* Weekly Structure Configuration */}
+                        {structureType === 'weekly' && (
+                          <div className="space-y-4">
+                            <div>
+                              <Label>Sessions per week</Label>
+                              <Input 
+                                type="number"
+                                placeholder="4"
+                                min="1"
+                                max="7"
+                                {...register(`programStructures.${index}.sessionCount`, { valueAsNumber: true })}
+                                className="mt-1"
+                              />
+                            </div>
+
+                            {/* Weekly Schedule */}
+                            <div>
+                              <Label className="text-sm font-medium">Weekly Schedule</Label>
+                              <p className="text-xs text-muted-foreground mb-3">
+                                Assign workout session names to each day (leave empty for rest days)
+                              </p>
+                              <div className="grid gap-3">
+                                {[
+                                  { key: 'monday', label: 'Monday' },
+                                  { key: 'tuesday', label: 'Tuesday' },
+                                  { key: 'wednesday', label: 'Wednesday' },
+                                  { key: 'thursday', label: 'Thursday' },
+                                  { key: 'friday', label: 'Friday' },
+                                  { key: 'saturday', label: 'Saturday' },
+                                  { key: 'sunday', label: 'Sunday' },
+                                ].map(({ key, label }) => (
+                                  <div key={key} className="flex items-center space-x-3">
+                                    <div className="w-20 text-sm font-medium text-right">{label}:</div>
+                                    <Input
+                                      placeholder="e.g., Push Day, Upper Body A, Rest"
+                                      className="flex-1"
+                                      value={weeklySchedule?.[key as keyof typeof weeklySchedule] || ''}
+                                      onChange={(e) => {
+                                        const currentSchedule = watch(`programStructures.${index}.weeklySchedule`) || {};
+                                        setValue(`programStructures.${index}.weeklySchedule` as const, {
+                                          ...currentSchedule,
+                                          [key]: e.target.value,
+                                        });
+                                      }}
+                                    />
+                                  </div>
+                                ))}
+                              </div>
+                            </div>
+                          </div>
+                        )}
+
+                        {/* Cyclic Structure Configuration */}
+                        {structureType === 'cyclic' && (
+                          <div className="grid grid-cols-2 gap-4">
+                            <div>
+                              <Label>Training Days</Label>
+                              <Input 
+                                type="number"
+                                placeholder="3"
+                                min="1"
+                                max="6"
+                                {...register(`programStructures.${index}.trainingDays`, { valueAsNumber: true })}
+                                className="mt-1"
+                              />
+                              <p className="text-sm text-muted-foreground mt-1">Days of training</p>
+                            </div>
+                            <div>
+                              <Label>Rest Days</Label>
+                              <Input 
+                                type="number"
+                                placeholder="1"
+                                min="1"
+                                max="3"
+                                {...register(`programStructures.${index}.restDays`, { valueAsNumber: true })}
+                                className="mt-1"
+                              />
+                              <p className="text-sm text-muted-foreground mt-1">Days of rest</p>
+                            </div>
+                          </div>
+                        )}
+                      </CardContent>
+                    )}
+                  </Card>
+                );
+              })}
+            </div>
+          )}
+
+          <Separator className="my-6" />
 
           {/* Interactive Features */}
           <div className="space-y-4">

@@ -22,6 +22,7 @@ interface TrainingProgram {
   createdAt: string;
   purchaseDate?: string;
   isOwned: boolean;
+  isAdminAccess?: boolean;
 }
 
 interface ProgramsData {
@@ -30,6 +31,7 @@ interface ProgramsData {
   totalPrograms: number;
   ownedCount: number;
   browseCount: number;
+  isAdmin?: boolean;
 }
 
 export default function ProgramsPage() {
@@ -98,8 +100,8 @@ export default function ProgramsPage() {
 
   const handleProgramClick = (program: TrainingProgram) => {
     if (program.isOwned) {
-      // Navigate to program builder/configuration
-      router.push(`/programs/${program.id}/build`);
+      // Navigate to program guide page for owned programs (including admin access)
+      router.push(`/programs/${program.id}/guide`);
     } else {
       // Navigate to program about page
       router.push(`/programs/${program.id}/about`);
@@ -140,9 +142,21 @@ export default function ProgramsPage() {
                 {programDescription}
               </CardDescription>
             </div>
-            <Badge variant={program.isOwned ? "default" : "secondary"} className="ml-2 shrink-0">
-              {program.isOwned ? "Owned" : formatPrice(program.price)}
-            </Badge>
+            <div className="ml-2 shrink-0 flex flex-col gap-1">
+              {program.isOwned && program.isAdminAccess ? (
+                <Badge variant="destructive" className="text-xs">
+                  Admin Access
+                </Badge>
+              ) : program.isOwned ? (
+                <Badge variant="default">
+                  Owned
+                </Badge>
+              ) : (
+                <Badge variant="secondary">
+                  {formatPrice(program.price)}
+                </Badge>
+              )}
+            </div>
           </div>
         </CardHeader>
         <CardContent className="flex-1 flex flex-col pt-2">
@@ -170,7 +184,7 @@ export default function ProgramsPage() {
               <>
                 <Button className="w-full">
                   <Settings className="h-4 w-4 mr-2" />
-                  Configure Program
+                  {program.isAdminAccess ? 'Access Program' : 'Configure Program'}
                 </Button>
                 <Button
                   variant="outline"
@@ -231,7 +245,10 @@ export default function ProgramsPage() {
         <h1 className="text-3xl font-bold mb-2">Training Programs</h1>
         <p className="text-muted-foreground">
           {isAuthenticated 
-            ? "Manage your owned programs and discover new training plans" 
+            ? (programsData?.isAdmin 
+                ? "Admin access: View and manage all training programs" 
+                : "Manage your owned programs and discover new training plans"
+              )
             : "Discover professional training programs designed for your fitness goals"
           }
         </p>
@@ -243,8 +260,15 @@ export default function ProgramsPage() {
           <div className="mb-6">
             <div className="flex items-center justify-between mb-4">
               <div>
-                <h2 className="text-2xl font-semibold">My Programs</h2>
-                <p className="text-muted-foreground">Programs you own and can configure</p>
+                <h2 className="text-2xl font-semibold">
+                  {programsData.isAdmin ? 'All Programs (Admin Access)' : 'My Programs'}
+                </h2>
+                <p className="text-muted-foreground">
+                  {programsData.isAdmin 
+                    ? 'Administrative access to all training programs'
+                    : 'Programs you own and can configure'
+                  }
+                </p>
               </div>
               <Badge variant="outline" className="text-sm">
                 {programsData.ownedCount} program{programsData.ownedCount !== 1 ? 's' : ''}

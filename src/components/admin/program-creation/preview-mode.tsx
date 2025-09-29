@@ -26,7 +26,7 @@ export function PreviewMode({ data }: PreviewModeProps) {
             
             <div className="grid grid-cols-2 gap-4 text-sm">
               <div>
-                <span className="font-medium">Structure:</span> {data.structureType === 'weekly' ? `Weekly (${data.sessionCount} sessions/week)` : `Cyclic (${data.trainingDays} training, ${data.restDays} rest days)`}
+                <span className="font-medium">Structures:</span> {data.programStructures?.length || 0} structure(s) defined
               </div>
               <div>
                 <span className="font-medium">Categories:</span> {data.categories?.join(', ') || 'None selected'}

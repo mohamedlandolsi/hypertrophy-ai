@@ -14,11 +14,21 @@ import { Plus, Trash2, Dumbbell } from 'lucide-react';
 const muscleGroups = [
   { id: 'chest', name: 'Chest', color: 'bg-red-100 text-red-800' },
   { id: 'back', name: 'Back', color: 'bg-blue-100 text-blue-800' },
-  { id: 'shoulders', name: 'Shoulders', color: 'bg-yellow-100 text-yellow-800' },
-  { id: 'arms', name: 'Arms', color: 'bg-green-100 text-green-800' },
-  { id: 'legs', name: 'Legs', color: 'bg-purple-100 text-purple-800' },
+  { id: 'side_delts', name: 'Side Delts', color: 'bg-yellow-100 text-yellow-800' },
+  { id: 'front_delts', name: 'Front Delts', color: 'bg-amber-100 text-amber-800' },
+  { id: 'rear_delts', name: 'Rear Delts', color: 'bg-orange-100 text-orange-800' },
+  { id: 'elbow_flexors', name: 'Elbow Flexors (Biceps, Brachialis, Brachioradialis)', color: 'bg-green-100 text-green-800' },
+  { id: 'triceps', name: 'Triceps', color: 'bg-emerald-100 text-emerald-800' },
+  { id: 'forearms', name: 'Forearms', color: 'bg-teal-100 text-teal-800' },
   { id: 'glutes', name: 'Glutes', color: 'bg-pink-100 text-pink-800' },
-  { id: 'core', name: 'Core', color: 'bg-orange-100 text-orange-800' }
+  { id: 'quadriceps', name: 'Quadriceps', color: 'bg-purple-100 text-purple-800' },
+  { id: 'hamstrings', name: 'Hamstrings', color: 'bg-violet-100 text-violet-800' },
+  { id: 'adductors', name: 'Adductors', color: 'bg-indigo-100 text-indigo-800' },
+  { id: 'calves', name: 'Calves', color: 'bg-blue-100 text-blue-800' },
+  { id: 'erectors', name: 'Erectors', color: 'bg-cyan-100 text-cyan-800' },
+  { id: 'abs', name: 'Abs', color: 'bg-lime-100 text-lime-800' },
+  { id: 'obliques', name: 'Obliques', color: 'bg-yellow-100 text-yellow-800' },
+  { id: 'hip_flexors', name: 'Hip Flexors', color: 'bg-rose-100 text-rose-800' }
 ];
 
 // ExerciseSelector component
@@ -296,16 +306,21 @@ export function WorkoutTemplatesForm() {
                         <SelectContent>
                           <SelectItem value="CHEST">Chest</SelectItem>
                           <SelectItem value="BACK">Back</SelectItem>
-                          <SelectItem value="SHOULDERS">Shoulders</SelectItem>
-                          <SelectItem value="BICEPS">Biceps</SelectItem>
+                          <SelectItem value="SIDE_DELTS">Side Delts</SelectItem>
+                          <SelectItem value="FRONT_DELTS">Front Delts</SelectItem>
+                          <SelectItem value="REAR_DELTS">Rear Delts</SelectItem>
+                          <SelectItem value="ELBOW_FLEXORS">Elbow Flexors (Biceps, Brachialis, Brachioradialis)</SelectItem>
                           <SelectItem value="TRICEPS">Triceps</SelectItem>
                           <SelectItem value="FOREARMS">Forearms</SelectItem>
-                          <SelectItem value="ABS">Abs</SelectItem>
                           <SelectItem value="GLUTES">Glutes</SelectItem>
                           <SelectItem value="QUADRICEPS">Quadriceps</SelectItem>
                           <SelectItem value="HAMSTRINGS">Hamstrings</SelectItem>
                           <SelectItem value="ADDUCTORS">Adductors</SelectItem>
                           <SelectItem value="CALVES">Calves</SelectItem>
+                          <SelectItem value="ERECTORS">Erectors</SelectItem>
+                          <SelectItem value="ABS">Abs</SelectItem>
+                          <SelectItem value="OBLIQUES">Obliques</SelectItem>
+                          <SelectItem value="HIP_FLEXORS">Hip Flexors</SelectItem>
                         </SelectContent>
                       </Select>
                     </div>

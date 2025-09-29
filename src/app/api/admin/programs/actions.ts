@@ -4,7 +4,8 @@ import { revalidatePath } from 'next/cache';
 import { createClient } from '@/lib/supabase/server';
 import { prisma } from '@/lib/prisma';
 import { z } from 'zod';
-import { programCreationSchema } from '@/lib/validations/program-creation';
+import { programCreationSchema, guideSectionSchema, GuideSection } from '@/lib/validations/program-creation';
+import { sanitizeGuideSectionsForSubmit } from '@/lib/program-guide';
 
 // Update schema for partial updates
 const UpdateTrainingProgramSchema = z.object({
@@ -21,19 +22,29 @@ const UpdateTrainingProgramSchema = z.object({
   }).optional(),
   price: z.number().min(0, 'Price must be non-negative').optional(),
   lemonSqueezyId: z.string().optional(),
-  structureType: z.enum(['weekly', 'cyclic']).optional(),
-  sessionCount: z.number().min(1).max(7).optional(),
-  trainingDays: z.number().min(1).max(7).optional(),
-  restDays: z.number().min(1).max(7).optional(),
-  weeklySchedule: z.object({
-    monday: z.string().optional(),
-    tuesday: z.string().optional(),
-    wednesday: z.string().optional(),
-    thursday: z.string().optional(),
-    friday: z.string().optional(),
-    saturday: z.string().optional(),
-    sunday: z.string().optional(),
-  }).optional(),
+  programStructures: z.array(z.object({
+    id: z.string().optional(),
+    name: z.object({
+      en: z.string().min(1, 'English name is required'),
+      ar: z.string().optional().default(''),
+      fr: z.string().optional().default(''),
+    }),
+    structureType: z.enum(['weekly', 'cyclic']),
+    sessionCount: z.number().min(1).max(7).optional(),
+    trainingDays: z.number().min(1).max(7).optional(),
+    restDays: z.number().min(1).max(7).optional(),
+    weeklySchedule: z.object({
+      monday: z.string().optional(),
+      tuesday: z.string().optional(),
+      wednesday: z.string().optional(),
+      thursday: z.string().optional(),
+      friday: z.string().optional(),
+      saturday: z.string().optional(),
+      sunday: z.string().optional(),
+    }).optional(),
+    order: z.number().default(0),
+    isDefault: z.boolean().default(false),
+  })).optional(),
   hasInteractiveBuilder: z.boolean().optional(),
   allowsCustomization: z.boolean().optional(),
   isActive: z.boolean().optional(),
@@ -43,10 +54,17 @@ const UpdateTrainingProgramSchema = z.object({
     muscleGroups: z.array(z.string()).default([]),
     exercises: z.array(z.object({
       id: z.string(),
-      targetedMuscle: z.enum(['CHEST', 'BACK', 'SHOULDERS', 'BICEPS', 'TRICEPS', 'FOREARMS', 'ABS', 'GLUTES', 'QUADRICEPS', 'HAMSTRINGS', 'ADDUCTORS', 'CALVES']).optional(),
+      targetedMuscle: z.enum(['CHEST', 'BACK', 'SIDE_DELTS', 'FRONT_DELTS', 'REAR_DELTS', 'ELBOW_FLEXORS', 'TRICEPS', 'FOREARMS', 'GLUTES', 'QUADRICEPS', 'HAMSTRINGS', 'ADDUCTORS', 'CALVES', 'ERECTORS', 'ABS', 'OBLIQUES', 'HIP_FLEXORS']).optional(),
       selectedExercise: z.string().optional(),
     })).default([]),
   })).optional(),
+  
+  // Guide sections
+  guideSections: z.array(guideSectionSchema).optional(),
+  
+  // About program content
+  aboutContent: z.string().optional(),
+  thumbnailUrl: z.string().url('Must be a valid URL').optional().or(z.literal('')),
 });
 
 // Helper function to check admin access
@@ -107,29 +125,66 @@ export async function createTrainingProgram(formData: z.infer<typeof programCrea
           description: validatedData.description,
           price: validatedData.price,
           ...(validatedData.lemonSqueezyId && { lemonSqueezyId: validatedData.lemonSqueezyId }),
-          structureType: validatedData.structureType,
-          sessionCount: validatedData.sessionCount,
-          trainingDays: validatedData.trainingDays,
-          restDays: validatedData.restDays,
-          weeklySchedule: validatedData.weeklySchedule,
           hasInteractiveBuilder: validatedData.hasInteractiveBuilder ?? true,
           allowsCustomization: validatedData.allowsCustomization ?? true,
+          isActive: validatedData.isActive ?? true,
+          ...(validatedData.aboutContent && { aboutContent: validatedData.aboutContent }),
+          ...(validatedData.thumbnailUrl && { thumbnailUrl: validatedData.thumbnailUrl }),
         },
       });
 
+      // Create program structures
+      if (validatedData.programStructures && validatedData.programStructures.length > 0) {
+        await tx.programStructure.createMany({
+          data: validatedData.programStructures.map((structure, index) => ({
+            trainingProgramId: trainingProgram.id,
+            name: structure.name,
+            structureType: structure.structureType,
+            sessionCount: structure.sessionCount || 4,
+            trainingDays: structure.trainingDays || 3,
+            restDays: structure.restDays || 1,
+            weeklySchedule: structure.weeklySchedule || {},
+            order: structure.order || index,
+            isDefault: structure.isDefault || index === 0, // First structure is default if none specified
+          })),
+        });
+      }
+
       // Create workout templates
-      await tx.workoutTemplate.createMany({
-        data: validatedData.workoutTemplates.map((template, index) => ({
-          trainingProgramId: trainingProgram.id,
-          name: {
-            en: template.name,
-            ar: template.name, // For now, use the same name for all languages
-            fr: template.name,
-          },
-          order: index + 1, // Use index as order since we removed it from form
-          requiredMuscleGroups: template.muscleGroups, // Use muscleGroups instead of requiredMuscleGroups
-        })),
-      });
+      if (validatedData.workoutTemplates && validatedData.workoutTemplates.length > 0) {
+        await tx.workoutTemplate.createMany({
+          data: validatedData.workoutTemplates.map((template, index) => ({
+            trainingProgramId: trainingProgram.id,
+            name: {
+              en: template.name,
+              ar: template.name, // For now, use the same name for all languages
+              fr: template.name,
+            },
+            order: index + 1,
+            requiredMuscleGroups: template.muscleGroups,
+          })),
+        });
+      }
+
+      // Create program guide if provided
+      if (validatedData.guideSections && validatedData.guideSections.length > 0) {
+        const sanitizedGuideSections = sanitizeGuideSectionsForSubmit(validatedData.guideSections)
+          .map((section, index) => ({
+            id: section.id,
+            title: section.title,
+            content: section.content,
+            order: section.order ?? index + 1,
+          })) as GuideSection[];
+
+        if (sanitizedGuideSections.length > 0) {
+          await tx.programGuide.create({
+            data: {
+              trainingProgramId: trainingProgram.id,
+              content: sanitizedGuideSections,
+            },
+          });
+        }
+      }
 
       return trainingProgram;
     });
@@ -193,19 +248,41 @@ export async function updateTrainingProgram(formData: z.infer<typeof UpdateTrain
       if (validatedData.description) updateData.description = validatedData.description;
       if (validatedData.price !== undefined) updateData.price = validatedData.price;
       if (validatedData.lemonSqueezyId) updateData.lemonSqueezyId = validatedData.lemonSqueezyId;
-      if (validatedData.structureType) updateData.structureType = validatedData.structureType;
-      if (validatedData.sessionCount !== undefined) updateData.sessionCount = validatedData.sessionCount;
-      if (validatedData.trainingDays !== undefined) updateData.trainingDays = validatedData.trainingDays;
-      if (validatedData.restDays !== undefined) updateData.restDays = validatedData.restDays;
-      if (validatedData.weeklySchedule) updateData.weeklySchedule = validatedData.weeklySchedule;
       if (validatedData.hasInteractiveBuilder !== undefined) updateData.hasInteractiveBuilder = validatedData.hasInteractiveBuilder;
       if (validatedData.allowsCustomization !== undefined) updateData.allowsCustomization = validatedData.allowsCustomization;
       if (validatedData.isActive !== undefined) updateData.isActive = validatedData.isActive;
+      if (validatedData.aboutContent !== undefined) updateData.aboutContent = validatedData.aboutContent;
+      if (validatedData.thumbnailUrl !== undefined) updateData.thumbnailUrl = validatedData.thumbnailUrl;
 
       const trainingProgram = await tx.trainingProgram.update({
         where: { id: validatedData.id },
         data: updateData,
       });
+
+      // Update program structures if provided
+      if (validatedData.programStructures) {
+        // Delete existing structures
+        await tx.programStructure.deleteMany({
+          where: { trainingProgramId: validatedData.id },
+        });
+
+        // Create new structures
+        if (validatedData.programStructures.length > 0) {
+          await tx.programStructure.createMany({
+            data: validatedData.programStructures.map((structure, index) => ({
+              trainingProgramId: validatedData.id,
+              name: structure.name,
+              structureType: structure.structureType,
+              sessionCount: structure.sessionCount || 4,
+              trainingDays: structure.trainingDays || 3,
+              restDays: structure.restDays || 1,
+              weeklySchedule: structure.weeklySchedule || {},
+              order: structure.order || index,
+              isDefault: structure.isDefault || index === 0,
+            })),
+          });
+        }
+      }
 
       // Update workout templates if provided
       if (validatedData.workoutTemplates) {
@@ -214,19 +291,55 @@ export async function updateTrainingProgram(formData: z.infer<typeof UpdateTrain
           where: { trainingProgramId: validatedData.id },
         });
 
-        // Create new templates
-        await tx.workoutTemplate.createMany({
-          data: validatedData.workoutTemplates.map((template, index) => ({
-            trainingProgramId: validatedData.id,
-            name: {
-              en: template.name,
-              ar: template.name, // For now, use the same name for all languages
-              fr: template.name,
+        // Create new templates with exercise data
+        if (validatedData.workoutTemplates.length > 0) {
+          // Create workout templates one by one to handle exercise data properly
+          for (let i = 0; i < validatedData.workoutTemplates.length; i++) {
+            const template = validatedData.workoutTemplates[i];
+            await tx.workoutTemplate.create({
+              data: {
+                id: template.id.startsWith('new-') ? undefined : template.id, // Let DB generate new ID for new templates
+                trainingProgramId: validatedData.id,
+                name: {
+                  en: template.name,
+                  ar: template.name, // TODO: Handle multilingual names properly
+                  fr: template.name,
+                  // Temporarily store exercise data in the name JSON field
+                  // This is a workaround until we add an exercises field to the schema
+                  _exerciseData: template.exercises || [],
+                },
+                order: i + 1,
+                requiredMuscleGroups: template.muscleGroups,
+              },
+            });
+          }
+        }
+      }
+
+      // Update program guide if provided
+      if (validatedData.guideSections !== undefined) {
+        const sanitizedGuideSections = sanitizeGuideSectionsForSubmit(validatedData.guideSections)
+          .map((section, index) => ({
+            id: section.id,
+            title: section.title,
+            content: section.content,
+            order: section.order ?? index + 1,
+          })) as GuideSection[];
+
+        if (sanitizedGuideSections.length > 0) {
+          await tx.programGuide.upsert({
+            where: { trainingProgramId: validatedData.id },
+            update: { content: sanitizedGuideSections },
+            create: {
+              trainingProgramId: validatedData.id,
+              content: sanitizedGuideSections,
             },
-            order: index + 1, // Use index as order since we removed it from form
-            requiredMuscleGroups: template.muscleGroups, // Use muscleGroups instead of requiredMuscleGroups
-          })),
-        });
+          });
+        } else {
+          await tx.programGuide.deleteMany({
+            where: { trainingProgramId: validatedData.id },
+          });
+        }
       }
 
       return trainingProgram;

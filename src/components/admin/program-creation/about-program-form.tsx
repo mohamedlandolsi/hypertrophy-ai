@@ -29,8 +29,17 @@ export function AboutProgramForm() {
   // Handle file upload
   const handleFileUpload = useCallback(async (file: File) => {
     if (!file.type.startsWith('image/')) {
+      console.warn('File type not supported:', file.type);
+      alert(`File type not supported: ${file.type}. Please use JPEG, PNG, or WebP images.`);
       return;
     }
+
+    console.log('Starting file upload:', {
+      name: file.name,
+      type: file.type,
+      size: file.size,
+      sizeFormatted: `${(file.size / 1024).toFixed(1)} KB`
+    });
 
     setIsUploading(true);
     try {
@@ -38,19 +47,50 @@ export function AboutProgramForm() {
       formData.append('file', file);
       formData.append('type', 'program-thumbnail');
 
+      console.log('FormData prepared:', {
+        fileAppended: formData.has('file'),
+        typeAppended: formData.has('type')
+      });
+
+      console.log('Sending upload request to /api/upload...');
+      
       const response = await fetch('/api/upload', {
         method: 'POST',
         body: formData,
       });
 
+      console.log('Response received:', {
+        status: response.status,
+        statusText: response.statusText,
+        ok: response.ok,
+        headers: Object.fromEntries(response.headers.entries())
+      });
+
       if (response.ok) {
         const data = await response.json();
+        console.log('Upload successful:', data);
         setValue('thumbnailUrl', data.url);
       } else {
-        throw new Error('Upload failed');
+        const responseText = await response.text();
+        let errorData;
+        try {
+          errorData = JSON.parse(responseText);
+        } catch {
+          errorData = { error: 'Invalid response format', details: responseText };
+        }
+        
+        console.error('Upload error details:', {
+          status: response.status,
+          statusText: response.statusText,
+          error: errorData,
+          responseBody: responseText
+        });
+        
+        throw new Error(`Upload failed (${response.status}): ${errorData.message || errorData.error || 'Unknown error'}`);
       }
     } catch (error) {
       console.error('Error uploading thumbnail:', error);
+      alert(`Upload failed: ${error instanceof Error ? error.message : 'Unknown error'}`);
     } finally {
       setIsUploading(false);
     }

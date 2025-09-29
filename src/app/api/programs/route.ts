@@ -11,13 +11,6 @@ export async function GET(request: NextRequest) {
     const supabase = await createClient();
     const { data: { user }, error: userError } = await supabase.auth.getUser();
     
-    if (userError || !user) {
-      return NextResponse.json(
-        { error: 'Authentication required' },
-        { status: 401 }
-      );
-    }
-
     // Fetch all active training programs
     const allPrograms = await prisma.trainingProgram.findMany({
       where: {
@@ -38,6 +31,34 @@ export async function GET(request: NextRequest) {
       }
     });
 
+    // If not authenticated, return browse-only view
+    if (userError || !user) {
+      const browsePrograms = allPrograms.map(program => ({
+        ...program,
+        isOwned: false
+      }));
+
+      return NextResponse.json({
+        success: true,
+        data: {
+          ownedPrograms: [],
+          browsePrograms,
+          totalPrograms: allPrograms.length,
+          ownedCount: 0,
+          browseCount: browsePrograms.length,
+          isAdmin: false
+        }
+      });
+    }
+
+    // Get user details including role
+    const dbUser = await prisma.user.findUnique({
+      where: { id: user.id },
+      select: { role: true }
+    });
+
+    const isAdmin = dbUser?.role === 'admin';
+
     // Get user's purchased programs
     const userPurchases = await prisma.userPurchase.findMany({
       where: {
@@ -51,7 +72,32 @@ export async function GET(request: NextRequest) {
 
     const purchasedProgramIds = new Set(userPurchases.map(p => p.trainingProgramId));
 
-    // Separate owned and available programs
+    // For admin users, all programs are "owned"
+    if (isAdmin) {
+      const ownedPrograms = allPrograms.map(program => {
+        const purchase = userPurchases.find(p => p.trainingProgramId === program.id);
+        return {
+          ...program,
+          purchaseDate: purchase?.purchaseDate,
+          isOwned: true,
+          isAdminAccess: !purchase // Flag to indicate admin access vs real purchase
+        };
+      });
+
+      return NextResponse.json({
+        success: true,
+        data: {
+          ownedPrograms,
+          browsePrograms: [], // Admin sees all as owned
+          totalPrograms: allPrograms.length,
+          ownedCount: ownedPrograms.length,
+          browseCount: 0,
+          isAdmin: true
+        }
+      });
+    }
+
+    // For regular users, separate owned and available programs
     const ownedPrograms = allPrograms.filter(program => 
       purchasedProgramIds.has(program.id)
     ).map(program => {
@@ -77,7 +123,8 @@ export async function GET(request: NextRequest) {
         browsePrograms,
         totalPrograms: allPrograms.length,
         ownedCount: ownedPrograms.length,
-        browseCount: browsePrograms.length
+        browseCount: browsePrograms.length,
+        isAdmin: false
       }
     });
 

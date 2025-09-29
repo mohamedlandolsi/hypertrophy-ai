@@ -22,6 +22,7 @@ import {
 } from 'lucide-react';
 import { showToast } from '@/lib/toast';
 import AdminLayout from '@/components/admin-layout';
+import { normalizeGuideSections } from '@/lib/program-guide';
 
 // Types
 interface WorkoutTemplate {
@@ -34,7 +35,7 @@ interface WorkoutTemplate {
 
 interface ProgramGuide {
   id: string;
-  content: Record<string, unknown>;
+  content: unknown;
   createdAt: string;
   updatedAt: string;
 }
@@ -86,6 +87,13 @@ async function fetchProgramDetails(programId: string): Promise<TrainingProgramDe
   return result.data;
 }
 
+const stripHtml = (html: string): string => html.replace(/<[^>]*>/g, ' ').replace(/\s+/g, ' ').trim();
+
+const getGuideSnippet = (html: string, maxLength = 160): string => {
+  const text = stripHtml(html);
+  return text.length > maxLength ? `${text.slice(0, maxLength)}…` : text;
+};
+
 export default function ProgramDetailsPage() {
   const params = useParams();
   const router = useRouter();
@@ -136,16 +144,21 @@ export default function ProgramDetailsPage() {
     const colors: Record<string, "default" | "destructive" | "outline" | "secondary"> = {
       'CHEST': 'default',
       'BACK': 'secondary', 
-      'SHOULDERS': 'outline',
-      'BICEPS': 'destructive',
+      'SIDE_DELTS': 'outline',
+      'FRONT_DELTS': 'destructive',
+      'REAR_DELTS': 'secondary',
+      'ELBOW_FLEXORS': 'default',
       'TRICEPS': 'destructive',
-      'FOREARMS': 'destructive',
-      'ABS': 'default',
+      'FOREARMS': 'outline',
       'GLUTES': 'secondary',
       'QUADRICEPS': 'outline',
-      'HAMSTRINGS': 'outline',
+      'HAMSTRINGS': 'destructive',
       'ADDUCTORS': 'outline',
-      'CALVES': 'secondary'
+      'CALVES': 'secondary',
+      'ERECTORS': 'default',
+      'ABS': 'default',
+      'OBLIQUES': 'secondary',
+      'HIP_FLEXORS': 'outline'
     };
     return colors[muscle] || 'default';
   };
@@ -223,6 +236,7 @@ export default function ProgramDetailsPage() {
     );
   }
 
+  const guideSections = program.programGuide ? normalizeGuideSections(program.programGuide.content) : [];
   const prices = formatPrice(program.price);
 
   return (
@@ -490,13 +504,26 @@ export default function ProgramDetailsPage() {
                 <FileText className="h-5 w-5 mr-2 text-muted-foreground" />
                 Program Guide
               </div>
-              <Badge variant={program.programGuide ? 'default' : 'destructive'} className="ml-2">
-                {program.programGuide ? 'Complete' : 'Missing'}
+              <Badge variant={guideSections.length > 0 ? 'default' : 'destructive'} className="ml-2">
+                {guideSections.length > 0 ? `${guideSections.length} section${guideSections.length === 1 ? '' : 's'}` : 'Missing'}
               </Badge>
             </CardTitle>
           </CardHeader>
           <CardContent>
-            {program.programGuide ? (
+            {!program.programGuide ? (
+              <div className="text-center py-12">
+                <div className="mx-auto w-16 h-16 bg-destructive/10 rounded-full flex items-center justify-center mb-4">
+                  <XCircle className="h-8 w-8 text-destructive" />
+                </div>
+                <h3 className="text-lg font-medium mb-2">No program guide created</h3>
+                <p className="text-sm text-muted-foreground mb-4">
+                  Users will not be able to properly understand this program without a guide.
+                </p>
+                <Button variant="outline" size="sm">
+                  Create Program Guide
+                </Button>
+              </div>
+            ) : (
               <div className="space-y-6">
                 <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4 p-4 bg-muted/30 rounded-lg">
                   <div className="space-y-1">
@@ -514,33 +541,47 @@ export default function ProgramDetailsPage() {
                     <div className="text-sm">{formatDate(program.programGuide.updatedAt)}</div>
                   </div>
                 </div>
-                
+
                 <Separator />
-                
-                <div className="space-y-3">
-                  <div className="flex items-center justify-between">
-                    <label className="text-sm font-medium text-muted-foreground">Content Preview</label>
-                    <Badge variant="outline" className="text-xs">JSON Format</Badge>
+
+                {guideSections.length > 0 ? (
+                  <div className="space-y-4">
+                    {guideSections.map((section) => (
+                      <div key={section.id} className="border rounded-lg p-4 bg-muted/40">
+                        <div className="flex items-start justify-between gap-3">
+                          <div>
+                            <h4 className="font-semibold text-base break-words">{section.title || `Section ${section.order}`}</h4>
+                            <p className="text-xs text-muted-foreground mt-1">Section {section.order}</p>
+                          </div>
+                          <Badge variant="secondary" className="text-xs font-mono shrink-0">#{section.order}</Badge>
+                        </div>
+                        <p className="text-sm text-muted-foreground mt-3">
+                          {getGuideSnippet(section.content)}
+                        </p>
+                        <details className="mt-3 text-xs text-muted-foreground">
+                          <summary className="cursor-pointer text-xs font-medium text-primary">View full content</summary>
+                          <div
+                            className="prose prose-sm max-w-none dark:prose-invert mt-2"
+                            dangerouslySetInnerHTML={{ __html: section.content }}
+                          />
+                        </details>
+                      </div>
+                    ))}
                   </div>
-                  <div className="bg-muted/50 rounded-lg p-4 max-h-40 overflow-y-auto border">
-                    <pre className="text-xs text-muted-foreground whitespace-pre-wrap font-mono">
-                      {JSON.stringify(program.programGuide.content, null, 2)}
-                    </pre>
+                ) : (
+                  <div className="text-center py-10 border border-dashed rounded-lg">
+                    <p className="text-sm text-muted-foreground">
+                      This guide does not contain any sections yet. Add sections in the editor to help users understand the program.
+                    </p>
                   </div>
-                </div>
-              </div>
-            ) : (
-              <div className="text-center py-12">
-                <div className="mx-auto w-16 h-16 bg-destructive/10 rounded-full flex items-center justify-center mb-4">
-                  <XCircle className="h-8 w-8 text-destructive" />
-                </div>
-                <h3 className="text-lg font-medium mb-2">No program guide created</h3>
-                <p className="text-sm text-muted-foreground mb-4">
-                  Users will not be able to properly understand this program without a guide.
-                </p>
-                <Button variant="outline" size="sm">
-                  Create Program Guide
-                </Button>
+                )}
+
+                <details className="bg-muted/30 rounded-lg p-4 border">
+                  <summary className="text-sm font-medium cursor-pointer">View raw JSON</summary>
+                  <pre className="mt-3 text-xs text-muted-foreground whitespace-pre-wrap font-mono">
+                    {JSON.stringify(program.programGuide.content, null, 2)}
+                  </pre>
+                </details>
               </div>
             )}
           </CardContent>

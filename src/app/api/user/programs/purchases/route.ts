@@ -12,6 +12,49 @@ export async function GET() {
       return NextResponse.json({ error: 'Authentication required' }, { status: 401 });
     }
 
+    // Check if user is admin
+    const dbUser = await prisma.user.findUnique({
+      where: { id: user.id },
+      select: { role: true }
+    });
+
+    const isAdmin = dbUser?.role === 'admin';
+
+    if (isAdmin) {
+      // Admin users get access to all active programs
+      const allPrograms = await prisma.trainingProgram.findMany({
+        where: {
+          isActive: true,
+        },
+        select: {
+          id: true,
+          name: true,
+          description: true,
+          price: true,
+          isActive: true,
+        },
+        orderBy: {
+          createdAt: 'desc',
+        },
+      });
+
+      // Format as purchases for consistency
+      const adminPurchases = allPrograms.map(program => ({
+        id: `admin-${program.id}`,
+        userId: user.id,
+        trainingProgramId: program.id,
+        purchaseDate: new Date(), // Current date for admin access
+        isAdminAccess: true,
+        trainingProgram: program,
+      }));
+
+      return NextResponse.json({
+        success: true,
+        purchases: adminPurchases,
+        isAdmin: true,
+      });
+    }
+
     // Fetch user's purchased programs
     const purchases = await prisma.userPurchase.findMany({
       where: {
@@ -36,6 +79,7 @@ export async function GET() {
     return NextResponse.json({
       success: true,
       purchases,
+      isAdmin: false,
     });
   } catch (error) {
     console.error('Error fetching user purchases:', error);

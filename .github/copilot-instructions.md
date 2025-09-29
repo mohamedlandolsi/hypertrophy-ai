@@ -8,6 +8,7 @@ Key facts
 - Data: Prisma + PostgreSQL with pgvector. Embeddings are stored as JSON arrays (768 dims).
 - Auth/Storage: Supabase (SSR helpers in `src/lib/supabase/*`). No guest chat — users must be authenticated.
 - AI config: an admin-only `AIConfiguration` singleton is required for AI features (see `prisma/schema.prisma` and `src/lib/gemini.ts`).
+- UI components: React with server components, Tailwind CSS, shadcn/ui and Radix UI.
 
 Priority checklist before edits
 - Open `src/lib/gemini.ts` first and search for `getAIConfiguration()` — many flows intentionally throw when missing.

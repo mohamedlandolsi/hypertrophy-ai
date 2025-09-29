@@ -52,6 +52,9 @@ export async function GET(
         workoutTemplates: {
           orderBy: { order: 'asc' },
         },
+        programStructures: {
+          orderBy: { order: 'asc' },
+        },
         programGuide: true,
         _count: {
           select: {

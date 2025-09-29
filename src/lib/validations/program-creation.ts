@@ -16,7 +16,7 @@ const programCategorySchema = z.object({
 // Exercise in template schema
 const exerciseInTemplateSchema = z.object({
   id: z.string(),
-  targetedMuscle: z.enum(['CHEST', 'BACK', 'SHOULDERS', 'BICEPS', 'TRICEPS', 'FOREARMS', 'ABS', 'GLUTES', 'QUADRICEPS', 'HAMSTRINGS', 'ADDUCTORS', 'CALVES']).optional(),
+  targetedMuscle: z.enum(['CHEST', 'BACK', 'SIDE_DELTS', 'FRONT_DELTS', 'REAR_DELTS', 'ELBOW_FLEXORS', 'TRICEPS', 'FOREARMS', 'GLUTES', 'QUADRICEPS', 'HAMSTRINGS', 'ADDUCTORS', 'CALVES', 'ERECTORS', 'ABS', 'OBLIQUES', 'HIP_FLEXORS']).optional(),
   selectedExercise: z.string().optional(),
 });
 
@@ -29,7 +29,7 @@ const workoutTemplateSchema = z.object({
 });
 
 // Guide section schema
-const guideSectionSchema = z.object({
+export const guideSectionSchema = z.object({
   id: z.string(),
   title: z.string().min(1, 'Section title is required'),
   content: z.string().min(1, 'Section content is required'),
@@ -47,6 +47,19 @@ const weeklyScheduleSchema = z.object({
   sunday: z.string().optional(),
 });
 
+// Program structure schema
+const programStructureSchema = z.object({
+  id: z.string().optional(), // Optional for new structures
+  name: multilingualContentSchema,
+  structureType: z.enum(['weekly', 'cyclic']).default('weekly'),
+  sessionCount: z.number().min(1, 'At least 1 session per week').max(7, 'Maximum 7 sessions per week').optional(),
+  trainingDays: z.number().min(1, 'At least 1 training day').max(6, 'Maximum 6 training days').optional(),
+  restDays: z.number().min(1, 'At least 1 rest day').max(3, 'Maximum 3 rest days').optional(),
+  weeklySchedule: weeklyScheduleSchema.optional(),
+  order: z.number().default(0),
+  isDefault: z.boolean().default(false),
+});
+
 // Main program creation schema
 export const programCreationSchema = z.object({
   // Basic information
@@ -55,24 +68,18 @@ export const programCreationSchema = z.object({
   price: z.number().min(0, 'Price must be positive').max(999999, 'Price too high'),
   lemonSqueezyId: z.string().min(1, 'LemonSqueezy ID is required').optional(),
   
-  // Training structure
-  structureType: z.enum(['weekly', 'cyclic']).default('weekly'),
-  sessionCount: z.number().min(1, 'At least 1 session per week').max(7, 'Maximum 7 sessions per week').optional(),
-  trainingDays: z.number().min(1, 'At least 1 training day').max(6, 'Maximum 6 training days').optional(),
-  restDays: z.number().min(1, 'At least 1 rest day').max(3, 'Maximum 3 rest days').optional(),
-  
-  // Weekly schedule (when structureType is 'weekly')
-  weeklySchedule: weeklyScheduleSchema.optional(),
+  // Program structures (multiple structures support)
+  programStructures: z.array(programStructureSchema).min(1, 'At least one program structure is required'),
   
   // Interactive features
   hasInteractiveBuilder: z.boolean().default(true),
   allowsCustomization: z.boolean().default(true),
   
-  // Categories (minimalist, essentialist, maximalist)
-  categories: z.array(programCategorySchema).min(1, 'At least one category is required').max(3),
+  // Categories (minimalist, essentialist, maximalist) - optional for now
+  categories: z.array(programCategorySchema).max(3).default([]),
   
-  // Workout templates
-  workoutTemplates: z.array(workoutTemplateSchema).min(1, 'At least one workout template is required'),
+  // Workout templates - can be empty initially
+  workoutTemplates: z.array(workoutTemplateSchema).default([]),
   
   // Guide sections
   guideSections: z.array(guideSectionSchema).default([]),
@@ -89,10 +96,11 @@ export const programCreationSchema = z.object({
 export type ProgramCreationInput = z.infer<typeof programCreationSchema>;
 export type MultilingualContent = z.infer<typeof multilingualContentSchema>;
 export type ProgramCategory = z.infer<typeof programCategorySchema>;
+export type ProgramStructure = z.infer<typeof programStructureSchema>;
 export type WorkoutTemplate = z.infer<typeof workoutTemplateSchema>;
+export type GuideSection = z.infer<typeof guideSectionSchema>;
 export type ExerciseInTemplate = z.infer<typeof exerciseInTemplateSchema>;
 export type WeeklySchedule = z.infer<typeof weeklyScheduleSchema>;
-export type GuideSection = z.infer<typeof guideSectionSchema>;
 
 // Helper functions for form defaults
 export const getDefaultMultilingualContent = (): MultilingualContent => ({

@@ -16,15 +16,56 @@ import { toast } from 'sonner';
 
 import { BasicInfoForm } from '@/components/admin/program-creation/basic-info-form';
 import { ProgramStructureForm } from '@/components/admin/program-creation/program-structure-form';
-import { CategoryConfigurationForm } from '@/components/admin/program-creation/category-configuration-form';
+
 import { WorkoutTemplatesForm } from '@/components/admin/program-creation/workout-templates-form';
 import { GuideForm } from '@/components/admin/program-creation/guide-form';
 import { AboutProgramForm } from '@/components/admin/program-creation/about-program-form';
+import { GuideSectionData, normalizeGuideSections, sanitizeGuideSectionsForSubmit } from '@/lib/program-guide';
+
+// Create a more flexible type for editing existing programs
+type EditProgramFormData = {
+  name: { en: string; ar: string; fr: string };
+  description: { en: string; ar: string; fr: string };
+  price: number;
+  lemonSqueezyId?: string;
+  programStructures: Array<{
+    id?: string;
+    name: { en: string; ar: string; fr: string };
+    structureType: 'weekly' | 'cyclic';
+    sessionCount?: number;
+    trainingDays?: number;
+    restDays?: number;
+    weeklySchedule?: {
+      monday?: string;
+      tuesday?: string;
+      wednesday?: string;
+      thursday?: string;
+      friday?: string;
+      saturday?: string;
+      sunday?: string;
+    };
+    order: number;
+    isDefault: boolean;
+  }>;
+  hasInteractiveBuilder: boolean;
+  allowsCustomization: boolean;
+  isActive: boolean;
+  categories: Array<unknown>;
+  workoutTemplates: Array<{
+    id: string;
+    name: string;
+    muscleGroups: string[];
+    exercises: unknown[];
+  }>;
+  guideSections?: GuideSectionData[];
+  aboutContent?: string;
+  thumbnailUrl?: string;
+};
 
 // Type definitions
 interface ExerciseData {
   id: string;
-  targetedMuscle?: 'CHEST' | 'BACK' | 'SHOULDERS' | 'BICEPS' | 'TRICEPS' | 'FOREARMS' | 'ABS' | 'GLUTES' | 'QUADRICEPS' | 'HAMSTRINGS' | 'ADDUCTORS' | 'CALVES';
+  targetedMuscle?: 'CHEST' | 'BACK' | 'SIDE_DELTS' | 'FRONT_DELTS' | 'REAR_DELTS' | 'ELBOW_FLEXORS' | 'TRICEPS' | 'FOREARMS' | 'ABS' | 'GLUTES' | 'QUADRICEPS' | 'HAMSTRINGS' | 'ADDUCTORS' | 'CALVES' | 'ERECTORS' | 'OBLIQUES' | 'HIP_FLEXORS';
   selectedExercise?: string;
 }
 
@@ -32,6 +73,7 @@ interface CategoryData {
   id: string;
   category: string;
 }
+
 import { updateTrainingProgram } from '@/app/api/admin/programs/actions';
 import { showToast } from '@/lib/toast';
 import AdminLayout from '@/components/admin-layout';
@@ -43,13 +85,24 @@ interface TrainingProgramData {
   description: Record<string, string>;
   price: number;
   lemonSqueezyId?: string;
-  structureType: 'weekly' | 'cyclic';
-  sessionCount: number;
-  trainingDays: number;
-  restDays: number;
-  weeklySchedule: Record<string, string> | null;
   hasInteractiveBuilder: boolean;
   allowsCustomization: boolean;
+  aboutContent?: string;
+  thumbnailUrl?: string;
+  programGuide?: {
+    content: unknown;
+  };
+  programStructures?: Array<{
+    id: string;
+    name: Record<string, string>;
+    structureType: 'weekly' | 'cyclic';
+    sessionCount?: number;
+    trainingDays?: number;
+    restDays?: number;
+    weeklySchedule?: Record<string, string>;
+    order: number;
+    isDefault: boolean;
+  }>;
   workoutTemplates: Array<{
     id: string;
     name: Record<string, string>;
@@ -93,60 +146,39 @@ export default function EditProgramPage() {
   const [isLoading, setIsLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
 
-  const methods = useForm<{
-    id: string;
-    name: { en: string; ar: string; fr: string };
-    description: { en: string; ar: string; fr: string };
-    price: number;
-    lemonSqueezyId: string;
-    structureType: 'weekly' | 'cyclic';
-    sessionCount: number;
-    trainingDays: number;
-    restDays: number;
-    weeklySchedule: {
-      monday: string;
-      tuesday: string;
-      wednesday: string;
-      thursday: string;
-      friday: string;
-      saturday: string;
-      sunday: string;
-    };
-    hasInteractiveBuilder: boolean;
-    allowsCustomization: boolean;
-    isActive: boolean;
-    categories: unknown[];
-    workoutTemplates: Array<{
-      id: string;
-      name: string;
-      muscleGroups: string[];
-      exercises: unknown[];
-    }>;
-  }>({
+  const methods = useForm<EditProgramFormData>({
+    mode: 'onChange',
     defaultValues: {
-      id: '',
       name: { en: '', ar: '', fr: '' },
       description: { en: '', ar: '', fr: '' },
       price: 0,
       lemonSqueezyId: '',
-      structureType: 'weekly' as 'weekly' | 'cyclic',
-      sessionCount: 4,
-      trainingDays: 3,
-      restDays: 1,
-      weeklySchedule: {
-        monday: '',
-        tuesday: '',
-        wednesday: '',
-        thursday: '',
-        friday: '',
-        saturday: '',
-        sunday: '',
-      },
+      programStructures: [{
+        name: { en: '', ar: '', fr: '' },
+        structureType: 'weekly' as const,
+        sessionCount: 4,
+        trainingDays: 3,
+        restDays: 1,
+        weeklySchedule: {
+          monday: '',
+          tuesday: '',
+          wednesday: '',
+          thursday: '',
+          friday: '',
+          saturday: '',
+          sunday: '',
+        },
+        order: 0,
+        isDefault: true,
+      }],
       hasInteractiveBuilder: true,
       allowsCustomization: true,
       isActive: true,
       categories: [],
       workoutTemplates: [],
+      guideSections: [],
+      aboutContent: '',
+      thumbnailUrl: '',
     }
   });
 
@@ -165,34 +197,67 @@ export default function EditProgramPage() {
           id: template.id,
           name: template.name.en || `Workout ${idx + 1}`,
           muscleGroups: template.requiredMuscleGroups,
-          exercises: [], // Exercises would need to be loaded separately if needed
+          // Extract exercise data from the name field if it exists (temporary workaround)
+          exercises: (template.name as Record<string, unknown>)?._exerciseData as unknown[] || [], // Exercises would need to be loaded separately if needed
         }));
+
+        // Transform program structures from API response
+        const transformedProgramStructures = programData.programStructures && programData.programStructures.length > 0 
+          ? programData.programStructures.map((structure) => ({
+              id: structure.id,
+              name: structure.name,
+              structureType: structure.structureType,
+              sessionCount: structure.sessionCount,
+              trainingDays: structure.trainingDays,
+              restDays: structure.restDays,
+              weeklySchedule: structure.weeklySchedule || {
+                monday: '',
+                tuesday: '',
+                wednesday: '',
+                thursday: '',
+                friday: '',
+                saturday: '',
+                sunday: '',
+              },
+              order: structure.order,
+              isDefault: structure.isDefault,
+            }))
+          : [{
+              name: { en: 'Default Structure', ar: '', fr: '' },
+              structureType: 'weekly' as const,
+              sessionCount: 4,
+              trainingDays: 3,
+              restDays: 1,
+              weeklySchedule: {
+                monday: '',
+                tuesday: '',
+                wednesday: '',
+                thursday: '',
+                friday: '',
+                saturday: '',
+                sunday: '',
+              },
+              order: 0,
+              isDefault: true,
+            }];
+
+        const transformedGuideSections = normalizeGuideSections(programData.programGuide?.content);
 
         // Reset form with fetched data
         reset({
-          id: programData.id,
           name: programData.name,
           description: programData.description,
           price: programData.price,
           lemonSqueezyId: programData.lemonSqueezyId || '',
-          structureType: programData.structureType,
-          sessionCount: programData.sessionCount,
-          trainingDays: programData.trainingDays,
-          restDays: programData.restDays,
-          weeklySchedule: programData.weeklySchedule || {
-            monday: '',
-            tuesday: '',
-            wednesday: '',
-            thursday: '',
-            friday: '',
-            saturday: '',
-            sunday: '',
-          },
+          programStructures: transformedProgramStructures,
           hasInteractiveBuilder: programData.hasInteractiveBuilder,
           allowsCustomization: programData.allowsCustomization,
           isActive: programData.isActive,
-          categories: [], // Categories would need to be loaded separately if needed
+          categories: [], // Start with empty - will be populated if/when categories tab is implemented
           workoutTemplates: transformedWorkoutTemplates,
+          guideSections: transformedGuideSections,
+          aboutContent: programData.aboutContent || '',
+          thumbnailUrl: programData.thumbnailUrl || '',
         });
       } catch (err) {
         console.error('Error loading program data:', err);
@@ -212,11 +277,31 @@ export default function EditProgramPage() {
   const handleUpdateProgram = async () => {
     try {
       setIsSubmitting(true);
-      const data = getValues();
       
-      // Transform data for API
+      const data = getValues();
+  const sanitizedGuideSections = sanitizeGuideSectionsForSubmit(data.guideSections);
+      
+      // Basic validation
+      if (!data.name?.en || !data.description?.en || data.price < 0) {
+        showToast.error('Validation Error', 'Please complete all required fields: name, description, and price.');
+        return;
+      }
+      
+      // Transform data for API - convert from form data to API schema
       const transformedData = {
-        ...data,
+        id: programId,
+        name: data.name,
+        description: data.description,
+        price: data.price,
+        lemonSqueezyId: data.lemonSqueezyId,
+        // Use the first program structure for now (backward compatibility)
+        programStructures: data.programStructures,
+        hasInteractiveBuilder: data.hasInteractiveBuilder,
+        allowsCustomization: data.allowsCustomization,
+        isActive: data.isActive,
+        guideSections: sanitizedGuideSections,
+        aboutContent: data.aboutContent || '',
+        thumbnailUrl: data.thumbnailUrl || '',
         workoutTemplates: data.workoutTemplates.map((template) => ({
           id: template.id,
           name: template.name,
@@ -266,16 +351,40 @@ export default function EditProgramPage() {
   const saveTabProgress = async (tabId: string) => {
     setSavingTab(tabId);
     try {
-      // TODO: Implement actual API call to save draft
-      // await saveTrainingProgramDraft(tabData, tabId);
+      const formData = getValues();
       
-      // Simulate API call
-      await new Promise(resolve => setTimeout(resolve, 1000));
+      // Basic validation checks based on the tab
+      let isValid = true;
+      let errorMessage = '';
       
-      toast.success(`${tabs.find(t => t.id === tabId)?.label} saved successfully!`);
+      switch (tabId) {
+        case 'basic-info':
+          if (!formData.name?.en || !formData.description?.en || formData.price < 0) {
+            isValid = false;
+            errorMessage = 'Please fill in all required basic information fields.';
+          }
+          break;
+        case 'structure':
+          if (!formData.programStructures || formData.programStructures.length === 0) {
+            isValid = false;
+            errorMessage = 'Please configure at least one program structure.';
+          }
+          break;
+        case 'workouts':
+          // Allow empty workout templates for now
+          break;
+        default:
+          break;
+      }
+      
+      if (isValid) {
+        toast.success(`${tabs.find(t => t.id === tabId)?.label} validated successfully!`);
+      } else {
+        toast.error(`Validation failed: ${errorMessage}`);
+      }
     } catch (error) {
-      console.error(`Error saving ${tabId} tab:`, error);
-      toast.error(`Failed to save ${tabs.find(t => t.id === tabId)?.label}. Please try again.`);
+      console.error(`Error validating ${tabId} tab:`, error);
+      toast.error(`Failed to validate ${tabs.find(t => t.id === tabId)?.label}. Please try again.`);
     } finally {
       setSavingTab(null);
     }
@@ -293,12 +402,6 @@ export default function EditProgramPage() {
       label: 'Program Structure', 
       component: ProgramStructureForm,
       description: 'Workout flow'
-    },
-    { 
-      id: 'categories', 
-      label: 'Category Config', 
-      component: CategoryConfigurationForm,
-      description: 'Program variants'
     },
     {
       id: 'workouts', 
@@ -327,10 +430,10 @@ export default function EditProgramPage() {
     const total = 4;
     
     // Basic info check
-    if (data.name?.en && data.description?.en && data.price > 0) completed++;
+    if (data.name?.en && data.description?.en && data.price >= 0) completed++;
     
     // Structure check
-    if (data.structureType && data.sessionCount > 0) completed++;
+    if (data.programStructures && data.programStructures.length > 0 && data.programStructures[0].structureType) completed++;
     
     // Categories check (always consider complete for now)
     completed++;
@@ -346,9 +449,9 @@ export default function EditProgramPage() {
     const data = getValues();
     switch (tabId) {
       case 'basic-info':
-        return !!(data.name?.en && data.description?.en && data.price > 0);
+        return !!(data.name?.en && data.description?.en && data.price >= 0);
       case 'structure':
-        return !!(data.structureType && data.sessionCount > 0);
+        return !!(data.programStructures && data.programStructures.length > 0 && data.programStructures[0].structureType);
       case 'categories':
         return true; // Always true for now
       case 'workouts':
@@ -576,7 +679,7 @@ export default function EditProgramPage() {
               <Button
                 type="button"
                 onClick={handleUpdateProgram}
-                disabled={!isValid || isSubmitting || completionProgress() < 80}
+                disabled={isSubmitting}
                 className="flex items-center space-x-2"
               >
                 <Save className="h-4 w-4" />
@@ -585,16 +688,14 @@ export default function EditProgramPage() {
             </div>
           </div>
 
-          {/* Validation Errors Alert */}
-          {!isValid && (
-            <Alert variant="destructive">
-              <AlertTriangle className="h-4 w-4" />
-              <AlertTitle>Validation Issues</AlertTitle>
-              <AlertDescription>
-                Please complete all required fields before updating the program.
-              </AlertDescription>
-            </Alert>
-          )}
+          {/* Information Alert */}
+          <Alert>
+            <AlertTriangle className="h-4 w-4" />
+            <AlertTitle>Update Program</AlertTitle>
+            <AlertDescription>
+              Fill in the required fields (name and description) to enable the Update Program button.
+            </AlertDescription>
+          </Alert>
         </form>
       </FormProvider>
     </AdminLayout>

@@ -15,11 +15,12 @@ import { toast } from 'sonner';
 
 import { BasicInfoForm } from '@/components/admin/program-creation/basic-info-form';
 import { ProgramStructureForm } from '@/components/admin/program-creation/program-structure-form';
-import { CategoryConfigurationForm } from '@/components/admin/program-creation/category-configuration-form';
+
 import { WorkoutTemplatesForm } from '@/components/admin/program-creation/workout-templates-form';
 import { GuideForm } from '@/components/admin/program-creation/guide-form';
 import { AboutProgramForm } from '@/components/admin/program-creation/about-program-form';
 import { createTrainingProgram } from '@/app/api/admin/programs/actions';
+import { sanitizeGuideSectionsForSubmit } from '@/lib/program-guide';
 
 export default function CreateProgramPage() {
   const [isSubmitting, setIsSubmitting] = useState(false);
@@ -33,19 +34,26 @@ export default function CreateProgramPage() {
       name: { en: '', ar: '', fr: '' },
       description: { en: '', ar: '', fr: '' },
       price: 0,
-      structureType: 'weekly' as 'weekly' | 'cyclic',
-      sessionCount: 4,
-      trainingDays: 3,
-      restDays: 1,
-      weeklySchedule: {
-        monday: '',
-        tuesday: '',
-        wednesday: '',
-        thursday: '',
-        friday: '',
-        saturday: '',
-        sunday: '',
-      },
+      programStructures: [
+        {
+          name: { en: 'Weekly Structure', ar: 'هيكل أسبوعي', fr: 'Structure Hebdomadaire' },
+          structureType: 'weekly' as 'weekly' | 'cyclic',
+          sessionCount: 4,
+          trainingDays: 3,
+          restDays: 1,
+          weeklySchedule: {
+            monday: '',
+            tuesday: '',
+            wednesday: '',
+            thursday: '',
+            friday: '',
+            saturday: '',
+            sunday: '',
+          },
+          order: 0,
+          isDefault: true,
+        },
+      ],
       hasInteractiveBuilder: true,
       allowsCustomization: true,
       categories: [],
@@ -69,9 +77,11 @@ export default function CreateProgramPage() {
       case 'basic-info':
         return formValues.name?.en && formValues.description?.en && formValues.price > 0;
       case 'structure':
-        return formValues.structureType && (
-          (formValues.structureType === 'weekly' && formValues.sessionCount > 0) ||
-          (formValues.structureType === 'cyclic' && formValues.trainingDays > 0 && formValues.restDays > 0)
+        return formValues.programStructures?.length > 0 && formValues.programStructures.some((structure: { name?: { en?: string }; structureType?: string; sessionCount?: number; trainingDays?: number; restDays?: number }) => 
+          structure.name?.en && structure.structureType && (
+            (structure.structureType === 'weekly' && (structure.sessionCount || 0) > 0) ||
+            (structure.structureType === 'cyclic' && (structure.trainingDays || 0) > 0 && (structure.restDays || 0) > 0)
+          )
         );
       case 'categories':
         // Check if at least one category has a description filled out
@@ -124,7 +134,12 @@ export default function CreateProgramPage() {
     setIsSubmitting(true);
     try {
       const data = getValues();
-      console.log('Creating program with data:', data);
+      const sanitizedGuideSections = sanitizeGuideSectionsForSubmit(data.guideSections);
+      const payload = {
+        ...data,
+        guideSections: sanitizedGuideSections,
+      };
+  console.log('Creating program with data:', payload);
       
       // Provide helpful validation guidance
       if (!data.categories || data.categories.length === 0) {
@@ -141,7 +156,7 @@ export default function CreateProgramPage() {
         return;
       }
       
-      const result = await createTrainingProgram(data);
+  const result = await createTrainingProgram(payload);
       
       if (result.success) {
         toast.success('Program created successfully!');
@@ -196,11 +211,7 @@ export default function CreateProgramPage() {
           break;
         case 'structure':
           tabData = {
-            structureType: currentData.structureType,
-            sessionCount: currentData.sessionCount,
-            trainingDays: currentData.trainingDays,
-            restDays: currentData.restDays,
-            weeklySchedule: currentData.weeklySchedule,
+            programStructures: currentData.programStructures,
           };
           break;
         case 'categories':
@@ -244,12 +255,6 @@ export default function CreateProgramPage() {
       label: 'Program Structure', 
       component: ProgramStructureForm,
       description: 'Workout flow'
-    },
-    { 
-      id: 'categories', 
-      label: 'Category Config', 
-      component: CategoryConfigurationForm,
-      description: 'Program variants'
     },
     {
       id: 'workouts', 
@@ -309,7 +314,7 @@ export default function CreateProgramPage() {
               </div>
               
               <div className="grid grid-cols-2 gap-4 text-sm">
-                <div><span className="font-medium">Structure:</span> {data.structureType === 'weekly' ? `Weekly (${data.sessionCount} sessions/week)` : `Cyclic (${data.trainingDays} training, ${data.restDays} rest days)`}</div>
+                <div><span className="font-medium">Structures:</span> {data.programStructures?.length || 0} structure(s) defined</div>
                 <div><span className="font-medium">Categories:</span> {data.categories?.join(', ') || 'None selected'}</div>
                 <div><span className="font-medium">Price:</span> ${(data.price / 100 * 0.32).toFixed(2)} USD (≈ {(data.price / 100).toFixed(2)} TND)</div>
                 <div><span className="font-medium">Status:</span> {data.isActive ? 'Active' : 'Inactive'}</div>
