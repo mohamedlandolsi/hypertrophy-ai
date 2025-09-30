@@ -218,25 +218,29 @@ model AIConfiguration {
 }
 
 model Exercise {
-  id           String              @id
-  name         String              @unique
-  muscleGroup  ExerciseMuscleGroup
+  id           String           @id
+  name         String           @unique
+  exerciseType ExerciseType     @default(COMPOUND) // Default to COMPOUND for existing exercises
   description  String?
   instructions String?
   equipment    String[]
-  category     ExerciseCategory    @default(APPROVED)
-  isActive     Boolean             @default(true)
-  difficulty   ExerciseDifficulty  @default(INTERMEDIATE)
-  // Volume contributions for each muscle group (1.0 = direct, 0.5 = indirect)
+  category     ExerciseCategory @default(APPROVED)
+  isActive     Boolean          @default(true)
+  isRecommended Boolean         @default(false)
+  // Volume contributions for each muscle group (1.0 = direct/primary, 0.5 = indirect/secondary)
+  // This defines which muscles are trained and how much
   // Format: { "CHEST": 1.0, "FRONT_DELTS": 0.5, "TRICEPS": 0.5 }
-  volumeContributions Json?
-  createdAt    DateTime            @default(now())
+  volumeContributions Json?         @default("{}")
+  // Regional bias for muscles with 1.0 volume contribution (optional)
+  // Format: { "CHEST": "UPPER_CHEST", "QUADRICEPS": "RECTUS_FEMORIS" }
+  regionalBias Json?         @default("{}")
+  createdAt    DateTime         @default(now())
   updatedAt    DateTime
 
   @@index([category])
   @@index([isActive])
-  @@index([muscleGroup, category])
-  @@index([muscleGroup])
+  @@index([exerciseType, category])
+  @@index([exerciseType])
 }
 
 model KnowledgeCategory {
@@ -263,12 +267,13 @@ model KnowledgeItemCategory {
 
 // Training Program Models
 model TrainingProgram {
-  id             String  @id @default(cuid())
-  name           Json // Multilingual: {"en": "Upper/Lower", "ar": "علوي/سفلي", "fr": "Haut/Bas"}
-  description    Json // Multilingual description
-  price          Int // Price in cents
-  lemonSqueezyId String? @unique
-  isActive       Boolean @default(true)
+  id                    String  @id @default(cuid())
+  name                  Json // Multilingual: {"en": "Upper/Lower", "ar": "علوي/سفلي", "fr": "Haut/Bas"}
+  description           Json // Multilingual description
+  price                 Int // Price in cents
+  lemonSqueezyId        String? @unique // LemonSqueezy product ID
+  lemonSqueezyVariantId String? // LemonSqueezy variant ID
+  isActive              Boolean @default(true)
 
   // Interactive Features
   hasInteractiveBuilder Boolean @default(true)
@@ -481,19 +486,25 @@ enum ExerciseCategory {
   DEPRECATED
 }
 
-enum ExerciseDifficulty {
-  BEGINNER
-  INTERMEDIATE
-  ADVANCED
-}
-
+// Muscle groups for volume contributions tracking
+// These define which muscles an exercise can target
 enum ExerciseMuscleGroup {
   CHEST
-  BACK
-  SHOULDERS
-  BICEPS
+  // Back muscles (separated for specificity)
+  LATS
+  TRAPEZIUS
+  RHOMBOIDS
+  // Shoulder muscles (separated by head)
+  FRONT_DELTS
+  SIDE_DELTS
+  REAR_DELTS
+  // Elbow flexors (anatomically accurate grouping)
+  ELBOW_FLEXORS  // Contains: Biceps, Brachialis, Brachioradialis
   TRICEPS
-  FOREARMS
+  // Forearm muscles (separated by function)
+  WRIST_FLEXORS
+  WRIST_EXTENSORS
+  // Core and lower body
   ABS
   GLUTES
   QUADRICEPS

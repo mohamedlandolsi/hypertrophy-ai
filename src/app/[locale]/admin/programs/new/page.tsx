@@ -34,6 +34,8 @@ export default function CreateProgramPage() {
       name: { en: '', ar: '', fr: '' },
       description: { en: '', ar: '', fr: '' },
       price: 0,
+      lemonSqueezyId: undefined,
+      lemonSqueezyVariantId: undefined,
       programStructures: [
         {
           name: { en: 'Weekly Structure', ar: 'هيكل أسبوعي', fr: 'Structure Hebdomadaire' },

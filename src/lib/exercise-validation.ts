@@ -8,13 +8,14 @@ import { prisma } from '@/lib/prisma';
 export interface Exercise {
   id: string;
   name: string;
-  muscleGroup: string;
+  exerciseType: 'COMPOUND' | 'ISOLATION' | 'UNILATERAL';
   description?: string | null;
   instructions?: string | null;
   equipment: string[];
   category: 'APPROVED' | 'PENDING' | 'DEPRECATED';
   isActive: boolean;
-  difficulty: 'BEGINNER' | 'INTERMEDIATE' | 'ADVANCED';
+  isRecommended: boolean;
+  volumeContributions: Record<string, number>;
 }
 
 /**
@@ -28,12 +29,16 @@ export async function getApprovedExercises(): Promise<Exercise[]> {
         isActive: true
       },
       orderBy: [
-        { muscleGroup: 'asc' },
+        { exerciseType: 'asc' },
         { name: 'asc' }
       ]
     });
     
-    return exercises;
+    // Map Prisma results to Exercise interface with proper type casting
+    return exercises.map(ex => ({
+      ...ex,
+      volumeContributions: (ex.volumeContributions as Record<string, number>) || {}
+    }));
   } catch (error) {
     console.error('Failed to fetch approved exercises:', error);
     return [];
@@ -41,21 +46,34 @@ export async function getApprovedExercises(): Promise<Exercise[]> {
 }
 
 /**
- * Fetch exercises for a specific muscle group
+ * Fetch exercises that target a specific muscle group
+ * Filters based on volume contributions
  */
 export async function getExercisesByMuscleGroup(muscleGroup: string): Promise<Exercise[]> {
   try {
-    const exercises = await prisma.exercise.findMany({
+    // Get all approved and active exercises
+    const allExercises = await prisma.exercise.findMany({
       where: {
-        // eslint-disable-next-line @typescript-eslint/no-explicit-any
-        muscleGroup: muscleGroup.toUpperCase() as any,
         category: 'APPROVED',
         isActive: true
       },
       orderBy: { name: 'asc' }
     });
     
-    return exercises;
+    // Filter exercises that have volume contributions for the requested muscle group
+    const filteredExercises = allExercises.filter(exercise => {
+      const volumeContributions = exercise.volumeContributions as Record<string, number>;
+      return volumeContributions && 
+             Object.keys(volumeContributions).some(muscle => 
+               muscle.toUpperCase() === muscleGroup.toUpperCase()
+             );
+    });
+    
+    // Map to Exercise interface with proper type casting
+    return filteredExercises.map(ex => ({
+      ...ex,
+      volumeContributions: (ex.volumeContributions as Record<string, number>) || {}
+    }));
   } catch (error) {
     console.error(`Failed to fetch exercises for muscle group ${muscleGroup}:`, error);
     return [];
@@ -72,13 +90,13 @@ export async function generateExerciseContext(): Promise<string> {
     return "No exercises available in the database. Please add exercises to the system first.";
   }
 
-  // Group exercises by muscle group
-  const exercisesByMuscleGroup = exercises.reduce((acc, exercise) => {
-    const group = exercise.muscleGroup.toLowerCase();
-    if (!acc[group]) {
-      acc[group] = [];
+  // Group exercises by type (COMPOUND, ISOLATION, UNILATERAL)
+  const exercisesByType = exercises.reduce((acc, exercise) => {
+    const type = exercise.exerciseType;
+    if (!acc[type]) {
+      acc[type] = [];
     }
-    acc[group].push(exercise);
+    acc[type].push(exercise);
     return acc;
   }, {} as Record<string, Exercise[]>);
 
@@ -108,29 +126,43 @@ export async function generateExerciseContext(): Promise<string> {
     if (machineExercises.length > 0) {
       context += "Machine Exercises:\n";
       machineExercises.forEach(ex => {
-        context += `- ${ex.name} (${ex.muscleGroup.toLowerCase()})\n`;
+        const targetMuscles = Object.entries(ex.volumeContributions)
+          .filter(([, value]) => value > 0)
+          .map(([muscle, value]) => `${muscle}(${value})`)
+          .join(', ');
+        context += `- ${ex.name} → ${targetMuscles}\n`;
       });
     }
     
     if (cableExercises.length > 0) {
       context += "Cable Exercises:\n";
       cableExercises.forEach(ex => {
-        context += `- ${ex.name} (${ex.muscleGroup.toLowerCase()})\n`;
+        const targetMuscles = Object.entries(ex.volumeContributions)
+          .filter(([, value]) => value > 0)
+          .map(([muscle, value]) => `${muscle}(${value})`)
+          .join(', ');
+        context += `- ${ex.name} → ${targetMuscles}\n`;
       });
     }
     context += "\n";
   }
 
-  // Add exercises grouped by muscle group
-  for (const [muscleGroup, groupExercises] of Object.entries(exercisesByMuscleGroup)) {
-    context += `${muscleGroup.toUpperCase()} EXERCISES:\n`;
-    groupExercises.forEach(exercise => {
+  // Add exercises grouped by exercise type
+  for (const [exerciseType, typeExercises] of Object.entries(exercisesByType)) {
+    context += `${exerciseType} EXERCISES:\n`;
+    typeExercises.forEach(exercise => {
+      const targetMuscles = Object.entries(exercise.volumeContributions)
+        .filter(([, value]) => value > 0)
+        .map(([muscle, value]) => `${muscle}(${value === 1 ? 'direct' : 'indirect'})`)
+        .join(', ');
+      
       context += `- ${exercise.name}`;
       if (exercise.equipment.length > 0) {
         context += ` (${exercise.equipment.join(', ')})`;
       }
-      if (exercise.difficulty !== 'INTERMEDIATE') {
-        context += ` [${exercise.difficulty}]`;
+      context += ` → ${targetMuscles}`;
+      if (exercise.isRecommended) {
+        context += ` [⭐ RECOMMENDED]`;
       }
       context += "\n";
     });
@@ -139,8 +171,8 @@ export async function generateExerciseContext(): Promise<string> {
 
   context += "IMPORTANT RULES:\n";
   context += "1. ONLY recommend exercises from this list\n";
-  context += "2. Prefer machine and cable exercises when available\n";
-  context += "3. Consider difficulty level based on user experience\n";
+  context += "2. Prefer recommended exercises (marked with ⭐) when available\n";
+  context += "3. Prefer machine and cable exercises when available\n";
   context += "4. Always specify the exact exercise name as listed above\n";
   context += "5. If an exercise isn't in this list, DO NOT recommend it\n\n";
 
@@ -188,7 +220,11 @@ export async function findSimilarExercises(exerciseName: string, limit: number =
       orderBy: { name: 'asc' }
     });
     
-    return exercises;
+    // Map to Exercise interface with proper type casting
+    return exercises.map(ex => ({
+      ...ex,
+      volumeContributions: (ex.volumeContributions as Record<string, number>) || {}
+    }));
   } catch (error) {
     console.error('Failed to find similar exercises:', error);
     return [];
@@ -206,7 +242,7 @@ export async function getExerciseStats() {
       pendingExercises,
       deprecatedExercises,
       activeExercises,
-      exercisesByMuscleGroup
+      exercisesByType
     ] = await Promise.all([
       prisma.exercise.count(),
       prisma.exercise.count({ where: { category: 'APPROVED' } }),
@@ -214,8 +250,8 @@ export async function getExerciseStats() {
       prisma.exercise.count({ where: { category: 'DEPRECATED' } }),
       prisma.exercise.count({ where: { isActive: true } }),
       prisma.exercise.groupBy({
-        by: ['muscleGroup'],
-        _count: { muscleGroup: true },
+        by: ['exerciseType'],
+        _count: { exerciseType: true },
         where: { category: 'APPROVED', isActive: true }
       })
     ]);
@@ -226,8 +262,8 @@ export async function getExerciseStats() {
       pending: pendingExercises,
       deprecated: deprecatedExercises,
       active: activeExercises,
-      byMuscleGroup: exercisesByMuscleGroup.reduce((acc, item) => {
-        acc[item.muscleGroup] = item._count.muscleGroup;
+      byExerciseType: exercisesByType.reduce((acc, item) => {
+        acc[item.exerciseType] = item._count.exerciseType;
         return acc;
       }, {} as Record<string, number>)
     };
@@ -239,7 +275,7 @@ export async function getExerciseStats() {
       pending: 0,
       deprecated: 0,
       active: 0,
-      byMuscleGroup: {}
+      byExerciseType: {}
     };
   }
 }

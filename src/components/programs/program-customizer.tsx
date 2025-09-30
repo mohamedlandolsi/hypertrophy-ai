@@ -9,6 +9,7 @@ import { RadioGroup, RadioGroupItem } from '@/components/ui/radio-group';
 import { Label } from '@/components/ui/label';
 import { Alert, AlertDescription } from '@/components/ui/alert';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
+import { Accordion, AccordionContent, AccordionItem, AccordionTrigger } from '@/components/ui/accordion';
 import { useToast } from '@/hooks/use-toast';
 import { 
   Settings,
@@ -21,25 +22,83 @@ import {
   Info
 } from 'lucide-react';
 
+// Muscle group definitions (matching admin form)
+const MUSCLE_GROUPS = [
+  { id: 'chest', name: 'Chest', color: 'bg-red-100 text-red-800 dark:bg-red-900/20 dark:text-red-200' },
+  // Back muscles
+  { id: 'lats', name: 'Lats', color: 'bg-blue-100 text-blue-800 dark:bg-blue-900/20 dark:text-blue-200' },
+  { id: 'trapezius_rhomboids', name: 'Trapezius & Rhomboids', color: 'bg-sky-100 text-sky-800 dark:bg-sky-900/20 dark:text-sky-200' },
+  // Shoulder muscles (separated by head)
+  { id: 'front_delts', name: 'Front Delts', color: 'bg-amber-100 text-amber-800 dark:bg-amber-900/20 dark:text-amber-200' },
+  { id: 'side_delts', name: 'Side Delts', color: 'bg-yellow-100 text-yellow-800 dark:bg-yellow-900/20 dark:text-yellow-200' },
+  { id: 'rear_delts', name: 'Rear Delts', color: 'bg-orange-100 text-orange-800 dark:bg-orange-900/20 dark:text-orange-200' },
+  // Arm muscles
+  { id: 'elbow_flexors', name: 'Elbow Flexors (Biceps, Brachialis, Brachioradialis)', color: 'bg-green-100 text-green-800 dark:bg-green-900/20 dark:text-green-200' },
+  { id: 'triceps', name: 'Triceps', color: 'bg-emerald-100 text-emerald-800 dark:bg-emerald-900/20 dark:text-emerald-200' },
+  // Forearm muscles (separated by function)
+  { id: 'wrist_flexors', name: 'Wrist Flexors', color: 'bg-teal-100 text-teal-800 dark:bg-teal-900/20 dark:text-teal-200' },
+  { id: 'wrist_extensors', name: 'Wrist Extensors', color: 'bg-slate-100 text-slate-800 dark:bg-slate-900/20 dark:text-slate-200' },
+  // Lower body
+  { id: 'glutes', name: 'Glutes', color: 'bg-pink-100 text-pink-800 dark:bg-pink-900/20 dark:text-pink-200' },
+  { id: 'quadriceps', name: 'Quadriceps', color: 'bg-purple-100 text-purple-800 dark:bg-purple-900/20 dark:text-purple-200' },
+  { id: 'hamstrings', name: 'Hamstrings', color: 'bg-violet-100 text-violet-800 dark:bg-violet-900/20 dark:text-violet-200' },
+  { id: 'adductors', name: 'Adductors', color: 'bg-indigo-100 text-indigo-800 dark:bg-indigo-900/20 dark:text-indigo-200' },
+  { id: 'calves', name: 'Calves', color: 'bg-blue-200 text-blue-900 dark:bg-blue-900/20 dark:text-blue-200' },
+  // Core
+  { id: 'abs', name: 'Abs', color: 'bg-lime-100 text-lime-800 dark:bg-lime-900/20 dark:text-lime-200' },
+  { id: 'obliques', name: 'Obliques', color: 'bg-yellow-200 text-yellow-900 dark:bg-yellow-900/20 dark:text-yellow-200' },
+  // Additional
+  { id: 'erectors', name: 'Erectors', color: 'bg-cyan-200 text-cyan-900 dark:bg-cyan-900/20 dark:text-cyan-200' },
+  { id: 'hip_flexors', name: 'Hip Flexors', color: 'bg-rose-100 text-rose-800 dark:bg-rose-900/20 dark:text-rose-200' }
+];
+
+// Helper function to get muscle group display info
+function getMuscleGroupInfo(muscleGroupId: string) {
+  return MUSCLE_GROUPS.find(mg => mg.id === muscleGroupId) || {
+    id: muscleGroupId,
+    name: muscleGroupId.charAt(0).toUpperCase() + muscleGroupId.slice(1).replace(/_/g, ' '),
+    color: 'bg-gray-100 text-gray-800 dark:bg-gray-900/20 dark:text-gray-200'
+  };
+}
+
+// Helper function to filter valid muscle groups
+function filterValidMuscleGroups(muscleGroups: string[]): string[] {
+  const validIds = MUSCLE_GROUPS.map(mg => mg.id);
+  return muscleGroups.filter(mg => validIds.includes(mg));
+}
+
 // Mapping from detailed muscle groups (workout templates) to simplified muscle groups (Exercise enum)
 const muscleGroupMapping: Record<string, string[]> = {
   // Chest
   'chest': ['CHEST'],
   
-  // Back
-  'back': ['BACK'],
+  // Back muscles (separated anatomically)
+  'lats': ['LATS'],
+  'trapezius': ['TRAPEZIUS'],
+  'rhomboids': ['RHOMBOIDS'],
+  // Legacy mappings for backward compatibility
+  'back': ['LATS', 'TRAPEZIUS', 'RHOMBOIDS'],
+  'upper_back': ['TRAPEZIUS', 'RHOMBOIDS'],
   
-  // Shoulders - map all shoulder subdivisions to SHOULDERS
-  'shoulders': ['SHOULDERS'],
-  'side_delts': ['SHOULDERS'],
-  'front_delts': ['SHOULDERS'],
-  'rear_delts': ['SHOULDERS'],
+  // Shoulder muscles (separated by head)
+  'front_delts': ['FRONT_DELTS'],
+  'side_delts': ['SIDE_DELTS'],
+  'rear_delts': ['REAR_DELTS'],
+  // Legacy mappings for backward compatibility
+  'shoulders': ['FRONT_DELTS', 'SIDE_DELTS', 'REAR_DELTS'],
   
-  // Arms - map to specific muscle groups
-  'arms': ['BICEPS', 'TRICEPS'], // Generic arms maps to both
-  'elbow_flexors': ['BICEPS'], // Biceps, brachialis, brachioradialis
+  // Arm muscles
+  'elbow_flexors': ['ELBOW_FLEXORS'], // Biceps, brachialis, brachioradialis
   'triceps': ['TRICEPS'],
-  'forearms': ['FOREARMS'],
+  // Legacy mappings for backward compatibility
+  'arms': ['ELBOW_FLEXORS', 'TRICEPS'],
+  'biceps': ['ELBOW_FLEXORS'],
+  
+  // Forearm muscles (separated by function)
+  'wrist_flexors': ['WRIST_FLEXORS'],
+  'wrist_extensors': ['WRIST_EXTENSORS'],
+  // Legacy mappings for backward compatibility
+  'forearms': ['WRIST_FLEXORS', 'WRIST_EXTENSORS'],
   
   // Core/Abs
   'core': ['ABS'],
@@ -56,7 +115,7 @@ const muscleGroupMapping: Record<string, string[]> = {
   
   // Additional mappings
   'hip_flexors': ['GLUTES'], // Map to closest available muscle group
-  'erectors': ['BACK'], // Map erectors to back since they're back muscles
+  'erectors': ['TRAPEZIUS'], // Map erectors to trapezius (upper back)
 };
 
 interface ProgramCustomizerProps {
@@ -105,13 +164,14 @@ export function ProgramCustomizer({
   interface Exercise {
     id: string;
     name: string;
-    muscleGroup: string;
+    exerciseType: 'COMPOUND' | 'ISOLATION' | 'UNILATERAL';
     description?: string | null;
     instructions?: string | null;
     equipment: string[];
     category: 'APPROVED' | 'PENDING' | 'DEPRECATED';
     isActive: boolean;
-    difficulty: 'BEGINNER' | 'INTERMEDIATE' | 'ADVANCED';
+    isRecommended: boolean;
+    volumeContributions: Record<string, number>;
   }
 
   const [exercisesByMuscleGroup, setExercisesByMuscleGroup] = useState<Record<string, Exercise[]>>({});
@@ -384,6 +444,42 @@ export function ProgramCustomizer({
   const updateCustomization = (updates: Partial<CustomizationConfig>) => {
     setCustomization(prev => ({ ...prev, ...updates }));
     setHasUnsavedChanges(true);
+    
+    // Auto-save when structure is changed
+    if (updates.structureId) {
+      // Debounce auto-save slightly
+      setTimeout(() => {
+        autoSaveCustomization({ ...customization, ...updates });
+      }, 500);
+    }
+  };
+  
+  // Auto-save customization (for structure changes)
+  const autoSaveCustomization = async (config: CustomizationConfig) => {
+    try {
+      const response = await fetch('/api/programs/customize', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          trainingProgramId: program.id,
+          customization: config
+        })
+      });
+
+      if (response.ok) {
+        const result = await response.json();
+        onCustomizationSaved(result);
+        setHasUnsavedChanges(false);
+        
+        toast({
+          title: 'Structure Saved',
+          description: 'Your training structure has been automatically saved.',
+        });
+      }
+    } catch (error) {
+      console.error('Auto-save failed:', error);
+      // Don't show error toast for auto-save failures
+    }
   };
 
   // Helper functions for exercise selection
@@ -391,9 +487,16 @@ export function ProgramCustomizer({
     // Return exercises from our state, filtered by category type
     const exercises = exercisesByMuscleGroup[muscleGroup] || [];
     
-    // For now, return all exercises regardless of category type
-    // In the future, this could be filtered based on exercise properties
-    return exercises.filter(exercise => exercise.isActive && exercise.category === 'APPROVED');
+    // Filter and sort: recommended exercises first, then alphabetically
+    return exercises
+      .filter(exercise => exercise.isActive && exercise.category === 'APPROVED')
+      .sort((a, b) => {
+        // Recommended exercises come first
+        if (a.isRecommended && !b.isRecommended) return -1;
+        if (!a.isRecommended && b.isRecommended) return 1;
+        // Then sort alphabetically by name
+        return a.name.localeCompare(b.name);
+      });
   };
 
   const getExerciseLimit = () => {
@@ -545,17 +648,19 @@ export function ProgramCustomizer({
                               <div className="mt-2">
                                 <div className="flex space-x-1 text-xs">
                                   {Object.entries(structure.weeklySchedule as Record<string, string>).map(([day, workout]) => {
-                                    const dayLabel = day.replace('day', 'D');
+                                    const isRestDay = !workout || workout.trim() === '' || workout.toLowerCase() === 'rest';
+                                    const displayLabel = isRestDay ? 'Rest' : workout;
+                                    
                                     return (
                                       <div 
                                         key={day} 
                                         className={`px-2 py-1 rounded text-center min-w-12 ${
-                                          workout 
-                                            ? 'bg-blue-100 dark:bg-blue-900 text-blue-800 dark:text-blue-200' 
-                                            : 'bg-gray-100 dark:bg-gray-800'
+                                          isRestDay
+                                            ? 'bg-gray-100 dark:bg-gray-800 text-gray-600 dark:text-gray-400' 
+                                            : 'bg-blue-100 dark:bg-blue-900 text-blue-800 dark:text-blue-200'
                                         }`}
                                       >
-                                        {dayLabel}
+                                        {displayLabel}
                                       </div>
                                     );
                                   })}
@@ -762,58 +867,91 @@ export function ProgramCustomizer({
             <CardHeader>
               <CardTitle>Workout Templates</CardTitle>
               <CardDescription>
-                Your program includes {program.workoutTemplates.length} workout templates
+                Your program includes {program.workoutTemplates.length} workout template{program.workoutTemplates.length !== 1 ? 's' : ''}
               </CardDescription>
             </CardHeader>
             <CardContent>
-              <div className="space-y-6">
+              <Accordion type="single" collapsible className="w-full">
                 {/* eslint-disable-next-line @typescript-eslint/no-explicit-any */}
-                {program.workoutTemplates.map((template: any) => {
+                {program.workoutTemplates.map((template: any, index: number) => {
                   const templateName = getLocalizedContent(template.name, `Workout ${template.order + 1}`);
                   const selectedExercises = customization.workoutConfiguration[template.id] || [];
+                  // Filter to only include valid muscle groups from the predefined list
+                  const validMuscleGroups = filterValidMuscleGroups(template.requiredMuscleGroups || []);
                   
                   return (
-                    <div key={template.id} className="p-4 border rounded-lg space-y-4">
-                      <div className="flex items-center justify-between">
-                        <div>
-                          <h4 className="font-medium">{templateName}</h4>
-                          <p className="text-sm text-gray-600 dark:text-gray-400">
-                            Target muscles: {template.requiredMuscleGroups.join(', ')}
-                          </p>
-                        </div>
-                        <div className="flex items-center space-x-2">
-                          <Badge variant="outline">
-                            {selectedExercises.length} selected
+                    <AccordionItem key={template.id} value={`workout-${index}`} className="border rounded-lg px-4 mb-3">
+                      <AccordionTrigger className="hover:no-underline">
+                        <div className="flex items-center justify-between w-full pr-4">
+                          <div className="flex items-center space-x-3">
+                            <Dumbbell className="w-5 h-5 text-blue-500" />
+                            <div className="text-left">
+                              <h4 className="font-semibold">{templateName}</h4>
+                              <div className="flex flex-wrap gap-1 mt-1">
+                                {validMuscleGroups.slice(0, 3).map((muscleGroupId) => {
+                                  const muscleInfo = getMuscleGroupInfo(muscleGroupId);
+                                  return (
+                                    <Badge 
+                                      key={muscleGroupId} 
+                                      variant="secondary" 
+                                      className={`${muscleInfo.color} text-xs`}
+                                    >
+                                      {muscleInfo.name}
+                                    </Badge>
+                                  );
+                                })}
+                                {validMuscleGroups.length > 3 && (
+                                  <Badge variant="secondary" className="text-xs">
+                                    +{validMuscleGroups.length - 3} more
+                                  </Badge>
+                                )}
+                              </div>
+                            </div>
+                          </div>
+                          <Badge variant="outline" className="ml-auto">
+                            {selectedExercises.length} exercise{selectedExercises.length !== 1 ? 's' : ''}
                           </Badge>
-                          <Button
-                            size="sm"
-                            variant="outline"
-                            onClick={() => autoSelectExercises(template.id, template.requiredMuscleGroups)}
-                          >
-                            Auto-Select
-                          </Button>
                         </div>
-                      </div>
-
-                      {/* Exercise Selection for this template */}
-                      <div className="space-y-3">
-                        <h5 className="text-sm font-medium text-gray-700 dark:text-gray-300">
-                          Exercise Selection
-                        </h5>
+                      </AccordionTrigger>
+                      <AccordionContent>
+                        <div className="space-y-4 pt-4">
+                          {/* Auto-select button */}
+                          <div className="flex justify-end">
+                            <Button
+                              size="sm"
+                              variant="outline"
+                              onClick={() => autoSelectExercises(template.id, validMuscleGroups)}
+                            >
+                              Auto-Select Exercises
+                            </Button>
+                          </div>
+                          
+                          <h5 className="text-sm font-medium text-gray-700 dark:text-gray-300">
+                            Exercise Selection
+                          </h5>
                         
-                        {template.requiredMuscleGroups.map((muscleGroup: string) => {
+                        {validMuscleGroups.map((muscleGroup: string) => {
+                          const muscleInfo = getMuscleGroupInfo(muscleGroup);
                           const availableExercises = getAvailableExercises(muscleGroup);
                           const isLoadingMuscleGroup = loadingExercises[muscleGroup];
                           const muscleGroupExercises = selectedExercises.filter((exerciseId: string) => {
                             const exercise = availableExercises.find((ex: Exercise) => ex.id === exerciseId);
-                            return exercise?.muscleGroup.toLowerCase() === muscleGroup.toLowerCase();
+                            // Check if exercise has volume contribution for this muscle group
+                            return exercise && exercise.volumeContributions && 
+                                   Object.keys(exercise.volumeContributions).some(muscle => 
+                                     muscle.toLowerCase() === muscleGroup.toLowerCase()
+                                   );
                           });
 
                           return (
                             <div key={muscleGroup} className="p-3 bg-gray-50 dark:bg-gray-800/50 rounded-md">
                               <div className="flex items-center justify-between mb-2">
-                                <h6 className="text-sm font-medium">{muscleGroup}</h6>
-                                <Badge variant="secondary" className="text-xs">
+                                <div className="flex items-center space-x-2">
+                                  <Badge variant="secondary" className={muscleInfo.color}>
+                                    {muscleInfo.name}
+                                  </Badge>
+                                </div>
+                                <Badge variant="outline" className="text-xs">
                                   {muscleGroupExercises.length}/{getExerciseLimit()} selected
                                 </Badge>
                               </div>
@@ -846,9 +984,14 @@ export function ProgramCustomizer({
                                             <div className="flex-1">
                                               <p className="text-sm font-medium">
                                                 {exercise.name}
+                                                {exercise.isRecommended && (
+                                                  <span className="ml-2 text-xs bg-green-100 text-green-700 dark:bg-green-900 dark:text-green-300 px-2 py-0.5 rounded">
+                                                    ⭐ Recommended
+                                                  </span>
+                                                )}
                                               </p>
                                               <p className="text-xs text-gray-500">
-                                                {exercise.difficulty} • {exercise.equipment.join(', ')}
+                                                {exercise.equipment.join(', ')}
                                               </p>
                                             </div>
                                             {isSelected && (
@@ -870,11 +1013,12 @@ export function ProgramCustomizer({
                             </div>
                           );
                         })}
-                      </div>
-                    </div>
+                        </div>
+                      </AccordionContent>
+                    </AccordionItem>
                   );
                 })}
-              </div>
+              </Accordion>
             </CardContent>
           </Card>
         </TabsContent>

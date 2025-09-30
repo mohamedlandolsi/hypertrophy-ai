@@ -13,21 +13,31 @@ import { Plus, Trash2, Dumbbell } from 'lucide-react';
 
 const muscleGroups = [
   { id: 'chest', name: 'Chest', color: 'bg-red-100 text-red-800' },
-  { id: 'back', name: 'Back', color: 'bg-blue-100 text-blue-800' },
-  { id: 'side_delts', name: 'Side Delts', color: 'bg-yellow-100 text-yellow-800' },
+  // Back muscles (separated for specificity)
+  { id: 'lats', name: 'Lats', color: 'bg-blue-100 text-blue-800' },
+  { id: 'trapezius', name: 'Trapezius', color: 'bg-sky-100 text-sky-800' },
+  { id: 'rhomboids', name: 'Rhomboids', color: 'bg-cyan-100 text-cyan-800' },
+  // Shoulder muscles (separated by head)
   { id: 'front_delts', name: 'Front Delts', color: 'bg-amber-100 text-amber-800' },
+  { id: 'side_delts', name: 'Side Delts', color: 'bg-yellow-100 text-yellow-800' },
   { id: 'rear_delts', name: 'Rear Delts', color: 'bg-orange-100 text-orange-800' },
+  // Arm muscles
   { id: 'elbow_flexors', name: 'Elbow Flexors (Biceps, Brachialis, Brachioradialis)', color: 'bg-green-100 text-green-800' },
   { id: 'triceps', name: 'Triceps', color: 'bg-emerald-100 text-emerald-800' },
-  { id: 'forearms', name: 'Forearms', color: 'bg-teal-100 text-teal-800' },
+  // Forearm muscles (separated by function)
+  { id: 'wrist_flexors', name: 'Wrist Flexors', color: 'bg-teal-100 text-teal-800' },
+  { id: 'wrist_extensors', name: 'Wrist Extensors', color: 'bg-slate-100 text-slate-800' },
+  // Lower body
   { id: 'glutes', name: 'Glutes', color: 'bg-pink-100 text-pink-800' },
   { id: 'quadriceps', name: 'Quadriceps', color: 'bg-purple-100 text-purple-800' },
   { id: 'hamstrings', name: 'Hamstrings', color: 'bg-violet-100 text-violet-800' },
   { id: 'adductors', name: 'Adductors', color: 'bg-indigo-100 text-indigo-800' },
-  { id: 'calves', name: 'Calves', color: 'bg-blue-100 text-blue-800' },
-  { id: 'erectors', name: 'Erectors', color: 'bg-cyan-100 text-cyan-800' },
+  { id: 'calves', name: 'Calves', color: 'bg-blue-200 text-blue-900' },
+  // Core
   { id: 'abs', name: 'Abs', color: 'bg-lime-100 text-lime-800' },
-  { id: 'obliques', name: 'Obliques', color: 'bg-yellow-100 text-yellow-800' },
+  { id: 'obliques', name: 'Obliques', color: 'bg-yellow-200 text-yellow-900' },
+  // Additional
+  { id: 'erectors', name: 'Erectors', color: 'bg-cyan-200 text-cyan-900' },
   { id: 'hip_flexors', name: 'Hip Flexors', color: 'bg-rose-100 text-rose-800' }
 ];
 

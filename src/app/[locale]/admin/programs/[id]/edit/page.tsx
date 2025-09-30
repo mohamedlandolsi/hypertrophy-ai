@@ -28,6 +28,7 @@ type EditProgramFormData = {
   description: { en: string; ar: string; fr: string };
   price: number;
   lemonSqueezyId?: string;
+  lemonSqueezyVariantId?: string;
   programStructures: Array<{
     id?: string;
     name: { en: string; ar: string; fr: string };
@@ -85,6 +86,7 @@ interface TrainingProgramData {
   description: Record<string, string>;
   price: number;
   lemonSqueezyId?: string;
+  lemonSqueezyVariantId?: string;
   hasInteractiveBuilder: boolean;
   allowsCustomization: boolean;
   aboutContent?: string;
@@ -153,6 +155,7 @@ export default function EditProgramPage() {
       description: { en: '', ar: '', fr: '' },
       price: 0,
       lemonSqueezyId: '',
+      lemonSqueezyVariantId: '',
       programStructures: [{
         name: { en: '', ar: '', fr: '' },
         structureType: 'weekly' as const,
@@ -249,6 +252,7 @@ export default function EditProgramPage() {
           description: programData.description,
           price: programData.price,
           lemonSqueezyId: programData.lemonSqueezyId || '',
+          lemonSqueezyVariantId: programData.lemonSqueezyVariantId || '',
           programStructures: transformedProgramStructures,
           hasInteractiveBuilder: programData.hasInteractiveBuilder,
           allowsCustomization: programData.allowsCustomization,
@@ -294,6 +298,7 @@ export default function EditProgramPage() {
         description: data.description,
         price: data.price,
         lemonSqueezyId: data.lemonSqueezyId,
+        lemonSqueezyVariantId: data.lemonSqueezyVariantId,
         // Use the first program structure for now (backward compatibility)
         programStructures: data.programStructures,
         hasInteractiveBuilder: data.hasInteractiveBuilder,

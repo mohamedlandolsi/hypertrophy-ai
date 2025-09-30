@@ -240,17 +240,83 @@ class LemonSqueezyService {
       body: JSON.stringify(resumeData),
     });
   }
+
+  /**
+   * Create checkout URL for a training program (one-time purchase)
+   */
+  async createProgramCheckoutUrl(options: {
+    productId: string;
+    variantId: string;
+    userId: string;
+    userEmail: string;
+    programId: string;
+    successUrl?: string;
+    cancelUrl?: string;
+  }): Promise<string> {
+    const checkoutData = {
+      data: {
+        type: 'checkouts',
+        attributes: {
+          checkout_options: {
+            embed: false,
+            media: true,
+            logo: true,
+            button_color: '#3b82f6',
+          },
+          checkout_data: {
+            email: options.userEmail,
+            custom: {
+              user_id: options.userId,
+              program_id: options.programId, // Important for webhook
+              purchase_type: 'training_program', // Distinguish from subscriptions
+            },
+          },
+          product_options: {
+            enabled_variants: [options.variantId],
+            redirect_url: options.successUrl || `${process.env.NEXT_PUBLIC_SITE_URL}/programs/${options.programId}/guide`,
+            receipt_link_url: options.successUrl || `${process.env.NEXT_PUBLIC_SITE_URL}/programs/${options.programId}/guide`,
+            receipt_thank_you_note: 'Thank you for purchasing this training program! You now have lifetime access.',
+          },
+          expires_at: new Date(Date.now() + 24 * 60 * 60 * 1000).toISOString(), // 24 hours
+        },
+        relationships: {
+          store: {
+            data: {
+              type: 'stores',
+              id: this.storeId,
+            },
+          },
+          variant: {
+            data: {
+              type: 'variants',
+              id: options.variantId,
+            },
+          },
+        },
+      },
+    };
+
+    const result = await this.makeRequest('/checkouts', {
+      method: 'POST',
+      body: JSON.stringify(checkoutData),
+    });
+
+    return result.data.attributes.url;
+  }
 }
 
 // Singleton instance
-let lemonSqueezyService: LemonSqueezyService | null = null;
+let serviceInstance: LemonSqueezyService | null = null;
 
 export function getLemonSqueezyService(): LemonSqueezyService {
-  if (!lemonSqueezyService) {
-    lemonSqueezyService = new LemonSqueezyService();
+  if (!serviceInstance) {
+    serviceInstance = new LemonSqueezyService();
   }
-  return lemonSqueezyService;
+  return serviceInstance;
 }
+
+// Export singleton for direct use
+export const lemonSqueezyService = getLemonSqueezyService();
 
 // Helper functions for easy use
 export async function createProCheckoutUrl(

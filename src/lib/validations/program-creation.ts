@@ -67,6 +67,7 @@ export const programCreationSchema = z.object({
   description: multilingualContentSchema,
   price: z.number().min(0, 'Price must be positive').max(999999, 'Price too high'),
   lemonSqueezyId: z.string().min(1, 'LemonSqueezy ID is required').optional(),
+  lemonSqueezyVariantId: z.string().min(1, 'LemonSqueezy Variant ID is required').optional(),
   
   // Program structures (multiple structures support)
   programStructures: z.array(programStructureSchema).min(1, 'At least one program structure is required'),

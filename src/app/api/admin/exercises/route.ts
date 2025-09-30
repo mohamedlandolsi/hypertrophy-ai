@@ -33,7 +33,7 @@ export async function GET(request: NextRequest) {
 
     // Get query parameters for filtering/pagination
     const url = new URL(request.url);
-    const muscleGroup = url.searchParams.get('muscleGroup');
+    const exerciseType = url.searchParams.get('exerciseType');
     const category = url.searchParams.get('category');
     const isActive = url.searchParams.get('isActive');
     const page = parseInt(url.searchParams.get('page') || '1');
@@ -43,8 +43,8 @@ export async function GET(request: NextRequest) {
     // Build where clause
     const where: Record<string, unknown> = {};
     
-    if (muscleGroup) {
-      where.muscleGroup = muscleGroup;
+    if (exerciseType) {
+      where.exerciseType = exerciseType;
     }
     
     if (category) {
@@ -67,7 +67,7 @@ export async function GET(request: NextRequest) {
       prisma.exercise.findMany({
         where,
         orderBy: [
-          { muscleGroup: 'asc' },
+          { exerciseType: 'asc' },
           { name: 'asc' }
         ],
         skip: (page - 1) * limit,
@@ -122,20 +122,21 @@ export async function POST(request: NextRequest) {
     const body = await request.json();
     const { 
       name, 
-      muscleGroup, 
+      exerciseType, 
       description, 
       instructions, 
       equipment, 
       category, 
       isActive, 
-      difficulty,
-      volumeContributions
+      isRecommended,
+      volumeContributions,
+      regionalBias
     } = body;
 
     // Validate required fields
-    if (!name || !muscleGroup) {
+    if (!name || !exerciseType || !volumeContributions || Object.keys(volumeContributions).length === 0) {
       return NextResponse.json(
-        { error: 'Name and muscle group are required' },
+        { error: 'Name, exercise type, and volume contributions are required' },
         { status: 400 }
       );
     }
@@ -145,14 +146,15 @@ export async function POST(request: NextRequest) {
       data: {
         id: `ex_${Date.now()}_${Math.random().toString(36).substr(2, 9)}`,
         name: name.trim(),
-        muscleGroup,
+        exerciseType,
         description: description?.trim() || null,
         instructions: instructions?.trim() || null,
         equipment: equipment || [],
         category: category || 'APPROVED',
-        isActive: isActive !== undefined ? isActive : true,
-        difficulty: difficulty || 'INTERMEDIATE',
+        isActive: isActive ?? true,
+        isRecommended: isRecommended ?? false,
         volumeContributions: volumeContributions || {},
+        regionalBias: regionalBias || {},
         updatedAt: new Date()
       }
     });

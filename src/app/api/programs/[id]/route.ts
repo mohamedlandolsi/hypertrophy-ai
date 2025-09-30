@@ -38,6 +38,8 @@ export async function GET(
         name: true,
         description: true,
         price: true,
+        lemonSqueezyId: true,
+        lemonSqueezyVariantId: true,
         isActive: true,
         thumbnailUrl: true,
         aboutContent: true,
@@ -54,6 +56,7 @@ export async function GET(
 
     // Check if user owns this program (if authenticated)
     let isOwned = false;
+    let hasPurchased = false;
     if (user) {
       const userProgram = await prisma.userProgram.findFirst({
         where: {
@@ -62,11 +65,23 @@ export async function GET(
         },
       });
       isOwned = !!userProgram;
+
+      // Check purchase status
+      const userPurchase = await prisma.userPurchase.findUnique({
+        where: {
+          userId_trainingProgramId: {
+            userId: user.id,
+            trainingProgramId: program.id,
+          },
+        },
+      });
+      hasPurchased = !!userPurchase;
     }
 
     const responseData = {
       ...program,
       isOwned,
+      hasPurchased,
     };
 
     return NextResponse.json({

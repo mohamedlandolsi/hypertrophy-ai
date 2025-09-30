@@ -82,20 +82,21 @@ export async function PUT(request: NextRequest, { params }: { params: Promise<{ 
     const body = await request.json();
     const { 
       name, 
-      muscleGroup, 
+      exerciseType, 
       description, 
       instructions, 
       equipment, 
       category, 
       isActive, 
-      difficulty,
-      volumeContributions
+      isRecommended,
+      volumeContributions,
+      regionalBias
     } = body;
 
     // Validate required fields
-    if (!name || !muscleGroup) {
+    if (!name || !exerciseType || !volumeContributions || Object.keys(volumeContributions).length === 0) {
       return NextResponse.json(
-        { error: 'Name and muscle group are required' },
+        { error: 'Name, exercise type, and volume contributions are required' },
         { status: 400 }
       );
     }
@@ -117,14 +118,15 @@ export async function PUT(request: NextRequest, { params }: { params: Promise<{ 
       where: { id: id },
       data: {
         name: name.trim(),
-        muscleGroup,
+        exerciseType,
         description: description?.trim() || null,
         instructions: instructions?.trim() || null,
         equipment: equipment || [],
         category: category || 'APPROVED',
         isActive: isActive !== undefined ? isActive : true,
-        difficulty: difficulty || 'INTERMEDIATE',
+        isRecommended: isRecommended !== undefined ? isRecommended : false,
         volumeContributions: volumeContributions || {},
+        regionalBias: regionalBias || {},
         updatedAt: new Date()
       }
     });

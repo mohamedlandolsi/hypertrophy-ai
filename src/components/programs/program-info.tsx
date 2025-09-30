@@ -132,20 +132,27 @@ export function ProgramInfo({ program, locale }: ProgramInfoProps) {
                         </div>
                       </div>
                       
-                      {(structure.weeklySchedule as Record<string, string> | undefined) && (
+                      {structure.structureType === 'weekly' && (structure.weeklySchedule as Record<string, string> | undefined) && (
                         <div className="mt-3">
                           <p className="text-sm font-medium mb-2">Weekly Schedule:</p>
-                          <div className="grid grid-cols-7 gap-1 text-xs">
-                            {Object.entries(structure.weeklySchedule as Record<string, string>).map(([day, workout]) => (
-                              <div key={day} className="text-center">
-                                <div className="font-medium capitalize mb-1">{day.slice(0, 3)}</div>
-                                <div className={`p-1 rounded text-xs ${
-                                  workout ? 'bg-blue-100 dark:bg-blue-900 text-blue-800 dark:text-blue-200' : 'bg-gray-100 dark:bg-gray-800'
-                                }`}>
-                                  {workout || 'Rest'}
+                          <div className="flex flex-wrap gap-1 text-xs">
+                            {Object.entries(structure.weeklySchedule as Record<string, string>).map(([day, workout], index) => {
+                              const isRestDay = !workout || workout.trim() === '' || workout.toLowerCase() === 'rest';
+                              const displayLabel = isRestDay ? 'Rest' : workout;
+                              
+                              return (
+                                <div key={day} className="flex flex-col items-center">
+                                  <div className="font-medium mb-1">Day {index + 1}</div>
+                                  <div className={`px-2 py-1 rounded text-center min-w-12 ${
+                                    isRestDay
+                                      ? 'bg-gray-100 dark:bg-gray-800 text-gray-600 dark:text-gray-400' 
+                                      : 'bg-blue-100 dark:bg-blue-900 text-blue-800 dark:text-blue-200'
+                                  }`}>
+                                    {displayLabel}
+                                  </div>
                                 </div>
-                              </div>
-                            ))}
+                              );
+                            })}
                           </div>
                         </div>
                       )}
@@ -166,19 +173,42 @@ export function ProgramInfo({ program, locale }: ProgramInfoProps) {
               <Zap className="w-5 h-5" />
               <span>Program Guide</span>
             </CardTitle>
+            <CardDescription>
+              Detailed guide to help you get the most out of this program
+            </CardDescription>
           </CardHeader>
           <CardContent>
-            <div className="space-y-6">
+            <div className="space-y-4">
               {guideContent
                 .sort((a: Record<string, unknown>, b: Record<string, unknown>) => ((a.order as number) || 0) - ((b.order as number) || 0))
                 .map((section: Record<string, unknown>, index: number) => (
-                  <div key={(section.id as string) || index} className="space-y-3">
-                    <h3 className="text-lg font-semibold">{section.title as string}</h3>
+                  <div key={(section.id as string) || index} className="border rounded-lg p-6 bg-muted/40 space-y-4">
+                    <div className="flex items-start justify-between gap-3">
+                      <h3 className="text-lg font-semibold break-words">{section.title as string}</h3>
+                      <Badge variant="secondary" className="text-xs font-mono shrink-0">
+                        #{(section.order as number) || (index + 1)}
+                      </Badge>
+                    </div>
+                    <Separator className="my-3" />
                     <div 
-                      className="prose prose-sm max-w-none dark:prose-invert"
+                      className="
+                        prose prose-base lg:prose-lg max-w-none dark:prose-invert
+                        prose-headings:font-semibold prose-headings:text-foreground prose-headings:mt-6 prose-headings:mb-4 first:prose-headings:mt-0
+                        prose-h1:text-2xl prose-h2:text-xl prose-h3:text-lg
+                        prose-p:text-foreground/90 prose-p:leading-7 prose-p:mb-4 prose-p:mt-0
+                        prose-strong:text-foreground prose-strong:font-bold
+                        prose-ul:my-6 prose-ul:list-disc prose-ul:pl-8 prose-ul:space-y-3
+                        prose-ol:my-6 prose-ol:list-decimal prose-ol:pl-8 prose-ol:space-y-3
+                        prose-li:text-foreground/90 prose-li:leading-7 prose-li:my-1
+                        prose-li:marker:text-foreground/60
+                        [&_ul]:!list-disc [&_ul]:!block [&_ul]:!my-6 [&_ul]:!pl-8
+                        [&_ol]:!list-decimal [&_ol]:!block [&_ol]:!my-6 [&_ol]:!pl-8
+                        [&_li]:!block [&_li]:!my-2
+                        [&_br]:block [&_br]:my-2
+                        [&>*:first-child]:mt-0
+                        [&>*:last-child]:mb-0"
                       dangerouslySetInnerHTML={{ __html: section.content as string }}
                     />
-                    {index < guideContent.length - 1 && <Separator />}
                   </div>
                 ))}
             </div>

@@ -15,11 +15,14 @@ interface TrainingProgram {
   name: Record<string, string>;
   description: Record<string, string>;
   price: number;
+  lemonSqueezyId?: string;
+  lemonSqueezyVariantId?: string;
   isActive: boolean;
   thumbnailUrl?: string;
   aboutContent?: string;
   createdAt: string;
   isOwned?: boolean;
+  hasPurchased?: boolean;
 }
 
 export default function ProgramAboutPage() {
@@ -30,6 +33,7 @@ export default function ProgramAboutPage() {
   const [program, setProgram] = useState<TrainingProgram | null>(null);
   const [isLoading, setIsLoading] = useState(true);
   const [isAuthenticated, setIsAuthenticated] = useState(false);
+  const [isPurchasing, setIsPurchasing] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
   useEffect(() => {
@@ -78,14 +82,66 @@ export default function ProgramAboutPage() {
     return new Date(dateString).toLocaleDateString();
   };
 
-  const handlePurchase = () => {
+  const handlePurchase = async () => {
     if (!isAuthenticated) {
-      router.push('/login');
+      router.push('/auth/login');
       return;
     }
     
-    // Navigate to checkout or pricing page
-    router.push(`/checkout?program=${programId}`);
+    if (!program) return;
+
+    // Check if program is free
+    if (program.price === 0) {
+      // Free program - redirect to guide page
+      router.push(`/programs/${programId}/guide`);
+      return;
+    }
+
+    // Check if already purchased
+    if (program.hasPurchased) {
+      router.push(`/programs/${programId}/guide`);
+      return;
+    }
+
+    // Check if LemonSqueezy IDs are configured
+    if (!program.lemonSqueezyId || !program.lemonSqueezyVariantId) {
+      setError('This program is not available for purchase at the moment. Please contact support.');
+      return;
+    }
+
+    try {
+      setIsPurchasing(true);
+      setError(null);
+
+      // Call API to create checkout URL
+      const response = await fetch('/api/checkout/create-program', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({
+          programId: program.id,
+        }),
+      });
+
+      const data = await response.json();
+
+      if (!response.ok) {
+        throw new Error(data.error || 'Failed to create checkout');
+      }
+
+      if (data.checkoutUrl) {
+        // Redirect to LemonSqueezy checkout
+        window.location.href = data.checkoutUrl;
+      } else {
+        throw new Error('No checkout URL received');
+      }
+    } catch (error) {
+      console.error('Error creating checkout:', error);
+      setError(error instanceof Error ? error.message : 'Failed to create checkout');
+    } finally {
+      setIsPurchasing(false);
+    }
   };
 
   const handleBackToPrograms = () => {
@@ -226,21 +282,39 @@ export default function ProgramAboutPage() {
         {/* Purchase/Action Section */}
         <Card className="bg-primary/5 border-primary/20">
           <CardHeader className="text-center">
-            <CardTitle className="text-2xl">Ready to Get Started?</CardTitle>
+            <CardTitle className="text-2xl">
+              {program.hasPurchased ? 'You Own This Program' : 'Ready to Get Started?'}
+            </CardTitle>
             <CardDescription className="text-base">
-              Purchase this program and start building your personalized training plan
+              {program.hasPurchased 
+                ? 'Access your personalized training plan' 
+                : program.price === 0
+                ? 'This program is free - start building your plan now'
+                : 'Purchase this program and start building your personalized training plan'
+              }
             </CardDescription>
           </CardHeader>
           <CardContent className="space-y-6">
             {/* Pricing */}
-            <div className="text-center">
-              <div className="text-3xl font-bold text-primary mb-2">
-                {formatPrice(program.price)}
+            {!program.hasPurchased && (
+              <div className="text-center">
+                <div className="text-3xl font-bold text-primary mb-2">
+                  {program.price === 0 ? 'FREE' : formatPrice(program.price)}
+                </div>
+                {program.price > 0 && (
+                  <p className="text-sm text-muted-foreground">
+                    One-time purchase • Lifetime access
+                  </p>
+                )}
               </div>
-              <p className="text-sm text-muted-foreground">
-                One-time purchase • Lifetime access
-              </p>
-            </div>
+            )}
+
+            {/* Error Message */}
+            {error && (
+              <div className="p-3 rounded-md bg-destructive/10 border border-destructive/20 text-sm text-destructive text-center">
+                {error}
+              </div>
+            )}
 
             {/* Action Buttons */}
             <div className="flex flex-col sm:flex-row gap-3 max-w-sm mx-auto">
@@ -248,9 +322,26 @@ export default function ProgramAboutPage() {
                 onClick={handlePurchase}
                 className="flex-1 h-12"
                 size="lg"
+                disabled={isPurchasing}
               >
-                <ShoppingCart className="h-5 w-5 mr-2" />
-                {isAuthenticated ? 'Purchase Program' : 'Sign In to Purchase'}
+                {isPurchasing ? (
+                  <>
+                    <Loader2 className="h-5 w-5 mr-2 animate-spin" />
+                    Processing...
+                  </>
+                ) : program.hasPurchased ? (
+                  <>
+                    <Star className="h-5 w-5 mr-2" />
+                    View Program
+                  </>
+                ) : isAuthenticated ? (
+                  <>
+                    <ShoppingCart className="h-5 w-5 mr-2" />
+                    {program.price === 0 ? 'Access Program' : 'Purchase Program'}
+                  </>
+                ) : (
+                  'Sign In to Purchase'
+                )}
               </Button>
             </div>
 
@@ -262,7 +353,7 @@ export default function ProgramAboutPage() {
                   <Button
                     variant="link"
                     className="p-0 h-auto text-sm"
-                    onClick={() => router.push('/signup')}
+                    onClick={() => router.push('/auth/signup')}
                   >
                     Sign up here
                   </Button>

@@ -21,10 +21,14 @@ export function BasicInfoForm() {
   const [usdPrice, setUsdPrice] = useState<string>('');
   const [tndPrice, setTndPrice] = useState<string>('');
   const [convertingPrice, setConvertingPrice] = useState(false);
+  const [lemonSqueezyId, setLemonSqueezyId] = useState<string>('');
+  const [lemonSqueezyVariantId, setLemonSqueezyVariantId] = useState<string>('');
   
   const englishName = watch('name.en');
   const englishDescription = watch('description.en');
   const price = watch('price');
+  const formLemonSqueezyId = watch('lemonSqueezyId');
+  const formLemonSqueezyVariantId = watch('lemonSqueezyVariantId');
 
   // Translation function using Gemini API
   const translateText = async (text: string, targetLang: 'ar' | 'fr'): Promise<string> => {
@@ -123,6 +127,19 @@ export function BasicInfoForm() {
       convertCentsToUsd();
     }
   }, [price, usdPrice]);
+
+  // Initialize LemonSqueezy IDs from form values
+  useEffect(() => {
+    if (formLemonSqueezyId && !lemonSqueezyId) {
+      setLemonSqueezyId(formLemonSqueezyId);
+    }
+  }, [formLemonSqueezyId, lemonSqueezyId]);
+
+  useEffect(() => {
+    if (formLemonSqueezyVariantId && !lemonSqueezyVariantId) {
+      setLemonSqueezyVariantId(formLemonSqueezyVariantId);
+    }
+  }, [formLemonSqueezyVariantId, lemonSqueezyVariantId]);
 
   const handleTranslateName = async (targetLang: 'ar' | 'fr') => {
     if (!englishName?.trim()) {
@@ -390,6 +407,50 @@ export function BasicInfoForm() {
             {errors.price && (
               <p className="text-sm text-red-600 mt-1">{errors.price.message}</p>
             )}
+          </div>
+
+          <Separator />
+
+          {/* LemonSqueezy Integration */}
+          <div className="space-y-4">
+            <Label className="text-base font-semibold">LemonSqueezy Integration (Optional)</Label>
+            <p className="text-sm text-muted-foreground">
+              If you want to sell this program through LemonSqueezy, enter the Product ID and Variant ID from your LemonSqueezy dashboard.
+            </p>
+            
+            <div>
+              <Label htmlFor="lemonSqueezyId">LemonSqueezy Product ID</Label>
+              <Input 
+                id="lemonSqueezyId"
+                placeholder="e.g., 123456"
+                value={lemonSqueezyId}
+                onChange={(e) => {
+                  setLemonSqueezyId(e.target.value);
+                  setValue('lemonSqueezyId', e.target.value || undefined);
+                }}
+                className="mt-1"
+              />
+              <p className="text-sm text-muted-foreground mt-1">
+                Find this in your LemonSqueezy dashboard under Products
+              </p>
+            </div>
+
+            <div>
+              <Label htmlFor="lemonSqueezyVariantId">LemonSqueezy Variant ID</Label>
+              <Input 
+                id="lemonSqueezyVariantId"
+                placeholder="e.g., 789012"
+                value={lemonSqueezyVariantId}
+                onChange={(e) => {
+                  setLemonSqueezyVariantId(e.target.value);
+                  setValue('lemonSqueezyVariantId', e.target.value || undefined);
+                }}
+                className="mt-1"
+              />
+              <p className="text-sm text-muted-foreground mt-1">
+                Find this in your LemonSqueezy dashboard under Product Variants
+              </p>
+            </div>
           </div>
         </CardContent>
       </Card>

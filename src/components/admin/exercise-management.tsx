@@ -10,6 +10,7 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/com
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
 import { Badge } from '@/components/ui/badge';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
+import { Checkbox } from '@/components/ui/checkbox';
 import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle, DialogTrigger } from '@/components/ui/dialog';
 import { Plus, Edit, Trash, Search } from 'lucide-react';
 import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle, AlertDialogTrigger } from '@/components/ui/alert-dialog';
@@ -17,121 +18,121 @@ import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, 
 interface Exercise {
   id: string;
   name: string;
-  muscleGroup: string;
+  exerciseType: 'COMPOUND' | 'ISOLATION' | 'UNILATERAL';
   description?: string;
   instructions?: string;
   equipment: string[];
   category: 'APPROVED' | 'PENDING' | 'DEPRECATED';
   isActive: boolean;
-  difficulty: 'BEGINNER' | 'INTERMEDIATE' | 'ADVANCED';
-  volumeContributions?: Record<string, number>;
+  isRecommended: boolean;
+  volumeContributions: Record<string, number>;
   createdAt: string;
   updatedAt: string;
 }
 
 interface ExerciseFormData {
   name: string;
-  muscleGroup: string;
+  exerciseType: 'COMPOUND' | 'ISOLATION' | 'UNILATERAL';
   description: string;
   instructions: string;
   equipment: string[];
   category: 'APPROVED' | 'PENDING' | 'DEPRECATED';
   isActive: boolean;
-  difficulty: 'BEGINNER' | 'INTERMEDIATE' | 'ADVANCED';
+  isRecommended: boolean;
   volumeContributions: Record<string, number>;
+  regionalBias: Record<string, string>; // Stores which region/specific muscle is biased for muscles at 1.0
 }
 
-const MUSCLE_GROUPS = [
-  'CHEST', 'BACK', 'SHOULDERS', 'BICEPS', 'TRICEPS', 'FOREARMS',
-  'ABS', 'GLUTES', 'QUADRICEPS', 'HAMSTRINGS', 'ADDUCTORS', 'CALVES'
+const EXERCISE_TYPES = [
+  { value: 'COMPOUND', label: 'Compound', description: 'Multi-joint exercises that work multiple muscle groups' },
+  { value: 'ISOLATION', label: 'Isolation', description: 'Single-joint exercises targeting specific muscles' },
+  { value: 'UNILATERAL', label: 'Unilateral', description: 'One-sided exercises for balance and symmetry' },
 ];
 
-// Volume tracking muscle groups with display names
+// Volume tracking muscle groups with display names (simplified to match schema)
 const VOLUME_MUSCLES = [
   // Chest
-  { value: 'UPPER_CHEST', label: 'Upper Chest' },
-  { value: 'MIDDLE_CHEST', label: 'Middle Chest' },
-  { value: 'LOWER_CHEST', label: 'Lower Chest' },
+  { value: 'CHEST', label: 'Chest' },
   
-  // Arms - Biceps and Related
-  { value: 'BICEPS', label: 'Biceps' },
-  { value: 'BRACHIALIS', label: 'Brachialis' },
-  { value: 'BRACHIORADIALIS', label: 'Brachioradialis' },
-  
-  // Arms - Triceps
-  { value: 'TRICEPS_LONG_HEAD', label: 'Triceps Long Head' },
-  { value: 'TRICEPS_MEDIAL_HEAD', label: 'Triceps Medial Head' },
-  { value: 'TRICEPS_LATERAL_HEAD', label: 'Triceps Lateral Head' },
+  // Back
+  { value: 'LATS', label: 'Lats' },
+  { value: 'TRAPEZIUS_RHOMBOIDS', label: 'Trapezius & Rhomboids' },
   
   // Shoulders
   { value: 'FRONT_DELTS', label: 'Front Delts' },
   { value: 'SIDE_DELTS', label: 'Side Delts' },
   { value: 'REAR_DELTS', label: 'Rear Delts' },
   
+  // Arms
+  { value: 'ELBOW_FLEXORS', label: 'Elbow Flexors (Biceps)' },
+  { value: 'TRICEPS', label: 'Triceps' },
+  
   // Forearms
   { value: 'WRIST_FLEXORS', label: 'Wrist Flexors' },
   { value: 'WRIST_EXTENSORS', label: 'Wrist Extensors' },
   
-  // Back - Lats
-  { value: 'UPPER_LATS', label: 'Upper Lats' },
-  { value: 'MIDDLE_LATS', label: 'Middle Lats' },
-  { value: 'LOWER_LATS', label: 'Lower Lats' },
-  
-  // Back - Other
-  { value: 'TRAPEZIUS', label: 'Trapezius' },
-  { value: 'RHOMBOIDS', label: 'Rhomboids' },
-  { value: 'ERECTOR_SPINAE', label: 'Erector Spinae' },
-  
-  // Glutes
-  { value: 'GLUTEUS_MAXIMUS', label: 'Gluteus Maximus' },
-  { value: 'GLUTEUS_MEDIUS', label: 'Gluteus Medius' },
-  { value: 'GLUTEUS_MINIMUS', label: 'Gluteus Minimus' },
-  
-  // Adductors
-  { value: 'ADDUCTOR_MAGNUS', label: 'Adductor Magnus' },
-  { value: 'OTHER_ADDUCTORS', label: 'Other Adductors' },
-  
-  // Quadriceps
-  { value: 'RECTUS_FEMORIS', label: 'Rectus Femoris' },
-  { value: 'VASTUS_LATERALIS', label: 'Vastus Lateralis' },
-  { value: 'VASTUS_MEDIALIS', label: 'Vastus Medialis' },
-  { value: 'VASTUS_INTERMEDIUS', label: 'Vastus Intermedius' },
-  
-  // Hamstrings
-  { value: 'HAMSTRINGS', label: 'Hamstrings' },
-  
-  // Calves and Lower Leg
-  { value: 'CALVES', label: 'Calves' },
-  { value: 'TIBIALIS_ANTERIOR', label: 'Tibialis Anterior' },
-  
   // Core
   { value: 'ABS', label: 'Abs' },
-  { value: 'OBLIQUES', label: 'Obliques' },
   
-  // Additional muscles
-  { value: 'HIP_FLEXORS', label: 'Hip Flexors' },
-  { value: 'SERRATUS_ANTERIOR', label: 'Serratus Anterior' },
-  { value: 'PECTORALIS_MINOR', label: 'Pectoralis Minor' },
-  { value: 'TERES_MAJOR', label: 'Teres Major' },
-  { value: 'TERES_MINOR', label: 'Teres Minor' },
-  { value: 'INFRASPINATUS', label: 'Infraspinatus' },
-  { value: 'SUPRASPINATUS', label: 'Supraspinatus' },
-  { value: 'SUBSCAPULARIS', label: 'Subscapularis' },
+  // Lower Body
+  { value: 'GLUTES', label: 'Glutes' },
+  { value: 'QUADRICEPS', label: 'Quadriceps' },
+  { value: 'HAMSTRINGS', label: 'Hamstrings' },
+  { value: 'ADDUCTORS', label: 'Adductors' },
+  { value: 'CALVES', label: 'Calves' },
 ];
 
+// Regional bias options for muscles (only shown when volume = 1.0)
+const MUSCLE_REGIONAL_BIAS: Record<string, Array<{ value: string; label: string }>> = {
+  CHEST: [
+    { value: 'UPPER_CHEST', label: 'Upper Chest' },
+    { value: 'MIDDLE_CHEST', label: 'Middle Chest' },
+    { value: 'LOWER_CHEST', label: 'Lower Chest' },
+  ],
+  LATS: [
+    { value: 'UPPER_LATS', label: 'Upper Lats' },
+    { value: 'MID_LOWER_LATS', label: 'Mid to Lower Lats' },
+  ],
+  ELBOW_FLEXORS: [
+    { value: 'BICEPS', label: 'Biceps' },
+    { value: 'BRACHIALIS', label: 'Brachialis' },
+    { value: 'BRACHIORADIALIS', label: 'Brachioradialis' },
+  ],
+  TRICEPS: [
+    { value: 'TRICEPS_LONG_HEAD', label: 'Long Head' },
+    { value: 'TRICEPS_MEDIAL_LATERAL', label: 'Medial & Lateral Heads' },
+  ],
+  GLUTES: [
+    { value: 'GLUTEUS_MAXIMUS', label: 'Gluteus Maximus' },
+    { value: 'GLUTEUS_MEDIUS', label: 'Gluteus Medius' },
+    { value: 'GLUTEUS_MINIMUS', label: 'Gluteus Minimus' },
+  ],
+  QUADRICEPS: [
+    { value: 'RECTUS_FEMORIS', label: 'Rectus Femoris' },
+    { value: 'VASTUS_HEADS', label: 'Vastus Heads (Lateralis, Medialis, Intermedius)' },
+  ],
+  ADDUCTORS: [
+    { value: 'ADDUCTOR_LONGUS', label: 'Adductor Longus' },
+    { value: 'ADDUCTOR_BREVIS', label: 'Adductor Brevis' },
+    { value: 'ADDUCTOR_MAGNUS', label: 'Adductor Magnus' },
+    { value: 'GRACILIS', label: 'Gracilis' },
+    { value: 'PECTINEUS', label: 'Pectineus' },
+  ],
+};
+
 const CATEGORIES = ['APPROVED', 'PENDING', 'DEPRECATED'];
-const DIFFICULTIES = ['BEGINNER', 'INTERMEDIATE', 'ADVANCED'];
 
 const initialFormData: ExerciseFormData = {
   name: '',
-  muscleGroup: '',
+  exerciseType: 'COMPOUND',
   description: '',
   instructions: '',
   equipment: [],
   category: 'APPROVED',
   isActive: true,
-  difficulty: 'INTERMEDIATE',
-  volumeContributions: {}
+  isRecommended: false,
+  volumeContributions: {},
+  regionalBias: {}
 };
 
 export default function ExerciseManagement() {
@@ -149,7 +150,7 @@ export default function ExerciseManagement() {
   
   // Filter and search state
   const [searchTerm, setSearchTerm] = useState('');
-  const [muscleGroupFilter, setMuscleGroupFilter] = useState('all');
+  const [exerciseTypeFilter, setExerciseTypeFilter] = useState('all');
   const [categoryFilter, setCategoryFilter] = useState('all');
   const [showInactiveFilter, setShowInactiveFilter] = useState(false);
 
@@ -167,7 +168,7 @@ export default function ExerciseManagement() {
         page: currentPage.toString(),
         limit: '20',
         search: searchTerm,
-        ...(muscleGroupFilter && muscleGroupFilter !== 'all' && { muscleGroup: muscleGroupFilter }),
+        ...(exerciseTypeFilter && exerciseTypeFilter !== 'all' && { exerciseType: exerciseTypeFilter }),
         ...(categoryFilter && categoryFilter !== 'all' && { category: categoryFilter }),
         ...(showInactiveFilter ? {} : { isActive: 'true' })
       });
@@ -188,7 +189,7 @@ export default function ExerciseManagement() {
     } finally {
       setLoading(false);
     }
-  }, [currentPage, searchTerm, muscleGroupFilter, categoryFilter, showInactiveFilter]);
+  }, [currentPage, searchTerm, exerciseTypeFilter, categoryFilter, showInactiveFilter]);
 
   useEffect(() => {
     fetchExercises();
@@ -232,14 +233,15 @@ export default function ExerciseManagement() {
   const handleEdit = (exercise: Exercise) => {
     setFormData({
       name: exercise.name,
-      muscleGroup: exercise.muscleGroup,
+      exerciseType: exercise.exerciseType,
       description: exercise.description || '',
       instructions: exercise.instructions || '',
       equipment: exercise.equipment,
       category: exercise.category,
       isActive: exercise.isActive,
-      difficulty: exercise.difficulty,
-      volumeContributions: exercise.volumeContributions || {}
+      isRecommended: exercise.isRecommended,
+      volumeContributions: exercise.volumeContributions || {},
+      regionalBias: (exercise as Exercise & { regionalBias?: Record<string, string> }).regionalBias || {}
     });
     setEquipmentInput(exercise.equipment.join(', '));
     setEditingId(exercise.id);
@@ -295,34 +297,44 @@ export default function ExerciseManagement() {
   // Volume tracking helper functions
   const updateVolumeContribution = (muscle: string, volume: number) => {
     const newContributions = { ...formData.volumeContributions };
+    const newBias = { ...formData.regionalBias };
+    
     if (volume === 0) {
       delete newContributions[muscle];
+      delete newBias[muscle]; // Remove bias if volume is 0
     } else {
       newContributions[muscle] = volume;
+      // Keep regional bias when volume changes (only clear when volume is 0)
     }
-    setFormData({ ...formData, volumeContributions: newContributions });
+    
+    setFormData({ ...formData, volumeContributions: newContributions, regionalBias: newBias });
   };
 
   const getVolumeContribution = (muscle: string) => {
     return formData.volumeContributions[muscle] || 0;
   };
 
-  const getMuscleGroupColor = (muscleGroup: string) => {
+  const updateRegionalBias = (muscle: string, region: string) => {
+    const newBias = { ...formData.regionalBias };
+    if (region === '' || region === 'NONE') {
+      delete newBias[muscle];
+    } else {
+      newBias[muscle] = region;
+    }
+    setFormData({ ...formData, regionalBias: newBias });
+  };
+
+  const getRegionalBias = (muscle: string) => {
+    return formData.regionalBias[muscle] || 'NONE';
+  };
+
+  const getExerciseTypeColor = (exerciseType: string) => {
     const colors = {
-      CHEST: 'bg-red-100 text-red-800',
-      BACK: 'bg-blue-100 text-blue-800',
-      SHOULDERS: 'bg-yellow-100 text-yellow-800',
-      BICEPS: 'bg-green-100 text-green-800',
-      TRICEPS: 'bg-purple-100 text-purple-800',
-      FOREARMS: 'bg-gray-100 text-gray-800',
-      ABS: 'bg-orange-100 text-orange-800',
-      GLUTES: 'bg-pink-100 text-pink-800',
-      QUADRICEPS: 'bg-indigo-100 text-indigo-800',
-      HAMSTRINGS: 'bg-cyan-100 text-cyan-800',
-      ADDUCTORS: 'bg-lime-100 text-lime-800',
-      CALVES: 'bg-amber-100 text-amber-800'
+      'COMPOUND': 'bg-purple-100 text-purple-800 dark:bg-purple-900 dark:text-purple-300',
+      'ISOLATION': 'bg-blue-100 text-blue-800 dark:bg-blue-900 dark:text-blue-300',
+      'UNILATERAL': 'bg-green-100 text-green-800 dark:bg-green-900 dark:text-green-300',
     };
-    return colors[muscleGroup as keyof typeof colors] || 'bg-gray-100 text-gray-800';
+    return colors[exerciseType as keyof typeof colors] || 'bg-gray-100 text-gray-800';
   };
 
   const getCategoryColor = (category: string) => {
@@ -373,18 +385,21 @@ export default function ExerciseManagement() {
                     />
                   </div>
                   <div>
-                    <Label htmlFor="muscleGroup">Muscle Group *</Label>
+                    <Label htmlFor="exerciseType">Exercise Type *</Label>
                     <Select
-                      value={formData.muscleGroup}
-                      onValueChange={(value) => setFormData({ ...formData, muscleGroup: value })}
+                      value={formData.exerciseType}
+                      onValueChange={(value: 'COMPOUND' | 'ISOLATION' | 'UNILATERAL') => setFormData({ ...formData, exerciseType: value })}
                     >
                       <SelectTrigger>
-                        <SelectValue placeholder="Select muscle group" />
+                        <SelectValue placeholder="Select exercise type" />
                       </SelectTrigger>
                       <SelectContent>
-                        {MUSCLE_GROUPS.map((group) => (
-                          <SelectItem key={group} value={group}>
-                            {group.toLowerCase().replace(/^\w/, c => c.toUpperCase())}
+                        {EXERCISE_TYPES.map((type) => (
+                          <SelectItem key={type.value} value={type.value}>
+                            <div>
+                              <div className="font-medium">{type.label}</div>
+                              <div className="text-xs text-muted-foreground">{type.description}</div>
+                            </div>
                           </SelectItem>
                         ))}
                       </SelectContent>
@@ -413,25 +428,17 @@ export default function ExerciseManagement() {
                       </SelectContent>
                     </Select>
                   </div>
-                  <div>
-                    <Label htmlFor="difficulty">Difficulty</Label>
-                    <Select
-                      value={formData.difficulty}
-                      onValueChange={(value: 'BEGINNER' | 'INTERMEDIATE' | 'ADVANCED') => 
-                        setFormData({ ...formData, difficulty: value })
+                  <div className="flex items-center space-x-2">
+                    <Checkbox
+                      id="isRecommended"
+                      checked={formData.isRecommended}
+                      onCheckedChange={(checked: boolean) => 
+                        setFormData({ ...formData, isRecommended: checked })
                       }
-                    >
-                      <SelectTrigger>
-                        <SelectValue />
-                      </SelectTrigger>
-                      <SelectContent>
-                        {DIFFICULTIES.map((difficulty) => (
-                          <SelectItem key={difficulty} value={difficulty}>
-                            {difficulty.toLowerCase().replace(/^\w/, c => c.toUpperCase())}
-                          </SelectItem>
-                        ))}
-                      </SelectContent>
-                    </Select>
+                    />
+                    <Label htmlFor="isRecommended" className="cursor-pointer">
+                      Recommended Exercise (appears first in program guide)
+                    </Label>
                   </div>
                 </div>
 
@@ -489,29 +496,55 @@ export default function ExerciseManagement() {
                   <div>
                     <Label className="text-base font-medium">Volume Contributions</Label>
                     <p className="text-sm text-muted-foreground">
-                      Set muscle volume contributions: 1.0 for direct, 0.5 for indirect, 0 for none
+                      Set how much each muscle is targeted: 1.0 (primary), 0.75 (strong secondary), 0.5 (standard secondary), 0.25 (light secondary), 0 (not targeted)
                     </p>
                   </div>
                   
                   <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4 max-h-60 overflow-y-auto border rounded-lg p-4">
                     {VOLUME_MUSCLES.map(({ value, label }) => (
-                      <div key={value} className="flex items-center justify-between space-x-2">
-                        <Label htmlFor={`volume-${value}`} className="text-sm font-normal flex-grow">
-                          {label}
-                        </Label>
-                        <Select
-                          value={getVolumeContribution(value).toString()}
-                          onValueChange={(val) => updateVolumeContribution(value, parseFloat(val))}
-                        >
-                          <SelectTrigger className="w-20 h-8">
-                            <SelectValue />
-                          </SelectTrigger>
-                          <SelectContent>
-                            <SelectItem value="0">0</SelectItem>
-                            <SelectItem value="0.5">0.5</SelectItem>
-                            <SelectItem value="1">1.0</SelectItem>
-                          </SelectContent>
-                        </Select>
+                      <div key={value} className="space-y-2">
+                        <div className="flex items-center justify-between space-x-2">
+                          <Label htmlFor={`volume-${value}`} className="text-sm font-normal flex-grow">
+                            {label}
+                          </Label>
+                          <Select
+                            value={getVolumeContribution(value).toString()}
+                            onValueChange={(val) => updateVolumeContribution(value, parseFloat(val))}
+                          >
+                            <SelectTrigger className="w-24 h-8">
+                              <SelectValue />
+                            </SelectTrigger>
+                            <SelectContent>
+                              <SelectItem value="0">0</SelectItem>
+                              <SelectItem value="0.25">0.25</SelectItem>
+                              <SelectItem value="0.5">0.5</SelectItem>
+                              <SelectItem value="0.75">0.75</SelectItem>
+                              <SelectItem value="1">1.0</SelectItem>
+                            </SelectContent>
+                          </Select>
+                        </div>
+                        
+                        {/* Regional Bias - Shown when volume is non-zero (0.25, 0.5, 0.75, 1.0) */}
+                        {getVolumeContribution(value) > 0 && MUSCLE_REGIONAL_BIAS[value] && (
+                          <div className="ml-4 mt-1">
+                            <Select
+                              value={getRegionalBias(value)}
+                              onValueChange={(region) => updateRegionalBias(value, region)}
+                            >
+                              <SelectTrigger className="w-full h-8 text-xs">
+                                <SelectValue placeholder="Select region/bias (optional)" />
+                              </SelectTrigger>
+                              <SelectContent>
+                                <SelectItem value="NONE">No specific bias</SelectItem>
+                                {MUSCLE_REGIONAL_BIAS[value].map(({ value: regionValue, label: regionLabel }) => (
+                                  <SelectItem key={regionValue} value={regionValue}>
+                                    {regionLabel}
+                                  </SelectItem>
+                                ))}
+                              </SelectContent>
+                            </Select>
+                          </div>
+                        )}
                       </div>
                     ))}
                   </div>
@@ -523,35 +556,15 @@ export default function ExerciseManagement() {
                       variant="outline"
                       size="sm"
                       onClick={() => {
-                        const chestPreset = {
-                          MIDDLE_CHEST: 1.0,
+                        const benchPressPreset = {
+                          CHEST: 1.0,
                           FRONT_DELTS: 0.5,
-                          TRICEPS_MEDIAL_HEAD: 0.5,
-                          TRICEPS_LATERAL_HEAD: 0.5
+                          TRICEPS: 0.5
                         };
-                        setFormData({ ...formData, volumeContributions: chestPreset });
+                        setFormData({ ...formData, volumeContributions: benchPressPreset });
                       }}
                     >
-                      Chest Press Preset
-                    </Button>
-                    <Button
-                      type="button"
-                      variant="outline"
-                      size="sm"
-                      onClick={() => {
-                        const latPreset = {
-                          UPPER_LATS: 0.5,
-                          MIDDLE_LATS: 1.0,
-                          LOWER_LATS: 0.5,
-                          RHOMBOIDS: 0.5,
-                          TRAPEZIUS: 0.5,
-                          REAR_DELTS: 0.5,
-                          BICEPS: 0.5
-                        };
-                        setFormData({ ...formData, volumeContributions: latPreset });
-                      }}
-                    >
-                      Lat Pulldown Preset
+                      Bench Press Preset
                     </Button>
                     <Button
                       type="button"
@@ -559,18 +572,46 @@ export default function ExerciseManagement() {
                       size="sm"
                       onClick={() => {
                         const squatPreset = {
-                          RECTUS_FEMORIS: 1.0,
-                          VASTUS_LATERALIS: 1.0,
-                          VASTUS_MEDIALIS: 1.0,
-                          VASTUS_INTERMEDIUS: 1.0,
-                          GLUTEUS_MAXIMUS: 1.0,
-                          HAMSTRINGS: 0.5,
-                          ABS: 0.5
+                          QUADRICEPS: 1.0,
+                          GLUTES: 0.75,
+                          HAMSTRINGS: 0.5
                         };
                         setFormData({ ...formData, volumeContributions: squatPreset });
                       }}
                     >
                       Squat Preset
+                    </Button>
+                    <Button
+                      type="button"
+                      variant="outline"
+                      size="sm"
+                      onClick={() => {
+                        const rowPreset = {
+                          LATS: 1.0,
+                          TRAPEZIUS_RHOMBOIDS: 0.75,
+                          REAR_DELTS: 0.5,
+                          ELBOW_FLEXORS: 0.5
+                        };
+                        setFormData({ ...formData, volumeContributions: rowPreset });
+                      }}
+                    >
+                      Row Preset
+                    </Button>
+                    <Button
+                      type="button"
+                      variant="outline"
+                      size="sm"
+                      onClick={() => {
+                        const deadliftPreset = {
+                          LATS: 1.0,
+                          TRAPEZIUS_RHOMBOIDS: 0.75,
+                          GLUTES: 0.75,
+                          HAMSTRINGS: 0.75
+                        };
+                        setFormData({ ...formData, volumeContributions: deadliftPreset });
+                      }}
+                    >
+                      Deadlift Preset
                     </Button>
                     <Button
                       type="button"
@@ -638,16 +679,16 @@ export default function ExerciseManagement() {
               </div>
             </div>
             <div className="space-y-2">
-              <Label htmlFor="muscleGroupFilter">Muscle Group</Label>
-              <Select value={muscleGroupFilter} onValueChange={setMuscleGroupFilter}>
+              <Label htmlFor="exerciseTypeFilter">Exercise Type</Label>
+              <Select value={exerciseTypeFilter} onValueChange={setExerciseTypeFilter}>
                 <SelectTrigger>
-                  <SelectValue placeholder="All muscle groups" />
+                  <SelectValue placeholder="All exercise types" />
                 </SelectTrigger>
                 <SelectContent>
-                  <SelectItem value="all">All muscle groups</SelectItem>
-                  {MUSCLE_GROUPS.map((group) => (
-                    <SelectItem key={group} value={group}>
-                      {group.toLowerCase().replace(/^\w/, c => c.toUpperCase())}
+                  <SelectItem value="all">All exercise types</SelectItem>
+                  {EXERCISE_TYPES.map((type) => (
+                    <SelectItem key={type.value} value={type.value}>
+                      {type.label}
                     </SelectItem>
                   ))}
                 </SelectContent>
@@ -685,7 +726,7 @@ export default function ExerciseManagement() {
           <div className="text-center py-8">Loading exercises...</div>
         ) : exercises.length === 0 ? (
           <div className="text-center py-8 text-muted-foreground">
-            No exercises found. {searchTerm || (muscleGroupFilter !== 'all') || (categoryFilter !== 'all') ? 'Try adjusting your filters.' : 'Create your first exercise to get started.'}
+            No exercises found. {searchTerm || (exerciseTypeFilter !== 'all') || (categoryFilter !== 'all') ? 'Try adjusting your filters.' : 'Create your first exercise to get started.'}
           </div>
         ) : (
           <>
@@ -694,9 +735,9 @@ export default function ExerciseManagement() {
                 <TableHeader>
                   <TableRow>
                     <TableHead className="min-w-[200px]">Name</TableHead>
-                    <TableHead className="min-w-[120px]">Muscle Group</TableHead>
+                    <TableHead className="min-w-[120px]">Exercise Type</TableHead>
                     <TableHead className="min-w-[100px]">Category</TableHead>
-                    <TableHead className="min-w-[100px]">Difficulty</TableHead>
+                    <TableHead className="min-w-[100px]">Recommended</TableHead>
                     <TableHead className="min-w-[150px]">Equipment</TableHead>
                     <TableHead className="min-w-[180px]">Volume Contributions</TableHead>
                     <TableHead className="min-w-[80px]">Status</TableHead>
@@ -717,8 +758,8 @@ export default function ExerciseManagement() {
                         </div>
                       </TableCell>
                       <TableCell>
-                        <Badge className={getMuscleGroupColor(exercise.muscleGroup)}>
-                          {exercise.muscleGroup.toLowerCase().replace(/^\w/, c => c.toUpperCase())}
+                        <Badge className={getExerciseTypeColor(exercise.exerciseType)}>
+                          {exercise.exerciseType.toLowerCase().replace(/^\w/, (c: string) => c.toUpperCase())}
                         </Badge>
                       </TableCell>
                       <TableCell>
@@ -727,9 +768,15 @@ export default function ExerciseManagement() {
                         </Badge>
                       </TableCell>
                       <TableCell>
-                        <Badge variant="outline">
-                          {exercise.difficulty.toLowerCase()}
-                        </Badge>
+                        <div className="flex items-center justify-center">
+                          {exercise.isRecommended ? (
+                            <Badge variant="default" className="bg-green-600">
+                              ✓ Recommended
+                            </Badge>
+                          ) : (
+                            <span className="text-muted-foreground">—</span>
+                          )}
+                        </div>
                       </TableCell>
                       <TableCell>
                         <div className="flex flex-wrap gap-1 max-w-[150px]">
