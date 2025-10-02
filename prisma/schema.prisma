@@ -279,6 +279,9 @@ model TrainingProgram {
   hasInteractiveBuilder Boolean @default(true)
   allowsCustomization   Boolean @default(true)
   
+  // Workout Names (general for all structures)
+  workoutNames Json? // Array of workout names: ["Push Day", "Pull Day", "Leg Day"]
+  
   // About Program
   thumbnailUrl String?
   aboutContent String?

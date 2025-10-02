@@ -22,6 +22,7 @@ const UpdateTrainingProgramSchema = z.object({
   }).optional(),
   price: z.number().min(0, 'Price must be non-negative').optional(),
   lemonSqueezyId: z.string().optional(),
+  lemonSqueezyVariantId: z.string().optional(),
   programStructures: z.array(z.object({
     id: z.string().optional(),
     name: z.object({
@@ -48,6 +49,7 @@ const UpdateTrainingProgramSchema = z.object({
   hasInteractiveBuilder: z.boolean().optional(),
   allowsCustomization: z.boolean().optional(),
   isActive: z.boolean().optional(),
+  workoutNames: z.array(z.string()).optional(),
   workoutTemplates: z.array(z.object({
     id: z.string(),
     name: z.string().min(1, 'Workout name is required'),
@@ -125,9 +127,11 @@ export async function createTrainingProgram(formData: z.infer<typeof programCrea
           description: validatedData.description,
           price: validatedData.price,
           ...(validatedData.lemonSqueezyId && { lemonSqueezyId: validatedData.lemonSqueezyId }),
+          ...(validatedData.lemonSqueezyVariantId && { lemonSqueezyVariantId: validatedData.lemonSqueezyVariantId }),
           hasInteractiveBuilder: validatedData.hasInteractiveBuilder ?? true,
           allowsCustomization: validatedData.allowsCustomization ?? true,
           isActive: validatedData.isActive ?? true,
+          workoutNames: validatedData.workoutNames || [],
           ...(validatedData.aboutContent && { aboutContent: validatedData.aboutContent }),
           ...(validatedData.thumbnailUrl && { thumbnailUrl: validatedData.thumbnailUrl }),
         },
@@ -248,9 +252,11 @@ export async function updateTrainingProgram(formData: z.infer<typeof UpdateTrain
       if (validatedData.description) updateData.description = validatedData.description;
       if (validatedData.price !== undefined) updateData.price = validatedData.price;
       if (validatedData.lemonSqueezyId) updateData.lemonSqueezyId = validatedData.lemonSqueezyId;
+      if (validatedData.lemonSqueezyVariantId) updateData.lemonSqueezyVariantId = validatedData.lemonSqueezyVariantId;
       if (validatedData.hasInteractiveBuilder !== undefined) updateData.hasInteractiveBuilder = validatedData.hasInteractiveBuilder;
       if (validatedData.allowsCustomization !== undefined) updateData.allowsCustomization = validatedData.allowsCustomization;
       if (validatedData.isActive !== undefined) updateData.isActive = validatedData.isActive;
+      if (validatedData.workoutNames !== undefined) updateData.workoutNames = validatedData.workoutNames;
       if (validatedData.aboutContent !== undefined) updateData.aboutContent = validatedData.aboutContent;
       if (validatedData.thumbnailUrl !== undefined) updateData.thumbnailUrl = validatedData.thumbnailUrl;
 

@@ -134,6 +134,7 @@ interface CustomizationConfig {
   categoryType: 'MINIMALIST' | 'ESSENTIALIST' | 'MAXIMALIST';
   workoutConfiguration: Record<string, string[]>; // workoutTemplateId -> exerciseIds[]
   weeklyScheduleMapping?: Record<string, string>; // day1 -> monday, day2 -> tuesday, etc.
+  workoutPattern?: number; // 1 = same workout, 2 = A/B, 3 = A/B/C
 }
 
 export function ProgramCustomizer({
@@ -155,7 +156,8 @@ export function ProgramCustomizer({
     structureId: userCustomization?.configuration?.structureId || program.programStructures.find((s: Record<string, unknown>) => s.isDefault)?.id || program.programStructures[0]?.id || '',
     categoryType: userCustomization?.categoryType || 'ESSENTIALIST',
     workoutConfiguration: userCustomization?.configuration?.workoutConfiguration || {},
-    weeklyScheduleMapping: userCustomization?.configuration?.weeklyScheduleMapping || {}
+    weeklyScheduleMapping: userCustomization?.configuration?.weeklyScheduleMapping || {},
+    workoutPattern: userCustomization?.configuration?.workoutPattern || 1
   }));
 
   const [hasUnsavedChanges, setHasUnsavedChanges] = useState(false);
@@ -859,9 +861,63 @@ export function ProgramCustomizer({
           <Alert>
             <Info className="h-4 w-4" />
             <AlertDescription>
-              Customize exercises for each workout template. Select exercises that match your goals and available equipment.
+              Choose your workout pattern and customize exercises for each workout template.
             </AlertDescription>
           </Alert>
+
+          {/* Workout Pattern Selector */}
+          <Card>
+            <CardHeader>
+              <CardTitle>Workout Pattern</CardTitle>
+              <CardDescription>
+                Choose how you want to cycle through your workouts
+              </CardDescription>
+            </CardHeader>
+            <CardContent>
+              <RadioGroup 
+                value={customization.workoutPattern?.toString() || '1'}
+                onValueChange={(value) => {
+                  setCustomization(prev => ({
+                    ...prev,
+                    workoutPattern: parseInt(value)
+                  }));
+                  setHasUnsavedChanges(true);
+                }}
+              >
+                <div className="space-y-3">
+                  <div className="flex items-center space-x-3 border rounded-lg p-4 cursor-pointer hover:bg-muted/50 transition-colors">
+                    <RadioGroupItem value="1" id="pattern-1" />
+                    <Label htmlFor="pattern-1" className="flex-1 cursor-pointer">
+                      <div className="font-medium">Same Workout Repeated</div>
+                      <div className="text-sm text-muted-foreground">
+                        Repeat the same workout every training day (e.g., Full Body, Full Body, Full Body...)
+                      </div>
+                    </Label>
+                  </div>
+                  
+                  <div className="flex items-center space-x-3 border rounded-lg p-4 cursor-pointer hover:bg-muted/50 transition-colors">
+                    <RadioGroupItem value="2" id="pattern-2" />
+                    <Label htmlFor="pattern-2" className="flex-1 cursor-pointer">
+                      <div className="font-medium">Workout A and B</div>
+                      <div className="text-sm text-muted-foreground">
+                        Alternate between two different workouts (e.g., A, B, A, B, A, B...)
+                      </div>
+                    </Label>
+                  </div>
+                  
+                  <div className="flex items-center space-x-3 border rounded-lg p-4 cursor-pointer hover:bg-muted/50 transition-colors">
+                    <RadioGroupItem value="3" id="pattern-3" />
+                    <Label htmlFor="pattern-3" className="flex-1 cursor-pointer">
+                      <div className="font-medium">Workout A, B, and C</div>
+                      <div className="text-sm text-muted-foreground">
+                        Rotate through three different workouts (e.g., A, B, C, A, B, C...)
+                      </div>
+                    </Label>
+                  </div>
+                </div>
+              </RadioGroup>
+            </CardContent>
+          </Card>
 
           <Card>
             <CardHeader>

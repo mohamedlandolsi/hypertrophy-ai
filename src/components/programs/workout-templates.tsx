@@ -16,6 +16,17 @@ import {
   CheckCircle2
 } from 'lucide-react';
 
+// Workout template with pattern extension
+interface WorkoutTemplateWithPattern {
+  id: string;
+  name: Record<string, string>;
+  order: number;
+  requiredMuscleGroups: string[];
+  patternLabel: string | null;
+  patternIndex: number;
+  displayId?: string;
+}
+
 interface WorkoutTemplatesProps {
   // eslint-disable-next-line @typescript-eslint/no-explicit-any
   program: any;
@@ -30,6 +41,9 @@ export function WorkoutTemplates({
   locale
 }: WorkoutTemplatesProps) {
   const [selectedWorkout, setSelectedWorkout] = useState<string | null>(null);
+
+  // Get workout pattern from customization (1 = same, 2 = A/B, 3 = A/B/C)
+  const workoutPattern = userCustomization?.configuration?.workoutPattern || 1;
 
   // Extract multilingual content
   // eslint-disable-next-line @typescript-eslint/no-explicit-any
@@ -48,6 +62,54 @@ export function WorkoutTemplates({
   const structureName = selectedStructure 
     ? getLocalizedContent(selectedStructure.name, 'Training Structure')
     : 'Default Structure';
+
+  // Generate workout display based on pattern
+  const getWorkoutsToDisplay = (): WorkoutTemplateWithPattern[] => {
+    const baseWorkouts = program.workoutTemplates || [];
+    
+    if (workoutPattern === 1) {
+      // Pattern 1: Same workout repeated - show all workouts as they are
+      return baseWorkouts.map((workout: WorkoutTemplateWithPattern) => ({
+        ...workout,
+        patternLabel: null,
+        patternIndex: 0
+      }));
+    } else {
+      // Pattern 2 or 3: Multiply workouts by pattern
+      const expandedWorkouts: WorkoutTemplateWithPattern[] = [];
+      const labels = ['A', 'B', 'C'];
+      
+      for (let patternIndex = 0; patternIndex < workoutPattern; patternIndex++) {
+        baseWorkouts.forEach((workout: WorkoutTemplateWithPattern) => {
+          expandedWorkouts.push({
+            ...workout,
+            patternLabel: labels[patternIndex],
+            patternIndex: patternIndex,
+            // Create unique ID for each pattern instance
+            displayId: `${workout.id}-${labels[patternIndex]}`
+          });
+        });
+      }
+      
+      return expandedWorkouts;
+    }
+  };
+
+  const displayedWorkouts = getWorkoutsToDisplay();
+
+  // Get pattern description
+  const getPatternDescription = () => {
+    switch (workoutPattern) {
+      case 1:
+        return 'You will repeat the same workout every training day';
+      case 2:
+        return 'You will alternate between Workout A and Workout B';
+      case 3:
+        return 'You will rotate through Workout A, B, and C';
+      default:
+        return '';
+    }
+  };
 
   return (
     <div className="space-y-6">
@@ -69,34 +131,53 @@ export function WorkoutTemplates({
         <Alert>
           <Info className="h-4 w-4" />
           <AlertDescription>
-            <strong>Current Structure:</strong> {structureName} - 
-            {selectedStructure.structureType === 'weekly' 
-              ? ` ${selectedStructure.sessionCount} sessions per week`
-              : ` ${selectedStructure.trainingDays} training days, ${selectedStructure.restDays} rest days`
-            }
+            <div className="space-y-1">
+              <div>
+                <strong>Current Structure:</strong> {structureName} - 
+                {selectedStructure.structureType === 'weekly' 
+                  ? ` ${selectedStructure.sessionCount} sessions per week`
+                  : ` ${selectedStructure.trainingDays} training days, ${selectedStructure.restDays} rest days`
+                }
+              </div>
+              <div>
+                <strong>Workout Pattern:</strong> {getPatternDescription()}
+              </div>
+            </div>
           </AlertDescription>
         </Alert>
       )}
 
       {/* Workout Templates Grid */}
       <div className="grid gap-4 md:grid-cols-2">
-        {/* eslint-disable-next-line @typescript-eslint/no-explicit-any */}
-        {program.workoutTemplates.map((template: any) => {
+        {displayedWorkouts.map((template: WorkoutTemplateWithPattern) => {
           const templateName = getLocalizedContent(template.name, `Workout ${template.order + 1}`);
-          const isSelected = selectedWorkout === template.id;
+          const displayId = template.displayId || template.id;
+          const isSelected = selectedWorkout === displayId;
+          
+          // Create display name with pattern label if applicable
+          const displayName = template.patternLabel 
+            ? `${templateName} (${template.patternLabel})`
+            : templateName;
           
           return (
             <Card 
-              key={template.id} 
+              key={displayId} 
               className={`cursor-pointer transition-all duration-200 hover:shadow-md ${
                 isSelected ? 'ring-2 ring-blue-500 shadow-md' : ''
               }`}
-              onClick={() => setSelectedWorkout(isSelected ? null : template.id)}
+              onClick={() => setSelectedWorkout(isSelected ? null : displayId)}
             >
               <CardHeader className="pb-3">
                 <div className="flex items-start justify-between">
                   <div className="space-y-1">
-                    <CardTitle className="text-lg">{templateName}</CardTitle>
+                    <div className="flex items-center space-x-2">
+                      <CardTitle className="text-lg">{displayName}</CardTitle>
+                      {template.patternLabel && (
+                        <Badge variant="secondary" className="text-xs">
+                          {template.patternLabel}
+                        </Badge>
+                      )}
+                    </div>
                     <div className="flex items-center space-x-2 text-sm text-gray-600 dark:text-gray-400">
                       <Target className="w-4 h-4" />
                       <span>Workout {template.order + 1}</span>

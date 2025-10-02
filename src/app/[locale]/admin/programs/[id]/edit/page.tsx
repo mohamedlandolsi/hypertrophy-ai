@@ -51,6 +51,7 @@ type EditProgramFormData = {
   hasInteractiveBuilder: boolean;
   allowsCustomization: boolean;
   isActive: boolean;
+  workoutNames: string[];
   categories: Array<unknown>;
   workoutTemplates: Array<{
     id: string;
@@ -91,6 +92,7 @@ interface TrainingProgramData {
   allowsCustomization: boolean;
   aboutContent?: string;
   thumbnailUrl?: string;
+  workoutNames?: string[];
   programGuide?: {
     content: unknown;
   };
@@ -177,6 +179,7 @@ export default function EditProgramPage() {
       hasInteractiveBuilder: true,
       allowsCustomization: true,
       isActive: true,
+      workoutNames: [],
       categories: [],
       workoutTemplates: [],
       guideSections: [],
@@ -246,6 +249,12 @@ export default function EditProgramPage() {
 
         const transformedGuideSections = normalizeGuideSections(programData.programGuide?.content);
 
+        console.log('Loaded program data:', {
+          workoutNames: programData.workoutNames,
+          workoutNamesType: typeof programData.workoutNames,
+          workoutNamesIsArray: Array.isArray(programData.workoutNames)
+        });
+
         // Reset form with fetched data
         reset({
           name: programData.name,
@@ -257,6 +266,7 @@ export default function EditProgramPage() {
           hasInteractiveBuilder: programData.hasInteractiveBuilder,
           allowsCustomization: programData.allowsCustomization,
           isActive: programData.isActive,
+          workoutNames: Array.isArray(programData.workoutNames) ? programData.workoutNames : [],
           categories: [], // Start with empty - will be populated if/when categories tab is implemented
           workoutTemplates: transformedWorkoutTemplates,
           guideSections: transformedGuideSections,
@@ -304,6 +314,7 @@ export default function EditProgramPage() {
         hasInteractiveBuilder: data.hasInteractiveBuilder,
         allowsCustomization: data.allowsCustomization,
         isActive: data.isActive,
+        workoutNames: data.workoutNames,
         guideSections: sanitizedGuideSections,
         aboutContent: data.aboutContent || '',
         thumbnailUrl: data.thumbnailUrl || '',
@@ -328,6 +339,8 @@ export default function EditProgramPage() {
           };
         })
       };
+
+      console.log('Updating program with data:', transformedData);
 
       const result = await updateTrainingProgram(transformedData);
       

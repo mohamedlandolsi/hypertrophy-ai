@@ -1,11 +1,10 @@
 'use client';
 
 import { useFormContext } from 'react-hook-form';
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useMemo } from 'react';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Label } from '@/components/ui/label';
-import { Input } from '@/components/ui/input';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { Badge } from '@/components/ui/badge';
 import { Separator } from '@/components/ui/separator';
@@ -116,21 +115,36 @@ function ExerciseSelector({ muscleGroup, value, onValueChange }: ExerciseSelecto
 
 export function WorkoutTemplatesForm() {
   const { watch, setValue } = useFormContext();
-  const workoutTemplates = watch('workoutTemplates') || [];
+  const workoutNamesRaw = watch('workoutNames');
+  const workoutTemplatesRaw = watch('workoutTemplates');
+  
+  // Memoize to prevent triggering useEffect on every render
+  const workoutNames = useMemo(() => workoutNamesRaw || [], [workoutNamesRaw]);
+  const workoutTemplates = useMemo(() => workoutTemplatesRaw || [], [workoutTemplatesRaw]);
 
-  const addWorkoutTemplate = () => {
-    const newTemplate = {
-      id: Date.now().toString(),
-      name: '',
-      muscleGroups: [],
-      exercises: []
-    };
-    setValue('workoutTemplates', [...workoutTemplates, newTemplate]);
-  };
-
-  const removeWorkoutTemplate = (templateId: string) => {
-    setValue('workoutTemplates', workoutTemplates.filter((template: Record<string, unknown>) => template.id !== templateId));
-  };
+  // Auto-sync workout templates with workout names
+  useEffect(() => {
+    const existingTemplateNames = workoutTemplates.map((t: Record<string, unknown>) => t.name);
+    const needsSync = JSON.stringify(workoutNames) !== JSON.stringify(existingTemplateNames);
+    
+    if (needsSync) {
+      const synced = workoutNames.map((name: string, index: number) => {
+        // Find existing template with this name
+        const existing = workoutTemplates.find((t: Record<string, unknown>) => t.name === name);
+        if (existing) {
+          return existing; // Preserve existing template data
+        }
+        // Create new template
+        return {
+          id: `workout-${Date.now()}-${index}`,
+          name,
+          muscleGroups: [],
+          exercises: []
+        };
+      });
+      setValue('workoutTemplates', synced);
+    }
+  }, [workoutNames, workoutTemplates, setValue]);
 
   const updateWorkoutTemplate = (templateId: string, field: string, value: unknown) => {
     const updatedTemplates = workoutTemplates.map((template: Record<string, unknown>) =>
@@ -187,10 +201,11 @@ export function WorkoutTemplatesForm() {
 
   return (
     <div className="space-y-6">
-      <div className="bg-green-50 border border-green-200 rounded-lg p-4">
-        <h4 className="font-medium text-green-900 mb-2">Required: Add at least one workout template</h4>
-        <p className="text-sm text-green-700">
-          Click &quot;Add Workout&quot; below to create workout templates. Each template represents a training session in your program.
+      <div className="bg-blue-50 border border-blue-200 rounded-lg p-4">
+        <h4 className="font-medium text-blue-900 mb-2">Workouts Auto-Generated</h4>
+        <p className="text-sm text-blue-700">
+          Workout templates are automatically created based on the workout names you defined in the Program Structure tab. 
+          Edit them below to configure exercises and muscle groups.
         </p>
       </div>
       
@@ -198,27 +213,19 @@ export function WorkoutTemplatesForm() {
         <div>
           <h3 className="text-lg font-semibold">Workout Templates</h3>
           <p className="text-sm text-muted-foreground">
-            Define workout sessions for your training program
+            Configure exercises and muscle groups for each workout session
           </p>
         </div>
-        <Button type="button" onClick={addWorkoutTemplate} className="flex items-center space-x-2">
-          <Plus className="h-4 w-4" />
-          <span>Add Workout</span>
-        </Button>
       </div>
 
       {workoutTemplates.length === 0 && (
         <Card>
           <CardContent className="flex flex-col items-center justify-center py-12">
             <Dumbbell className="h-12 w-12 text-muted-foreground mb-4" />
-            <h3 className="text-lg font-semibold mb-2">No workout templates yet</h3>
+            <h3 className="text-lg font-semibold mb-2">No workout names defined yet</h3>
             <p className="text-muted-foreground text-center mb-4">
-              Create your first workout template to define the structure of your training sessions.
+              Go to the Program Structure tab and add workout names. They will automatically appear here.
             </p>
-            <Button type="button" onClick={addWorkoutTemplate} className="flex items-center space-x-2">
-              <Plus className="h-4 w-4" />
-              <span>Create First Workout</span>
-            </Button>
           </CardContent>
         </Card>
       )}
@@ -228,37 +235,14 @@ export function WorkoutTemplatesForm() {
           <CardHeader>
             <div className="flex items-center justify-between">
               <div>
-                <CardTitle className="text-base">Workout {index + 1}</CardTitle>
+                <CardTitle className="text-base">{template.name as string || `Workout ${index + 1}`}</CardTitle>
                 <CardDescription>
                   Configure workout details and target muscle groups
                 </CardDescription>
               </div>
-              <Button
-                type="button"
-                variant="outline"
-                size="sm"
-                onClick={() => removeWorkoutTemplate(template.id as string)}
-                className="text-red-600 hover:text-red-700"
-              >
-                <Trash2 className="h-4 w-4" />
-              </Button>
             </div>
           </CardHeader>
-          <CardContent className="space-y-4">
-            {/* Basic Info */}
-            <div className="space-y-2">
-              <Label>Workout Name</Label>
-              <Input
-                value={template.name as string || ''}
-                onChange={(e) => updateWorkoutTemplate(template.id as string, 'name', e.target.value)}
-                placeholder="e.g., Push Day, Upper Body"
-                className="max-w-md"
-              />
-            </div>
-
-            <Separator />
-
-            {/* Muscle Groups */}
+          <CardContent className="space-y-4">\n            {/* Muscle Groups */}
             <div className="space-y-3">
               <Label>Target Muscle Groups</Label>
               <div className="flex flex-wrap gap-2">

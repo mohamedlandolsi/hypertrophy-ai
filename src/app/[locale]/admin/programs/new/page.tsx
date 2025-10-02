@@ -58,6 +58,7 @@ export default function CreateProgramPage() {
       ],
       hasInteractiveBuilder: true,
       allowsCustomization: true,
+      workoutNames: [],
       categories: [],
       workoutTemplates: [],
       guideSections: [],

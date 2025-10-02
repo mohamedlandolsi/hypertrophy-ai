@@ -41,6 +41,7 @@ export default function ProgramsPage() {
   const [programsData, setProgramsData] = useState<ProgramsData | null>(null);
   const [isLoading, setIsLoading] = useState(true);
   const [isAuthenticated, setIsAuthenticated] = useState(false);
+  const [navigatingToProgramId, setNavigatingToProgramId] = useState<string | null>(null);
   const router = useRouter();
 
   useEffect(() => {
@@ -102,6 +103,7 @@ export default function ProgramsPage() {
   };
 
   const handleProgramClick = (program: TrainingProgram) => {
+    setNavigatingToProgramId(program.id);
     if (program.isOwned) {
       // Navigate to program guide page for owned programs (including admin access)
       router.push(`/programs/${program.id}/guide`);
@@ -113,17 +115,19 @@ export default function ProgramsPage() {
 
   const handleAccessProgram = (programId: string, event: React.MouseEvent) => {
     event.stopPropagation();
+    setNavigatingToProgramId(programId);
     router.push(`/programs/${programId}/guide`);
   };
 
   const ProgramCard = ({ program, showPurchaseDate = false }: { program: TrainingProgram; showPurchaseDate?: boolean }) => {
     const programName = program.name.en || Object.values(program.name)[0] || 'Unknown Program';
     const programDescription = program.description.en || Object.values(program.description)[0] || 'No description available';
+    const isNavigating = navigatingToProgramId === program.id;
 
     return (
       <Card 
         key={program.id} 
-        className="flex flex-col cursor-pointer hover:shadow-md transition-shadow"
+        className={`flex flex-col cursor-pointer hover:shadow-md transition-shadow ${isNavigating ? 'opacity-70 pointer-events-none' : ''}`}
         onClick={() => handleProgramClick(program)}
       >
         <CardHeader className="pb-2">
@@ -192,14 +196,33 @@ export default function ProgramsPage() {
               <Button 
                 className="w-full"
                 onClick={(e) => handleAccessProgram(program.id, e)}
+                disabled={isNavigating}
               >
-                <Settings className="h-4 w-4 mr-2" />
-                Access Program
+                {isNavigating ? (
+                  <>
+                    <Loader2 className="h-4 w-4 mr-2 animate-spin" />
+                    Loading...
+                  </>
+                ) : (
+                  <>
+                    <Settings className="h-4 w-4 mr-2" />
+                    Access Program
+                  </>
+                )}
               </Button>
             ) : (
-              <Button className="w-full">
-                <ShoppingCart className="h-4 w-4 mr-2" />
-                Learn More
+              <Button className="w-full" disabled={isNavigating}>
+                {isNavigating ? (
+                  <>
+                    <Loader2 className="h-4 w-4 mr-2 animate-spin" />
+                    Loading...
+                  </>
+                ) : (
+                  <>
+                    <ShoppingCart className="h-4 w-4 mr-2" />
+                    Learn More
+                  </>
+                )}
               </Button>
             )}
           </div>
@@ -242,6 +265,21 @@ export default function ProgramsPage() {
 
   return (
     <div className="container mx-auto px-4 py-8">
+      {/* Loading overlay when navigating to a program */}
+      {navigatingToProgramId && (
+        <div className="fixed inset-0 bg-background/80 backdrop-blur-sm z-50 flex items-center justify-center">
+          <div className="bg-card p-8 rounded-lg shadow-lg text-center max-w-sm mx-4 border">
+            <div className="mb-4">
+              <Loader2 className="h-12 w-12 animate-spin mx-auto text-primary" />
+            </div>
+            <h3 className="text-lg font-semibold mb-2">Loading Program</h3>
+            <p className="text-sm text-muted-foreground">
+              Taking you to the program guide...
+            </p>
+          </div>
+        </div>
+      )}
+      
       <div className="mb-8">
         <h1 className="text-3xl font-bold mb-2">Training Programs</h1>
         <p className="text-muted-foreground">

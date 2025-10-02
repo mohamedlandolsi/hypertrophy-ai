@@ -21,6 +21,23 @@ export function ProgramStructureForm() {
   });
 
   const [expandedStructure, setExpandedStructure] = useState<number>(0);
+  
+  // General workout names (applies to all structures)
+  const workoutNames = watch('workoutNames') || [];
+  
+  const addWorkoutName = () => {
+    setValue('workoutNames', [...workoutNames, '']);
+  };
+  
+  const updateWorkoutName = (index: number, value: string) => {
+    const updated = [...workoutNames];
+    updated[index] = value;
+    setValue('workoutNames', updated);
+  };
+  
+  const removeWorkoutName = (index: number) => {
+    setValue('workoutNames', workoutNames.filter((_: string, i: number) => i !== index));
+  };
 
   const addNewStructure = () => {
     const newStructure: ProgramStructure = {
@@ -46,6 +63,50 @@ export function ProgramStructureForm() {
 
   return (
     <div className="space-y-6">
+      {/* General Workout Names Section */}
+      <Card>
+        <CardHeader>
+          <CardTitle>Workout Names</CardTitle>
+          <CardDescription>
+            Define the names of your workouts (e.g., &ldquo;Push Day&rdquo;, &ldquo;Pull Day&rdquo;, &ldquo;Leg Day&rdquo;). These will be used across all program structures.
+          </CardDescription>
+        </CardHeader>
+        <CardContent>
+          <div className="space-y-3">
+            {workoutNames.map((name: string, index: number) => (
+              <div key={index} className="flex items-center space-x-2">
+                <Input
+                  placeholder={`Workout ${index + 1} name`}
+                  value={name}
+                  onChange={(e) => updateWorkoutName(index, e.target.value)}
+                  className="flex-1"
+                />
+                <Button
+                  type="button"
+                  variant="outline"
+                  size="sm"
+                  onClick={() => removeWorkoutName(index)}
+                  className="text-red-600 hover:text-red-700"
+                >
+                  <Trash2 className="h-4 w-4" />
+                </Button>
+              </div>
+            ))}
+            <Button
+              type="button"
+              variant="outline"
+              size="sm"
+              onClick={addWorkoutName}
+              className="w-full"
+            >
+              <Plus className="h-4 w-4 mr-2" />
+              Add Workout Name
+            </Button>
+          </div>
+        </CardContent>
+      </Card>
+
+      {/* Program Structures Section */}
       <Card>
         <CardHeader>
           <div className="flex items-center justify-between">
@@ -223,7 +284,7 @@ export function ProgramStructureForm() {
                             <div>
                               <Label className="text-sm font-medium">Weekly Schedule</Label>
                               <p className="text-xs text-muted-foreground mb-3">
-                                Assign workout session names to each day or mark as rest day. Users will later map these to their preferred weekdays.
+                                Assign workout names to each day or mark as rest day.
                               </p>
                               <div className="grid gap-3">
                                 {[
@@ -237,24 +298,33 @@ export function ProgramStructureForm() {
                                 ].map(({ key, label }) => {
                                   const currentValue = weeklySchedule?.[key as keyof typeof weeklySchedule] || '';
                                   const isRestDay = currentValue.toLowerCase() === 'rest';
+                                  const availableWorkouts = workoutNames;
                                   
                                   return (
                                     <div key={key} className="flex items-center space-x-3">
                                       <div className="w-20 text-sm font-medium text-right">{label}:</div>
                                       <div className="flex items-center space-x-2 flex-1">
-                                        <Input
-                                          placeholder="e.g., Push Day, Upper Body A"
-                                          className="flex-1"
-                                          value={isRestDay ? '' : currentValue}
-                                          disabled={isRestDay}
-                                          onChange={(e) => {
+                                        <Select
+                                          value={isRestDay ? 'Rest' : currentValue}
+                                          onValueChange={(value) => {
                                             const currentSchedule = watch(`programStructures.${index}.weeklySchedule`) || {};
                                             setValue(`programStructures.${index}.weeklySchedule` as const, {
                                               ...currentSchedule,
-                                              [key]: e.target.value,
+                                              [key]: value,
                                             });
                                           }}
-                                        />
+                                          disabled={availableWorkouts.length === 0}
+                                        >
+                                          <SelectTrigger className="flex-1">
+                                            <SelectValue placeholder="Select workout or rest" />
+                                          </SelectTrigger>
+                                          <SelectContent>
+                                            <SelectItem value="Rest">Rest Day</SelectItem>
+                                            {availableWorkouts.map((workout, idx) => (
+                                              workout && <SelectItem key={idx} value={workout}>{workout}</SelectItem>
+                                            ))}
+                                          </SelectContent>
+                                        </Select>
                                         <div className="flex items-center space-x-2">
                                           <Checkbox
                                             id={`rest-${index}-${key}`}
@@ -271,7 +341,7 @@ export function ProgramStructureForm() {
                                             htmlFor={`rest-${index}-${key}`}
                                             className="text-sm font-normal cursor-pointer"
                                           >
-                                            Rest Day
+                                            Rest
                                           </Label>
                                         </div>
                                       </div>
@@ -285,30 +355,32 @@ export function ProgramStructureForm() {
 
                         {/* Cyclic Structure Configuration */}
                         {structureType === 'cyclic' && (
-                          <div className="grid grid-cols-2 gap-4">
-                            <div>
-                              <Label>Training Days</Label>
-                              <Input 
-                                type="number"
-                                placeholder="3"
-                                min="1"
-                                max="6"
-                                {...register(`programStructures.${index}.trainingDays`, { valueAsNumber: true })}
-                                className="mt-1"
-                              />
-                              <p className="text-sm text-muted-foreground mt-1">Days of training</p>
-                            </div>
-                            <div>
-                              <Label>Rest Days</Label>
-                              <Input 
-                                type="number"
-                                placeholder="1"
-                                min="1"
-                                max="3"
-                                {...register(`programStructures.${index}.restDays`, { valueAsNumber: true })}
-                                className="mt-1"
-                              />
-                              <p className="text-sm text-muted-foreground mt-1">Days of rest</p>
+                          <div className="space-y-4">
+                            <div className="grid grid-cols-2 gap-4">
+                              <div>
+                                <Label>Training Days</Label>
+                                <Input 
+                                  type="number"
+                                  placeholder="3"
+                                  min="1"
+                                  max="6"
+                                  {...register(`programStructures.${index}.trainingDays`, { valueAsNumber: true })}
+                                  className="mt-1"
+                                />
+                                <p className="text-sm text-muted-foreground mt-1">Days of training</p>
+                              </div>
+                              <div>
+                                <Label>Rest Days</Label>
+                                <Input 
+                                  type="number"
+                                  placeholder="1"
+                                  min="1"
+                                  max="3"
+                                  {...register(`programStructures.${index}.restDays`, { valueAsNumber: true })}
+                                  className="mt-1"
+                                />
+                                <p className="text-sm text-muted-foreground mt-1">Days of rest</p>
+                              </div>
                             </div>
                           </div>
                         )}

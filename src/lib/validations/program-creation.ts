@@ -72,6 +72,9 @@ export const programCreationSchema = z.object({
   // Program structures (multiple structures support)
   programStructures: z.array(programStructureSchema).min(1, 'At least one program structure is required'),
   
+  // General workout names (applies to all structures)
+  workoutNames: z.array(z.string()).default([]),
+  
   // Interactive features
   hasInteractiveBuilder: z.boolean().default(true),
   allowsCustomization: z.boolean().default(true),
