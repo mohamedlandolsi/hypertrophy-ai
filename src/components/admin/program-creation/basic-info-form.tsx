@@ -130,16 +130,16 @@ export function BasicInfoForm() {
 
   // Initialize LemonSqueezy IDs from form values
   useEffect(() => {
-    if (formLemonSqueezyId && !lemonSqueezyId) {
-      setLemonSqueezyId(formLemonSqueezyId);
+    if (formLemonSqueezyId !== undefined) {
+      setLemonSqueezyId(formLemonSqueezyId || '');
     }
-  }, [formLemonSqueezyId, lemonSqueezyId]);
+  }, [formLemonSqueezyId]);
 
   useEffect(() => {
-    if (formLemonSqueezyVariantId && !lemonSqueezyVariantId) {
-      setLemonSqueezyVariantId(formLemonSqueezyVariantId);
+    if (formLemonSqueezyVariantId !== undefined) {
+      setLemonSqueezyVariantId(formLemonSqueezyVariantId || '');
     }
-  }, [formLemonSqueezyVariantId, lemonSqueezyVariantId]);
+  }, [formLemonSqueezyVariantId]);
 
   const handleTranslateName = async (targetLang: 'ar' | 'fr') => {
     if (!englishName?.trim()) {
