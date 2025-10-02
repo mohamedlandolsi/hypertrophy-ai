@@ -2,6 +2,7 @@ import { NextRequest, NextResponse } from 'next/server';
 import { prisma } from '@/lib/prisma';
 import { ApiErrorHandler } from '@/lib/error-handler';
 import { createClient } from '@/lib/supabase/server';
+import { hasProAccess } from '@/lib/program-access';
 
 export async function GET(
   request: NextRequest,
@@ -57,6 +58,8 @@ export async function GET(
     // Check if user owns this program (if authenticated)
     let isOwned = false;
     let hasPurchased = false;
+    let hasProAccess_check = false;
+    
     if (user) {
       const userProgram = await prisma.userProgram.findFirst({
         where: {
@@ -76,12 +79,16 @@ export async function GET(
         },
       });
       hasPurchased = !!userPurchase;
+
+      // Check Pro subscription access
+      hasProAccess_check = await hasProAccess(user.id);
     }
 
     const responseData = {
       ...program,
       isOwned,
       hasPurchased,
+      hasProAccess: hasProAccess_check,
     };
 
     return NextResponse.json({

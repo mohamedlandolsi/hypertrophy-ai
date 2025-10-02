@@ -256,8 +256,8 @@
   "Pricing": {
     "title": "Choose Your Plan",
     "subtitle": "Start free and upgrade when you're ready",
-    "heroTitle": "Choose Your Fitness Journey",
-    "heroSubtitle": "Transform your fitness goals with AI-powered coaching. Start free or unlock unlimited potential with Pro.",
+    "heroTitle": "Choose Your Training Plan",
+    "heroSubtitle": "Access expert training programs designed for hypertrophy. Start free or unlock all programs with Pro.",
     "subscriptionPlansLabel": "Subscription Plans",
     "whyUpgradeTitle": "Why Upgrade to Pro?",
     "free": "Free",
@@ -279,14 +279,14 @@
     },
     "freePlan": {
       "title": "Free Plan",
-      "description": "Perfect for getting started with AI fitness coaching",
+      "description": "Try out our training programs",
       "price": "$0",
       "period": "/month",
       "features": [
-        "5 messages per day",
-        "Basic AI fitness guidance",
-        "Access to knowledge base", 
-        "Standard response time"
+        "Access to 1 training program",
+        "Basic program features",
+        "View workout structure", 
+        "Community support"
       ],
       "cta": "Get Started Free",
       "currentPlanButton": "Current Plan",
@@ -294,38 +294,37 @@
     },
     "proPlan": {
       "title": "Pro Plan",
-      "description": "Unlock unlimited AI coaching and advanced features",
+      "description": "Unlock all training programs and advanced features",
       "mostPopular": "Most Popular",
       "period": "/month",
       "yearPeriod": "/year",
       "equivalentTo": "Equivalent to",
       "cancelAnytime": "Cancel anytime",
       "features": [
-        "Smarter responses",
-        "Unlimited messages",
-        "Persistent conversation memory",
-        "Personalized training plans",
+        "Access to ALL training programs (current + future)",
+        "Customize programs and workouts",
+        "AI Assistant for each program",
+        "Workout log tracking (mobile app)",
         "Progress tracking & analytics", 
-        "Advanced nutrition guidance",
+        "Advanced exercise variations",
         "Priority support",
-        "Early access to new features",
-        "Detailed workout history"
+        "Early access to new programs"
       ],
       "cta": "Start Pro Now",
       "currentPlanButton": "Current Plan"
     },
     "benefits": {
       "unlimited": {
-        "title": "Unlimited Conversations",
-        "description": "Chat as much as you want without daily limits. Get continuous support for your fitness journey."
+        "title": "All Programs Included",
+        "description": "Access every training program we offer, including all future releases. No limits, no restrictions."
       },
       "personalized": {
-        "title": "Personalized Coaching", 
-        "description": "AI remembers your progress, preferences, and goals to provide truly personalized guidance."
+        "title": "Full Customization", 
+        "description": "Adjust programs and workouts to fit your schedule, equipment, and preferences. Make it truly yours."
       },
       "tracking": {
-        "title": "Progress Tracking",
-        "description": "Advanced analytics and insights to track your fitness progress and optimize your results."
+        "title": "Smart AI Assistant",
+        "description": "Get personalized guidance for each program with AI-powered recommendations and workout logging."
       }
     },
     "faq": {
@@ -337,11 +336,11 @@
         },
         {
           "question": "What happens to my data if I downgrade?",
-          "answer": "Your conversation history and progress data are safely stored. You'll just be limited to 5 messages per day on the free plan."
+          "answer": "Your workout logs and progress data are safely stored. You'll just have access to 1 program on the free plan instead of all programs."
         },
         {
           "question": "Is there a free trial?",
-          "answer": "Every new user starts with our free plan which includes 5 messages per day. You can upgrade to Pro anytime to unlock unlimited access."
+          "answer": "Every new user starts with our free plan which includes access to 1 training program. You can upgrade to Pro anytime to unlock all programs and features."
         }
       ]
     }

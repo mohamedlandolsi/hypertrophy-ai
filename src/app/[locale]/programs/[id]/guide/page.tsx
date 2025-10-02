@@ -4,37 +4,13 @@ import { createClient } from '@/lib/supabase/server';
 import { prisma } from '@/lib/prisma';
 import ProgramGuideContent from '@/components/programs/program-guide-content';
 import { Card } from '@/components/ui/card';
+import { canAccessProgram } from '@/lib/program-access';
 
 interface ProgramGuidePageProps {
   params: Promise<{
     locale: string;
     id: string;
   }>;
-}
-
-async function verifyProgramAccess(programId: string, userId: string) {
-  // First check if user is an admin
-  const dbUser = await prisma.user.findUnique({
-    where: { id: userId },
-    select: { role: true }
-  });
-
-  // Admin users have access to all programs
-  if (dbUser?.role === 'admin') {
-    return true;
-  }
-
-  // Check if user has purchased this program
-  const purchase = await prisma.userPurchase.findUnique({
-    where: {
-      userId_trainingProgramId: {
-        userId,
-        trainingProgramId: programId
-      }
-    }
-  });
-
-  return !!purchase;
 }
 
 async function getProgramData(programId: string) {
@@ -63,26 +39,14 @@ async function getProgramData(programId: string) {
 }
 
 async function getUserAccessInfo(userId: string, programId: string) {
-  const dbUser = await prisma.user.findUnique({
-    where: { id: userId },
-    select: { role: true }
-  });
-
-  const isAdmin = dbUser?.role === 'admin';
-  
-  const purchase = await prisma.userPurchase.findUnique({
-    where: {
-      userId_trainingProgramId: {
-        userId,
-        trainingProgramId: programId
-      }
-    }
-  });
+  const accessInfo = await canAccessProgram(userId, programId);
 
   return {
-    isAdmin,
-    hasPurchased: !!purchase,
-    hasAccess: isAdmin || !!purchase
+    isAdmin: accessInfo.isAdmin,
+    hasPurchased: accessInfo.hasPurchased,
+    hasAccess: accessInfo.hasAccess,
+    isPro: accessInfo.isPro,
+    accessReason: accessInfo.reason,
   };
 }
 
@@ -106,14 +70,13 @@ export default async function ProgramGuidePage({ params }: ProgramGuidePageProps
     redirect(`/${locale}/auth/login?redirect=/programs/${programId}/guide`);
   }
 
-  // Verify program access
-  const hasAccess = await verifyProgramAccess(programId, user.id);
-  if (!hasAccess) {
-    redirect(`/${locale}/programs/${programId}?error=access_required`);
-  }
-
-  // Get user access information (admin status, purchase status)
+  // Get user access information (includes Pro subscription check)
   const accessInfo = await getUserAccessInfo(user.id, programId);
+  
+  // Verify program access (now includes Pro subscription)
+  if (!accessInfo.hasAccess) {
+    redirect(`/${locale}/programs/${programId}/about?error=access_required`);
+  }
 
   // Get program data
   const program = await getProgramData(programId);

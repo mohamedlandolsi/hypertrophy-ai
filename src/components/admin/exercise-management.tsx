@@ -153,6 +153,7 @@ export default function ExerciseManagement() {
   const [exerciseTypeFilter, setExerciseTypeFilter] = useState('all');
   const [categoryFilter, setCategoryFilter] = useState('all');
   const [showInactiveFilter, setShowInactiveFilter] = useState(false);
+  const [muscleSearchTerm, setMuscleSearchTerm] = useState('');
 
   // Pagination
   const [currentPage, setCurrentPage] = useState(1);
@@ -218,11 +219,25 @@ export default function ExerciseManagement() {
       }
 
       setSuccess(result.message);
+      
+      // Optimistic UI update: Update local state without full page reload
+      if (editingId && result.exercise) {
+        // Update existing exercise in local state with server response
+        setExercises(prevExercises => 
+          prevExercises.map(ex => 
+            ex.id === editingId ? result.exercise : ex
+          )
+        );
+      } else if (result.exercise) {
+        // For new exercises, add to local state with server response
+        setExercises(prevExercises => [result.exercise, ...prevExercises]);
+        setTotalExercises(prev => prev + 1);
+      }
+      
       setIsDialogOpen(false);
       setFormData(initialFormData);
       setEditingId(null);
       setEquipmentInput('');
-      fetchExercises();
     } catch (err) {
       setError(err instanceof Error ? err.message : 'Failed to save exercise');
     } finally {
@@ -253,6 +268,11 @@ export default function ExerciseManagement() {
       setError(null);
       setSuccess(null);
       
+      // Optimistic UI update: Remove from local state immediately
+      const exerciseToDelete = exercises.find(ex => ex.id === id);
+      setExercises(prevExercises => prevExercises.filter(ex => ex.id !== id));
+      setTotalExercises(prev => prev - 1);
+      
       const response = await fetch(`/api/admin/exercises/${id}`, {
         method: 'DELETE'
       });
@@ -260,11 +280,15 @@ export default function ExerciseManagement() {
       const result = await response.json();
 
       if (!response.ok) {
+        // Rollback optimistic update on error
+        if (exerciseToDelete) {
+          setExercises(prevExercises => [...prevExercises, exerciseToDelete]);
+          setTotalExercises(prev => prev + 1);
+        }
         throw new Error(result.error || 'Failed to delete exercise');
       }
 
       setSuccess(result.message);
-      fetchExercises();
     } catch (err) {
       setError(err instanceof Error ? err.message : 'Failed to delete exercise');
     }
@@ -291,6 +315,7 @@ export default function ExerciseManagement() {
     setFormData(initialFormData);
     setEditingId(null);
     setEquipmentInput('');
+    setMuscleSearchTerm('');
     setIsDialogOpen(false);
   };
 
@@ -500,8 +525,22 @@ export default function ExerciseManagement() {
                     </p>
                   </div>
                   
+                  {/* Muscle Search Bar */}
+                  <div className="relative">
+                    <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 h-4 w-4 text-muted-foreground" />
+                    <Input
+                      type="text"
+                      placeholder="Search muscles..."
+                      value={muscleSearchTerm}
+                      onChange={(e) => setMuscleSearchTerm(e.target.value)}
+                      className="pl-9"
+                    />
+                  </div>
+                  
                   <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4 max-h-60 overflow-y-auto border rounded-lg p-4">
-                    {VOLUME_MUSCLES.map(({ value, label }) => (
+                    {VOLUME_MUSCLES.filter(({ label }) => 
+                      label.toLowerCase().includes(muscleSearchTerm.toLowerCase())
+                    ).map(({ value, label }) => (
                       <div key={value} className="space-y-2">
                         <div className="flex items-center justify-between space-x-2">
                           <Label htmlFor={`volume-${value}`} className="text-sm font-normal flex-grow">

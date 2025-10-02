@@ -125,9 +125,8 @@ const Navbar = () => {
 
   const navLinks = [
     { href: `/${locale}/pricing`, label: t('pricing'), icon: Crown },
+    { href: `/${locale}/programs`, label: t('programs'), icon: BookOpen },
     ...(user ? [{ href: `/${locale}/profile`, label: t('profile'), icon: UserCircle }] : []),
-    ...(user ? [{ href: `/${locale}/programs`, label: t('programs'), icon: BookOpen }] : []),
-    { href: `/${locale}/chat`, label: t('chat'), icon: MessageSquare },
     ...(userRole?.split(',').map(r => r.trim()).includes('coach') ? [{ href: `/${locale}/coach-inbox`, label: 'Coach Inbox', icon: MessageSquare }] : []),
     ...(userRole === 'admin' ? [{ href: `/${locale}/admin`, label: t('dashboard'), icon: LayoutDashboard }] : []),
   ];

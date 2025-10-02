@@ -6,7 +6,7 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/com
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
 import { Separator } from '@/components/ui/separator';
-import { Loader2, BookOpen, Settings, Eye, ShoppingCart, Star, Calendar, DollarSign } from 'lucide-react';
+import { Loader2, BookOpen, Settings, ShoppingCart, Star, Calendar, DollarSign, Crown, Sparkles } from 'lucide-react';
 import { toast } from 'sonner';
 import { createClient } from '@/lib/supabase/client';
 import Image from 'next/image';
@@ -23,6 +23,8 @@ interface TrainingProgram {
   purchaseDate?: string;
   isOwned: boolean;
   isAdminAccess?: boolean;
+  isProAccess?: boolean;
+  accessReason?: 'admin' | 'pro_subscription' | 'purchased' | 'free';
 }
 
 interface ProgramsData {
@@ -32,6 +34,7 @@ interface ProgramsData {
   ownedCount: number;
   browseCount: number;
   isAdmin?: boolean;
+  isPro?: boolean;
 }
 
 export default function ProgramsPage() {
@@ -108,9 +111,9 @@ export default function ProgramsPage() {
     }
   };
 
-  const handleViewProgram = (programId: string, event: React.MouseEvent) => {
+  const handleAccessProgram = (programId: string, event: React.MouseEvent) => {
     event.stopPropagation();
-    router.push(`/programs/${programId}`);
+    router.push(`/programs/${programId}/guide`);
   };
 
   const ProgramCard = ({ program, showPurchaseDate = false }: { program: TrainingProgram; showPurchaseDate?: boolean }) => {
@@ -147,6 +150,11 @@ export default function ProgramsPage() {
                 <Badge variant="destructive" className="text-xs">
                   Admin Access
                 </Badge>
+              ) : program.isOwned && program.isProAccess ? (
+                <Badge className="text-xs bg-gradient-to-r from-purple-600 to-blue-600">
+                  <Crown className="h-3 w-3 mr-1" />
+                  Pro Access
+                </Badge>
               ) : program.isOwned ? (
                 <Badge variant="default">
                   Owned
@@ -181,20 +189,13 @@ export default function ProgramsPage() {
           
           <div className="flex flex-col gap-2">
             {program.isOwned ? (
-              <>
-                <Button className="w-full">
-                  <Settings className="h-4 w-4 mr-2" />
-                  {program.isAdminAccess ? 'Access Program' : 'Configure Program'}
-                </Button>
-                <Button
-                  variant="outline"
-                  onClick={(e) => handleViewProgram(program.id, e)}
-                  className="w-full"
-                >
-                  <Eye className="h-4 w-4 mr-2" />
-                  View Details
-                </Button>
-              </>
+              <Button 
+                className="w-full"
+                onClick={(e) => handleAccessProgram(program.id, e)}
+              >
+                <Settings className="h-4 w-4 mr-2" />
+                Access Program
+              </Button>
             ) : (
               <Button className="w-full">
                 <ShoppingCart className="h-4 w-4 mr-2" />
@@ -247,12 +248,64 @@ export default function ProgramsPage() {
           {isAuthenticated 
             ? (programsData?.isAdmin 
                 ? "Admin access: View and manage all training programs" 
+                : programsData?.isPro
+                ? "Pro member: Full access to all training programs"
                 : "Manage your owned programs and discover new training plans"
               )
             : "Discover professional training programs designed for your fitness goals"
           }
         </p>
       </div>
+
+      {/* Pro Subscription Banner - Show for non-Pro authenticated users with browse programs */}
+      {isAuthenticated && !programsData.isPro && !programsData.isAdmin && programsData.browseCount > 0 && (
+        <Card className="mb-8 border-purple-200 dark:border-purple-800 bg-gradient-to-r from-purple-50 to-blue-50 dark:from-purple-950/30 dark:to-blue-950/30">
+          <CardContent className="py-6">
+            <div className="flex flex-col md:flex-row items-start md:items-center justify-between gap-4">
+              <div className="flex-1">
+                <div className="flex items-center gap-2 mb-2">
+                  <Crown className="h-5 w-5 text-purple-600 dark:text-purple-400" />
+                  <h3 className="text-lg font-semibold">Upgrade to Pro</h3>
+                  <Badge className="bg-gradient-to-r from-purple-600 to-blue-600">
+                    <Sparkles className="h-3 w-3 mr-1" />
+                    Best Value
+                  </Badge>
+                </div>
+                <p className="text-sm text-muted-foreground mb-3">
+                  Get unlimited access to all {programsData.totalPrograms} training programs for one monthly price. 
+                  {programsData.ownedCount > 0 && ` You've already purchased ${programsData.ownedCount} program${programsData.ownedCount > 1 ? 's' : ''}.`}
+                </p>
+                <div className="flex flex-wrap gap-3 text-sm">
+                  <div className="flex items-center gap-1">
+                    <Star className="h-4 w-4 text-purple-600 dark:text-purple-400" />
+                    <span>All programs included</span>
+                  </div>
+                  <div className="flex items-center gap-1">
+                    <Sparkles className="h-4 w-4 text-purple-600 dark:text-purple-400" />
+                    <span>Future programs free</span>
+                  </div>
+                  <div className="flex items-center gap-1">
+                    <Crown className="h-4 w-4 text-purple-600 dark:text-purple-400" />
+                    <span>Premium support</span>
+                  </div>
+                </div>
+              </div>
+              <div className="flex flex-col gap-2">
+                <Button 
+                  onClick={() => router.push('/pricing')}
+                  className="bg-gradient-to-r from-purple-600 to-blue-600 hover:from-purple-700 hover:to-blue-700"
+                >
+                  <Crown className="h-4 w-4 mr-2" />
+                  View Pro Plans
+                </Button>
+                <p className="text-xs text-center text-muted-foreground">
+                  Starting at $19/month
+                </p>
+              </div>
+            </div>
+          </CardContent>
+        </Card>
+      )}
 
       {/* My Programs Section - Only show if authenticated and has programs */}
       {isAuthenticated && programsData.ownedCount > 0 && (
@@ -261,18 +314,28 @@ export default function ProgramsPage() {
             <div className="flex items-center justify-between mb-4">
               <div>
                 <h2 className="text-2xl font-semibold">
-                  {programsData.isAdmin ? 'All Programs (Admin Access)' : 'My Programs'}
+                  {programsData.isAdmin ? 'All Programs (Admin Access)' : programsData.isPro ? 'All Programs' : 'My Programs'}
                 </h2>
                 <p className="text-muted-foreground">
                   {programsData.isAdmin 
                     ? 'Administrative access to all training programs'
+                    : programsData.isPro
+                    ? 'Pro membership: Full access to all training programs'
                     : 'Programs you own and can configure'
                   }
                 </p>
               </div>
-              <Badge variant="outline" className="text-sm">
-                {programsData.ownedCount} program{programsData.ownedCount !== 1 ? 's' : ''}
-              </Badge>
+              <div className="flex items-center gap-2">
+                {programsData.isPro && (
+                  <Badge className="bg-gradient-to-r from-purple-600 to-blue-600">
+                    <Crown className="h-3 w-3 mr-1" />
+                    Pro
+                  </Badge>
+                )}
+                <Badge variant="outline" className="text-sm">
+                  {programsData.ownedCount} program{programsData.ownedCount !== 1 ? 's' : ''}
+                </Badge>
+              </div>
             </div>
             <div className="grid gap-6 md:grid-cols-2 lg:grid-cols-3">
               {programsData.ownedPrograms.map((program) => (

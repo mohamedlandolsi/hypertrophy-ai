@@ -120,9 +120,9 @@ export default function PricingPage() {
   return (
     <>
       <Head>
-        <title>Pricing Plans - Choose Your Fitness Journey | HypertroQ</title>
-        <meta name="description" content="Transform your fitness goals with HypertroQ's AI-powered coaching. Start free with 5 daily messages or upgrade to Pro for unlimited coaching, conversation memory, and personalized training plans." />
-        <meta name="keywords" content="fitness coaching pricing, AI personal trainer cost, fitness app subscription, personal training plans, workout coaching rates" />
+        <title>Pricing Plans - Choose Your Training Program | HypertroQ</title>
+        <meta name="description" content="Access expert hypertrophy training programs designed for muscle growth. Start free with 1 program or upgrade to Pro for unlimited access to all programs, customization, and AI assistance." />
+        <meta name="keywords" content="training program pricing, hypertrophy programs, muscle building plans, workout program subscription, fitness training membership" />
         <link rel="canonical" href="https://hypertroq.com/pricing" />
         <script
           type="application/ld+json"
@@ -130,28 +130,28 @@ export default function PricingPage() {
             __html: JSON.stringify([
               generateSchema('Product', {
                 name: 'HypertroQ Pro Subscription',
-                description: 'Unlimited AI fitness coaching with personalized training plans and conversation memory',
+                description: 'Unlimited access to all hypertrophy training programs with customization and AI assistance',
                 offers: [
                   {
                     '@type': 'Offer',
                     name: 'Free Plan',
                     price: '0',
                     priceCurrency: 'USD',
-                    description: '5 messages per day, basic AI guidance',
+                    description: 'Access to 1 training program with basic features',
                   },
                   {
                     '@type': 'Offer',
                     name: 'Pro Plan - Monthly',
                     price: '9',
                     priceCurrency: 'USD',
-                    description: 'Unlimited messages, conversation memory, personalized training',
+                    description: 'All training programs, customization, AI assistant, workout tracking',
                   },
                   {
                     '@type': 'Offer',
                     name: 'Pro Plan - Yearly',
                     price: '90',
                     priceCurrency: 'USD',
-                    description: 'Unlimited messages, conversation memory, personalized training - billed annually',
+                    description: 'All training programs, customization, AI assistant, workout tracking - billed annually',
                   }
                 ]
               })

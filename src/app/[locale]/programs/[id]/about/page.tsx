@@ -6,7 +6,7 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/com
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
 import { Separator } from '@/components/ui/separator';
-import { Loader2, ArrowLeft, ShoppingCart, Star, Calendar, DollarSign } from 'lucide-react';
+import { Loader2, ArrowLeft, ShoppingCart, Star, Calendar, DollarSign, Crown, Sparkles } from 'lucide-react';
 import { createClient } from '@/lib/supabase/client';
 import Image from 'next/image';
 
@@ -23,6 +23,7 @@ interface TrainingProgram {
   createdAt: string;
   isOwned?: boolean;
   hasPurchased?: boolean;
+  hasProAccess?: boolean;
 }
 
 export default function ProgramAboutPage() {
@@ -89,6 +90,12 @@ export default function ProgramAboutPage() {
     }
     
     if (!program) return;
+
+    // Check if user has Pro access (can access without purchase)
+    if (program.hasProAccess) {
+      router.push(`/programs/${programId}/guide`);
+      return;
+    }
 
     // Check if program is free
     if (program.price === 0) {
@@ -283,10 +290,12 @@ export default function ProgramAboutPage() {
         <Card className="bg-primary/5 border-primary/20">
           <CardHeader className="text-center">
             <CardTitle className="text-2xl">
-              {program.hasPurchased ? 'You Own This Program' : 'Ready to Get Started?'}
+              {program.hasPurchased || program.hasProAccess ? 'You Have Access' : 'Ready to Get Started?'}
             </CardTitle>
             <CardDescription className="text-base">
-              {program.hasPurchased 
+              {program.hasProAccess
+                ? 'Pro membership: Full access to this program and all others'
+                : program.hasPurchased 
                 ? 'Access your personalized training plan' 
                 : program.price === 0
                 ? 'This program is free - start building your plan now'
@@ -296,7 +305,7 @@ export default function ProgramAboutPage() {
           </CardHeader>
           <CardContent className="space-y-6">
             {/* Pricing */}
-            {!program.hasPurchased && (
+            {!program.hasPurchased && !program.hasProAccess && (
               <div className="text-center">
                 <div className="text-3xl font-bold text-primary mb-2">
                   {program.price === 0 ? 'FREE' : formatPrice(program.price)}
@@ -306,6 +315,14 @@ export default function ProgramAboutPage() {
                     One-time purchase • Lifetime access
                   </p>
                 )}
+              </div>
+            )}
+
+            {/* Pro Access Badge */}
+            {program.hasProAccess && (
+              <div className="flex items-center justify-center gap-2 p-4 rounded-lg bg-gradient-to-r from-purple-100 to-blue-100 dark:from-purple-950/30 dark:to-blue-950/30 border border-purple-200 dark:border-purple-800">
+                <Crown className="h-5 w-5 text-purple-600 dark:text-purple-400" />
+                <span className="font-semibold text-purple-900 dark:text-purple-100">Pro Member - Full Access</span>
               </div>
             )}
 
@@ -329,7 +346,7 @@ export default function ProgramAboutPage() {
                     <Loader2 className="h-5 w-5 mr-2 animate-spin" />
                     Processing...
                   </>
-                ) : program.hasPurchased ? (
+                ) : program.hasProAccess || program.hasPurchased ? (
                   <>
                     <Star className="h-5 w-5 mr-2" />
                     View Program
@@ -344,6 +361,68 @@ export default function ProgramAboutPage() {
                 )}
               </Button>
             </div>
+
+            {/* Pro Upgrade Option - Only show for non-Pro users on paid programs */}
+            {isAuthenticated && !program.hasProAccess && !program.hasPurchased && program.price > 0 && (
+              <>
+                <div className="relative">
+                  <div className="absolute inset-0 flex items-center">
+                    <span className="w-full border-t" />
+                  </div>
+                  <div className="relative flex justify-center text-xs uppercase">
+                    <span className="bg-background px-2 text-muted-foreground">
+                      Or get unlimited access
+                    </span>
+                  </div>
+                </div>
+
+                <Card className="border-purple-200 dark:border-purple-800 bg-gradient-to-r from-purple-50 to-blue-50 dark:from-purple-950/30 dark:to-blue-950/30">
+                  <CardContent className="py-4">
+                    <div className="flex flex-col gap-3">
+                      <div className="flex items-start gap-3">
+                        <div className="p-2 rounded-lg bg-gradient-to-r from-purple-600 to-blue-600">
+                          <Crown className="h-5 w-5 text-white" />
+                        </div>
+                        <div className="flex-1">
+                          <h4 className="font-semibold mb-1 flex items-center gap-2">
+                            Upgrade to Pro
+                            <Badge className="bg-gradient-to-r from-purple-600 to-blue-600">
+                              <Sparkles className="h-3 w-3 mr-1" />
+                              Best Value
+                            </Badge>
+                          </h4>
+                          <p className="text-sm text-muted-foreground mb-2">
+                            Get unlimited access to all training programs for just $19/month
+                          </p>
+                          <ul className="text-xs space-y-1 text-muted-foreground">
+                            <li className="flex items-center gap-1">
+                              <Star className="h-3 w-3 text-purple-600 dark:text-purple-400" />
+                              Access to all current programs
+                            </li>
+                            <li className="flex items-center gap-1">
+                              <Sparkles className="h-3 w-3 text-purple-600 dark:text-purple-400" />
+                              Future programs included free
+                            </li>
+                            <li className="flex items-center gap-1">
+                              <Crown className="h-3 w-3 text-purple-600 dark:text-purple-400" />
+                              Premium support priority
+                            </li>
+                          </ul>
+                        </div>
+                      </div>
+                      <Button
+                        onClick={() => router.push('/pricing')}
+                        variant="outline"
+                        className="w-full border-purple-300 dark:border-purple-700"
+                      >
+                        <Crown className="h-4 w-4 mr-2" />
+                        View Pro Plans
+                      </Button>
+                    </div>
+                  </CardContent>
+                </Card>
+              </>
+            )}
 
             {/* Additional Info */}
             {!isAuthenticated && (

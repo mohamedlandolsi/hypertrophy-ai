@@ -2,6 +2,7 @@ import { NextRequest, NextResponse } from 'next/server';
 import { createClient } from '@/lib/supabase/server';
 import { ApiErrorHandler } from '@/lib/error-handler';
 import { prisma } from '@/lib/prisma';
+import { hasProAccess } from '@/lib/program-access';
 
 export async function GET(request: NextRequest) {
   const context = ApiErrorHandler.createContext(request);
@@ -51,13 +52,16 @@ export async function GET(request: NextRequest) {
       });
     }
 
-    // Get user details including role
+    // Get user details including role and Pro status
     const dbUser = await prisma.user.findUnique({
       where: { id: user.id },
-      select: { role: true }
+      select: { role: true, plan: true }
     });
 
     const isAdmin = dbUser?.role === 'admin';
+    
+    // Check if user has Pro subscription (access to all programs)
+    const isPro = await hasProAccess(user.id);
 
     // Get user's purchased programs
     const userPurchases = await prisma.userPurchase.findMany({
@@ -80,7 +84,8 @@ export async function GET(request: NextRequest) {
           ...program,
           purchaseDate: purchase?.purchaseDate,
           isOwned: true,
-          isAdminAccess: !purchase // Flag to indicate admin access vs real purchase
+          isAdminAccess: !purchase, // Flag to indicate admin access vs real purchase
+          accessReason: 'admin' as const
         };
       });
 
@@ -92,25 +97,54 @@ export async function GET(request: NextRequest) {
           totalPrograms: allPrograms.length,
           ownedCount: ownedPrograms.length,
           browseCount: 0,
-          isAdmin: true
+          isAdmin: true,
+          isPro: dbUser?.plan === 'PRO'
+        }
+      });
+    }
+
+    // For Pro users, all programs are accessible
+    if (isPro) {
+      const ownedPrograms = allPrograms.map(program => {
+        const purchase = userPurchases.find(p => p.trainingProgramId === program.id);
+        return {
+          ...program,
+          purchaseDate: purchase?.purchaseDate,
+          isOwned: true,
+          isProAccess: !purchase, // Flag to indicate Pro access vs actual purchase
+          accessReason: purchase ? 'purchased' : 'pro_subscription' as const
+        };
+      });
+
+      return NextResponse.json({
+        success: true,
+        data: {
+          ownedPrograms,
+          browsePrograms: [], // Pro users see all as owned
+          totalPrograms: allPrograms.length,
+          ownedCount: ownedPrograms.length,
+          browseCount: 0,
+          isAdmin: false,
+          isPro: true
         }
       });
     }
 
     // For regular users, separate owned and available programs
     const ownedPrograms = allPrograms.filter(program => 
-      purchasedProgramIds.has(program.id)
+      purchasedProgramIds.has(program.id) || program.price === 0 // Include free programs
     ).map(program => {
       const purchase = userPurchases.find(p => p.trainingProgramId === program.id);
       return {
         ...program,
         purchaseDate: purchase?.purchaseDate,
-        isOwned: true
+        isOwned: true,
+        accessReason: program.price === 0 ? 'free' : 'purchased' as const
       };
     });
 
     const browsePrograms = allPrograms.filter(program => 
-      !purchasedProgramIds.has(program.id)
+      !purchasedProgramIds.has(program.id) && program.price > 0
     ).map(program => ({
       ...program,
       isOwned: false
@@ -124,7 +158,8 @@ export async function GET(request: NextRequest) {
         totalPrograms: allPrograms.length,
         ownedCount: ownedPrograms.length,
         browseCount: browsePrograms.length,
-        isAdmin: false
+        isAdmin: false,
+        isPro: false
       }
     });
 
