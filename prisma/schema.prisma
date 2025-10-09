@@ -227,6 +227,9 @@ model Exercise {
   category     ExerciseCategory @default(APPROVED)
   isActive     Boolean          @default(true)
   isRecommended Boolean         @default(false)
+  // Image URL for exercise demonstration (can be image or GIF)
+  imageUrl     String?
+  imageType    String?          // 'image/jpeg', 'image/png', 'image/gif', etc.
   // Volume contributions for each muscle group (1.0 = direct/primary, 0.5 = indirect/secondary)
   // This defines which muscles are trained and how much
   // Format: { "CHEST": 1.0, "FRONT_DELTS": 0.5, "TRICEPS": 0.5 }
@@ -341,13 +344,15 @@ model ProgramGuide {
 }
 
 model WorkoutTemplate {
-  id                   String   @id @default(cuid())
-  trainingProgramId    String
-  name                 Json // Multilingual: {"en": "Upper Body A", "ar": "الجزء العلوي أ", "fr": "Haut du Corps A"}
-  order                Int // Order within the program
-  requiredMuscleGroups String[] // Array of required muscle groups for this workout
-  createdAt            DateTime @default(now())
-  updatedAt            DateTime @updatedAt
+  id                     String   @id @default(cuid())
+  trainingProgramId      String
+  name                   Json // Multilingual: {"en": "Upper Body A", "ar": "الجزء العلوي أ", "fr": "Haut du Corps A"}
+  order                  Int // Order within the program
+  requiredMuscleGroups   String[] // Array of required muscle groups for this workout
+  exercisesPerMuscle     Json? // Per-muscle exercise limits: {"chest": 2, "back": 3, ...}
+  volumeRange            Json? // Per-muscle volume range: {"chest": {"min": 2, "max": 5}, "back": {"min": 3, "max": 7}, ...}
+  createdAt              DateTime @default(now())
+  updatedAt              DateTime @updatedAt
 
   // Relations
   trainingProgram TrainingProgram @relation(fields: [trainingProgramId], references: [id], onDelete: Cascade)

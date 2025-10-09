@@ -5,6 +5,12 @@
       "id": "supabase-access-token",
       "description": "Supabase personal access token",
       "password": true
+    },
+    {
+      "type": "promptString",
+      "id": "perplexity-key",
+      "description": "Perplexity API Key",
+      "password": true
     }
   ],
   "servers": {
@@ -13,6 +19,18 @@
       "args": ["/c", "npx", "-y", "@supabase/mcp-server-supabase@latest", "--read-only", "--project-ref=kbxqoaeytmuabopwlngy"],
       "env": {
         "SUPABASE_ACCESS_TOKEN": "${input:supabase-access-token}"
+      }
+    },
+    "perplexity": {
+      "command": "cmd",
+      "args": [
+        "/c",
+        "npx",
+        "-y",
+        "@modelcontextprotocol/server-perplexity-ask"
+      ],
+      "env": {
+        "PERPLEXITY_API_KEY": "${input:perplexity-key}"
       }
     }
   }

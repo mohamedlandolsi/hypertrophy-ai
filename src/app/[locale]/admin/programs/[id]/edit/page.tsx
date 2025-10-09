@@ -57,6 +57,8 @@ type EditProgramFormData = {
     id: string;
     name: string;
     muscleGroups: string[];
+    exercisesPerMuscle?: Record<string, number>;
+    volumeRange?: Record<string, { min: number; max: number }>;
     exercises: unknown[];
   }>;
   guideSections?: GuideSectionData[];
@@ -112,6 +114,8 @@ interface TrainingProgramData {
     name: Record<string, string>;
     order: number;
     requiredMuscleGroups: string[];
+    exercisesPerMuscle?: Record<string, number>;
+    volumeRange?: Record<string, { min: number; max: number }>;
   }>;
   isActive: boolean;
 }
@@ -203,6 +207,8 @@ export default function EditProgramPage() {
           id: template.id,
           name: template.name.en || `Workout ${idx + 1}`,
           muscleGroups: template.requiredMuscleGroups,
+          exercisesPerMuscle: template.exercisesPerMuscle || {},
+          volumeRange: template.volumeRange || {},
           // Extract exercise data from the name field if it exists (temporary workaround)
           exercises: (template.name as Record<string, unknown>)?._exerciseData as unknown[] || [], // Exercises would need to be loaded separately if needed
         }));
@@ -322,6 +328,8 @@ export default function EditProgramPage() {
           id: template.id,
           name: template.name,
           muscleGroups: template.muscleGroups,
+          exercisesPerMuscle: template.exercisesPerMuscle,
+          volumeRange: template.volumeRange,
           exercises: (template.exercises || []).map((exercise: unknown) => {
             const ex = exercise as ExerciseData;
             return {

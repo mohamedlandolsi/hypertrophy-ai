@@ -15,6 +15,8 @@ export interface Exercise {
   category: 'APPROVED' | 'PENDING' | 'DEPRECATED';
   isActive: boolean;
   isRecommended: boolean;
+  imageUrl?: string | null;
+  imageType?: string | null;
   volumeContributions: Record<string, number>;
 }
 

@@ -12,6 +12,8 @@ interface CustomizationRequest {
     categoryType: 'MINIMALIST' | 'ESSENTIALIST' | 'MAXIMALIST';
     workoutConfiguration: Record<string, string[]>;
     weeklyScheduleMapping?: Record<string, string>;
+    workoutPattern?: number;
+    exerciseSets?: Record<string, Record<string, number>>; // templateId -> exerciseId -> sets count
   };
 }
 
@@ -87,22 +89,40 @@ export async function POST(request: NextRequest) {
     // Validate structure ID
     const validStructure = program.programStructures.find(s => s.id === customization.structureId);
     if (!validStructure) {
+      console.error('Invalid structure ID:', customization.structureId);
+      console.error('Valid structure IDs:', program.programStructures.map((s: { id: string }) => s.id));
       return NextResponse.json({
         error: 'Invalid structure',
         message: 'The specified program structure does not exist.'
       }, { status: 400 });
     }
 
-    // Validate workout configuration
-    const validWorkoutIds = program.workoutTemplates.map(w => w.id);
-    const configuredWorkoutIds = Object.keys(customization.workoutConfiguration);
-    const invalidWorkoutIds = configuredWorkoutIds.filter(id => !validWorkoutIds.includes(id));
+    // Validate workout configuration (skip if empty)
+    const configuredWorkoutIds = Object.keys(customization.workoutConfiguration || {});
     
-    if (invalidWorkoutIds.length > 0) {
-      return NextResponse.json({
-        error: 'Invalid workout configuration',
-        message: `Invalid workout template IDs: ${invalidWorkoutIds.join(', ')}`
-      }, { status: 400 });
+    if (configuredWorkoutIds.length > 0) {
+      // Handle both base workout IDs and pattern-aware IDs (e.g., "upper-body-A")
+      const validWorkoutIds = program.workoutTemplates.map((w: { id: string }) => w.id);
+      
+      // Extract base ID from pattern-aware IDs (e.g., "upper-body-A" -> "upper-body")
+      const invalidWorkoutIds = configuredWorkoutIds.filter(id => {
+        // Check if it's a base ID
+        if (validWorkoutIds.includes(id)) return false;
+        
+        // Check if it's a pattern-aware ID (ends with -A, -B, or -C)
+        const baseId = id.replace(/-(A|B|C)$/, '');
+        return !validWorkoutIds.includes(baseId);
+      });
+      
+      if (invalidWorkoutIds.length > 0) {
+        console.error('Invalid workout IDs:', invalidWorkoutIds);
+        console.error('Valid workout IDs:', validWorkoutIds);
+        console.error('Configured workout IDs:', configuredWorkoutIds);
+        return NextResponse.json({
+          error: 'Invalid workout configuration',
+          message: `Invalid workout template IDs: ${invalidWorkoutIds.join(', ')}`
+        }, { status: 400 });
+      }
     }
 
     // Check if user already has customization for this program
@@ -125,6 +145,8 @@ export async function POST(request: NextRequest) {
             structureId: customization.structureId,
             workoutConfiguration: customization.workoutConfiguration,
             weeklyScheduleMapping: customization.weeklyScheduleMapping || {},
+            workoutPattern: customization.workoutPattern || 1,
+            exerciseSets: customization.exerciseSets || {},
             customizedAt: new Date().toISOString()
           },
           updatedAt: new Date()
@@ -141,6 +163,8 @@ export async function POST(request: NextRequest) {
             structureId: customization.structureId,
             workoutConfiguration: customization.workoutConfiguration,
             weeklyScheduleMapping: customization.weeklyScheduleMapping || {},
+            workoutPattern: customization.workoutPattern || 1,
+            exerciseSets: customization.exerciseSets || {},
             customizedAt: new Date().toISOString()
           }
         }

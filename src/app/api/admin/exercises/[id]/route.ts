@@ -89,6 +89,8 @@ export async function PUT(request: NextRequest, { params }: { params: Promise<{ 
       category, 
       isActive, 
       isRecommended,
+      imageUrl,
+      imageType,
       volumeContributions,
       regionalBias
     } = body;
@@ -125,6 +127,8 @@ export async function PUT(request: NextRequest, { params }: { params: Promise<{ 
         category: category || 'APPROVED',
         isActive: isActive !== undefined ? isActive : true,
         isRecommended: isRecommended !== undefined ? isRecommended : false,
+        imageUrl: imageUrl !== undefined ? imageUrl : existingExercise.imageUrl,
+        imageType: imageType !== undefined ? imageType : existingExercise.imageType,
         volumeContributions: volumeContributions || {},
         regionalBias: regionalBias || {},
         updatedAt: new Date()

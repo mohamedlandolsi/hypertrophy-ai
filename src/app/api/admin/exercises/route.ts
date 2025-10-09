@@ -129,6 +129,8 @@ export async function POST(request: NextRequest) {
       category, 
       isActive, 
       isRecommended,
+      imageUrl,
+      imageType,
       volumeContributions,
       regionalBias
     } = body;
@@ -153,6 +155,8 @@ export async function POST(request: NextRequest) {
         category: category || 'APPROVED',
         isActive: isActive ?? true,
         isRecommended: isRecommended ?? false,
+        imageUrl: imageUrl || null,
+        imageType: imageType || null,
         volumeContributions: volumeContributions || {},
         regionalBias: regionalBias || {},
         updatedAt: new Date()

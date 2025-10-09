@@ -54,6 +54,11 @@ const UpdateTrainingProgramSchema = z.object({
     id: z.string(),
     name: z.string().min(1, 'Workout name is required'),
     muscleGroups: z.array(z.string()).default([]),
+    exercisesPerMuscle: z.record(z.string(), z.number()).optional(),
+    volumeRange: z.record(z.string(), z.object({
+      min: z.number().min(0).max(20),
+      max: z.number().min(0).max(20)
+    })).optional(),
     exercises: z.array(z.object({
       id: z.string(),
       targetedMuscle: z.enum(['CHEST', 'BACK', 'SIDE_DELTS', 'FRONT_DELTS', 'REAR_DELTS', 'ELBOW_FLEXORS', 'TRICEPS', 'FOREARMS', 'GLUTES', 'QUADRICEPS', 'HAMSTRINGS', 'ADDUCTORS', 'CALVES', 'ERECTORS', 'ABS', 'OBLIQUES', 'HIP_FLEXORS']).optional(),
@@ -166,6 +171,8 @@ export async function createTrainingProgram(formData: z.infer<typeof programCrea
             },
             order: index + 1,
             requiredMuscleGroups: template.muscleGroups,
+            exercisesPerMuscle: template.exercisesPerMuscle || undefined,
+            volumeRange: template.volumeRange || undefined,
           })),
         });
       }
@@ -316,6 +323,8 @@ export async function updateTrainingProgram(formData: z.infer<typeof UpdateTrain
                 },
                 order: i + 1,
                 requiredMuscleGroups: template.muscleGroups,
+                exercisesPerMuscle: template.exercisesPerMuscle || undefined,
+                volumeRange: template.volumeRange || undefined,
               },
             });
           }

@@ -163,12 +163,9 @@ export default function ProgramGuideContent({
             <Settings className="w-4 h-4" />
             <span>Customize</span>
           </TabsTrigger>
-          <TabsTrigger value="workouts" disabled className="flex items-center space-x-2 opacity-60 cursor-not-allowed">
+          <TabsTrigger value="workouts" className="flex items-center space-x-2">
             <Dumbbell className="w-4 h-4" />
-            <div className="flex items-center space-x-1">
-              <span>AI Assistant</span>
-              <Badge variant="secondary" className="ml-1 text-[10px] px-1 py-0 h-4">Soon</Badge>
-            </div>
+            <span>Workouts</span>
           </TabsTrigger>
           <TabsTrigger value="progress" disabled className="flex items-center space-x-2 opacity-60 cursor-not-allowed">
             <TrendingUp className="w-4 h-4" />
@@ -203,6 +200,7 @@ export default function ProgramGuideContent({
             program={program}
             userCustomization={userCustomization}
             locale={locale}
+            userId={userId}
           />
         </TabsContent>
 

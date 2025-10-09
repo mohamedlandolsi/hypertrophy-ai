@@ -14,8 +14,7 @@ const muscleGroups = [
   { id: 'chest', name: 'Chest', color: 'bg-red-100 text-red-800' },
   // Back muscles (separated for specificity)
   { id: 'lats', name: 'Lats', color: 'bg-blue-100 text-blue-800' },
-  { id: 'trapezius', name: 'Trapezius', color: 'bg-sky-100 text-sky-800' },
-  { id: 'rhomboids', name: 'Rhomboids', color: 'bg-cyan-100 text-cyan-800' },
+  { id: 'trapezius_rhomboids', name: 'Trapezius & Rhomboids', color: 'bg-sky-100 text-sky-800' },
   // Shoulder muscles (separated by head)
   { id: 'front_delts', name: 'Front Delts', color: 'bg-amber-100 text-amber-800' },
   { id: 'side_delts', name: 'Side Delts', color: 'bg-yellow-100 text-yellow-800' },
@@ -50,6 +49,8 @@ interface Exercise {
   equipment: string[];
   category: 'APPROVED' | 'PENDING' | 'DEPRECATED';
   isActive: boolean;
+  imageUrl?: string | null;
+  imageType?: string | null;
   difficulty: 'BEGINNER' | 'INTERMEDIATE' | 'ADVANCED';
 }
 
@@ -266,6 +267,146 @@ export function WorkoutTemplatesForm() {
             </div>
 
             <Separator />
+
+            {/* Exercise Limits Per Muscle Group */}
+            {(template.muscleGroups as string[] || []).length > 0 && (
+              <>
+                <div className="space-y-3">
+                  <Label className="text-base font-semibold">Exercise Limits Per Muscle Group</Label>
+                  <p className="text-xs text-muted-foreground">
+                    Set how many exercises users can select for each muscle group
+                  </p>
+                  <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
+                    {(template.muscleGroups as string[] || []).map((muscleGroupId: string) => {
+                      const muscle = muscleGroups.find(m => m.id === muscleGroupId);
+                      if (!muscle) return null;
+                      
+                      const exercisesPerMuscle = (template.exercisesPerMuscle as Record<string, number>) || {};
+                      const currentLimit = exercisesPerMuscle[muscleGroupId] || 2;
+                      
+                      return (
+                        <div key={muscleGroupId} className="flex items-center space-x-3 p-3 border rounded-lg">
+                          <Badge variant="secondary" className={muscle.color}>
+                            {muscle.name}
+                          </Badge>
+                          <div className="flex items-center space-x-2 ml-auto">
+                            <Label htmlFor={`limit-${template.id}-${muscleGroupId}`} className="text-sm whitespace-nowrap">
+                              Max:
+                            </Label>
+                            <Select
+                              value={currentLimit.toString()}
+                              onValueChange={(value) => {
+                                const updatedLimits = {
+                                  ...(template.exercisesPerMuscle as Record<string, number> || {}),
+                                  [muscleGroupId]: parseInt(value)
+                                };
+                                updateWorkoutTemplate(template.id as string, 'exercisesPerMuscle', updatedLimits);
+                              }}
+                            >
+                              <SelectTrigger id={`limit-${template.id}-${muscleGroupId}`} className="w-20">
+                                <SelectValue />
+                              </SelectTrigger>
+                              <SelectContent>
+                                <SelectItem value="1">1</SelectItem>
+                                <SelectItem value="2">2</SelectItem>
+                                <SelectItem value="3">3</SelectItem>
+                                <SelectItem value="4">4</SelectItem>
+                                <SelectItem value="5">5</SelectItem>
+                                <SelectItem value="6">6</SelectItem>
+                              </SelectContent>
+                            </Select>
+                          </div>
+                        </div>
+                      );
+                    })}
+                  </div>
+                </div>
+
+                <Separator />
+
+                <div className="space-y-3">
+                  <Label className="text-base font-semibold">Volume Range Per Muscle Group (Sets)</Label>
+                  <p className="text-xs text-muted-foreground">
+                    Set the minimum and maximum number of total working sets for each muscle group
+                  </p>
+                  <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
+                    {(template.muscleGroups as string[] || []).map((muscleGroupId: string) => {
+                      const muscle = muscleGroups.find(m => m.id === muscleGroupId);
+                      if (!muscle) return null;
+                      
+                      const volumeRange = (template.volumeRange as Record<string, { min: number; max: number }>) || {};
+                      const currentRange = volumeRange[muscleGroupId] || { min: 2, max: 5 };
+                      
+                      return (
+                        <div key={muscleGroupId} className="flex flex-col space-y-2 p-3 border rounded-lg">
+                          <Badge variant="secondary" className={muscle.color}>
+                            {muscle.name}
+                          </Badge>
+                          <div className="flex items-center space-x-2">
+                            <div className="flex items-center space-x-1 flex-1">
+                              <Label htmlFor={`volume-min-${template.id}-${muscleGroupId}`} className="text-xs whitespace-nowrap">
+                                Min:
+                              </Label>
+                              <Select
+                                value={currentRange.min.toString()}
+                                onValueChange={(value) => {
+                                  const updatedRange = {
+                                    ...(template.volumeRange as Record<string, { min: number; max: number }> || {}),
+                                    [muscleGroupId]: { 
+                                      min: parseInt(value), 
+                                      max: currentRange.max 
+                                    }
+                                  };
+                                  updateWorkoutTemplate(template.id as string, 'volumeRange', updatedRange);
+                                }}
+                              >
+                                <SelectTrigger id={`volume-min-${template.id}-${muscleGroupId}`} className="w-20">
+                                  <SelectValue />
+                                </SelectTrigger>
+                                <SelectContent>
+                                  {[0, 1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 12, 15, 20].map(num => (
+                                    <SelectItem key={num} value={num.toString()}>{num}</SelectItem>
+                                  ))}
+                                </SelectContent>
+                              </Select>
+                            </div>
+                            <div className="flex items-center space-x-1 flex-1">
+                              <Label htmlFor={`volume-max-${template.id}-${muscleGroupId}`} className="text-xs whitespace-nowrap">
+                                Max:
+                              </Label>
+                              <Select
+                                value={currentRange.max.toString()}
+                                onValueChange={(value) => {
+                                  const updatedRange = {
+                                    ...(template.volumeRange as Record<string, { min: number; max: number }> || {}),
+                                    [muscleGroupId]: { 
+                                      min: currentRange.min, 
+                                      max: parseInt(value) 
+                                    }
+                                  };
+                                  updateWorkoutTemplate(template.id as string, 'volumeRange', updatedRange);
+                                }}
+                              >
+                                <SelectTrigger id={`volume-max-${template.id}-${muscleGroupId}`} className="w-20">
+                                  <SelectValue />
+                                </SelectTrigger>
+                                <SelectContent>
+                                  {[0, 1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 12, 15, 20].map(num => (
+                                    <SelectItem key={num} value={num.toString()}>{num}</SelectItem>
+                                  ))}
+                                </SelectContent>
+                              </Select>
+                            </div>
+                          </div>
+                        </div>
+                      );
+                    })}
+                  </div>
+                </div>
+
+                <Separator />
+              </>
+            )}
 
             {/* Exercise Selection */}
             <div className="space-y-4">

@@ -10,7 +10,6 @@ import { Label } from '@/components/ui/label';
 import { Alert, AlertDescription } from '@/components/ui/alert';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { Accordion, AccordionContent, AccordionItem, AccordionTrigger } from '@/components/ui/accordion';
-import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle, DialogTrigger } from '@/components/ui/dialog';
 import { useToast } from '@/hooks/use-toast';
 import { 
   Settings,
@@ -20,9 +19,7 @@ import {
   RotateCcw,
   CheckCircle,
   AlertCircle,
-  Info,
-  Plus,
-  X
+  Info
 } from 'lucide-react';
 
 // Muscle group definitions (matching admin form)
@@ -77,12 +74,11 @@ const muscleGroupMapping: Record<string, string[]> = {
   
   // Back muscles (separated anatomically)
   'lats': ['LATS'],
-  'trapezius_rhomboids': ['TRAPEZIUS_RHOMBOIDS'],
-  // Legacy mappings for backward compatibility with old separated values
-  'trapezius': ['TRAPEZIUS_RHOMBOIDS'],
-  'rhomboids': ['TRAPEZIUS_RHOMBOIDS'],
-  'back': ['LATS', 'TRAPEZIUS_RHOMBOIDS'],
-  'upper_back': ['TRAPEZIUS_RHOMBOIDS'],
+  'trapezius': ['TRAPEZIUS'],
+  'rhomboids': ['RHOMBOIDS'],
+  // Legacy mappings for backward compatibility
+  'back': ['LATS', 'TRAPEZIUS', 'RHOMBOIDS'],
+  'upper_back': ['TRAPEZIUS', 'RHOMBOIDS'],
   
   // Shoulder muscles (separated by head)
   'front_delts': ['FRONT_DELTS'],
@@ -119,7 +115,7 @@ const muscleGroupMapping: Record<string, string[]> = {
   
   // Additional mappings
   'hip_flexors': ['GLUTES'], // Map to closest available muscle group
-  'erectors': ['TRAPEZIUS_RHOMBOIDS'], // Map erectors to trapezius & rhomboids (upper back)
+  'erectors': ['TRAPEZIUS'], // Map erectors to trapezius (upper back)
 };
 
 interface ProgramCustomizerProps {
@@ -139,8 +135,6 @@ interface CustomizationConfig {
   workoutConfiguration: Record<string, string[]>; // workoutTemplateId -> exerciseIds[]
   weeklyScheduleMapping?: Record<string, string>; // day1 -> monday, day2 -> tuesday, etc.
   workoutPattern?: number; // 1 = same workout, 2 = A/B, 3 = A/B/C
-  exerciseSets?: Record<string, Record<string, number>>; // templateId -> exerciseId -> sets count
-  exerciseEquipment?: Record<string, Record<string, string>>; // templateId -> exerciseId -> selected equipment
 }
 
 export function ProgramCustomizer({
@@ -163,48 +157,10 @@ export function ProgramCustomizer({
     categoryType: userCustomization?.categoryType || 'ESSENTIALIST',
     workoutConfiguration: userCustomization?.configuration?.workoutConfiguration || {},
     weeklyScheduleMapping: userCustomization?.configuration?.weeklyScheduleMapping || {},
-    workoutPattern: userCustomization?.configuration?.workoutPattern || 1,
-    exerciseSets: userCustomization?.configuration?.exerciseSets || {},
-    exerciseEquipment: userCustomization?.configuration?.exerciseEquipment || {}
+    workoutPattern: userCustomization?.configuration?.workoutPattern || 1
   }));
 
   const [hasUnsavedChanges, setHasUnsavedChanges] = useState(false);
-  
-  // Track the saved workout pattern (updates only after save)
-  const [savedWorkoutPattern, setSavedWorkoutPattern] = useState<number>(
-    userCustomization?.configuration?.workoutPattern || 1
-  );
-
-  // Track exercise sets (templateId -> exerciseId -> sets)
-  const [exerciseSets, setExerciseSets] = useState<Record<string, Record<string, number>>>(
-    userCustomization?.configuration?.exerciseSets || {}
-  );
-
-  // Track exercise equipment selection (templateId -> exerciseId -> equipment)
-  const [exerciseEquipment, setExerciseEquipment] = useState<Record<string, Record<string, string>>>(
-    userCustomization?.configuration?.exerciseEquipment || {}
-  );
-
-  // Track muscle priority order (templateId -> ordered muscle array)
-  const [musclePriorityOrder, setMusclePriorityOrder] = useState<Record<string, string[]>>({});
-
-  // Sync customization state when userCustomization prop changes (e.g., after hot reload or data refresh)
-  useEffect(() => {
-    if (userCustomization) {
-      setCustomization({
-        structureId: userCustomization.configuration?.structureId || program.programStructures.find((s: Record<string, unknown>) => s.isDefault)?.id || program.programStructures[0]?.id || '',
-        categoryType: userCustomization.categoryType || 'ESSENTIALIST',
-        workoutConfiguration: userCustomization.configuration?.workoutConfiguration || {},
-        weeklyScheduleMapping: userCustomization.configuration?.weeklyScheduleMapping || {},
-        workoutPattern: userCustomization.configuration?.workoutPattern || 1,
-        exerciseSets: userCustomization.configuration?.exerciseSets || {},
-        exerciseEquipment: userCustomization.configuration?.exerciseEquipment || {}
-      });
-      setSavedWorkoutPattern(userCustomization.configuration?.workoutPattern || 1);
-      setExerciseSets(userCustomization.configuration?.exerciseSets || {});
-      setExerciseEquipment(userCustomization.configuration?.exerciseEquipment || {});
-    }
-  }, [userCustomization, program.programStructures]);
 
   // Exercise state
   interface Exercise {
@@ -217,140 +173,17 @@ export function ProgramCustomizer({
     category: 'APPROVED' | 'PENDING' | 'DEPRECATED';
     isActive: boolean;
     isRecommended: boolean;
-    imageUrl?: string | null;
-    imageType?: string | null;
     volumeContributions: Record<string, number>;
   }
 
   const [exercisesByMuscleGroup, setExercisesByMuscleGroup] = useState<Record<string, Exercise[]>>({});
   const [loadingExercises, setLoadingExercises] = useState<Record<string, boolean>>({});
-  const [expandedExerciseId, setExpandedExerciseId] = useState<string | null>(null);
 
   // Function to get Exercise muscle groups for a workout template muscle group
   const getExerciseMuscleGroups = useCallback((workoutMuscleGroup: string): string[] => {
     const lowerCaseGroup = workoutMuscleGroup.toLowerCase();
     return muscleGroupMapping[lowerCaseGroup] || [];
   }, []);
-
-  // Helper to get/set exercise sets
-  const getExerciseSets = (templateId: string, exerciseId: string) => {
-    return exerciseSets[templateId]?.[exerciseId] || 2; // default 2 sets
-  };
-
-  const setExerciseSetCount = (templateId: string, exerciseId: string, sets: number) => {
-    setExerciseSets(prev => ({
-      ...prev,
-      [templateId]: {
-        ...(prev[templateId] || {}),
-        [exerciseId]: sets
-      }
-    }));
-    setHasUnsavedChanges(true);
-  };
-
-  // Helper to get/set exercise equipment
-  const getExerciseEquipment = (templateId: string, exerciseId: string) => {
-    return exerciseEquipment[templateId]?.[exerciseId] || '';
-  };
-
-  const setExerciseEquipmentChoice = (templateId: string, exerciseId: string, equipment: string) => {
-    setExerciseEquipment(prev => ({
-      ...prev,
-      [templateId]: {
-        ...(prev[templateId] || {}),
-        [exerciseId]: equipment
-      }
-    }));
-    setHasUnsavedChanges(true);
-  };
-
-  // Calculate total volume for a muscle in a workout
-  const calculateMuscleVolume = (template: WorkoutTemplateWithPattern, muscleGroup: string): number => {
-    const selectedExercises = customization.workoutConfiguration[template.displayId] || [];
-    let totalVolume = 0;
-    
-    // Map workout muscle group to exercise muscle groups (e.g., "chest" -> ["CHEST"])
-    const exerciseMuscleGroups = getExerciseMuscleGroups(muscleGroup);
-    
-    selectedExercises.forEach(exerciseId => {
-      const sets = getExerciseSets(template.displayId, exerciseId);
-      const exercise = Object.values(exercisesByMuscleGroup).flat().find(ex => ex.id === exerciseId);
-      
-      if (exercise && exercise.volumeContributions) {
-        // Get max contribution across all mapped muscle groups
-        const contribution = Math.max(
-          ...exerciseMuscleGroups.map(emg => exercise.volumeContributions?.[emg] || 0)
-        );
-        totalVolume += sets * contribution;
-      }
-    });
-    
-    return Math.round(totalVolume * 10) / 10; // Round to 1 decimal
-  };
-
-  // Get volume range from template
-  const getVolumeRange = (template: WorkoutTemplateWithPattern, muscleGroup: string) => {
-    const volumeRange = template.volumeRange as Record<string, { min: number; max: number }> | undefined;
-    return volumeRange?.[muscleGroup] || { min: 2, max: 5 };
-  };
-
-  // Determine volume status
-  const getVolumeStatus = (volume: number, range: { min: number; max: number }) => {
-    if (volume < range.min) {
-      return { 
-        color: 'bg-red-100 text-red-800 dark:bg-red-900/30 dark:text-red-200', 
-        label: 'Too Low',
-        icon: '⚠️'
-      };
-    }
-    if (volume > range.max) {
-      return { 
-        color: 'bg-yellow-100 text-yellow-800 dark:bg-yellow-900/30 dark:text-yellow-200', 
-        label: 'Too High',
-        icon: '⚠️'
-      };
-    }
-    return { 
-      color: 'bg-green-100 text-green-800 dark:bg-green-900/30 dark:text-green-200', 
-      label: 'Optimal',
-      icon: '✓'
-    };
-  };
-
-  // Get ordered muscles for a template
-  const getOrderedMuscles = (templateId: string, muscles: string[]) => {
-    const order = musclePriorityOrder[templateId];
-    if (!order) return muscles;
-    
-    // Sort based on custom order, then append remaining
-    const ordered = [...order].filter(m => muscles.includes(m));
-    const remaining = muscles.filter(m => !order.includes(m));
-    return [...ordered, ...remaining];
-  };
-
-  // Move muscle up in priority
-  const moveMuscleUp = (templateId: string, muscleGroup: string, allMuscles: string[]) => {
-    const currentOrder = musclePriorityOrder[templateId] || allMuscles;
-    const index = currentOrder.indexOf(muscleGroup);
-    if (index > 0) {
-      const newOrder = [...currentOrder];
-      [newOrder[index - 1], newOrder[index]] = [newOrder[index], newOrder[index - 1]];
-      setMusclePriorityOrder(prev => ({ ...prev, [templateId]: newOrder }));
-      setHasUnsavedChanges(true);
-    }
-  };
-
-  // Move muscle down in priority
-  const moveMuscleDown = (templateId: string, muscleGroup: string, allMuscles: string[]) => {
-    const currentOrder = musclePriorityOrder[templateId] || allMuscles;
-    const index = currentOrder.indexOf(muscleGroup);
-    if (index < currentOrder.length - 1 && index !== -1) {
-      const newOrder = [...currentOrder];
-      [newOrder[index], newOrder[index + 1]] = [newOrder[index + 1], newOrder[index]];
-      setMusclePriorityOrder(prev => ({ ...prev, [templateId]: newOrder }));
-      setHasUnsavedChanges(true);
-    }
-  };
 
   // Function to fetch exercises for a muscle group
   const fetchExercisesForMuscleGroup = useCallback(async (muscleGroup: string) => {
@@ -431,6 +264,54 @@ export function ProgramCustomizer({
     }
     return content || fallback;
   };
+
+  // Generate workout templates based on pattern
+  interface WorkoutTemplateWithPattern {
+    id: string;
+    name: Record<string, string>;
+    order: number;
+    requiredMuscleGroups: string[];
+    patternLabel: string | null;
+    patternIndex: number;
+    displayId: string;
+    originalId: string; // Keep track of original template ID
+  }
+
+  const getWorkoutTemplatesForPattern = (): WorkoutTemplateWithPattern[] => {
+    const baseWorkouts = program.workoutTemplates || [];
+    const pattern = customization.workoutPattern || 1;
+    
+    if (pattern === 1) {
+      // Pattern 1: Same workout repeated - show all workouts as they are
+      return baseWorkouts.map((workout: WorkoutTemplateWithPattern) => ({
+        ...workout,
+        patternLabel: null,
+        patternIndex: 0,
+        displayId: workout.id,
+        originalId: workout.id
+      }));
+    } else {
+      // Pattern 2 or 3: Multiply workouts by pattern
+      const expandedWorkouts: WorkoutTemplateWithPattern[] = [];
+      const labels = ['A', 'B', 'C'];
+      
+      for (let patternIndex = 0; patternIndex < pattern; patternIndex++) {
+        baseWorkouts.forEach((workout: WorkoutTemplateWithPattern) => {
+          expandedWorkouts.push({
+            ...workout,
+            patternLabel: labels[patternIndex],
+            patternIndex: patternIndex,
+            displayId: `${workout.id}-${labels[patternIndex]}`,
+            originalId: workout.id
+          });
+        });
+      }
+      
+      return expandedWorkouts;
+    }
+  };
+
+  const workoutTemplatesForDisplay = getWorkoutTemplatesForPattern();
 
   // Get selected structure
   const selectedStructure = program.programStructures.find((s: Record<string, unknown>) => s.id === customization.structureId);
@@ -558,43 +439,46 @@ export function ProgramCustomizer({
     MAXIMALIST: 'More exercises and volume. Best for advanced users who want maximum muscle stimulation.'
   };
 
-  // Save customization (legacy - kept for reference, now using individual save functions)
-  // const saveCustomization = async () => {
-  //   setIsSaving(true);
-  //   try {
-  //     console.log('Saving customization:', customization);
-  //     
-  //     const response = await fetch('/api/programs/customize', {
-  //       method: 'POST',
-  //       headers: { 'Content-Type': 'application/json' },
-  //       body: JSON.stringify({
-  //         trainingProgramId: program.id,
-  //         customization
-  //       })
-  //     });
+  // Save customization
+  const saveCustomization = async () => {
+    setIsSaving(true);
+    try {
+      console.log('Saving customization:', customization);
+      
+      const response = await fetch('/api/programs/customize', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          trainingProgramId: program.id,
+          customization
+        })
+      });
 
-  //     if (!response.ok) {
-  //       throw new Error('Failed to save customization');
-  //     }
+      if (!response.ok) {
+        const errorData = await response.json();
+        console.error('API Error:', errorData);
+        throw new Error(errorData.message || 'Failed to save customization');
+      }
 
-  //     const result = await response.json();
-  //     onCustomizationSaved(result);
-  //     setHasUnsavedChanges(false);
-  //     
-  //     toast({
-  //       title: 'Customization Saved',
-  //       description: 'Your program customization has been saved successfully.'
-  //     });
-  //   } catch {
-  //     toast({
-  //       title: 'Save Failed',
-  //       description: 'Failed to save your customization. Please try again.',
-  //       variant: 'destructive'
-  //     });
-  //   } finally {
-  //     setIsSaving(false);
-  //   }
-  // };
+      const result = await response.json();
+      onCustomizationSaved(result);
+      setHasUnsavedChanges(false);
+      
+      toast({
+        title: 'Customization Saved',
+        description: 'Your program customization has been saved successfully.'
+      });
+    } catch (error) {
+      console.error('Save customization error:', error);
+      toast({
+        title: 'Save Failed',
+        description: error instanceof Error ? error.message : 'Failed to save your customization. Please try again.',
+        variant: 'destructive'
+      });
+    } finally {
+      setIsSaving(false);
+    }
+  };
 
   // Reset to defaults
   const resetToDefaults = () => {
@@ -614,59 +498,13 @@ export function ProgramCustomizer({
     setCustomization(prev => ({ ...prev, ...updates }));
     setHasUnsavedChanges(true);
   };
-
-  // Generate workout templates based on pattern multiplier
-  interface WorkoutTemplateWithPattern {
-    id: string;
-    name: Record<string, string>;
-    order: number;
-    requiredMuscleGroups: string[];
-    exercisesPerMuscle?: Record<string, number>;
-    volumeRange?: Record<string, { min: number; max: number }>;
-    patternLabel: string | null;
-    patternIndex: number;
-    displayId: string;
-    baseId: string;
-  }
-
-  const getWorkoutsToDisplay = (): WorkoutTemplateWithPattern[] => {
-    const baseWorkouts = program.workoutTemplates || [];
-    const pattern = savedWorkoutPattern;
-    
-    if (pattern === 1) {
-      // Pattern 1: Same workout repeated - show all workouts as they are
-      return baseWorkouts.map((workout: WorkoutTemplateWithPattern) => ({
-        ...workout,
-        patternLabel: null,
-        patternIndex: 0,
-        displayId: workout.id,
-        baseId: workout.id
-      }));
-    } else {
-      // Pattern 2 or 3: Multiply workouts by pattern
-      const expandedWorkouts: WorkoutTemplateWithPattern[] = [];
-      const labels = ['A', 'B', 'C'];
-      
-      for (let patternIndex = 0; patternIndex < pattern; patternIndex++) {
-        baseWorkouts.forEach((workout: WorkoutTemplateWithPattern) => {
-          expandedWorkouts.push({
-            ...workout,
-            patternLabel: labels[patternIndex],
-            patternIndex: patternIndex,
-            displayId: `${workout.id}-${labels[patternIndex]}`,
-            baseId: workout.id
-          });
-        });
-      }
-      
-      return expandedWorkouts;
-    }
-  };
-
+  
   // Save structure selection
   const saveStructure = async () => {
     setIsSaving(true);
     try {
+      console.log('Saving structure:', customization.structureId);
+      
       const response = await fetch('/api/programs/customize', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
@@ -675,7 +513,7 @@ export function ProgramCustomizer({
           customization: {
             structureId: customization.structureId,
             categoryType: customization.categoryType,
-            workoutConfiguration: {}, // Clear workout config when changing structure
+            workoutConfiguration: customization.workoutConfiguration || {},
             weeklyScheduleMapping: customization.weeklyScheduleMapping || {},
             workoutPattern: customization.workoutPattern || 1
           }
@@ -684,10 +522,12 @@ export function ProgramCustomizer({
 
       if (!response.ok) {
         const errorData = await response.json();
+        console.error('API Error:', errorData);
         throw new Error(errorData.message || 'Failed to save structure');
       }
 
       const result = await response.json();
+      console.log('Structure saved successfully:', result);
       onCustomizationSaved(result);
       setHasUnsavedChanges(false);
       
@@ -696,6 +536,7 @@ export function ProgramCustomizer({
         description: 'Your training structure has been saved successfully.'
       });
     } catch (error) {
+      console.error('Save structure error:', error);
       toast({
         title: 'Save Failed',
         description: error instanceof Error ? error.message : 'Failed to save your structure.',
@@ -710,6 +551,8 @@ export function ProgramCustomizer({
   const saveCategory = async () => {
     setIsSaving(true);
     try {
+      console.log('Saving category:', customization.categoryType);
+      
       const response = await fetch('/api/programs/customize', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
@@ -718,7 +561,7 @@ export function ProgramCustomizer({
           customization: {
             structureId: customization.structureId,
             categoryType: customization.categoryType,
-            workoutConfiguration: {}, // Clear workout config when changing category
+            workoutConfiguration: customization.workoutConfiguration || {},
             weeklyScheduleMapping: customization.weeklyScheduleMapping || {},
             workoutPattern: customization.workoutPattern || 1
           }
@@ -727,10 +570,12 @@ export function ProgramCustomizer({
 
       if (!response.ok) {
         const errorData = await response.json();
+        console.error('API Error:', errorData);
         throw new Error(errorData.message || 'Failed to save category');
       }
 
       const result = await response.json();
+      console.log('Category saved successfully:', result);
       onCustomizationSaved(result);
       setHasUnsavedChanges(false);
       
@@ -739,6 +584,7 @@ export function ProgramCustomizer({
         description: 'Your program category has been saved successfully.'
       });
     } catch (error) {
+      console.error('Save category error:', error);
       toast({
         title: 'Save Failed',
         description: error instanceof Error ? error.message : 'Failed to save your category.',
@@ -753,6 +599,8 @@ export function ProgramCustomizer({
   const saveWorkoutPattern = async () => {
     setIsSaving(true);
     try {
+      console.log('Saving workout pattern:', customization.workoutPattern);
+      
       const response = await fetch('/api/programs/customize', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
@@ -761,7 +609,7 @@ export function ProgramCustomizer({
           customization: {
             structureId: customization.structureId,
             categoryType: customization.categoryType,
-            workoutConfiguration: {}, // Clear workout config when changing pattern
+            workoutConfiguration: customization.workoutConfiguration || {},
             weeklyScheduleMapping: customization.weeklyScheduleMapping || {},
             workoutPattern: customization.workoutPattern || 1
           }
@@ -770,35 +618,21 @@ export function ProgramCustomizer({
 
       if (!response.ok) {
         const errorData = await response.json();
+        console.error('API Error:', errorData);
         throw new Error(errorData.message || 'Failed to save workout pattern');
       }
 
       const result = await response.json();
-      
-      // Update saved pattern and clear workout configuration
-      setSavedWorkoutPattern(customization.workoutPattern || 1);
-      setCustomization(prev => ({
-        ...prev,
-        workoutConfiguration: {}
-      }));
-      
+      console.log('Workout pattern saved successfully:', result);
       onCustomizationSaved(result);
       setHasUnsavedChanges(false);
       
-      // Get pattern description for user feedback
-      const patternDescriptions: Record<number, string> = {
-        1: 'One same workout repeated',
-        2: 'Workout A and Workout B alternating',
-        3: 'Workout A, B, and C rotating'
-      };
-      
-      const patternValue = customization.workoutPattern || 1;
-      
       toast({
         title: 'Pattern Saved',
-        description: `Your workout pattern has been updated to: ${patternDescriptions[patternValue]}. Workout templates have been regenerated.`
+        description: 'Your workout pattern has been saved successfully.'
       });
     } catch (error) {
+      console.error('Save workout pattern error:', error);
       toast({
         title: 'Save Failed',
         description: error instanceof Error ? error.message : 'Failed to save your workout pattern.',
@@ -810,9 +644,11 @@ export function ProgramCustomizer({
   };
 
   // Save individual workout configuration
-  const saveWorkoutConfiguration = async (workoutDisplayId: string) => {
+  const saveWorkoutConfiguration = async (workoutId: string) => {
     setIsSaving(true);
     try {
+      console.log('Saving workout configuration for:', workoutId);
+      
       const response = await fetch('/api/programs/customize', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
@@ -823,27 +659,28 @@ export function ProgramCustomizer({
             categoryType: customization.categoryType,
             workoutConfiguration: customization.workoutConfiguration || {},
             weeklyScheduleMapping: customization.weeklyScheduleMapping || {},
-            workoutPattern: customization.workoutPattern || 1,
-            exerciseSets: exerciseSets, // Include exercise sets in save
-            exerciseEquipment: exerciseEquipment // Include exercise equipment choices in save
+            workoutPattern: customization.workoutPattern || 1
           }
         })
       });
 
       if (!response.ok) {
         const errorData = await response.json();
+        console.error('API Error:', errorData);
         throw new Error(errorData.message || 'Failed to save workout');
       }
 
       const result = await response.json();
+      console.log('Workout configuration saved successfully:', result);
       onCustomizationSaved(result);
       setHasUnsavedChanges(false);
       
       toast({
         title: 'Workout Saved',
-        description: `Your workout exercises have been saved successfully.`
+        description: 'Your workout exercises have been saved successfully.'
       });
     } catch (error) {
+      console.error('Save workout configuration error:', error);
       toast({
         title: 'Save Failed',
         description: error instanceof Error ? error.message : 'Failed to save your workout.',
@@ -852,8 +689,6 @@ export function ProgramCustomizer({
     } finally {
       setIsSaving(false);
     }
-    // Use workoutDisplayId to avoid unused variable warning
-    console.log('Saved workout:', workoutDisplayId);
   };
 
   // Helper functions for exercise selection
@@ -873,13 +708,7 @@ export function ProgramCustomizer({
       });
   };
 
-  const getExerciseLimit = (template: WorkoutTemplateWithPattern, muscleGroup: string) => {
-    // Get admin-defined limit from template's exercisesPerMuscle field
-    const exercisesPerMuscle = template.exercisesPerMuscle as Record<string, number> | undefined;
-    if (exercisesPerMuscle && exercisesPerMuscle[muscleGroup]) {
-      return exercisesPerMuscle[muscleGroup];
-    }
-    // Fallback to category-based limits if not defined
+  const getExerciseLimit = () => {
     const limits = {
       'MINIMALIST': 1,
       'ESSENTIALIST': 2,
@@ -908,7 +737,31 @@ export function ProgramCustomizer({
     });
   };
 
-
+  const autoSelectExercises = (workoutTemplateId: string, requiredMuscleGroups: string[]) => {
+    const newSelection: string[] = [];
+    
+    requiredMuscleGroups.forEach(muscleGroup => {
+      const availableExercises = getAvailableExercises(muscleGroup);
+      const limit = getExerciseLimit();
+      
+      // Select top priority exercises up to the limit
+      const topExercises = availableExercises.slice(0, limit);
+      // eslint-disable-next-line @typescript-eslint/no-explicit-any
+      newSelection.push(...topExercises.map((ex: any) => ex.id));
+    });
+    
+    updateCustomization({
+      workoutConfiguration: {
+        ...customization.workoutConfiguration,
+        [workoutTemplateId]: newSelection
+      }
+    });
+    
+    toast({
+      title: 'Exercises Auto-Selected',
+      description: `Selected ${newSelection.length} exercises based on your category preferences.`
+    });
+  };
 
   return (
     <div className="space-y-6">
@@ -1046,7 +899,7 @@ export function ProgramCustomizer({
             </CardFooter>
           </Card>
           
-          {/* Weekly Schedule Customization */}
+          {/* Weekly Schedule Customization */
           {(() => {
             // eslint-disable-next-line @typescript-eslint/no-explicit-any
             const selectedStructure = program.programStructures.find((s: any) => s.id === customization.structureId);
@@ -1316,15 +1169,15 @@ export function ProgramCustomizer({
             <CardHeader>
               <CardTitle>Workout Templates</CardTitle>
               <CardDescription>
-                {savedWorkoutPattern === 1 
+                {customization.workoutPattern === 1 
                   ? `Your program includes ${program.workoutTemplates.length} workout template${program.workoutTemplates.length !== 1 ? 's' : ''}`
-                  : `Your program includes ${program.workoutTemplates.length} base workout${program.workoutTemplates.length !== 1 ? 's' : ''} multiplied by ${savedWorkoutPattern}x pattern (${getWorkoutsToDisplay().length} total workout templates)`
+                  : `Displaying ${workoutTemplatesForDisplay.length} workout variations (${program.workoutTemplates.length} base workouts × ${customization.workoutPattern} patterns)`
                 }
               </CardDescription>
             </CardHeader>
             <CardContent>
               <Accordion type="single" collapsible className="w-full">
-                {getWorkoutsToDisplay().map((template: WorkoutTemplateWithPattern, index: number) => {
+                {workoutTemplatesForDisplay.map((template: WorkoutTemplateWithPattern, index: number) => {
                   const templateName = getLocalizedContent(template.name, `Workout ${template.order + 1}`);
                   const displayName = template.patternLabel 
                     ? `${templateName} (${template.patternLabel})`
@@ -1340,25 +1193,25 @@ export function ProgramCustomizer({
                           <div className="flex items-center space-x-3">
                             <Dumbbell className="w-5 h-5 text-blue-500" />
                             <div className="text-left">
-                              <h4 className="font-semibold">{displayName}</h4>
+                              <div className="flex items-center space-x-2">
+                                <h4 className="font-semibold">{displayName}</h4>
+                                {template.patternLabel && (
+                                  <Badge variant="secondary" className="text-xs">
+                                    {template.patternLabel}
+                                  </Badge>
+                                )}
+                              </div>
                               <div className="flex flex-wrap gap-1 mt-1">
                                 {validMuscleGroups.slice(0, 3).map((muscleGroupId) => {
                                   const muscleInfo = getMuscleGroupInfo(muscleGroupId);
-                                  const volume = calculateMuscleVolume(template, muscleGroupId);
-                                  const range = getVolumeRange(template, muscleGroupId);
-                                  const status = getVolumeStatus(volume, range);
                                   return (
-                                    <div key={muscleGroupId} className="flex items-center gap-1">
-                                      <Badge 
-                                        variant="secondary" 
-                                        className={`${muscleInfo.color} text-xs`}
-                                      >
-                                        {muscleInfo.name}
-                                      </Badge>
-                                      <Badge className={`${status.color} text-xs`}>
-                                        {status.icon} {volume}/{range.min}-{range.max}
-                                      </Badge>
-                                    </div>
+                                    <Badge 
+                                      key={muscleGroupId} 
+                                      variant="secondary" 
+                                      className={`${muscleInfo.color} text-xs`}
+                                    >
+                                      {muscleInfo.name}
+                                    </Badge>
                                   );
                                 })}
                                 {validMuscleGroups.length > 3 && (
@@ -1376,12 +1229,32 @@ export function ProgramCustomizer({
                       </AccordionTrigger>
                       <AccordionContent>
                         <div className="space-y-4 pt-4">
+                          {/* Pattern info alert */}
+                          {template.patternLabel && (
+                            <Alert>
+                              <Info className="h-4 w-4" />
+                              <AlertDescription>
+                                This is <strong>{displayName}</strong>. Select different exercises than other patterns to create workout variation.
+                              </AlertDescription>
+                            </Alert>
+                          )}
+                          
+                          {/* Auto-select button */}
+                          <div className="flex justify-end">
+                            <Button
+                              size="sm"
+                              variant="outline"
+                              onClick={() => autoSelectExercises(template.displayId, validMuscleGroups)}
+                            >
+                              Auto-Select Exercises
+                            </Button>
+                          </div>
                           
                           <h5 className="text-sm font-medium text-gray-700 dark:text-gray-300">
                             Exercise Selection
                           </h5>
                         
-                        {getOrderedMuscles(template.displayId, validMuscleGroups).map((muscleGroup: string, muscleIndex: number) => {
+                        {validMuscleGroups.map((muscleGroup: string) => {
                           const muscleInfo = getMuscleGroupInfo(muscleGroup);
                           const availableExercises = getAvailableExercises(muscleGroup);
                           const isLoadingMuscleGroup = loadingExercises[muscleGroup];
@@ -1393,45 +1266,17 @@ export function ProgramCustomizer({
                                      muscle.toLowerCase() === muscleGroup.toLowerCase()
                                    );
                           });
-                          const volume = calculateMuscleVolume(template, muscleGroup);
-                          const range = getVolumeRange(template, muscleGroup);
-                          const status = getVolumeStatus(volume, range);
 
                           return (
                             <div key={muscleGroup} className="p-3 bg-gray-50 dark:bg-gray-800/50 rounded-md">
                               <div className="flex items-center justify-between mb-2">
                                 <div className="flex items-center space-x-2">
-                                  <div className="flex flex-col space-y-1">
-                                    <Button 
-                                      size="icon" 
-                                      variant="ghost" 
-                                      className="h-5 w-5 p-0"
-                                      onClick={() => moveMuscleUp(template.displayId, muscleGroup, validMuscleGroups)}
-                                      disabled={muscleIndex === 0}
-                                      title="Move up (higher priority)"
-                                    >
-                                      ↑
-                                    </Button>
-                                    <Button 
-                                      size="icon" 
-                                      variant="ghost" 
-                                      className="h-5 w-5 p-0"
-                                      onClick={() => moveMuscleDown(template.displayId, muscleGroup, validMuscleGroups)}
-                                      disabled={muscleIndex === validMuscleGroups.length - 1}
-                                      title="Move down (lower priority)"
-                                    >
-                                      ↓
-                                    </Button>
-                                  </div>
                                   <Badge variant="secondary" className={muscleInfo.color}>
                                     {muscleInfo.name}
                                   </Badge>
-                                  <Badge className={`${status.color} text-xs`}>
-                                    {status.icon} {volume}/{range.min}-{range.max} sets ({status.label})
-                                  </Badge>
                                 </div>
                                 <Badge variant="outline" className="text-xs">
-                                  {muscleGroupExercises.length}/{getExerciseLimit(template, muscleGroup)} selected
+                                  {muscleGroupExercises.length}/{getExerciseLimit()} selected
                                 </Badge>
                               </div>
                               
@@ -1442,290 +1287,47 @@ export function ProgramCustomizer({
                                 </div>
                               ) : (
                                 <>
-                                  {/* Selected Exercises - Compact View */}
-                                  {muscleGroupExercises.length > 0 && (
-                                    <div className="space-y-2 mb-3">
-                                      <div className="text-xs font-medium text-muted-foreground">Selected Exercises:</div>
-                                      <div className="grid grid-cols-1 gap-2">
-                                        {muscleGroupExercises.map((exerciseId: string) => {
-                                          const exercise = availableExercises.find((ex: Exercise) => ex.id === exerciseId);
-                                          if (!exercise) return null;
-                                          
-                                          const exerciseMuscleGroups = getExerciseMuscleGroups(muscleGroup);
-                                          const volumeContribution = Math.max(
-                                            ...exerciseMuscleGroups.map(emg => exercise.volumeContributions?.[emg] || 0)
-                                          );
-                                          
-                                          return (
-                                            <div
-                                              key={exercise.id}
-                                              className="border border-blue-200 bg-blue-50 dark:bg-blue-900/20 dark:border-blue-800 rounded overflow-hidden"
-                                            >
-                                              <div className="p-2">
-                                                <div className="flex items-center gap-3">
-                                                  {exercise.imageUrl && (
-                                                    <img 
-                                                      src={exercise.imageUrl} 
-                                                      alt={exercise.name}
-                                                      className="w-10 h-10 object-cover rounded flex-shrink-0"
-                                                    />
-                                                  )}
-                                                  <div className="flex-1 min-w-0">
-                                                    <div className="flex items-center gap-2">
-                                                      <p className="text-sm font-medium truncate">{exercise.name}</p>
-                                                      {exercise.isRecommended && (
-                                                        <span className="text-xs bg-green-100 text-green-700 dark:bg-green-900 dark:text-green-300 px-1.5 py-0.5 rounded flex-shrink-0">
-                                                          ⭐
-                                                        </span>
-                                                      )}
-                                                    </div>
-                                                    <p className="text-xs text-gray-500 truncate">
-                                                      {getExerciseEquipment(template.displayId, exercise.id) || exercise.equipment[0] || 'Select equipment'} • {Math.round(volumeContribution * 100)}% volume
-                                                    </p>
-                                                  </div>
-                                                  <div className="flex items-center gap-1 flex-shrink-0">
-                                                    <Button
-                                                      type="button"
-                                                      variant="ghost"
-                                                      size="sm"
-                                                      className="h-7 w-7 p-0"
-                                                      onClick={() => setExpandedExerciseId(expandedExerciseId === exercise.id ? null : exercise.id)}
-                                                      title="View details"
-                                                    >
-                                                      <Info className="h-4 w-4" />
-                                                    </Button>
-                                                    <Select
-                                                      value={getExerciseEquipment(template.displayId, exercise.id) || exercise.equipment[0] || ''}
-                                                      onValueChange={(value) => setExerciseEquipmentChoice(template.displayId, exercise.id, value)}
-                                                    >
-                                                      <SelectTrigger className="w-24 h-7 text-xs">
-                                                        <SelectValue placeholder="Equipment" />
-                                                      </SelectTrigger>
-                                                      <SelectContent>
-                                                        {exercise.equipment.map((equip) => (
-                                                          <SelectItem key={equip} value={equip}>{equip}</SelectItem>
-                                                        ))}
-                                                      </SelectContent>
-                                                    </Select>
-                                                    <Select
-                                                      value={getExerciseSets(template.displayId, exercise.id).toString()}
-                                                      onValueChange={(value) => setExerciseSetCount(template.displayId, exercise.id, parseInt(value))}
-                                                    >
-                                                      <SelectTrigger className="w-16 h-7 text-xs">
-                                                        <SelectValue />
-                                                      </SelectTrigger>
-                                                      <SelectContent>
-                                                        {[1, 2, 3, 4].map(num => (
-                                                          <SelectItem key={num} value={num.toString()}>{num} sets</SelectItem>
-                                                        ))}
-                                                      </SelectContent>
-                                                    </Select>
-                                                    <Button
-                                                      type="button"
-                                                      variant="ghost"
-                                                      size="sm"
-                                                      className="h-7 w-7 p-0"
-                                                      onClick={() => toggleExerciseSelection(template.displayId, exercise.id)}
-                                                    >
-                                                      <X className="h-4 w-4" />
-                                                    </Button>
-                                                  </div>
-                                                </div>
-                                              </div>
-                                              
-                                              {/* Expandable Details */}
-                                              {expandedExerciseId === exercise.id && (
-                                                <div className="px-3 pb-3 pt-1 border-t border-blue-200 dark:border-blue-800 bg-white/50 dark:bg-blue-950/20">
-                                                  <div className="space-y-2 text-xs">
-                                                    {exercise.description && (
-                                                      <div>
-                                                        <p className="font-medium text-gray-700 dark:text-gray-300">Description:</p>
-                                                        <p className="text-gray-600 dark:text-gray-400">{exercise.description}</p>
-                                                      </div>
-                                                    )}
-                                                    {exercise.instructions && (
-                                                      <div>
-                                                        <p className="font-medium text-gray-700 dark:text-gray-300">Instructions:</p>
-                                                        <p className="text-gray-600 dark:text-gray-400 whitespace-pre-wrap">{exercise.instructions}</p>
-                                                      </div>
-                                                    )}
-                                                    <div>
-                                                      <p className="font-medium text-gray-700 dark:text-gray-300">Type:</p>
-                                                      <Badge variant="secondary" className="text-xs mt-1">
-                                                        {exercise.exerciseType}
-                                                      </Badge>
-                                                    </div>
-                                                    <div>
-                                                      <p className="font-medium text-gray-700 dark:text-gray-300">Equipment:</p>
-                                                      <p className="text-gray-600 dark:text-gray-400">{exercise.equipment.join(', ')}</p>
-                                                    </div>
-                                                  </div>
-                                                </div>
-                                              )}
-                                            </div>
-                                          );
-                                        })}
-                                      </div>
-                                    </div>
-                                  )}
-                                  
-                                  {/* Add Exercise Button */}
-                                  {muscleGroupExercises.length < getExerciseLimit(template, muscleGroup) && (
-                                    <Dialog>
-                                      <DialogTrigger asChild>
-                                        <Button 
-                                          type="button" 
-                                          variant="outline" 
-                                          size="sm" 
-                                          className="w-full"
-                                          onClick={() => {
-                                            // Load exercises when opening dialog
-                                            if (availableExercises.length === 0) {
-                                              fetchExercisesForMuscleGroup(muscleGroup);
-                                            }
-                                          }}
+                                  <div className="grid grid-cols-1 md:grid-cols-2 gap-2">
+                                    {availableExercises.map((exercise: Exercise) => {
+                                      const isSelected = selectedExercises.includes(exercise.id);
+                                      const canSelect = !isSelected && muscleGroupExercises.length < getExerciseLimit();
+                                      
+                                      return (
+                                        <div
+                                          key={exercise.id}
+                                          className={`p-2 border rounded cursor-pointer transition-colors ${
+                                            isSelected 
+                                              ? 'bg-blue-50 border-blue-200 dark:bg-blue-900/20 dark:border-blue-800' 
+                                              : canSelect
+                                                ? 'hover:bg-gray-100 dark:hover:bg-gray-700'
+                                                : 'opacity-50 cursor-not-allowed'
+                                          }`}
+                                          onClick={() => canSelect || isSelected ? toggleExerciseSelection(template.displayId, exercise.id) : undefined}
                                         >
-                                          <Plus className="w-4 h-4 mr-2" />
-                                          Add Exercise ({muscleGroupExercises.length}/{getExerciseLimit(template, muscleGroup)})
-                                        </Button>
-                                      </DialogTrigger>
-                                      <DialogContent className="max-w-3xl max-h-[80vh] overflow-y-auto">
-                                        <DialogHeader>
-                                          <DialogTitle>Select Exercise for {muscleGroup}</DialogTitle>
-                                          <DialogDescription>
-                                            Choose exercises that target this muscle group. You can select up to {getExerciseLimit(template, muscleGroup)} exercises.
-                                          </DialogDescription>
-                                        </DialogHeader>
-                                        
-                                        <div className="grid grid-cols-1 md:grid-cols-2 gap-3 mt-4">
-                                          {availableExercises
-                                            .filter((exercise: Exercise) => {
-                                              // Filter out already selected exercises
-                                              if (selectedExercises.includes(exercise.id)) return false;
-                                              
-                                              const exerciseMuscleGroups = getExerciseMuscleGroups(muscleGroup);
-                                              const hasHighContribution = exerciseMuscleGroups.some(emg => {
-                                                const contribution = exercise.volumeContributions?.[emg] || 0;
-                                                return contribution >= 0.75;
-                                              });
-                                              
-                                              return hasHighContribution;
-                                            })
-                                            .map((exercise: Exercise) => {
-                                            const exerciseMuscleGroups = getExerciseMuscleGroups(muscleGroup);
-                                            const volumeContribution = Math.max(
-                                              ...exerciseMuscleGroups.map(emg => exercise.volumeContributions?.[emg] || 0)
-                                            );
-                                            
-                                            return (
-                                              <div
-                                                key={exercise.id}
-                                                className="border rounded-lg overflow-hidden transition-colors"
-                                              >
-                                                <div 
-                                                  className="p-3 hover:border-blue-400 hover:bg-blue-50 dark:hover:bg-blue-900/20 cursor-pointer"
-                                                  onClick={() => {
-                                                    toggleExerciseSelection(template.displayId, exercise.id);
-                                                  }}
-                                                >
-                                                  <div className="flex gap-3">
-                                                    {exercise.imageUrl ? (
-                                                      <img 
-                                                        src={exercise.imageUrl} 
-                                                        alt={exercise.name}
-                                                        className="w-16 h-16 object-cover rounded flex-shrink-0"
-                                                      />
-                                                    ) : (
-                                                      <div className="w-16 h-16 bg-muted rounded flex items-center justify-center flex-shrink-0">
-                                                        <span className="text-xs text-muted-foreground">No image</span>
-                                                      </div>
-                                                    )}
-                                                    <div className="flex-1 min-w-0">
-                                                      <div className="flex items-start justify-between gap-2">
-                                                        <div className="flex-1">
-                                                          <p className="text-sm font-medium mb-1">{exercise.name}</p>
-                                                          {exercise.isRecommended && (
-                                                            <Badge variant="outline" className="text-xs bg-green-50 text-green-700 border-green-200 mb-1">
-                                                              ⭐ Recommended
-                                                            </Badge>
-                                                          )}
-                                                        </div>
-                                                        <Button
-                                                          type="button"
-                                                          variant="ghost"
-                                                          size="sm"
-                                                          className="h-7 w-7 p-0 flex-shrink-0"
-                                                          onClick={(e) => {
-                                                            e.stopPropagation();
-                                                            setExpandedExerciseId(expandedExerciseId === exercise.id ? null : exercise.id);
-                                                          }}
-                                                          title="View details"
-                                                        >
-                                                          <Info className="h-4 w-4" />
-                                                        </Button>
-                                                      </div>
-                                                      <p className="text-xs text-gray-500 line-clamp-2">
-                                                        {exercise.equipment.join(', ')}
-                                                      </p>
-                                                      <p className="text-xs text-blue-600 dark:text-blue-400 mt-1">
-                                                        {Math.round(volumeContribution * 100)}% volume contribution
-                                                      </p>
-                                                    </div>
-                                                  </div>
-                                                </div>
-                                                
-                                                {/* Expandable Details */}
-                                                {expandedExerciseId === exercise.id && (
-                                                  <div className="px-3 pb-3 border-t bg-muted/30">
-                                                    <div className="space-y-2 text-xs pt-2">
-                                                      {exercise.description && (
-                                                        <div>
-                                                          <p className="font-medium text-gray-700 dark:text-gray-300">Description:</p>
-                                                          <p className="text-gray-600 dark:text-gray-400">{exercise.description}</p>
-                                                        </div>
-                                                      )}
-                                                      {exercise.instructions && (
-                                                        <div>
-                                                          <p className="font-medium text-gray-700 dark:text-gray-300">Instructions:</p>
-                                                          <p className="text-gray-600 dark:text-gray-400 whitespace-pre-wrap">{exercise.instructions}</p>
-                                                        </div>
-                                                      )}
-                                                      <div>
-                                                        <p className="font-medium text-gray-700 dark:text-gray-300">Type:</p>
-                                                        <Badge variant="secondary" className="text-xs mt-1">
-                                                          {exercise.exerciseType}
-                                                        </Badge>
-                                                      </div>
-                                                      <div>
-                                                        <p className="font-medium text-gray-700 dark:text-gray-300">Full Equipment List:</p>
-                                                        <p className="text-gray-600 dark:text-gray-400">{exercise.equipment.join(', ')}</p>
-                                                      </div>
-                                                    </div>
-                                                  </div>
+                                          <div className="flex items-center justify-between">
+                                            <div className="flex-1">
+                                              <p className="text-sm font-medium">
+                                                {exercise.name}
+                                                {exercise.isRecommended && (
+                                                  <span className="ml-2 text-xs bg-green-100 text-green-700 dark:bg-green-900 dark:text-green-300 px-2 py-0.5 rounded">
+                                                    ⭐ Recommended
+                                                  </span>
                                                 )}
-                                              </div>
-                                            );
-                                          })}
-                                        </div>
-                                        
-                                        {availableExercises.filter((exercise: Exercise) => {
-                                          if (selectedExercises.includes(exercise.id)) return false;
-                                          const exerciseMuscleGroups = getExerciseMuscleGroups(muscleGroup);
-                                          return exerciseMuscleGroups.some(emg => {
-                                            const contribution = exercise.volumeContributions?.[emg] || 0;
-                                            return contribution >= 0.75;
-                                          });
-                                        }).length === 0 && (
-                                          <div className="text-center py-8 text-muted-foreground">
-                                            <p>No more exercises available for this muscle group.</p>
-                                            <p className="text-sm mt-1">All suitable exercises have been selected.</p>
+                                              </p>
+                                              <p className="text-xs text-gray-500">
+                                                {exercise.equipment.join(', ')}
+                                              </p>
+                                            </div>
+                                            {isSelected && (
+                                              <CheckCircle className="w-4 h-4 text-blue-600" />
+                                            )}
                                           </div>
-                                        )}
-                                      </DialogContent>
-                                    </Dialog>
-                                  )}
+                                        </div>
+                                      );
+                                    })}
+                                  </div>
                                   
-                                  {availableExercises.length === 0 && !isLoadingMuscleGroup && muscleGroupExercises.length === 0 && (
+                                  {availableExercises.length === 0 && !isLoadingMuscleGroup && (
                                     <p className="text-sm text-gray-500 text-center py-2">
                                       No exercises available for {muscleGroup}
                                     </p>

@@ -25,6 +25,8 @@ interface Exercise {
   category: 'APPROVED' | 'PENDING' | 'DEPRECATED';
   isActive: boolean;
   isRecommended: boolean;
+  imageUrl?: string;
+  imageType?: string;
   volumeContributions: Record<string, number>;
   createdAt: string;
   updatedAt: string;
@@ -39,6 +41,8 @@ interface ExerciseFormData {
   category: 'APPROVED' | 'PENDING' | 'DEPRECATED';
   isActive: boolean;
   isRecommended: boolean;
+  imageUrl?: string;
+  imageType?: string;
   volumeContributions: Record<string, number>;
   regionalBias: Record<string, string>; // Stores which region/specific muscle is biased for muscles at 1.0
 }
@@ -148,6 +152,11 @@ export default function ExerciseManagement() {
   const [isDialogOpen, setIsDialogOpen] = useState(false);
   const [equipmentInput, setEquipmentInput] = useState('');
   
+  // Image upload state
+  const [imageFile, setImageFile] = useState<File | null>(null);
+  const [imagePreview, setImagePreview] = useState<string | null>(null);
+  const [uploadingImage, setUploadingImage] = useState(false);
+  
   // Filter and search state
   const [searchTerm, setSearchTerm] = useState('');
   const [exerciseTypeFilter, setExerciseTypeFilter] = useState('all');
@@ -203,13 +212,25 @@ export default function ExerciseManagement() {
     setSuccess(null);
 
     try {
+      // Upload image first if one is selected
+      let imageData = null;
+      if (imageFile) {
+        imageData = await handleImageUpload();
+      }
+
+      // Merge image data into the payload to avoid race condition with state updates
+      const payload = {
+        ...formData,
+        ...(imageData && { imageUrl: imageData.imageUrl, imageType: imageData.imageType })
+      };
+
       const url = editingId ? `/api/admin/exercises/${editingId}` : '/api/admin/exercises';
       const method = editingId ? 'PUT' : 'POST';
       
       const response = await fetch(url, {
         method,
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify(formData)
+        body: JSON.stringify(payload)
       });
 
       const result = await response.json();
@@ -238,11 +259,87 @@ export default function ExerciseManagement() {
       setFormData(initialFormData);
       setEditingId(null);
       setEquipmentInput('');
+      setImageFile(null);
+      setImagePreview(null);
     } catch (err) {
       setError(err instanceof Error ? err.message : 'Failed to save exercise');
     } finally {
       setSaving(false);
     }
+  };
+
+  const handleImageSelect = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    if (!file) return;
+
+    // Validate file type
+    const allowedTypes = ['image/jpeg', 'image/jpg', 'image/png', 'image/gif', 'image/webp'];
+    if (!allowedTypes.includes(file.type)) {
+      setError('Please select a valid image file (JPEG, PNG, GIF, or WebP)');
+      return;
+    }
+
+    // Validate file size (10MB max)
+    const maxSize = 10 * 1024 * 1024;
+    if (file.size > maxSize) {
+      setError('Image size must be less than 10MB');
+      return;
+    }
+
+    setImageFile(file);
+    
+    // Create preview
+    const reader = new FileReader();
+    reader.onloadend = () => {
+      setImagePreview(reader.result as string);
+    };
+    reader.readAsDataURL(file);
+    setError(null);
+  };
+
+  const handleImageUpload = async (): Promise<{ imageUrl: string; imageType: string } | null> => {
+    if (!imageFile) return null;
+
+    setUploadingImage(true);
+    try {
+      const formDataToSend = new FormData();
+      formDataToSend.append('file', imageFile);
+
+      const response = await fetch('/api/admin/exercises/upload-image', {
+        method: 'POST',
+        body: formDataToSend
+      });
+
+      const result = await response.json();
+
+      if (!response.ok) {
+        throw new Error(result.message || 'Failed to upload image');
+      }
+
+      // Update form data with the uploaded image URL
+      setFormData(prev => ({
+        ...prev,
+        imageUrl: result.imageUrl,
+        imageType: result.imageType
+      }));
+
+      return { imageUrl: result.imageUrl, imageType: result.imageType };
+    } catch (err) {
+      setError(err instanceof Error ? err.message : 'Failed to upload image');
+      throw err;
+    } finally {
+      setUploadingImage(false);
+    }
+  };
+
+  const handleRemoveImage = () => {
+    setImageFile(null);
+    setImagePreview(null);
+    setFormData(prev => ({
+      ...prev,
+      imageUrl: undefined,
+      imageType: undefined
+    }));
   };
 
   const handleEdit = (exercise: Exercise) => {
@@ -255,10 +352,14 @@ export default function ExerciseManagement() {
       category: exercise.category,
       isActive: exercise.isActive,
       isRecommended: exercise.isRecommended,
+      imageUrl: exercise.imageUrl,
+      imageType: exercise.imageType,
       volumeContributions: exercise.volumeContributions || {},
       regionalBias: (exercise as Exercise & { regionalBias?: Record<string, string> }).regionalBias || {}
     });
     setEquipmentInput(exercise.equipment.join(', '));
+    setImagePreview(exercise.imageUrl || null);
+    setImageFile(null);
     setEditingId(exercise.id);
     setIsDialogOpen(true);
   };
@@ -514,6 +615,49 @@ export default function ExerciseManagement() {
                       </div>
                     )}
                   </div>
+                </div>
+
+                {/* Exercise Image Upload */}
+                <div className="space-y-2">
+                  <Label htmlFor="exercise-image">Exercise Image/GIF (Optional)</Label>
+                  <p className="text-sm text-muted-foreground">
+                    Upload an image or GIF to demonstrate the exercise (Max 10MB, JPG/PNG/GIF/WebP)
+                  </p>
+                  
+                  <div className="flex gap-2">
+                    <Input
+                      id="exercise-image"
+                      type="file"
+                      accept="image/jpeg,image/jpg,image/png,image/gif,image/webp"
+                      onChange={handleImageSelect}
+                      disabled={uploadingImage}
+                      className="cursor-pointer"
+                    />
+                    {imagePreview && (
+                      <Button 
+                        type="button" 
+                        variant="outline" 
+                        onClick={handleRemoveImage}
+                        disabled={uploadingImage}
+                      >
+                        Remove
+                      </Button>
+                    )}
+                  </div>
+                  
+                  {imagePreview && (
+                    <div className="mt-2 border rounded-lg p-2">
+                      <img 
+                        src={imagePreview} 
+                        alt="Exercise preview" 
+                        className="max-h-48 mx-auto rounded"
+                      />
+                    </div>
+                  )}
+                  
+                  {uploadingImage && (
+                    <p className="text-sm text-muted-foreground">Uploading image...</p>
+                  )}
                 </div>
 
                 {/* Volume Contributions Section */}
@@ -774,6 +918,7 @@ export default function ExerciseManagement() {
                 <TableHeader>
                   <TableRow>
                     <TableHead className="min-w-[200px]">Name</TableHead>
+                    <TableHead className="min-w-[80px]">Image</TableHead>
                     <TableHead className="min-w-[120px]">Exercise Type</TableHead>
                     <TableHead className="min-w-[100px]">Category</TableHead>
                     <TableHead className="min-w-[100px]">Recommended</TableHead>
@@ -795,6 +940,19 @@ export default function ExerciseManagement() {
                             </div>
                           )}
                         </div>
+                      </TableCell>
+                      <TableCell>
+                        {exercise.imageUrl ? (
+                          <img 
+                            src={exercise.imageUrl} 
+                            alt={exercise.name}
+                            className="h-12 w-12 object-cover rounded"
+                          />
+                        ) : (
+                          <div className="h-12 w-12 bg-muted rounded flex items-center justify-center text-muted-foreground text-xs">
+                            No image
+                          </div>
+                        )}
                       </TableCell>
                       <TableCell>
                         <Badge className={getExerciseTypeColor(exercise.exerciseType)}>

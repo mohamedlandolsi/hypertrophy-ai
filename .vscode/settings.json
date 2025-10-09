@@ -1,0 +1,10 @@
+{
+  "chat.mcp.serverSampling": {
+    "hypertrophy-ai-nextjs/.vscode/mcp.json: perplexity": {
+      "allowedModels": [
+        "copilot/claude-sonnet-4.5",
+        "copilot/gpt-5-codex"
+      ]
+    }
+  }
+}

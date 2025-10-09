@@ -25,6 +25,11 @@ const workoutTemplateSchema = z.object({
   id: z.string(),
   name: z.string().min(1, 'Workout name is required'),
   muscleGroups: z.array(z.string()).default([]),
+  exercisesPerMuscle: z.record(z.string(), z.number()).optional(),
+  volumeRange: z.record(z.string(), z.object({
+    min: z.number().min(0).max(20),
+    max: z.number().min(0).max(20)
+  })).optional(),
   exercises: z.array(exerciseInTemplateSchema).default([]),
 });
 
