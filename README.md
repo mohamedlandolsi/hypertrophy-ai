@@ -120,16 +120,37 @@ HypertroQ provides guidance in:
 ## 📁 Project Structure
 
 ```
-src/
-├── app/
-│   ├── api/          # API routes for chat, knowledge, conversations
-│   ├── chat/         # Chat interface
-│   ├── knowledge/    # Knowledge management
-│   └── auth/         # Authentication pages
-├── components/       # Reusable UI components
-├── lib/             # Utilities, database, AI integration
-└── prisma/          # Database schema and migrations
+hypertrophy-ai-nextjs/
+├── src/
+│   ├── app/          # Next.js app router
+│   │   ├── api/      # API routes for chat, knowledge, conversations
+│   │   ├── chat/     # Chat interface
+│   │   ├── knowledge/# Knowledge management
+│   │   └── auth/     # Authentication pages
+│   ├── components/   # Reusable UI components
+│   ├── lib/          # Utilities, database, AI integration
+│   └── styles/       # Global styles
+├── prisma/           # Database schema and Prisma migrations
+├── public/           # Static assets
+├── docs/             # 📄 Documentation files
+├── scripts/          # 🔧 Utility and test scripts
+├── migrations/       # 🗄️ SQL migration files
+└── backups/          # 💾 Backup and archived data files
 ```
+
+### Directory Organization
+
+- **`docs/`** - All documentation, feature guides, and implementation notes
+- **`scripts/`** - Testing, debugging, and database management scripts
+- **`migrations/`** - Manual SQL migrations and Supabase configurations
+- **`backups/`** - Database exports and configuration backups
+
+For detailed information about each directory, see:
+- [docs/README.md](./docs/README.md) - Documentation guide
+- [scripts/README.md](./scripts/README.md) - Scripts usage guide
+- [migrations/README.md](./migrations/README.md) - Migration guide
+- [backups/README.md](./backups/README.md) - Backup procedures
+- [docs/REPOSITORY_ORGANIZATION.md](./docs/REPOSITORY_ORGANIZATION.md) - Complete reorganization details
 
 ## 🔧 Configuration
 
@@ -141,6 +162,45 @@ src/
 - Model: Gemini 2.0 Flash (Experimental)
 - Temperature: 0.7 (Professional yet engaging)
 - Max tokens: 3000 (Detailed scientific explanations)
+
+## 🛠️ Development Scripts
+
+Common development and maintenance scripts are located in the `scripts/` directory:
+
+### Testing & Debugging
+```bash
+# Check AI configuration
+node scripts/check-ai-config.js
+
+# Debug RAG system
+node scripts/debug-rag-system.js
+
+# Test AI integration
+node scripts/test-ai-integration.js
+```
+
+### Database Management
+```bash
+# Create admin user
+node scripts/create-admin.js
+
+# Backup database
+node scripts/backup-data.js
+
+# Check database status
+node scripts/check-database-status.js
+```
+
+### Knowledge Base
+```bash
+# Reprocess knowledge base
+node scripts/reprocess-knowledge-base.js
+
+# Analyze knowledge content
+node scripts/analyze-knowledge-base.js
+```
+
+See [scripts/README.md](./scripts/README.md) for a complete list of available scripts.
 
 ## 🚀 Deployment
 

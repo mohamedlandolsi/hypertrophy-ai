@@ -14,6 +14,7 @@ interface CustomizationRequest {
     weeklyScheduleMapping?: Record<string, string>;
     workoutPattern?: number;
     exerciseSets?: Record<string, Record<string, number>>; // templateId -> exerciseId -> sets count
+    exerciseEquipment?: Record<string, Record<string, string>>; // templateId -> exerciseId -> equipment
   };
 }
 
@@ -147,6 +148,7 @@ export async function POST(request: NextRequest) {
             weeklyScheduleMapping: customization.weeklyScheduleMapping || {},
             workoutPattern: customization.workoutPattern || 1,
             exerciseSets: customization.exerciseSets || {},
+            exerciseEquipment: customization.exerciseEquipment || {},
             customizedAt: new Date().toISOString()
           },
           updatedAt: new Date()
@@ -165,6 +167,7 @@ export async function POST(request: NextRequest) {
             weeklyScheduleMapping: customization.weeklyScheduleMapping || {},
             workoutPattern: customization.workoutPattern || 1,
             exerciseSets: customization.exerciseSets || {},
+            exerciseEquipment: customization.exerciseEquipment || {},
             customizedAt: new Date().toISOString()
           }
         }

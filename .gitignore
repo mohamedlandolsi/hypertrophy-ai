@@ -41,3 +41,12 @@ yarn-error.log*
 next-env.d.ts
 
 /src/generated/prisma
+
+# Backups
+/backups/*.json
+/backups/*.sql
+!/backups/README.md
+
+# Temporary files
+*.log
+*.tmp
