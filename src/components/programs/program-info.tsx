@@ -2,6 +2,7 @@
 
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
+import { Button } from '@/components/ui/button';
 import { Separator } from '@/components/ui/separator';
 import { 
   Calendar,
@@ -9,16 +10,20 @@ import {
   Zap,
   Info,
   CheckCircle2,
-  Clock
+  Clock,
+  ArrowRight
 } from 'lucide-react';
 
 interface ProgramInfoProps {
   // eslint-disable-next-line @typescript-eslint/no-explicit-any
   program: any;
   locale: string;
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
+  userCustomization?: any;
+  onNavigateToStructures?: () => void;
 }
 
-export function ProgramInfo({ program, locale }: ProgramInfoProps) {
+export function ProgramInfo({ program, locale, userCustomization, onNavigateToStructures }: ProgramInfoProps) {
   // Extract multilingual content
   // eslint-disable-next-line @typescript-eslint/no-explicit-any
   const getLocalizedContent = (content: any, fallback: string = '') => {
@@ -37,6 +42,11 @@ export function ProgramInfo({ program, locale }: ProgramInfoProps) {
 
   // Parse about content if it's HTML
   const aboutContent = program.aboutContent || '';
+
+  // Get selected structure ID (from customization or default)
+  const selectedStructureId = userCustomization?.configuration?.structureId 
+    || program.programStructures.find((s: Record<string, unknown>) => s.isDefault)?.id 
+    || program.programStructures[0]?.id;
 
   return (
     <div className="space-y-6">
@@ -91,26 +101,54 @@ export function ProgramInfo({ program, locale }: ProgramInfoProps) {
       {/* Program Structure Overview */}
       <Card>
         <CardHeader>
-          <CardTitle className="flex items-center space-x-2">
-            <Calendar className="w-5 h-5" />
-            <span>Program Structures</span>
-          </CardTitle>
-          <CardDescription>
-            Choose from different training structures to match your schedule
-          </CardDescription>
+          <div className="flex items-center justify-between">
+            <div className="space-y-1">
+              <CardTitle className="flex items-center space-x-2">
+                <Calendar className="w-5 h-5" />
+                <span>Program Structures</span>
+              </CardTitle>
+              <CardDescription>
+                Choose from different training structures to match your schedule
+              </CardDescription>
+            </div>
+            {onNavigateToStructures && (
+              <Button 
+                variant="outline" 
+                size="sm"
+                onClick={onNavigateToStructures}
+                className="flex items-center gap-2"
+              >
+                <span>Go to Structures</span>
+                <ArrowRight className="w-4 h-4" />
+              </Button>
+            )}
+          </div>
         </CardHeader>
         <CardContent>
           <div className="space-y-4">
             {program.programStructures.map((structure: Record<string, unknown>) => {
               const structureName = getLocalizedContent(structure.name as Record<string, string> | string, `Structure ${(structure.order as number) + 1}`);
+              const isSelected = structure.id === selectedStructureId;
               
               return (
-                <div key={structure.id as string} className="border rounded-lg p-4">
+                <div 
+                  key={structure.id as string} 
+                  className={`border rounded-lg p-4 transition-all ${
+                    isSelected 
+                      ? 'border-blue-500 bg-blue-50 dark:bg-blue-950 shadow-md ring-2 ring-blue-500 ring-opacity-50' 
+                      : 'border-gray-200 dark:border-gray-700'
+                  }`}
+                >
                   <div className="flex items-start justify-between">
                     <div className="space-y-2">
                       <div className="flex items-center space-x-2">
                         <h4 className="font-medium">{structureName}</h4>
-                        {structure.isDefault as boolean && (
+                        {isSelected && (
+                          <Badge variant="default" className="bg-blue-500">
+                            Selected
+                          </Badge>
+                        )}
+                        {structure.isDefault as boolean && !isSelected && (
                           <Badge variant="secondary">Default</Badge>
                         )}
                       </div>

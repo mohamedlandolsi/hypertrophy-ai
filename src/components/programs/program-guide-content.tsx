@@ -1,6 +1,7 @@
 'use client';
 
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
+import { useRouter, useSearchParams } from 'next/navigation';
 import { Card, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { Badge } from '@/components/ui/badge';
@@ -11,11 +12,10 @@ import { UserProgress } from './user-progress';
 import { 
   BookOpen, 
   Settings, 
-  Dumbbell, 
+  BotMessageSquare,
   TrendingUp,
   CheckCircle,
   Clock,
-  Users,
   Target
 } from 'lucide-react';
 
@@ -40,8 +40,25 @@ export default function ProgramGuideContent({
   locale,
   accessInfo
 }: ProgramGuideContentProps) {
+  const router = useRouter();
+  const searchParams = useSearchParams();
   const [activeTab, setActiveTab] = useState('overview');
-  const [hasCustomization, setHasCustomization] = useState(!!userCustomization);
+
+  // Initialize tab from URL query params
+  useEffect(() => {
+    const tabFromUrl = searchParams.get('tab');
+    if (tabFromUrl && ['overview', 'customize', 'workouts', 'progress'].includes(tabFromUrl)) {
+      setActiveTab(tabFromUrl);
+    }
+  }, [searchParams]);
+
+  // Update URL when tab changes
+  const handleTabChange = (value: string) => {
+    setActiveTab(value);
+    const url = new URL(window.location.href);
+    url.searchParams.set('tab', value);
+    router.push(url.pathname + url.search, { scroll: false });
+  };
 
   // Extract multilingual content
   // eslint-disable-next-line @typescript-eslint/no-explicit-any
@@ -92,17 +109,6 @@ export default function ProgramGuideContent({
                     Purchased
                   </Badge>
                 )}
-                {hasCustomization && (
-                  <Badge variant="outline" className="text-sm">
-                    <Settings className="w-4 h-4 mr-1" />
-                    Customized
-                  </Badge>
-                )}
-                {accessInfo.isAdmin && !accessInfo.hasPurchased && (
-                  <Badge variant="outline" className="text-xs">
-                    Preview Mode
-                  </Badge>
-                )}
               </div>
             </div>
           </CardHeader>
@@ -110,10 +116,10 @@ export default function ProgramGuideContent({
       </div>
 
       {/* Program Stats */}
-      <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
+      <div className="grid grid-cols-3 gap-4">
         <Card className="p-4">
           <div className="flex items-center space-x-2">
-            <Dumbbell className="w-5 h-5 text-blue-500" />
+            <Target className="w-5 h-5 text-blue-500" />
             <div>
               <p className="text-sm font-medium">Workouts</p>
               <p className="text-2xl font-bold">{program.workoutTemplates.length}</p>
@@ -140,20 +146,10 @@ export default function ProgramGuideContent({
             </div>
           </div>
         </Card>
-        
-        <Card className="p-4">
-          <div className="flex items-center space-x-2">
-            <Users className="w-5 h-5 text-purple-500" />
-            <div>
-              <p className="text-sm font-medium">Categories</p>
-              <p className="text-2xl font-bold">{program.programCategories.length}</p>
-            </div>
-          </div>
-        </Card>
       </div>
 
       {/* Main Content Tabs */}
-      <Tabs value={activeTab} onValueChange={setActiveTab} className="space-y-6">
+      <Tabs value={activeTab} onValueChange={handleTabChange} className="space-y-6">
         <TabsList className="grid w-full grid-cols-4">
           <TabsTrigger value="overview" className="flex items-center space-x-2">
             <BookOpen className="w-4 h-4" />
@@ -163,9 +159,12 @@ export default function ProgramGuideContent({
             <Settings className="w-4 h-4" />
             <span>Customize</span>
           </TabsTrigger>
-          <TabsTrigger value="workouts" className="flex items-center space-x-2">
-            <Dumbbell className="w-4 h-4" />
-            <span>Workouts</span>
+          <TabsTrigger value="workouts" disabled className="flex items-center space-x-2 opacity-60 cursor-not-allowed">
+            <BotMessageSquare className="w-4 h-4" />
+            <div className="flex items-center space-x-1">
+              <span>AI Assistant</span>
+              <Badge variant="secondary" className="ml-1 text-[10px] px-1 py-0 h-4">Soon</Badge>
+            </div>
           </TabsTrigger>
           <TabsTrigger value="progress" disabled className="flex items-center space-x-2 opacity-60 cursor-not-allowed">
             <TrendingUp className="w-4 h-4" />
@@ -180,6 +179,8 @@ export default function ProgramGuideContent({
           <ProgramInfo 
             program={program}
             locale={locale}
+            userCustomization={userCustomization}
+            onNavigateToStructures={() => handleTabChange('customize')}
           />
         </TabsContent>
 
@@ -190,7 +191,7 @@ export default function ProgramGuideContent({
             userId={userId}
             locale={locale}
             onCustomizationSaved={() => {
-              setHasCustomization(true);
+              // Customization saved - could trigger a refresh if needed
             }}
           />
         </TabsContent>
