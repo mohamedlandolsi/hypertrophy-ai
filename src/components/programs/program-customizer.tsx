@@ -1,6 +1,7 @@
 'use client';
 
 import { useState, useEffect, useCallback } from 'react';
+import Image from 'next/image';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle, CardFooter } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
@@ -1385,14 +1386,47 @@ export function ProgramCustomizer({
                           const muscleInfo = getMuscleGroupInfo(muscleGroup);
                           const availableExercises = getAvailableExercises(muscleGroup);
                           const isLoadingMuscleGroup = loadingExercises[muscleGroup];
+                          
+                          // Only include exercises with 0.75 or 1.0 volume contribution for this muscle
                           const muscleGroupExercises = selectedExercises.filter((exerciseId: string) => {
                             const exercise = availableExercises.find((ex: Exercise) => ex.id === exerciseId);
-                            // Check if exercise has volume contribution for this muscle group
-                            return exercise && exercise.volumeContributions && 
-                                   Object.keys(exercise.volumeContributions).some(muscle => 
-                                     muscle.toLowerCase() === muscleGroup.toLowerCase()
-                                   );
+                            if (!exercise || !exercise.volumeContributions) return false;
+                            
+                            const exerciseMuscleGroups = getExerciseMuscleGroups(muscleGroup);
+                            const volumeContribution = Math.max(
+                              ...exerciseMuscleGroups.map(emg => exercise.volumeContributions?.[emg] || 0)
+                            );
+                            
+                            // Only show exercises with 0.75 or higher volume contribution
+                            return volumeContribution >= 0.75;
                           });
+                          
+                          // Find exercises with 0.5 volume (indirect)
+                          const indirectExercises = selectedExercises.filter((exerciseId: string) => {
+                            const exercise = availableExercises.find((ex: Exercise) => ex.id === exerciseId);
+                            if (!exercise || !exercise.volumeContributions) return false;
+                            
+                            const exerciseMuscleGroups = getExerciseMuscleGroups(muscleGroup);
+                            const volumeContribution = Math.max(
+                              ...exerciseMuscleGroups.map(emg => exercise.volumeContributions?.[emg] || 0)
+                            );
+                            
+                            return volumeContribution === 0.5;
+                          });
+                          
+                          // Find exercises with 0.25 volume (minimal)
+                          const minimalExercises = selectedExercises.filter((exerciseId: string) => {
+                            const exercise = availableExercises.find((ex: Exercise) => ex.id === exerciseId);
+                            if (!exercise || !exercise.volumeContributions) return false;
+                            
+                            const exerciseMuscleGroups = getExerciseMuscleGroups(muscleGroup);
+                            const volumeContribution = Math.max(
+                              ...exerciseMuscleGroups.map(emg => exercise.volumeContributions?.[emg] || 0)
+                            );
+                            
+                            return volumeContribution === 0.25;
+                          });
+                          
                           const volume = calculateMuscleVolume(template, muscleGroup);
                           const range = getVolumeRange(template, muscleGroup);
                           const status = getVolumeStatus(volume, range);
@@ -1464,9 +1498,11 @@ export function ProgramCustomizer({
                                               <div className="p-2">
                                                 <div className="flex items-center gap-3">
                                                   {exercise.imageUrl && (
-                                                    <img 
+                                                    <Image 
                                                       src={exercise.imageUrl} 
                                                       alt={exercise.name}
+                                                      width={40}
+                                                      height={40}
                                                       className="w-10 h-10 object-cover rounded flex-shrink-0"
                                                     />
                                                   )}
@@ -1488,30 +1524,39 @@ export function ProgramCustomizer({
                                                       type="button"
                                                       variant="ghost"
                                                       size="sm"
-                                                      className="h-7 w-7 p-0"
+                                                      className="h-8 w-8 p-0 flex-shrink-0"
                                                       onClick={() => setExpandedExerciseId(expandedExerciseId === exercise.id ? null : exercise.id)}
                                                       title="View details"
                                                     >
                                                       <Info className="h-4 w-4" />
                                                     </Button>
+                                                  </div>
+                                                </div>
+                                                {/* Equipment and Sets Selection Row */}
+                                                <div className="flex items-center gap-2 mt-2 pt-2 border-t border-blue-200 dark:border-blue-800">
+                                                  <div className="flex-1">
                                                     <Select
                                                       value={getExerciseEquipment(template.displayId, exercise.id) || exercise.equipment[0] || ''}
                                                       onValueChange={(value) => setExerciseEquipmentChoice(template.displayId, exercise.id, value)}
                                                     >
-                                                      <SelectTrigger className="w-24 h-7 text-xs">
+                                                      <SelectTrigger className="w-full h-9 text-xs">
                                                         <SelectValue placeholder="Equipment" />
                                                       </SelectTrigger>
                                                       <SelectContent>
                                                         {exercise.equipment.map((equip) => (
-                                                          <SelectItem key={equip} value={equip}>{equip}</SelectItem>
+                                                          <SelectItem key={equip} value={equip}>
+                                                            {equip.charAt(0).toUpperCase() + equip.slice(1)}
+                                                          </SelectItem>
                                                         ))}
                                                       </SelectContent>
                                                     </Select>
+                                                  </div>
+                                                  <div className="w-28">
                                                     <Select
                                                       value={getExerciseSets(template.displayId, exercise.id).toString()}
                                                       onValueChange={(value) => setExerciseSetCount(template.displayId, exercise.id, parseInt(value))}
                                                     >
-                                                      <SelectTrigger className="w-16 h-7 text-xs">
+                                                      <SelectTrigger className="w-full h-9 text-xs">
                                                         <SelectValue />
                                                       </SelectTrigger>
                                                       <SelectContent>
@@ -1520,16 +1565,16 @@ export function ProgramCustomizer({
                                                         ))}
                                                       </SelectContent>
                                                     </Select>
-                                                    <Button
-                                                      type="button"
-                                                      variant="ghost"
-                                                      size="sm"
-                                                      className="h-7 w-7 p-0"
-                                                      onClick={() => toggleExerciseSelection(template.displayId, exercise.id)}
-                                                    >
-                                                      <X className="h-4 w-4" />
-                                                    </Button>
                                                   </div>
+                                                  <Button
+                                                    type="button"
+                                                    variant="ghost"
+                                                    size="sm"
+                                                    className="h-9 w-9 p-0 flex-shrink-0"
+                                                    onClick={() => toggleExerciseSelection(template.displayId, exercise.id)}
+                                                  >
+                                                    <X className="h-4 w-4" />
+                                                  </Button>
                                                 </div>
                                               </div>
                                               
@@ -1566,6 +1611,42 @@ export function ProgramCustomizer({
                                           );
                                         })}
                                       </div>
+                                    </div>
+                                  )}
+                                  
+                                  {/* Notes for indirect and minimal volume contributions */}
+                                  {(indirectExercises.length > 0 || minimalExercises.length > 0) && (
+                                    <div className="space-y-2 mb-3 text-xs">
+                                      {indirectExercises.length > 0 && (
+                                        <div className="flex items-start gap-2 p-2 bg-yellow-50 dark:bg-yellow-900/20 border border-yellow-200 dark:border-yellow-800 rounded">
+                                          <Info className="h-4 w-4 text-yellow-600 dark:text-yellow-400 flex-shrink-0 mt-0.5" />
+                                          <div>
+                                            <p className="font-medium text-yellow-800 dark:text-yellow-300">Indirect Volume</p>
+                                            <p className="text-yellow-700 dark:text-yellow-400">
+                                              {indirectExercises.length} selected exercise{indirectExercises.length > 1 ? 's' : ''} provide{indirectExercises.length === 1 ? 's' : ''} indirect volume to this muscle (50% contribution):
+                                              {indirectExercises.map((exerciseId: string) => {
+                                                const exercise = availableExercises.find((ex: Exercise) => ex.id === exerciseId);
+                                                return exercise ? ` ${exercise.name}` : '';
+                                              }).join(', ')}
+                                            </p>
+                                          </div>
+                                        </div>
+                                      )}
+                                      {minimalExercises.length > 0 && (
+                                        <div className="flex items-start gap-2 p-2 bg-gray-50 dark:bg-gray-800/50 border border-gray-200 dark:border-gray-700 rounded">
+                                          <Info className="h-4 w-4 text-gray-600 dark:text-gray-400 flex-shrink-0 mt-0.5" />
+                                          <div>
+                                            <p className="font-medium text-gray-700 dark:text-gray-300">Minimal Contribution</p>
+                                            <p className="text-gray-600 dark:text-gray-400">
+                                              {minimalExercises.length} selected exercise{minimalExercises.length > 1 ? 's' : ''} contribute{minimalExercises.length === 1 ? 's' : ''} minimally to this muscle (25% contribution):
+                                              {minimalExercises.map((exerciseId: string) => {
+                                                const exercise = availableExercises.find((ex: Exercise) => ex.id === exerciseId);
+                                                return exercise ? ` ${exercise.name}` : '';
+                                              }).join(', ')}
+                                            </p>
+                                          </div>
+                                        </div>
+                                      )}
                                     </div>
                                   )}
                                   
@@ -1630,9 +1711,11 @@ export function ProgramCustomizer({
                                                 >
                                                   <div className="flex gap-3">
                                                     {exercise.imageUrl ? (
-                                                      <img 
+                                                      <Image 
                                                         src={exercise.imageUrl} 
                                                         alt={exercise.name}
+                                                        width={64}
+                                                        height={64}
                                                         className="w-16 h-16 object-cover rounded flex-shrink-0"
                                                       />
                                                     ) : (

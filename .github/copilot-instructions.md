@@ -1,95 +1,205 @@
-# HypertroQ — AI Coding Agent Instructions```instructions
+# HypertroQ — AI Coding Agent Instructions
 
-# HypertroQ — Copilot instructions (concise & actionable)
-
-An AI-powered fitness coaching application specializing in hypertrophy training. This guide provides essential patterns and workflows for AI agents to be immediately productive.
-
-This file collects repository-specific facts and quick checks so an AI coding agent can be productive immediately.
+An AI-powered hypertrophy training coach using RAG (Retrieval-Augmented Generation) with pgvector embeddings. This guide helps AI agents be immediately productive in this codebase.
 
 ## 🏗️ Architecture Overview
 
-Key facts
+**Stack**: Next.js 15 (App Router) + TypeScript + Prisma + PostgreSQL (pgvector) + Supabase Auth/Storage + Google Gemini AI
 
-**Stack**: Next.js 15 (App Router) + TypeScript + Prisma + PostgreSQL (pgvector) + Supabase + Google Gemini AI- Framework: Next.js 15 (App Router) + TypeScript. API route files that must be edge-safe live under `src/app/api/**/route.ts`.
+**Core Concepts**:
+- **RAG-Powered AI**: All AI responses driven by vector embeddings (768-dim) stored in PostgreSQL with pgvector extension
+- **Admin Singleton Pattern**: `AIConfiguration` table contains exactly ONE admin-managed config row that controls all AI behavior
+- **Multi-language**: Automatic Arabic/English detection with RTL/LTR support via `next-intl` (`messages/ar.json`, `messages/en.json`)
+- **Subscription-Gated**: Freemium model with LemonSqueezy webhooks. Server-side enforcement via `canUserSendMessage()` and `incrementUserMessageCount()`
+- **Edge Runtime Constraints**: API routes and middleware must be Edge-compatible (no Node.js-only APIs like `fs`, `child_process`)
 
-- Data: Prisma + PostgreSQL with pgvector. Embeddings are stored as JSON arrays (768 dims).
+## ⚡ Critical Workflows (Start Here)
 
-**Key Concepts**:- Auth/Storage: Supabase (SSR helpers in `src/lib/supabase/*`). No guest chat — users must be authenticated.
+### 1. AI Configuration Dependency
+**Every AI feature requires `AIConfiguration` singleton**. Many functions in `src/lib/gemini.ts` intentionally throw if missing:
+```typescript
+const config = await getAIConfiguration(); // Throws if not found
+```
+- Check: Run `node check-ai-config.js` to verify it exists
+- Fix: Create via admin UI at `/admin/ai-config` or seed/migration
 
-- **RAG-powered AI**: Knowledge base content drives all AI responses via vector embeddings (768 dims)- AI config: an admin-only `AIConfiguration` singleton is required for AI features (see `prisma/schema.prisma` and `src/lib/gemini.ts`).
+### 2. Schema Changes Workflow
+```bash
+npm run postinstall          # Generate Prisma client
+npx prisma migrate dev       # Dev only - creates migration
+npm run build                # Verify everything compiles
+```
+**Important**: `npm run build` auto-runs Prisma generate. Never commit without building first.
 
-- **Multi-language support**: Arabic/English with automatic detection and RTL/LTR handling- UI components: React with server components, Tailwind CSS, shadcn/ui and Radix UI.
+### 3. Pre-Commit Checklist
+```bash
+npm run lint                 # ESLint check
+npm run build                # TypeScript + Prisma validation
+node check-ai-config.js      # Verify AI config exists
+```
 
-- **Subscription-gated**: Freemium model with LemonSqueezy integration and server-side limit enforcement
+## 📁 High-Impact Files to Read
 
-- **Admin-controlled AI**: All AI features require `AIConfiguration` singleton managed by adminsPriority checklist before edits
+### Core AI System
+- **`src/lib/gemini.ts`** (2000+ lines) — Central AI orchestration. Search for `getAIConfiguration()` to understand the admin config dependency. Contains embedding generation, prompt construction, and RAG pipeline.
+- **`src/lib/vector-search.ts`** — pgvector similarity search. Use `fetchRelevantKnowledge(embedding, topK, threshold)` for basic RAG. Includes query type detection (`isProgramGeneration`, `isProgramReview`) and category prioritization.
+- **`src/lib/enhanced-rag-v2.ts`** — Advanced multi-stage RAG with HyDE, query transformation, and hybrid search. Falls back to SQL-based search if enhanced pipeline fails.
+- **`src/lib/client-memory.ts`** — Extracts user profile info and conversation memories from chat. Handles JSON repair for malformed AI responses.
 
-- Open `src/lib/gemini.ts` first and search for `getAIConfiguration()` — many flows intentionally throw when missing.
+### API Route Pattern
+- **`src/app/api/chat/route.ts`** — Reference implementation showing:
+  - Edge runtime config: `export const runtime = 'nodejs'` (some routes need Node.js for file processing)
+  - Error handling: `ApiErrorHandler.createContext(request)` → `ApiErrorHandler.handleError(error, context)`
+  - Rate limiting: `canUserSendMessage()` → `incrementUserMessageCount()` → return 429 if exceeded
+  - Image validation: `validateImageSignature()` checks magic bytes for security
 
-## ⚡ Priority Workflow (Read This First)- When changing Prisma schema: run `npm run postinstall` then `npx prisma migrate dev` (dev only). `npm run build` triggers Prisma generate.
+### Subscription & Auth
+- **`src/lib/subscription.ts`** — Plan limits (`PLAN_LIMITS`), usage counting, automatic downgrade on expired subscriptions
+- **`src/lib/lemonsqueezy.ts`** — Checkout URL generation, webhook validation, subscription sync
+- **`src/middleware.ts`** — Supabase auth + `next-intl` locale handling. Admin route protection (auth check only; role check in API routes)
 
-- After code changes: run `npm run lint` and `npm run build` locally to catch typing/migration generation issues.
+### Error Handling
+- **`src/lib/error-handler.ts`** — Centralized error types (`ValidationError`, `AuthenticationError`, etc.). Pattern:
+```typescript
+const context = ApiErrorHandler.createContext(request);
+try {
+  // ... route logic
+} catch (error) {
+  return ApiErrorHandler.handleError(error, context);
+}
+```
 
-1. **AI Configuration**: Open `src/lib/gemini.ts` and search for `getAIConfiguration()` — most AI flows intentionally throw when missing
+## 🎯 Project-Specific Patterns
 
-2. **Schema Changes**: Run `npm run postinstall` → `npx prisma migrate dev` (dev only) → `npm run build`Files to read first (high impact)
+### RAG Pipeline Pattern (Hybrid Search)
+Vector search + keyword search for high precision:
+```typescript
+// 1. Generate embedding
+const embedding = await getEmbedding(query);
 
-3. **Code Quality**: Run `npm run lint` and `npm run build` after changes to catch typing/generation issues- `src/lib/gemini.ts` — central AI helpers, prompt & embedding orchestration.
+// 2. Vector search
+const vectorResults = await fetchRelevantKnowledge(embedding, 20, 0.3);
 
-- `src/lib/vector-search.ts` — pgvector queries; use `fetchRelevantKnowledge()` here.
+// 3. Keyword search
+const keywordResults = await performAndKeywordSearch(query, 10);
 
-## 📁 High-Impact Files to Understand- `src/lib/client-memory.ts` — memory extraction and JSON repair logic used by RAG flows.
+// 4. Merge and deduplicate
+const merged = mergeAndRankResults(vectorResults, keywordResults);
+```
 
-- `src/lib/subscription.ts` & `src/lib/lemonsqueezy.ts` — plan enforcement and webhook/payment logic.
+### Memory Extraction Pattern
+User profile and conversation memories persist across chats:
+```typescript
+import { extractProfileInformation, saveProfileExtractions } from '@/lib/ai/memory-extractor';
 
+const profileUpdates = await extractProfileInformation(userMessage, aiResponse);
+await saveProfileExtractions(userId, profileUpdates);
+```
 
-# HypertroQ — Copilot instructions (concise & actionable)
+### Subscription Enforcement Pattern
+**Always enforce limits before AI operations**:
+```typescript
+import { canUserSendMessage, incrementUserMessageCount } from '@/lib/subscription';
 
-This repo is an AI-powered hypertrophy coaching app (Next.js 15 + TypeScript). The file below highlights the repo-specific patterns, commands, and files an AI coding agent needs to be productive immediately. Keep this short and actionable.
+const canSend = await canUserSendMessage(userId);
+if (!canSend) {
+  return NextResponse.json({ error: 'Daily message limit exceeded' }, { status: 429 });
+}
 
-Core facts
-- Stack: Next.js 15 (App Router), TypeScript, Prisma + PostgreSQL (pgvector), Supabase, Google Gemini (AI). API routes must be Edge-runtime compatible and live under `src/app/api/**/route.ts`.
-- Embeddings: 768-dimensional JSON arrays persisted in Postgres (pgvector).
+// ... perform AI operation
 
-Must-read files (start here)
-- `src/lib/gemini.ts` — central AI orchestration, prompt & embedding helpers. Search for `getAIConfiguration()`; many flows intentionally throw if the admin singleton is missing.
-- `src/lib/vector-search.ts` — pgvector queries. Use `fetchRelevantKnowledge(queryEmbedding.embedding, topK, threshold)`.
-- `src/lib/enhanced-rag-v2.ts` — multi-stage RAG + fallbacks.
-- `src/lib/client-memory.ts` — user memory extraction and JSON repair logic used by RAG.
-- `src/lib/subscription.ts` & `src/lib/lemonsqueezy.ts` — subscription checks, usage counting, webhooks.
-- `src/lib/error-handler.ts` — standard API error wrapper; use `ApiErrorHandler.createContext(request)` and `ApiErrorHandler.handleError(error, context)` in routes.
+await incrementUserMessageCount(userId);
+```
 
-High-priority rules (do not remove/skip)
-- All AI features require an admin `AIConfiguration` singleton — do not bypass. If missing, add a migration/seed or create the config via the admin UI.
-- API routes and `src/middleware.ts` must remain Edge-runtime safe: avoid Node-only APIs (fs, child_process, native modules).
-- No guest chat: Supabase auth is mandatory for user flows.
-- Embeddings shape: always 768 floats stored as JSON arrays — use existing helpers in `src/lib/gemini.ts` to produce/validate embeddings.
+### Multi-Language Pattern
+Automatic language detection in chat:
+```typescript
+function detectLanguage(text: string): 'ar' | 'en' {
+  const arabicChars = /[\u0600-\u06FF]/;
+  return arabicChars.test(text) ? 'ar' : 'en';
+}
 
-Developer commands (local/dev)
-- npm run dev (or npm run dev:turbo) — start dev server.
-- npm run postinstall && npx prisma migrate dev — after schema changes (dev only).
-- npm run build — runs Prisma generate and TypeScript build.
-- npm run lint — run project linter.
-- Useful scripts (repo root): `check-ai-config.js`, `debug-rag-system.js`, `test-ai-integration.js`, `debug-lemonsqueezy-checkout.js`.
+// System prompt includes: "If user writes in Arabic, respond in Arabic"
+```
 
-Patterns & examples
-- Vector + keyword hybrid: Merge `fetchRelevantKnowledge(...)` results with `performAndKeywordSearch(query, 10)` for precision when needed (see `src/lib/vector-search.ts`).
-- Error handling: Wrap route handlers with `ApiErrorHandler.createContext(request)` then catch and return via `ApiErrorHandler.handleError()` (see `src/lib/error-handler.ts`).
-- Rate/usage enforcement: Use `canUserSendMessage()` and `incrementUserMessageCount()` from `src/lib/subscription.ts` before invoking AI flows; return 429 when limits exceeded.
+## 🔧 Common Debugging Commands
 
-Debugging tips
-- "AI Configuration not found": run `node check-ai-config.js` or inspect `src/app/admin/`.
-- Empty knowledge responses: run `node debug-rag-system.js` and check thresholds in `fetchRelevantKnowledge()`.
-- Subscription issues: inspect LemonSqueezy webhook handling in `src/lib/lemonsqueezy.ts` and `debug-lemonsqueezy-checkout.js`.
+Run from project root (all CommonJS scripts):
+```bash
+node check-ai-config.js                    # Verify AIConfiguration exists
+node debug-rag-system.js                   # Test RAG retrieval pipeline
+node test-ai-integration.js                # End-to-end AI flow test
+node debug-lemonsqueezy-checkout.js        # Test subscription checkout
+node check-pgvector-status.js              # Verify pgvector extension installed
+node analyze-knowledge-base.js             # Inspect KB categories and chunks
+```
 
-When editing
-- Preserve Edge/runtime constraints in API and middleware files.
-- After Prisma schema edits: run `npm run postinstall`, then `npx prisma migrate dev`, then `npm run build`.
-- Add focused debug scripts (CommonJS) in repo root for any changed AI flow; include with PRs.
+See `scripts/README.md` for full script documentation.
 
-Quick checklist before PR
-- Ensure `AIConfiguration` exists or include a seed/migration.
-- Run `npm run lint` and `npm run build` locally.
-- Add or update a small debug script that reproduces changed behavior.
+## 🚨 Critical Rules (Do Not Skip)
 
-If something here is ambiguous tell me which file or area to expand and I will add precise code examples.
+1. **Admin Config Singleton**: Never bypass `getAIConfiguration()`. If missing, seed it or create via admin UI.
+2. **Edge Runtime Safety**: API routes default to Edge. Use `export const runtime = 'nodejs'` only when needed (e.g., file processing, Prisma). Check `vercel.json` for function timeouts.
+3. **No Guest Chat**: All chat endpoints require `await supabase.auth.getUser()` → return 401 if missing.
+4. **Embedding Shape**: Always 768 floats stored as JSON string arrays (`embeddingData: string?`). Use `getEmbedding()` from `src/lib/gemini.ts`.
+5. **Category Prioritization**: RAG system has strict category ordering (see `getPrioritizedCategories()` in `vector-search.ts`). Program generation queries prioritize `hypertrophy_programs` category.
+
+## 🐛 Common Issues & Fixes
+
+| Issue | Diagnosis | Fix |
+|-------|-----------|-----|
+| "AI Configuration not found" | `getAIConfiguration()` throwing | Run `node check-ai-config.js` or create via admin UI |
+| Empty RAG responses | Threshold too high or no embeddings | Run `node debug-rag-system.js`, check `similarityThreshold` (0.3 default) |
+| Subscription not syncing | LemonSqueezy webhook failing | Check `src/app/api/webhooks/lemonsqueezy/route.ts` logs |
+| Prisma type errors after migration | Client not regenerated | Run `npm run postinstall` |
+| Middleware crashes | Node.js API in Edge runtime | Check imports in `src/middleware.ts` - remove non-Edge APIs |
+
+## 📦 Deployment Notes
+
+- **Vercel**: API routes have 30s timeout by default (`vercel.json`). Chat endpoint overrides to 60s for image processing.
+- **Environment Variables**: Required vars in `.env.local`:
+  - `DATABASE_URL`, `DIRECT_URL` (Prisma)
+  - `NEXT_PUBLIC_SUPABASE_URL`, `NEXT_PUBLIC_SUPABASE_ANON_KEY`, `SUPABASE_SERVICE_ROLE_KEY`
+  - `GEMINI_API_KEY` (Google AI)
+  - `LEMONSQUEEZY_API_KEY`, `LEMONSQUEEZY_WEBHOOK_SECRET`, `LEMONSQUEEZY_STORE_ID`
+- **Database Setup**: Requires `pgvector` extension. Run `CREATE EXTENSION IF NOT EXISTS vector;` in PostgreSQL.
+
+## 🎨 UI Component Patterns
+
+- **shadcn/ui**: All UI components in `src/components/ui/` (Button, Card, Dialog, etc.)
+- **Server Components**: Default in Next.js 15. Use `'use client'` directive only when needed (event handlers, state, hooks)
+- **Internationalization**: Wrap text with `useTranslations()` hook:
+```tsx
+import { useTranslations } from 'next-intl';
+const t = useTranslations('chat');
+return <Button>{t('sendMessage')}</Button>; // Auto-translates to Arabic/English
+```
+
+## 📚 Key Data Models
+
+From `prisma/schema.prisma`:
+- **User**: Auth + subscription + plan limits. Fields: `plan` (FREE/PRO), `messagesUsedToday`, `freeMessagesRemaining`
+- **KnowledgeItem**: Uploaded content (PDFs, docs). Related to `KnowledgeChunk[]`
+- **KnowledgeChunk**: Text chunks with `embeddingData` (768-dim vector as JSON string)
+- **AIConfiguration**: Singleton admin config. Fields: `systemPrompt`, `ragHighRelevanceThreshold`, `strictMusclePriority`
+- **Chat** / **Message**: User chat history with AI
+- **Subscription**: LemonSqueezy sync. Fields: `status`, `lemonSqueezyId`, `currentPeriodEnd`
+
+## ✅ When Making Changes
+
+- **Adding new AI features**: Always call `getAIConfiguration()` first. Add config options to `AIConfiguration` schema if needed.
+- **Adding API routes**: Use error handler pattern. Add `export const runtime = 'nodejs'` if using Prisma or file I/O.
+- **Changing RAG logic**: Add a debug script to `scripts/` demonstrating the change. Update RAG thresholds carefully (test with `debug-rag-system.js`).
+- **Schema changes**: Create migration, test locally with `prisma migrate dev`, verify with `npm run build`.
+- **Subscription changes**: Test with `debug-lemonsqueezy-checkout.js`. Verify webhook handling still works.
+
+## 🔗 Related Documentation
+
+- `docs/` — Feature implementation docs (150+ markdown files)
+- `scripts/README.md` — Debug script usage guide
+- `migrations/README.md` — SQL migration history
+- `README.md` — Project overview and getting started
+
+---
+
+**Need clarification?** Ask about specific files or patterns. Most complex logic is in `src/lib/gemini.ts` (AI orchestration) and `src/lib/vector-search.ts` (RAG retrieval).

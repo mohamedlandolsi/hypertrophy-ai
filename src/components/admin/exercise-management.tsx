@@ -1,6 +1,7 @@
 'use client';
 
 import { useState, useEffect, useCallback } from 'react';
+import Image from 'next/image';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
@@ -647,9 +648,11 @@ export default function ExerciseManagement() {
                   
                   {imagePreview && (
                     <div className="mt-2 border rounded-lg p-2">
-                      <img 
+                      <Image 
                         src={imagePreview} 
                         alt="Exercise preview" 
+                        width={192}
+                        height={192}
                         className="max-h-48 mx-auto rounded"
                       />
                     </div>
@@ -943,9 +946,11 @@ export default function ExerciseManagement() {
                       </TableCell>
                       <TableCell>
                         {exercise.imageUrl ? (
-                          <img 
+                          <Image 
                             src={exercise.imageUrl} 
                             alt={exercise.name}
+                            width={48}
+                            height={48}
                             className="h-12 w-12 object-cover rounded"
                           />
                         ) : (
