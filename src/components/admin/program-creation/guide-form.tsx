@@ -202,7 +202,11 @@ export function GuideForm() {
                       onChange={(content: string) => updateSectionContent(activeSection, content)}
                       placeholder="Enter detailed information for this section. Use formatting to make it clear and easy to follow..."
                       className="min-h-[300px]"
+                      enableImageUpload={true}
                     />
+                    <p className="text-xs text-muted-foreground mt-2">
+                      💡 You can paste images directly into the editor or click the image icon to upload
+                    </p>
                   </div>
 
                   {/* Section Stats */}
