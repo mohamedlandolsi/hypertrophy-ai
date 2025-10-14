@@ -42,6 +42,11 @@ This document describes the implementation of image upload functionality in the 
    - RLS policies for access control
    - Verification and cleanup queries
 
+3. **`.npmrc`**
+   - NPM configuration file for Vercel deployment
+   - Sets `legacy-peer-deps=true` to resolve TipTap extension version conflicts
+   - Required for deploying with `@tiptap/extension-image@3.6.6` alongside TipTap v2.x packages
+
 ### Modified Files
 1. **`src/components/ui/rich-text-editor.tsx`**
    - Added `@tiptap/extension-image` import and configuration
@@ -216,6 +221,8 @@ Images are automatically styled with:
 | "File too large" | Image > 5MB | Compress or resize image |
 | "Invalid file type" | Non-image file | Select an image file |
 | "Upload failed" | Storage error | Check Supabase configuration |
+| Vercel build fails with ERESOLVE | Missing `.npmrc` file | Ensure `.npmrc` with `legacy-peer-deps=true` is committed |
+| Image shows as HTML code | Missing TipTap Image extension | Verify `@tiptap/extension-image` is installed and configured |
 
 ## Future Enhancements
 
@@ -251,6 +258,40 @@ Potential improvements that can be added:
 - [ ] Image button has title attribute
 - [ ] Alt text is added to images
 - [ ] Keyboard navigation works
+
+## Deployment to Vercel
+
+### Prerequisites
+1. ✅ `.npmrc` file committed to repository
+2. ✅ Supabase storage bucket created (SQL commands executed)
+3. ✅ All environment variables configured in Vercel dashboard
+
+### Environment Variables Required
+Set these in Vercel Project Settings → Environment Variables:
+- `NEXT_PUBLIC_SUPABASE_URL`
+- `NEXT_PUBLIC_SUPABASE_ANON_KEY`
+- `SUPABASE_SERVICE_ROLE_KEY`
+- `DATABASE_URL`
+- `DIRECT_URL`
+
+### Deployment Steps
+1. Commit and push `.npmrc` file to your repository
+2. Vercel will automatically use `legacy-peer-deps=true` during installation
+3. Build will succeed with TipTap Image extension v3.6.6
+4. Test image upload in production after deployment
+
+### Build Configuration
+- **Build Command**: `npm run build` (default)
+- **Install Command**: `npm install` (uses `.npmrc` automatically)
+- **Node Version**: 18.x or higher recommended
+
+### Troubleshooting Vercel Deployment
+If build fails with `ERESOLVE` error:
+1. ✅ Verify `.npmrc` file exists in root directory
+2. ✅ Ensure `.npmrc` contains `legacy-peer-deps=true`
+3. ✅ Check `.npmrc` is not in `.gitignore`
+4. ✅ Commit and push `.npmrc` if missing
+5. ✅ Trigger new deployment in Vercel
 
 ## Rollback Instructions
 
