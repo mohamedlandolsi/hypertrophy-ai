@@ -2,12 +2,16 @@
 
 import React, { useCallback, useRef } from 'react';
 import { useEditor, EditorContent, Editor } from '@tiptap/react';
+import { NodeSelection } from '@tiptap/pm/state';
 import StarterKit from '@tiptap/starter-kit';
 import TextStyle from '@tiptap/extension-text-style';
 import { Color } from '@tiptap/extension-color';
 import TextAlign from '@tiptap/extension-text-align';
-import Image from '@tiptap/extension-image';
+import ResizableImageExtension from 'tiptap-extension-resize-image';
 import { Button } from '@/components/ui/button';
+import { Input } from '@/components/ui/input';
+import { Label } from '@/components/ui/label';
+import '@/styles/tiptap-resize.css';
 import { 
   Bold, 
   Italic, 
@@ -43,6 +47,177 @@ const MenuBar = ({ editor, onImageUpload, uploadingImage }: {
   onImageUpload: () => void;
   uploadingImage: boolean;
 }) => {
+  // State for dimension inputs (must be at top level)
+  const [imageWidth, setImageWidth] = React.useState('');
+  const [imageHeight, setImageHeight] = React.useState('');
+  const [maintainAspectRatio, setMaintainAspectRatio] = React.useState(true);
+  const [isImageSelected, setIsImageSelected] = React.useState(false);
+  const [forceUpdate, setForceUpdate] = React.useState(0);
+
+  // Listen to editor selection updates
+  React.useEffect(() => {
+    if (!editor) return;
+
+    const updateSelection = () => {
+      setForceUpdate(prev => prev + 1);
+    };
+
+    editor.on('selectionUpdate', updateSelection);
+    editor.on('transaction', updateSelection);
+
+    return () => {
+      editor.off('selectionUpdate', updateSelection);
+      editor.off('transaction', updateSelection);
+    };
+  }, [editor]);
+
+  // Get current image dimensions when selected
+  React.useEffect(() => {
+    if (!editor) return;
+    
+    // Check if current selection is an image node
+    const { selection } = editor.state;
+    const { $from } = selection;
+    let imageNode = null;
+    
+    console.log('Selection update:', {
+      selectionType: selection.constructor.name,
+      nodeName: selection instanceof NodeSelection ? selection.node.type.name : 'not NodeSelection',
+      $fromNodeName: $from.node()?.type.name,
+    });
+    
+    // Check if selection is a NodeSelection containing an image (ResizableImageExtension uses 'imageResize' node type)
+    if (selection instanceof NodeSelection && (selection.node.type.name === 'image' || selection.node.type.name === 'imageResize')) {
+      imageNode = selection.node;
+      setIsImageSelected(true);
+      console.log('✅ Image selected (NodeSelection)', imageNode.attrs);
+    } else {
+      // Check if cursor is inside an image
+      const node = $from.node();
+      if (node && (node.type.name === 'image' || node.type.name === 'imageResize')) {
+        imageNode = node;
+        setIsImageSelected(true);
+        console.log('✅ Image selected (cursor inside)', imageNode.attrs);
+      } else {
+        console.log('❌ No image selected');
+        setIsImageSelected(false);
+        setImageWidth('');
+        setImageHeight('');
+        return;
+      }
+    }
+    
+    // Extract dimensions from the image node
+    if (imageNode) {
+      const attrs = imageNode.attrs;
+      console.log('Reading image attrs:', attrs);
+      
+      // Try multiple sources for width
+      let width = null;
+      
+      // First check containerStyle (ResizableImageExtension stores dimensions here)
+      if (attrs.containerStyle) {
+        const containerWidthMatch = attrs.containerStyle.match(/width:\s*(\d+)px/);
+        if (containerWidthMatch) width = containerWidthMatch[1];
+      }
+      
+      // Fallback to other attributes
+      if (!width && attrs.width) {
+        width = attrs.width;
+      } else if (!width && attrs['data-width']) {
+        width = attrs['data-width'];
+      } else if (!width && attrs.style) {
+        const widthMatch = attrs.style.match(/width:\s*(\d+)px/);
+        if (widthMatch) width = widthMatch[1];
+      }
+      
+      // Try multiple sources for height
+      let height = null;
+      
+      // First check containerStyle
+      if (attrs.containerStyle) {
+        const containerHeightMatch = attrs.containerStyle.match(/height:\s*(\d+)px/);
+        if (containerHeightMatch) height = containerHeightMatch[1];
+      }
+      
+      // Fallback to other attributes
+      if (!height && attrs.height) {
+        height = attrs.height;
+      } else if (!height && attrs['data-height']) {
+        height = attrs['data-height'];
+      } else if (!height && attrs.style) {
+        const heightMatch = attrs.style.match(/height:\s*(\d+)px/);
+        if (heightMatch) height = heightMatch[1];
+      }
+      
+      setImageWidth(width ? width.toString() : '');
+      setImageHeight(height ? height.toString() : '');
+      
+      console.log('Set dimensions:', { width, height });
+    }
+  }, [editor, editor?.state.selection, forceUpdate]);
+
+  // Apply dimensions
+  const applyDimensions = () => {
+    if (!editor || !isImageSelected) return;
+    
+    console.log('Applying dimensions:', { imageWidth, imageHeight, maintainAspectRatio });
+    
+    // Get current selection
+    const { selection } = editor.state;
+    if (!(selection instanceof NodeSelection)) {
+      console.log('Not a NodeSelection, cannot update');
+      return;
+    }
+    
+    const node = selection.node;
+    console.log('Current node attrs:', node.attrs);
+    
+    // Build new attributes
+    const width = imageWidth ? parseInt(imageWidth) : null;
+    const height = maintainAspectRatio ? null : (imageHeight ? parseInt(imageHeight) : null);
+    
+    const attrs: Record<string, number | string | null> = {
+      ...node.attrs,
+    };
+    
+    if (width) {
+      attrs.width = width;
+      attrs['data-width'] = width;
+      // Update containerStyle with new width
+      const heightStyle = height ? `height: ${height}px;` : '';
+      attrs.containerStyle = `position: relative; width: ${width}px; margin: 0px auto;${heightStyle ? ' ' + heightStyle : ''}`;
+    }
+    
+    if (height && !maintainAspectRatio) {
+      attrs.height = height;
+      attrs['data-height'] = height;
+      // Update containerStyle with height
+      const widthValue = width || (node.attrs.width ? parseInt(node.attrs.width) : 315);
+      attrs.containerStyle = `position: relative; width: ${widthValue}px; margin: 0px auto; height: ${height}px;`;
+    } else if (maintainAspectRatio && width) {
+      // Remove height to maintain aspect ratio
+      attrs.height = null;
+      attrs['data-height'] = null;
+      // Ensure containerStyle doesn't have height
+      attrs.containerStyle = `position: relative; width: ${width}px; margin: 0px auto;`;
+    }
+    
+    console.log('Updating to attrs:', attrs);
+    
+    // Update the node
+    const result = editor.commands.updateAttributes('imageResize', attrs);
+    console.log('Update result:', result);
+    
+    // Force editor update
+    editor.commands.focus();
+    
+    // Force a re-render to see the updated values
+    setTimeout(() => {
+      setForceUpdate(prev => prev + 1);
+    }, 100);
+  };
+
   if (!editor) {
     return null;
   }
@@ -51,7 +226,7 @@ const MenuBar = ({ editor, onImageUpload, uploadingImage }: {
   const activeClass = "bg-muted";
 
   return (
-    <div className="border-b border-border p-2 flex flex-wrap gap-1">
+    <div className="border-b border-border p-2 flex flex-wrap gap-1 items-center">
       {/* Undo/Redo */}
       <Button
         variant="ghost"
@@ -213,6 +388,83 @@ const MenuBar = ({ editor, onImageUpload, uploadingImage }: {
           <ImageIcon className="h-4 w-4" />
         )}
       </Button>
+
+      {/* Image Dimension Inputs - Show when image is selected */}
+      {isImageSelected && (
+        <>
+          <div className="w-px h-6 bg-border mx-1" />
+          <div className="flex items-center gap-2">
+            <Label htmlFor="img-width" className="text-xs whitespace-nowrap">Width:</Label>
+            <Input
+              id="img-width"
+              type="number"
+              value={imageWidth}
+              onChange={(e) => setImageWidth(e.target.value)}
+              onKeyDown={(e) => {
+                if (e.key === 'Enter') {
+                  e.preventDefault(); // Prevent form submission
+                  e.stopPropagation(); // Stop event bubbling
+                  applyDimensions();
+                  editor.commands.focus();
+                }
+              }}
+              placeholder="Auto"
+              className="h-8 w-20 text-xs"
+            />
+            <span className="text-xs text-muted-foreground">px</span>
+          </div>
+          
+          {!maintainAspectRatio && (
+            <div className="flex items-center gap-2">
+              <Label htmlFor="img-height" className="text-xs whitespace-nowrap">Height:</Label>
+              <Input
+                id="img-height"
+                type="number"
+                value={imageHeight}
+                onChange={(e) => setImageHeight(e.target.value)}
+                onKeyDown={(e) => {
+                  if (e.key === 'Enter') {
+                    e.preventDefault(); // Prevent form submission
+                    e.stopPropagation(); // Stop event bubbling
+                    applyDimensions();
+                    editor.commands.focus();
+                  }
+                }}
+                placeholder="Auto"
+                className="h-8 w-20 text-xs"
+              />
+              <span className="text-xs text-muted-foreground">px</span>
+            </div>
+          )}
+
+          <Button
+            variant="ghost"
+            size="sm"
+            className={cn("h-8 px-2 text-xs", maintainAspectRatio && activeClass)}
+            onClick={(e) => {
+              e.preventDefault(); // Prevent form submission
+              setMaintainAspectRatio(!maintainAspectRatio);
+            }}
+            title={maintainAspectRatio ? "Unlock aspect ratio" : "Lock aspect ratio"}
+            type="button"
+          >
+            {maintainAspectRatio ? "🔒" : "🔓"}
+          </Button>
+
+          <Button
+            variant="default"
+            size="sm"
+            className="h-8 px-3 text-xs"
+            onClick={(e) => {
+              e.preventDefault(); // Prevent form submission
+              applyDimensions();
+            }}
+            type="button"
+          >
+            Apply
+          </Button>
+        </>
+      )}
     </div>
   );
 };
@@ -236,17 +488,18 @@ export default function RichTextEditor({
       TextAlign.configure({
         types: ['heading', 'paragraph'],
       }),
-      Image.configure({
-        inline: true,
+      ResizableImageExtension.configure({
+        inline: false,
         allowBase64: true,
-        HTMLAttributes: {
-          class: 'max-w-full h-auto rounded-lg my-4',
-        },
       }),
     ],
     content,
     onUpdate: ({ editor }) => {
       onChange(editor.getHTML());
+    },
+    onSelectionUpdate: ({ editor }) => {
+      // Force re-render when selection changes to update dimension controls
+      editor.view.dispatch(editor.state.tr);
     },
     editorProps: {
       attributes: {
@@ -321,8 +574,11 @@ export default function RichTextEditor({
 
     const url = await uploadImage(file);
     if (url) {
-      // Insert image using TipTap Image extension
-      editor.chain().focus().setImage({ src: url, alt: 'Uploaded image' }).run();
+      // Insert image using TipTap Image extension with responsive width
+      editor.chain().focus().setImage({ 
+        src: url, 
+        alt: ''
+      }).run();
     }
 
     // Reset file input
@@ -348,7 +604,7 @@ export default function RichTextEditor({
           const url = await uploadImage(file);
           if (url) {
             // Insert image using TipTap Image extension
-            editor.chain().focus().setImage({ src: url, alt: 'Pasted image' }).run();
+            editor.chain().focus().setImage({ src: url, alt: '' }).run();
           }
         }
         break;

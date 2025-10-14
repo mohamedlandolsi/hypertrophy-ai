@@ -244,7 +244,8 @@ export function ProgramInfo({ program, locale, userCustomization, onNavigateToSt
                         [&_li]:!block [&_li]:!my-2
                         [&_br]:block [&_br]:my-2
                         [&>*:first-child]:mt-0
-                        [&>*:last-child]:mb-0"
+                        [&>*:last-child]:mb-0
+                        [&_img]:max-w-full [&_img]:h-auto [&_img]:rounded-lg [&_img]:my-4 [&_img]:mx-auto [&_img]:block"
                       dangerouslySetInnerHTML={{ __html: section.content as string }}
                     />
                   </div>

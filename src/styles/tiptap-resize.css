@@ -1,0 +1,110 @@
+/* TipTap Resizable Image Styles */
+
+/* Image wrapper with resize handles */
+.ProseMirror img {
+  max-width: 100%;
+  height: auto;
+  border-radius: 0.5rem;
+  margin: 1rem auto;
+  display: block;
+  cursor: pointer;
+  transition: box-shadow 0.2s;
+}
+
+.ProseMirror img:hover {
+  box-shadow: 0 10px 15px -3px rgb(0 0 0 / 0.1), 0 4px 6px -4px rgb(0 0 0 / 0.1);
+}
+
+/* Selected image */
+.ProseMirror img.ProseMirror-selectednode {
+  outline: 2px solid hsl(var(--primary));
+  outline-offset: 2px;
+  box-shadow: 0 10px 15px -3px rgb(0 0 0 / 0.1), 0 4px 6px -4px rgb(0 0 0 / 0.1);
+}
+
+/* Resize handle container */
+.ProseMirror .image-resizer {
+  position: relative;
+  display: inline-block;
+  max-width: 100%;
+}
+
+/* Resize handles */
+.ProseMirror .image-resizer .resize-handle {
+  position: absolute;
+  width: 10px;
+  height: 10px;
+  background-color: hsl(var(--primary));
+  border: 2px solid white;
+  border-radius: 50%;
+  z-index: 10;
+  box-shadow: 0 2px 4px rgba(0, 0, 0, 0.2);
+}
+
+/* Corner handles */
+.ProseMirror .image-resizer .resize-handle.nw {
+  top: -5px;
+  left: -5px;
+  cursor: nw-resize;
+}
+
+.ProseMirror .image-resizer .resize-handle.ne {
+  top: -5px;
+  right: -5px;
+  cursor: ne-resize;
+}
+
+.ProseMirror .image-resizer .resize-handle.sw {
+  bottom: -5px;
+  left: -5px;
+  cursor: sw-resize;
+}
+
+.ProseMirror .image-resizer .resize-handle.se {
+  bottom: -5px;
+  right: -5px;
+  cursor: se-resize;
+}
+
+/* Side handles */
+.ProseMirror .image-resizer .resize-handle.n {
+  top: -5px;
+  left: 50%;
+  transform: translateX(-50%);
+  cursor: n-resize;
+}
+
+.ProseMirror .image-resizer .resize-handle.s {
+  bottom: -5px;
+  left: 50%;
+  transform: translateX(-50%);
+  cursor: s-resize;
+}
+
+.ProseMirror .image-resizer .resize-handle.w {
+  top: 50%;
+  left: -5px;
+  transform: translateY(-50%);
+  cursor: w-resize;
+}
+
+.ProseMirror .image-resizer .resize-handle.e {
+  top: 50%;
+  right: -5px;
+  transform: translateY(-50%);
+  cursor: e-resize;
+}
+
+/* Hide handles when not selected */
+.ProseMirror .image-resizer:not(.selected) .resize-handle {
+  display: none;
+}
+
+/* Resizing state */
+.ProseMirror .image-resizer.resizing {
+  opacity: 0.8;
+}
+
+.ProseMirror .image-resizer.resizing img {
+  pointer-events: none;
+}
