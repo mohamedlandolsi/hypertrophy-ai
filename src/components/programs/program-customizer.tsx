@@ -11,7 +11,9 @@ import { Label } from '@/components/ui/label';
 import { Alert, AlertDescription } from '@/components/ui/alert';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { Accordion, AccordionContent, AccordionItem, AccordionTrigger } from '@/components/ui/accordion';
-import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle, DialogTrigger } from '@/components/ui/dialog';
+import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle, DialogTrigger, DialogFooter } from '@/components/ui/dialog';
+import { Input } from '@/components/ui/input';
+import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from '@/components/ui/tooltip';
 import { useToast } from '@/hooks/use-toast';
 import { 
   Settings,
@@ -23,7 +25,9 @@ import {
   AlertCircle,
   Info,
   Plus,
-  X
+  X,
+  Search,
+  HelpCircle
 } from 'lucide-react';
 
 // Muscle group definitions (matching admin form)
@@ -158,9 +162,20 @@ export function ProgramCustomizer({
   const [isSaving, setIsSaving] = useState(false);
   const [activeCustomizationTab, setActiveCustomizationTab] = useState('structure');
   
+  // Helper function to get a valid structure ID
+  const getValidStructureId = useCallback(() => {
+    // First check if saved structureId exists in current program structures
+    const savedStructureId = userCustomization?.configuration?.structureId;
+    if (savedStructureId && program.programStructures.some((s: Record<string, unknown>) => s.id === savedStructureId)) {
+      return savedStructureId;
+    }
+    // Fall back to default or first structure
+    return program.programStructures.find((s: Record<string, unknown>) => s.isDefault)?.id || program.programStructures[0]?.id || '';
+  }, [userCustomization?.configuration?.structureId, program.programStructures]);
+  
   // Customization state
   const [customization, setCustomization] = useState<CustomizationConfig>(() => ({
-    structureId: userCustomization?.configuration?.structureId || program.programStructures.find((s: Record<string, unknown>) => s.isDefault)?.id || program.programStructures[0]?.id || '',
+    structureId: getValidStructureId(),
     categoryType: userCustomization?.categoryType || 'ESSENTIALIST',
     workoutConfiguration: userCustomization?.configuration?.workoutConfiguration || {},
     weeklyScheduleMapping: userCustomization?.configuration?.weeklyScheduleMapping || {},
@@ -170,6 +185,9 @@ export function ProgramCustomizer({
   }));
 
   const [hasUnsavedChanges, setHasUnsavedChanges] = useState(false);
+  
+  // Track unsaved changes per workout template (templateId -> boolean)
+  const [workoutUnsavedChanges, setWorkoutUnsavedChanges] = useState<Record<string, boolean>>({});
   
   // Track the saved workout pattern (updates only after save)
   const [savedWorkoutPattern, setSavedWorkoutPattern] = useState<number>(
@@ -192,8 +210,21 @@ export function ProgramCustomizer({
   // Sync customization state when userCustomization prop changes (e.g., after hot reload or data refresh)
   useEffect(() => {
     if (userCustomization) {
+      const validStructureId = getValidStructureId();
+      const savedStructureId = userCustomization?.configuration?.structureId;
+      
+      // Notify user if their saved structure was invalid and has been reset
+      if (savedStructureId && savedStructureId !== validStructureId) {
+        console.warn('Invalid structure ID detected:', savedStructureId, '- Reset to:', validStructureId);
+        toast({
+          title: 'Program Structure Updated',
+          description: 'Your saved workout structure was outdated and has been reset to the current default. Please review and save your workout again.',
+          variant: 'default'
+        });
+      }
+      
       setCustomization({
-        structureId: userCustomization.configuration?.structureId || program.programStructures.find((s: Record<string, unknown>) => s.isDefault)?.id || program.programStructures[0]?.id || '',
+        structureId: validStructureId,
         categoryType: userCustomization.categoryType || 'ESSENTIALIST',
         workoutConfiguration: userCustomization.configuration?.workoutConfiguration || {},
         weeklyScheduleMapping: userCustomization.configuration?.weeklyScheduleMapping || {},
@@ -205,7 +236,7 @@ export function ProgramCustomizer({
       setExerciseSets(userCustomization.configuration?.exerciseSets || {});
       setExerciseEquipment(userCustomization.configuration?.exerciseEquipment || {});
     }
-  }, [userCustomization, program.programStructures]);
+  }, [userCustomization, program.programStructures, getValidStructureId, toast]);
 
   // Exercise state
   interface Exercise {
@@ -226,6 +257,14 @@ export function ProgramCustomizer({
   const [exercisesByMuscleGroup, setExercisesByMuscleGroup] = useState<Record<string, Exercise[]>>({});
   const [loadingExercises, setLoadingExercises] = useState<Record<string, boolean>>({});
   const [expandedExerciseId, setExpandedExerciseId] = useState<string | null>(null);
+  
+  // Exercise dialog state
+  const [exerciseSearchQuery, setExerciseSearchQuery] = useState('');
+  const [tempSelectedExercises, setTempSelectedExercises] = useState<string[]>([]);
+  const [dialogOpen, setDialogOpen] = useState(false);
+  const [currentTemplateId, setCurrentTemplateId] = useState<string>('');
+  const [currentMuscleGroup, setCurrentMuscleGroup] = useState<string>('');
+  const [equipmentFilter, setEquipmentFilter] = useState<string>('all');
 
   // Function to get Exercise muscle groups for a workout template muscle group
   const getExerciseMuscleGroups = useCallback((workoutMuscleGroup: string): string[] => {
@@ -247,6 +286,7 @@ export function ProgramCustomizer({
       }
     }));
     setHasUnsavedChanges(true);
+    setWorkoutUnsavedChanges(prev => ({ ...prev, [templateId]: true }));
   };
 
   // Helper to get/set exercise equipment
@@ -263,6 +303,7 @@ export function ProgramCustomizer({
       }
     }));
     setHasUnsavedChanges(true);
+    setWorkoutUnsavedChanges(prev => ({ ...prev, [templateId]: true }));
   };
 
   // Calculate total volume for a muscle in a workout
@@ -839,6 +880,8 @@ export function ProgramCustomizer({
       const result = await response.json();
       onCustomizationSaved(result);
       setHasUnsavedChanges(false);
+      // Clear unsaved changes flag for this specific workout
+      setWorkoutUnsavedChanges(prev => ({ ...prev, [workoutDisplayId]: false }));
       
       toast({
         title: 'Workout Saved',
@@ -853,8 +896,6 @@ export function ProgramCustomizer({
     } finally {
       setIsSaving(false);
     }
-    // Use workoutDisplayId to avoid unused variable warning
-    console.log('Saved workout:', workoutDisplayId);
   };
 
   // Helper functions for exercise selection
@@ -907,6 +948,7 @@ export function ProgramCustomizer({
         [workoutTemplateId]: newSelection
       }
     });
+    setWorkoutUnsavedChanges(prev => ({ ...prev, [workoutTemplateId]: true }));
   };
 
 
@@ -1375,8 +1417,8 @@ export function ProgramCustomizer({
                           </Badge>
                         </div>
                       </AccordionTrigger>
-                      <AccordionContent>
-                        <div className="space-y-4 pt-4">
+                      <AccordionContent className="relative">
+                        <div className="space-y-4 pt-4 pb-2">
                           
                           <h5 className="text-sm font-medium text-gray-700 dark:text-gray-300">
                             Exercise Selection
@@ -1650,160 +1692,359 @@ export function ProgramCustomizer({
                                     </div>
                                   )}
                                   
-                                  {/* Add Exercise Button */}
+                                  {/* Enhanced Add Exercise Dialog */}
                                   {muscleGroupExercises.length < getExerciseLimit(template, muscleGroup) && (
-                                    <Dialog>
+                                    <Dialog open={dialogOpen && currentTemplateId === template.displayId && currentMuscleGroup === muscleGroup} onOpenChange={(open) => {
+                                      setDialogOpen(open);
+                                      if (!open) {
+                                        // Reset when closing
+                                        setExerciseSearchQuery('');
+                                        setTempSelectedExercises([]);
+                                        setEquipmentFilter('all');
+                                        setExpandedExerciseId(null);
+                                      }
+                                    }}>
                                       <DialogTrigger asChild>
                                         <Button 
                                           type="button" 
                                           variant="outline" 
-                                          size="sm" 
-                                          className="w-full"
+                                          size="lg" 
+                                          className="w-full h-14 md:h-12 hover:bg-primary/5 hover:border-primary transition-all"
                                           onClick={() => {
+                                            setCurrentTemplateId(template.displayId);
+                                            setCurrentMuscleGroup(muscleGroup);
+                                            setDialogOpen(true);
                                             // Load exercises when opening dialog
                                             if (availableExercises.length === 0) {
                                               fetchExercisesForMuscleGroup(muscleGroup);
                                             }
+                                            // Initialize with already selected exercises (muscleGroupExercises is already an array of IDs)
+                                            setTempSelectedExercises(muscleGroupExercises);
                                           }}
                                         >
-                                          <Plus className="w-4 h-4 mr-2" />
-                                          Add Exercise ({muscleGroupExercises.length}/{getExerciseLimit(template, muscleGroup)})
+                                          <Plus className="w-5 h-5 mr-2" />
+                                          <span className="font-medium">Add Exercise ({muscleGroupExercises.length}/{getExerciseLimit(template, muscleGroup)})</span>
                                         </Button>
                                       </DialogTrigger>
-                                      <DialogContent className="max-w-3xl max-h-[80vh] overflow-y-auto">
-                                        <DialogHeader>
-                                          <DialogTitle>Select Exercise for {muscleGroup}</DialogTitle>
-                                          <DialogDescription>
-                                            Choose exercises that target this muscle group. You can select up to {getExerciseLimit(template, muscleGroup)} exercises.
-                                          </DialogDescription>
+                                      <DialogContent className="max-w-4xl max-h-[90vh] md:max-h-[85vh] overflow-hidden flex flex-col p-0">
+                                        <DialogHeader className="px-6 pt-6 pb-4 border-b">
+                                          <div className="flex items-start justify-between gap-4">
+                                            <div className="flex-1">
+                                              <DialogTitle className="text-2xl font-bold mb-2">Select Exercises for {muscleGroup}</DialogTitle>
+                                              <DialogDescription className="text-base">
+                                                Choose exercises that target this muscle group effectively.  
+                                                <TooltipProvider>
+                                                  <Tooltip>
+                                                    <TooltipTrigger asChild>
+                                                      <span className="inline-flex items-center gap-1 ml-1 text-primary cursor-help">
+                                                        <HelpCircle className="h-4 w-4" />
+                                                        Why these exercises?
+                                                      </span>
+                                                    </TooltipTrigger>
+                                                    <TooltipContent className="max-w-xs">
+                                                      <p className="text-sm">Exercises shown have 75%+ volume contribution to {muscleGroup}, meaning they effectively target this muscle for growth.</p>
+                                                    </TooltipContent>
+                                                  </Tooltip>
+                                                </TooltipProvider>
+                                              </DialogDescription>
+                                            </div>
+                                            {/* Selection Counter Badge */}
+                                            <Badge variant="secondary" className="text-lg px-4 py-2 whitespace-nowrap">
+                                              {tempSelectedExercises.length}/{getExerciseLimit(template, muscleGroup)}
+                                            </Badge>
+                                          </div>
                                         </DialogHeader>
                                         
-                                        <div className="grid grid-cols-1 md:grid-cols-2 gap-3 mt-4">
-                                          {availableExercises
-                                            .filter((exercise: Exercise) => {
-                                              // Filter out already selected exercises
-                                              if (selectedExercises.includes(exercise.id)) return false;
-                                              
+                                        {/* Search and Filter Bar */}
+                                        <div className="px-6 py-4 border-b bg-muted/30 space-y-3">
+                                          <div className="relative">
+                                            <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 h-5 w-5 text-muted-foreground" />
+                                            <Input
+                                              placeholder="Search exercises by name..."
+                                              value={exerciseSearchQuery}
+                                              onChange={(e) => setExerciseSearchQuery(e.target.value)}
+                                              className="pl-10 h-12 text-base"
+                                            />
+                                          </div>
+                                          <div className="flex gap-2 flex-wrap">
+                                            <Button
+                                              type="button"
+                                              variant={equipmentFilter === 'all' ? 'default' : 'outline'}
+                                              size="sm"
+                                              onClick={() => setEquipmentFilter('all')}
+                                            >
+                                              All Equipment
+                                            </Button>
+                                            <Button
+                                              type="button"
+                                              variant={equipmentFilter === 'barbell' ? 'default' : 'outline'}
+                                              size="sm"
+                                              onClick={() => setEquipmentFilter('barbell')}
+                                            >
+                                              Barbell
+                                            </Button>
+                                            <Button
+                                              type="button"
+                                              variant={equipmentFilter === 'dumbbell' ? 'default' : 'outline'}
+                                              size="sm"
+                                              onClick={() => setEquipmentFilter('dumbbell')}
+                                            >
+                                              Dumbbell
+                                            </Button>
+                                            <Button
+                                              type="button"
+                                              variant={equipmentFilter === 'machine' ? 'default' : 'outline'}
+                                              size="sm"
+                                              onClick={() => setEquipmentFilter('machine')}
+                                            >
+                                              Machine
+                                            </Button>
+                                            <Button
+                                              type="button"
+                                              variant={equipmentFilter === 'cable' ? 'default' : 'outline'}
+                                              size="sm"
+                                              onClick={() => setEquipmentFilter('cable')}
+                                            >
+                                              Cable
+                                            </Button>
+                                          </div>
+                                        </div>
+                                        
+                                        {/* Exercise Grid - Scrollable */}
+                                        <div className="flex-1 overflow-y-auto px-6 py-4">
+                                          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
+                                            {availableExercises
+                                              .filter((exercise: Exercise) => {
+                                                // Filter logic
+                                                const exerciseMuscleGroups = getExerciseMuscleGroups(muscleGroup);
+                                                const hasHighContribution = exerciseMuscleGroups.some(emg => {
+                                                  const contribution = exercise.volumeContributions?.[emg] || 0;
+                                                  return contribution >= 0.75;
+                                                });
+                                                
+                                                if (!hasHighContribution) return false;
+                                                
+                                                // Search filter
+                                                if (exerciseSearchQuery && !exercise.name.toLowerCase().includes(exerciseSearchQuery.toLowerCase())) {
+                                                  return false;
+                                                }
+                                                
+                                                // Equipment filter
+                                                if (equipmentFilter !== 'all' && !exercise.equipment.some(eq => eq.toLowerCase().includes(equipmentFilter.toLowerCase()))) {
+                                                  return false;
+                                                }
+                                                
+                                                return true;
+                                              })
+                                              .map((exercise: Exercise) => {
                                               const exerciseMuscleGroups = getExerciseMuscleGroups(muscleGroup);
-                                              const hasHighContribution = exerciseMuscleGroups.some(emg => {
-                                                const contribution = exercise.volumeContributions?.[emg] || 0;
-                                                return contribution >= 0.75;
-                                              });
+                                              const volumeContribution = Math.max(
+                                                ...exerciseMuscleGroups.map(emg => exercise.volumeContributions?.[emg] || 0)
+                                              );
+                                              const isSelected = tempSelectedExercises.includes(exercise.id);
+                                              const canSelect = tempSelectedExercises.length < getExerciseLimit(template, muscleGroup);
                                               
-                                              return hasHighContribution;
-                                            })
-                                            .map((exercise: Exercise) => {
-                                            const exerciseMuscleGroups = getExerciseMuscleGroups(muscleGroup);
-                                            const volumeContribution = Math.max(
-                                              ...exerciseMuscleGroups.map(emg => exercise.volumeContributions?.[emg] || 0)
-                                            );
-                                            
-                                            return (
-                                              <div
-                                                key={exercise.id}
-                                                className="border rounded-lg overflow-hidden transition-colors"
-                                              >
-                                                <div 
-                                                  className="p-3 hover:border-blue-400 hover:bg-blue-50 dark:hover:bg-blue-900/20 cursor-pointer"
+                                              return (
+                                                <div
+                                                  key={exercise.id}
+                                                  className={`
+                                                    relative border-2 rounded-xl overflow-hidden transition-all duration-200 cursor-pointer
+                                                    ${isSelected 
+                                                      ? 'border-primary bg-primary/5 shadow-md' 
+                                                      : 'border-border hover:border-primary/50 hover:shadow-sm'
+                                                    }
+                                                    ${!canSelect && !isSelected ? 'opacity-50 cursor-not-allowed' : ''}
+                                                  `}
                                                   onClick={() => {
-                                                    toggleExerciseSelection(template.displayId, exercise.id);
+                                                    if (isSelected) {
+                                                      setTempSelectedExercises(prev => prev.filter(id => id !== exercise.id));
+                                                    } else if (canSelect) {
+                                                      setTempSelectedExercises(prev => [...prev, exercise.id]);
+                                                    }
                                                   }}
                                                 >
-                                                  <div className="flex gap-3">
+                                                  {/* Selection Indicator */}
+                                                  {isSelected && (
+                                                    <div className="absolute top-3 right-3 z-10 bg-primary text-primary-foreground rounded-full p-1">
+                                                      <CheckCircle className="h-5 w-5" />
+                                                    </div>
+                                                  )}
+                                                  
+                                                  {/* Recommended Badge */}
+                                                  {exercise.isRecommended && (
+                                                    <div className="absolute top-3 left-3 z-10">
+                                                      <Badge className="bg-gradient-to-r from-amber-500 to-orange-500 text-white border-0 shadow-md">
+                                                        ⭐ Recommended
+                                                      </Badge>
+                                                    </div>
+                                                  )}
+                                                  
+                                                  {/* Exercise Image */}
+                                                  <div className="relative h-40 bg-muted">
                                                     {exercise.imageUrl ? (
                                                       <Image 
                                                         src={exercise.imageUrl} 
                                                         alt={exercise.name}
-                                                        width={64}
-                                                        height={64}
-                                                        className="w-16 h-16 object-cover rounded flex-shrink-0"
+                                                        fill
+                                                        className="object-cover"
                                                       />
                                                     ) : (
-                                                      <div className="w-16 h-16 bg-muted rounded flex items-center justify-center flex-shrink-0">
-                                                        <span className="text-xs text-muted-foreground">No image</span>
+                                                      <div className="w-full h-full flex items-center justify-center">
+                                                        <Dumbbell className="h-16 w-16 text-muted-foreground/30" />
                                                       </div>
                                                     )}
-                                                    <div className="flex-1 min-w-0">
-                                                      <div className="flex items-start justify-between gap-2">
-                                                        <div className="flex-1">
-                                                          <p className="text-sm font-medium mb-1">{exercise.name}</p>
-                                                          {exercise.isRecommended && (
-                                                            <Badge variant="outline" className="text-xs bg-green-50 text-green-700 border-green-200 mb-1">
-                                                              ⭐ Recommended
-                                                            </Badge>
-                                                          )}
-                                                        </div>
-                                                        <Button
-                                                          type="button"
-                                                          variant="ghost"
-                                                          size="sm"
-                                                          className="h-7 w-7 p-0 flex-shrink-0"
-                                                          onClick={(e) => {
-                                                            e.stopPropagation();
-                                                            setExpandedExerciseId(expandedExerciseId === exercise.id ? null : exercise.id);
-                                                          }}
-                                                          title="View details"
-                                                        >
-                                                          <Info className="h-4 w-4" />
-                                                        </Button>
-                                                      </div>
-                                                      <p className="text-xs text-gray-500 line-clamp-2">
-                                                        {exercise.equipment.join(', ')}
-                                                      </p>
-                                                      <p className="text-xs text-blue-600 dark:text-blue-400 mt-1">
-                                                        {Math.round(volumeContribution * 100)}% volume contribution
-                                                      </p>
-                                                    </div>
                                                   </div>
-                                                </div>
-                                                
-                                                {/* Expandable Details */}
-                                                {expandedExerciseId === exercise.id && (
-                                                  <div className="px-3 pb-3 border-t bg-muted/30">
-                                                    <div className="space-y-2 text-xs pt-2">
-                                                      {exercise.description && (
-                                                        <div>
-                                                          <p className="font-medium text-gray-700 dark:text-gray-300">Description:</p>
-                                                          <p className="text-gray-600 dark:text-gray-400">{exercise.description}</p>
-                                                        </div>
-                                                      )}
-                                                      {exercise.instructions && (
-                                                        <div>
-                                                          <p className="font-medium text-gray-700 dark:text-gray-300">Instructions:</p>
-                                                          <p className="text-gray-600 dark:text-gray-400 whitespace-pre-wrap">{exercise.instructions}</p>
-                                                        </div>
-                                                      )}
-                                                      <div>
-                                                        <p className="font-medium text-gray-700 dark:text-gray-300">Type:</p>
-                                                        <Badge variant="secondary" className="text-xs mt-1">
+                                                  
+                                                  {/* Exercise Info */}
+                                                  <div className="p-4 space-y-2">
+                                                    <div className="flex items-start justify-between gap-2">
+                                                      <h4 className="font-semibold text-base line-clamp-2 flex-1">{exercise.name}</h4>
+                                                      <Button
+                                                        type="button"
+                                                        variant="ghost"
+                                                        size="sm"
+                                                        className="h-8 w-8 p-0 flex-shrink-0"
+                                                        onClick={(e) => {
+                                                          e.stopPropagation();
+                                                          setExpandedExerciseId(expandedExerciseId === exercise.id ? null : exercise.id);
+                                                        }}
+                                                        title="View details"
+                                                      >
+                                                        <Info className="h-4 w-4" />
+                                                      </Button>
+                                                    </div>
+                                                    
+                                                    <div className="space-y-1">
+                                                      <div className="flex items-center gap-2 text-sm text-muted-foreground">
+                                                        <Badge variant="secondary" className="text-xs">
                                                           {exercise.exerciseType}
                                                         </Badge>
+                                                        <span className="text-xs">{exercise.equipment.slice(0, 2).join(', ')}</span>
                                                       </div>
-                                                      <div>
-                                                        <p className="font-medium text-gray-700 dark:text-gray-300">Full Equipment List:</p>
-                                                        <p className="text-gray-600 dark:text-gray-400">{exercise.equipment.join(', ')}</p>
+                                                      
+                                                      {/* Volume Contribution Bar */}
+                                                      <div className="space-y-1">
+                                                        <div className="flex items-center justify-between text-xs">
+                                                          <span className="text-muted-foreground">Volume Contribution</span>
+                                                          <TooltipProvider>
+                                                            <Tooltip>
+                                                              <TooltipTrigger asChild>
+                                                                <span className="font-semibold text-primary cursor-help">
+                                                                  {Math.round(volumeContribution * 100)}%
+                                                                </span>
+                                                              </TooltipTrigger>
+                                                              <TooltipContent>
+                                                                <p className="text-sm">This exercise targets {muscleGroup} with {Math.round(volumeContribution * 100)}% effectiveness</p>
+                                                              </TooltipContent>
+                                                            </Tooltip>
+                                                          </TooltipProvider>
+                                                        </div>
+                                                        <div className="w-full bg-muted rounded-full h-2 overflow-hidden">
+                                                          <div 
+                                                            className="h-full bg-gradient-to-r from-primary to-primary/70 transition-all"
+                                                            style={{ width: `${volumeContribution * 100}%` }}
+                                                          />
+                                                        </div>
                                                       </div>
                                                     </div>
+                                                    
+                                                    {/* Expanded Details */}
+                                                    {expandedExerciseId === exercise.id && (
+                                                      <div className="mt-3 pt-3 border-t space-y-2 text-sm">
+                                                        {exercise.description && (
+                                                          <div>
+                                                            <p className="font-medium mb-1">Description:</p>
+                                                            <p className="text-muted-foreground text-xs">{exercise.description}</p>
+                                                          </div>
+                                                        )}
+                                                        <div>
+                                                          <p className="font-medium mb-1">Equipment:</p>
+                                                          <p className="text-muted-foreground text-xs">{exercise.equipment.join(', ')}</p>
+                                                        </div>
+                                                      </div>
+                                                    )}
                                                   </div>
-                                                )}
-                                              </div>
-                                            );
-                                          })}
+                                                </div>
+                                              );
+                                            })}
+                                          </div>
+                                          
+                                          {/* No Results Message */}
+                                          {availableExercises.filter((exercise: Exercise) => {
+                                            const exerciseMuscleGroups = getExerciseMuscleGroups(muscleGroup);
+                                            const hasHighContribution = exerciseMuscleGroups.some(emg => {
+                                              const contribution = exercise.volumeContributions?.[emg] || 0;
+                                              return contribution >= 0.75;
+                                            });
+                                            if (!hasHighContribution) return false;
+                                            if (exerciseSearchQuery && !exercise.name.toLowerCase().includes(exerciseSearchQuery.toLowerCase())) return false;
+                                            if (equipmentFilter !== 'all' && !exercise.equipment.some(eq => eq.toLowerCase().includes(equipmentFilter.toLowerCase()))) return false;
+                                            return true;
+                                          }).length === 0 && (
+                                            <div className="text-center py-12">
+                                              <Dumbbell className="h-16 w-16 mx-auto text-muted-foreground/30 mb-4" />
+                                              <p className="text-lg font-medium text-muted-foreground mb-2">No exercises found</p>
+                                              <p className="text-sm text-muted-foreground">
+                                                {exerciseSearchQuery || equipmentFilter !== 'all' 
+                                                  ? 'Try adjusting your search or filters'
+                                                  : 'No more exercises available for this muscle group'
+                                                }
+                                              </p>
+                                            </div>
+                                          )}
                                         </div>
                                         
-                                        {availableExercises.filter((exercise: Exercise) => {
-                                          if (selectedExercises.includes(exercise.id)) return false;
-                                          const exerciseMuscleGroups = getExerciseMuscleGroups(muscleGroup);
-                                          return exerciseMuscleGroups.some(emg => {
-                                            const contribution = exercise.volumeContributions?.[emg] || 0;
-                                            return contribution >= 0.75;
-                                          });
-                                        }).length === 0 && (
-                                          <div className="text-center py-8 text-muted-foreground">
-                                            <p>No more exercises available for this muscle group.</p>
-                                            <p className="text-sm mt-1">All suitable exercises have been selected.</p>
+                                        {/* Sticky Footer with Actions */}
+                                        <DialogFooter className="px-6 py-4 border-t bg-muted/30">
+                                          <div className="flex items-center justify-between w-full gap-4">
+                                            <div className="text-sm text-muted-foreground">
+                                              <span className="font-medium">{tempSelectedExercises.length}</span> of {getExerciseLimit(template, muscleGroup)} exercises selected
+                                            </div>
+                                            <div className="flex gap-2">
+                                              <Button
+                                                type="button"
+                                                variant="outline"
+                                                onClick={() => {
+                                                  setDialogOpen(false);
+                                                  setTempSelectedExercises([]);
+                                                }}
+                                              >
+                                                Cancel
+                                              </Button>
+                                              <Button
+                                                type="button"
+                                                onClick={() => {
+                                                  // Apply selections
+                                                  const currentExercises = customization.workoutConfiguration[template.displayId] || [];
+                                                  const otherMuscleExercises = currentExercises.filter(id => {
+                                                    const ex = Object.values(exercisesByMuscleGroup).flat().find(e => e.id === id);
+                                                    if (!ex) return false;
+                                                    const exerciseMuscleGroups = getExerciseMuscleGroups(muscleGroup);
+                                                    const contribution = Math.max(...exerciseMuscleGroups.map(emg => ex.volumeContributions?.[emg] || 0));
+                                                    return contribution < 0.75;
+                                                  });
+                                                  
+                                                  setCustomization(prev => ({
+                                                    ...prev,
+                                                    workoutConfiguration: {
+                                                      ...prev.workoutConfiguration,
+                                                      [template.displayId]: [...otherMuscleExercises, ...tempSelectedExercises]
+                                                    }
+                                                  }));
+                                                  setHasUnsavedChanges(true);
+                                                  setWorkoutUnsavedChanges(prev => ({ ...prev, [template.displayId]: true }));
+                                                  setDialogOpen(false);
+                                                  setTempSelectedExercises([]);
+                                                }}
+                                                disabled={tempSelectedExercises.length === 0}
+                                                className="min-w-[140px]"
+                                              >
+                                                <CheckCircle className="mr-2 h-4 w-4" />
+                                                Add Selected
+                                              </Button>
+                                            </div>
                                           </div>
-                                        )}
+                                        </DialogFooter>
                                       </DialogContent>
                                     </Dialog>
                                   )}
@@ -1818,22 +2059,6 @@ export function ProgramCustomizer({
                             </div>
                           );
                         })}
-                        
-                        {/* Save button for this workout */}
-                        <div className="flex justify-end mt-4 pt-4 border-t">
-                          <Button
-                            onClick={() => saveWorkoutConfiguration(template.displayId)}
-                            disabled={isSaving}
-                            size="sm"
-                          >
-                            {isSaving ? (
-                              <div className="w-4 h-4 mr-2 border-2 border-current border-t-transparent rounded-full animate-spin" />
-                            ) : (
-                              <Save className="w-4 h-4 mr-2" />
-                            )}
-                            Save {displayName}
-                          </Button>
-                        </div>
                         </div>
                       </AccordionContent>
                     </AccordionItem>
@@ -1844,6 +2069,48 @@ export function ProgramCustomizer({
           </Card>
         </TabsContent>
       </Tabs>
+
+      {/* Sticky save buttons - fixed to bottom of viewport, only shows when workout has unsaved changes */}
+      {Object.entries(workoutUnsavedChanges).map(([templateId, hasChanges]) => {
+        if (!hasChanges) return null;
+        
+        const template = getWorkoutsToDisplay().find((t: WorkoutTemplateWithPattern) => t.displayId === templateId);
+        if (!template) return null;
+        
+        const templateName = getLocalizedContent(template.name, `Workout ${template.order + 1}`);
+        const displayName = template.patternLabel 
+          ? `${templateName} (${template.patternLabel})`
+          : templateName;
+        
+        return (
+          <div 
+            key={templateId}
+            className="fixed bottom-0 left-0 right-0 z-50 bg-white dark:bg-gray-900 border-t shadow-2xl px-4 py-3 md:px-6 md:py-4"
+          >
+            <div className="max-w-7xl mx-auto flex items-center justify-between gap-4">
+              <div className="flex items-center gap-2 flex-1 min-w-0">
+                <div className="w-2 h-2 bg-amber-500 rounded-full animate-pulse flex-shrink-0"></div>
+                <span className="text-sm text-muted-foreground truncate">
+                  <span className="font-medium">{displayName}:</span> You have unsaved changes
+                </span>
+              </div>
+              <Button
+                onClick={() => saveWorkoutConfiguration(templateId)}
+                disabled={isSaving}
+                size="default"
+                className="shadow-md flex-shrink-0"
+              >
+                {isSaving ? (
+                  <div className="w-4 h-4 mr-2 border-2 border-current border-t-transparent rounded-full animate-spin" />
+                ) : (
+                  <Save className="w-4 h-4 mr-2" />
+                )}
+                Save {displayName}
+              </Button>
+            </div>
+          </div>
+        );
+      })}
 
       {/* Action Buttons */}
       <div className="flex items-center justify-between p-4 bg-gray-50 dark:bg-gray-800/50 rounded-lg">
