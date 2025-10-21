@@ -1,6 +1,7 @@
 import { createServerClient, type CookieOptions } from '@supabase/ssr'
 import { NextResponse, type NextRequest } from 'next/server'
 import createIntlMiddleware from 'next-intl/middleware';
+import { ipAddress } from '@vercel/functions';
 
 // Create the intl middleware
 const intlMiddleware = createIntlMiddleware({
@@ -11,7 +12,31 @@ const intlMiddleware = createIntlMiddleware({
 });
 
 export async function middleware(request: NextRequest) {
-  // Note: Maintenance mode is now handled client-side due to Edge Runtime limitations
+  // Maintenance Mode Check with IP Whitelisting
+  const isMaintenanceMode = process.env.NEXT_PUBLIC_MAINTENANCE_MODE === 'true';
+  
+  if (isMaintenanceMode) {
+    // Get client IP address
+    const clientIP = ipAddress(request) || 'unknown';
+    
+    // Whitelisted IPs (owner/admin access)
+    // You can add multiple IPs separated by commas in the environment variable
+    const allowedIPs = process.env.NEXT_PUBLIC_ALLOWED_IPS?.split(',').map(ip => ip.trim()) || [];
+    
+    // Check if current path is already the maintenance page
+    const isMaintenancePath = request.nextUrl.pathname.includes('/maintenance');
+    
+    // Allow access if IP is whitelisted or user is already on maintenance page
+    if (!allowedIPs.includes(clientIP) && !isMaintenancePath) {
+      // Redirect to maintenance page
+      return NextResponse.redirect(new URL('/maintenance', request.url));
+    }
+    
+    // If on maintenance page and IP is whitelisted, allow access to other pages
+    if (isMaintenancePath && allowedIPs.includes(clientIP)) {
+      return NextResponse.redirect(new URL('/en', request.url));
+    }
+  }
   
   // Handle internationalization first
   const intlResponse = intlMiddleware(request);

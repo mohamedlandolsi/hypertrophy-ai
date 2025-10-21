@@ -1543,5 +1543,375 @@
     "accessNote": "You can still access other parts of the website while we work on the chat system. We apologize for any inconvenience.",
     "needHelp": "Need immediate assistance?",
     "goBack": "Go Back to Home"
+  },
+  "NewHomePage": {
+    "hero": {
+      "trustBadges": {
+        "scienceBased": "Science-Based",
+        "fullyCustomizable": "Fully Customizable",
+        "mobileWebAccess": "Mobile + Web Access"
+      },
+      "headline": "Build Your Perfect Training Program - Backed by Science",
+      "subheadline": "Interactive training programs with real-time volume tracking, exercise selection from expert database, and AI-powered guidance",
+      "cta": {
+        "primary": "Start Building My Program",
+        "secondary": "See How It Works"
+      },
+      "socialProof": {
+        "workoutsLogged": "10,000+ Workouts Logged",
+        "rating": "4.8/5 Rating"
+      },
+      "mockup": {
+        "title": "Interactive Program Builder",
+        "placeholder": "[Video/Screenshot placeholder]"
+      },
+      "indicators": {
+        "volumeOptimal": "✓ Volume Optimal",
+        "exercisesSelected": "12 Exercises Selected"
+      }
+    },
+    "problemSolution": {
+      "title": "Stop Guessing With Your Training",
+      "subtitle": "Most training programs fail for the same reasons. We've solved them all.",
+      "problems": {
+        "generic": {
+          "title": "Generic Cookie-Cutter Programs",
+          "description": "One-size-fits-all programs that don't fit your schedule, equipment, or goals",
+          "solution": "Our Solution: Fully customizable program builder - adjust splits, exercises, and volume to match YOUR lifestyle"
+        },
+        "volume": {
+          "title": "No Guidance on Volume",
+          "description": "Are you doing too much? Too little? Most people have no idea if their volume is optimal",
+          "solution": "Our Solution: Real-time volume tracking with color-coded feedback (low/optimal/high) based on science"
+        },
+        "myths": {
+          "title": "Myths & Misinformation",
+          "description": "Social media \"gurus\" contradict each other. Who do you trust?",
+          "solution": "Our Solution: AI assistant grounded in peer-reviewed research - no myths, just facts"
+        }
+      }
+    },
+    "howItWorks": {
+      "title": "How It Works",
+      "subtitle": "Get started in 4 simple steps",
+      "steps": {
+        "choose": {
+          "title": "Choose Your Program",
+          "description": "Browse from beginner to advanced hypertrophy programs designed by experts"
+        },
+        "customize": {
+          "title": "Customize Everything",
+          "description": "Adjust split structure, swap exercises, and fine-tune volume to fit your goals"
+        },
+        "guidance": {
+          "title": "Get Expert Guidance",
+          "description": "AI assistant helps optimize your choices with real training science"
+        },
+        "track": {
+          "title": "Train & Track",
+          "description": "Execute your program with mobile app tracking and progress monitoring"
+        }
+      }
+    },
+    "features": {
+      "title": "Powerful Features for Serious Results",
+      "subtitle": "Everything you need to build, track, and optimize your training",
+      "programBuilder": {
+        "badge": "Customizable Builder",
+        "title": "Design Your Perfect Split",
+        "description": "Design your split structure, select exercises from our expert database, and adjust sets - all in one interactive interface with real-time volume calculation and visual feedback.",
+        "screenshot": "[Program Builder Screenshot]",
+        "benefits": {
+          "science": {
+            "title": "Science-Based",
+            "description": "Every program follows research-backed recommendations for volume distribution, exercise selection, and session planning"
+          },
+          "flexible": {
+            "title": "Totally Flexible",
+            "description": "Adjust based on your available equipment, training days, and muscle focus. Works for gym and home"
+          },
+          "progressive": {
+            "title": "Built-In Progressive Overload",
+            "description": "Automatic tracking of volume, intensity, and reps over time to ensure continuous progress"
+          }
+        }
+      },
+      "exerciseDatabase": {
+        "badge": "Exercise Library",
+        "title": "Intelligent Exercise Database",
+        "description": "Every exercise includes detailed muscle contribution breakdowns and clear execution guidance. Can't find what you need? Create custom exercises instantly.",
+        "screenshot": "[Exercise Database Screenshot]",
+        "benefits": {
+          "comprehensive": {
+            "title": "Comprehensive",
+            "description": "300+ exercises covering every muscle group with detailed guidance and muscle target breakdown"
+          },
+          "equipment": {
+            "title": "Filter by Equipment",
+            "description": "Easily find alternatives based on your available equipment - free weights, machines, or bodyweight"
+          },
+          "smart": {
+            "title": "Smart Alternatives",
+            "description": "Get recommendations for alternative exercises targeting the same muscles with similar movement patterns"
+          }
+        }
+      },
+      "aiAssistant": {
+        "badge": "AI-Powered",
+        "title": "AI Program Assistant",
+        "description": "Ask questions about your specific program and get answers grounded in verified training science - no myths, just facts from peer-reviewed research.",
+        "screenshot": "[AI Chat Interface Screenshot]",
+        "benefits": {
+          "instant": {
+            "title": "Instant Expertise",
+            "description": "Get instant answers to programming questions, exercise form, recovery, and nutrition"
+          },
+          "evidence": {
+            "title": "Evidence-Backed",
+            "description": "Every answer is backed by the latest research in hypertrophy and sports nutrition"
+          },
+          "context": {
+            "title": "Context-Aware",
+            "description": "Remembers your program, goals, and constraints to provide personalized advice"
+          }
+        }
+      }
+    },
+    "pricing": {
+      "title": "Simple, Transparent Pricing",
+      "subtitle": "Choose the plan that fits your training goals",
+      "individual": {
+        "title": "Individual Programs",
+        "price": "$29-79",
+        "period": "one-time",
+        "features": {
+          "programs": "Selected program only",
+          "exercises": "Complete exercise database",
+          "basics": "Full customization",
+          "support": "Community support",
+          "mobile": "Mobile app access"
+        },
+        "cta": "Browse Programs"
+      },
+      "pro": {
+        "badge": "BEST VALUE",
+        "title": "Pro Subscription",
+        "price": "$19",
+        "period": "/month",
+        "yearly": "or $149/year (save 35%)",
+        "features": {
+          "unlimited": "Unlimited programs",
+          "custom": "Custom program builder",
+          "ai": "Unlimited AI guidance",
+          "advanced": "Advanced analytics & tracking",
+          "priority": "Priority support",
+          "export": "Export & print programs"
+        },
+        "cta": "Start Pro Trial",
+        "guarantee": "30-day money-back guarantee · Cancel anytime"
+      }
+    },
+    "faq": {
+      "title": "Frequently Asked Questions",
+      "subtitle": "Everything you need to know",
+      "questions": {
+        "trainer": {
+          "question": "How is this different from hiring a personal trainer?",
+          "answer": "While personal trainers can be great, they typically cost $50-150+ per session. Our platform gives you science-based program design tools, volume tracking, and AI guidance for a fraction of the cost. You have full control to customize everything while getting expert-level guidance when you need it."
+        },
+        "customize": {
+          "question": "Can I really customize everything?",
+          "answer": "Yes! Every program is fully customizable. Adjust your split structure (3-6 days), swap any exercise, modify sets and reps, and the system will give you real-time feedback on whether your volume is optimal. You can even create custom exercises if needed."
+        },
+        "exercises": {
+          "question": "What if I don't know which exercises to choose?",
+          "answer": "Each program comes with expert-selected default exercises that work great as-is. But if you want to swap exercises, our database shows detailed muscle contribution breakdowns for every movement, making it easy to find equivalent replacements. Plus, the AI assistant can recommend exercises based on your equipment and preferences."
+        },
+        "ai": {
+          "question": "How does the AI assistant work?",
+          "answer": "Our AI uses RAG (Retrieval-Augmented Generation) technology to ground its answers in verified training science from peer-reviewed research. It also understands your specific program configuration, so it can give you personalized advice. No generic responses or training myths - just evidence-based guidance."
+        },
+        "switch": {
+          "question": "Can I switch between programs?",
+          "answer": "If you purchase individual programs, you can buy additional programs anytime. With a Pro subscription, you get access to ALL programs (current and future) and can switch between them freely. Perfect for periodization or trying different training styles."
+        },
+        "mobile": {
+          "question": "Is the mobile app included?",
+          "answer": "Yes! Mobile app access is included with every purchase. Log workouts, track progress, view your program, and access exercise guides from your phone. Pro subscribers get additional advanced analytics features."
+        },
+        "afterPurchase": {
+          "question": "What happens after I buy a program?",
+          "answer": "You get immediate lifetime access to your purchased program(s). Customize it to your needs, access it on web and mobile, and use the AI assistant for guidance. All purchases come with a 30-day money-back guarantee, so you can try it risk-free."
+        }
+      }
+    },
+    "finalCta": {
+      "title": "Ready to Build Your Optimal Training Program?",
+      "subtitle": "Join thousands of lifters who've stopped guessing and started making real progress",
+      "cta": {
+        "primary": "Browse Programs",
+        "secondary": "Start Pro Trial"
+      },
+      "guarantees": {
+        "moneyBack": "30-day money-back guarantee",
+        "lifetime": "Lifetime access",
+        "cancel": "Cancel anytime"
+      }
+    }
+  },
+  "ProgramsPage": {
+    "title": "Training Programs",
+    "subtitle": {
+      "guest": "Science-based training programs for serious lifters",
+      "admin": "Admin access: View and manage all training programs",
+      "pro": "Pro member: Full access to all training programs",
+      "user": "Discover professional programs designed for your goals"
+    },
+    "loading": {
+      "title": "Loading Program",
+      "message": "Taking you to the program...",
+      "programs": "Loading programs..."
+    },
+    "error": {
+      "title": "Unable to Load Programs",
+      "message": "There was an issue loading the training programs. Please try again later.",
+      "retry": "Retry"
+    },
+    "search": {
+      "placeholder": "Search programs...",
+      "showing": "Showing {count} of {total} programs"
+    },
+    "filters": {
+      "difficulty": {
+        "label": "Difficulty",
+        "selectLevel": "Select Level",
+        "beginner": "Beginner",
+        "intermediate": "Intermediate",
+        "advanced": "Advanced"
+      },
+      "split": {
+        "label": "Split Type",
+        "title": "Training Split"
+      },
+      "duration": {
+        "label": "Duration",
+        "title": "Program Length"
+      },
+      "price": {
+        "label": "Price",
+        "title": "Price Range",
+        "under39": "Under $39",
+        "range4059": "$40-$59",
+        "over60": "$60+"
+      },
+      "clearAll": "Clear All",
+      "activeFilters": "Search: {query}"
+    },
+    "sort": {
+      "label": "Sort by",
+      "popular": "Most Popular",
+      "newest": "Newest",
+      "rating": "Highest Rated",
+      "priceLow": "Price: Low to High",
+      "priceHigh": "Price: High to Low"
+    },
+    "sections": {
+      "featured": {
+        "title": "Featured Programs",
+        "badge": "Most Popular"
+      },
+      "myPrograms": {
+        "title": "My Programs",
+        "titleAdmin": "All Programs (Admin)",
+        "titlePro": "All Programs",
+        "subtitle": "Programs you own and can configure",
+        "subtitleAdmin": "Administrative access to all training programs",
+        "subtitlePro": "Pro membership: Full access to all training programs",
+        "count": "{count} program",
+        "countPlural": "{count} programs"
+      },
+      "browse": {
+        "titleMore": "More Programs",
+        "titleAll": "All Programs",
+        "subtitle": "Discover new programs to add to your collection",
+        "subtitleGuest": "Professional training programs designed for your fitness goals"
+      }
+    },
+    "card": {
+      "badges": {
+        "new": "NEW",
+        "featured": "FEATURED",
+        "admin": "Admin",
+        "proAccess": "Pro Access",
+        "owned": "Owned"
+      },
+      "highlights": {
+        "title": "Highlights:",
+        "item1": "Progressive overload built-in",
+        "item2": "Complete exercise database",
+        "item3": "AI coaching included"
+      },
+      "specs": {
+        "mobileTracking": "Mobile tracking",
+        "users": "{count}+ users"
+      },
+      "pricing": {
+        "oneTime": "one-time",
+        "lifetimeAccess": "Lifetime access included"
+      },
+      "cta": {
+        "accessProgram": "Access Program",
+        "viewDetails": "View Details",
+        "loading": "Loading..."
+      }
+    },
+    "proUpsell": {
+      "badge": "PRO SUBSCRIPTION",
+      "title": "Get Access to ALL Programs",
+      "subtitle": "Unlock unlimited access to current and future programs",
+      "benefits": {
+        "allPrograms": "All programs ({count}+ and growing)",
+        "unlimitedAI": "Unlimited AI assistant",
+        "analytics": "Advanced workout analytics",
+        "earlyAccess": "Early access to new programs"
+      },
+      "pricing": {
+        "monthly": "$19",
+        "perMonth": "/month",
+        "yearly": "or $149/year (save 37%)"
+      },
+      "cta": "Learn More About Pro"
+    },
+    "proBanner": {
+      "badge": "UNLIMITED ACCESS",
+      "title": "Ready to unlock all {count}+ programs?",
+      "subtitle": "Get Pro and access every program, unlimited AI coaching, and advanced analytics for one monthly price.",
+      "cta": "View Pro Plans",
+      "guarantee": "30-day money-back guarantee • Cancel anytime"
+    },
+    "signInCta": {
+      "title": "Ready to Start Training?",
+      "subtitle": "Sign in to purchase programs and track your progress with our mobile app.",
+      "signIn": "Sign In",
+      "createAccount": "Create Account"
+    },
+    "emptyState": {
+      "noResults": {
+        "title": "No Programs Found",
+        "message": "No programs match your current filters. Try adjusting your search criteria.",
+        "clearFilters": "Clear All Filters"
+      },
+      "allOwned": {
+        "title": "All Programs Owned!",
+        "message": "You already own all available training programs. Check back later for new releases!"
+      },
+      "noPrograms": {
+        "title": "No Programs Available",
+        "message": "There are no training programs available at the moment. Check back soon!"
+      }
+    },
+    "loadMore": {
+      "button": "Load More Programs"
+    }
   }
 }

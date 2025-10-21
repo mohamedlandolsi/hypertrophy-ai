@@ -1677,5 +1677,375 @@
     "accessNote": "Vous pouvez toujours accéder aux autres parties du site pendant que nous travaillons sur le système de chat. Nous nous excusons pour la gêne occasionnée.",
     "needHelp": "Besoin d'aide immédiate ?",
     "goBack": "Retour à l'accueil"
+  },
+  "NewHomePage": {
+    "hero": {
+      "trustBadges": {
+        "scienceBased": "Basé sur la Science",
+        "fullyCustomizable": "Entièrement Personnalisable",
+        "mobileWebAccess": "Accès Mobile et Web"
+      },
+      "headline": "Construisez Votre Programme d'Entraînement Parfait",
+      "subheadline": "Obtenez des programmes d'hypertrophie personnalisés basés sur les principes scientifiques. Bénéficiez des conseils d'experts IA pour maximiser la croissance musculaire.",
+      "cta": {
+        "primary": "Commencer Maintenant",
+        "secondary": "Parcourir les Programmes"
+      },
+      "socialProof": {
+        "workoutsLogged": "+ 10 000 Entraînements Enregistrés",
+        "rating": "4.9/5 Évaluation"
+      },
+      "mockup": {
+        "title": "Interface du Créateur de Programme",
+        "placeholder": "[Capture d'écran du Créateur de Programme]"
+      },
+      "indicators": {
+        "volumeOptimal": "Volume Optimal",
+        "exercisesSelected": "6 Exercices Sélectionnés"
+      }
+    },
+    "problemSolution": {
+      "title": "Pourquoi les Programmes Génériques ne Fonctionnent Pas",
+      "subtitle": "Arrêtez de perdre du temps avec des programmes non personnalisés. Obtenez un programme adapté à vos besoins.",
+      "problems": {
+        "generic": {
+          "title": "⚠️ Programmes Génériques Universels",
+          "description": "Ignorent votre niveau d'entraînement, votre équipement disponible et vos objectifs",
+          "solution": "✨ Solution : Programmes personnalisés qui s'adaptent à vos besoins et contraintes uniques"
+        },
+        "volume": {
+          "title": "📉 Volume d'Entraînement Sous-Optimal",
+          "description": "Trop ou pas assez - personne n'explique pourquoi",
+          "solution": "✨ Solution : Recommandations de volume basées sur la recherche pour chaque muscle"
+        },
+        "myths": {
+          "title": "🤔 Mythes et Idées Reçues Obsolètes",
+          "description": "Exercices « magiques » et plages de répétitions erronées",
+          "solution": "✨ Solution : Informations soutenues par la recherche avec sources documentées"
+        }
+      }
+    },
+    "howItWorks": {
+      "title": "Comment Ça Marche",
+      "subtitle": "Trois étapes simples pour obtenir votre programme idéal",
+      "steps": {
+        "choose": {
+          "title": "🎯 Choisissez un Programme",
+          "description": "Parcourez les programmes d'hypertrophie basés sur la science ou créez un programme personnalisé"
+        },
+        "customize": {
+          "title": "⚙️ Personnalisez-le",
+          "description": "Ajustez-le en fonction de votre équipement, de votre emploi du temps et de vos objectifs uniques"
+        },
+        "guidance": {
+          "title": "🤖 Obtenez des Conseils d'IA",
+          "description": "Obtenez des réponses instantanées aux questions d'entraînement et de nutrition"
+        },
+        "track": {
+          "title": "📊 Suivez et Progressez",
+          "description": "Enregistrez les entraînements, visualisez les progrès et ajustez le programme si nécessaire"
+        }
+      }
+    },
+    "features": {
+      "title": "Tout ce dont Vous Avez Besoin pour Développer Vos Muscles",
+      "subtitle": "Programmes professionnels, conseils d'experts et suivi puissant - tout en un seul endroit",
+      "programBuilder": {
+        "badge": "Créateur de Programmes",
+        "title": "Programmes d'Hypertrophie Personnalisés",
+        "description": "Créez ou personnalisez des programmes d'entraînement professionnels basés sur les dernières recherches scientifiques en hypertrophie.",
+        "screenshot": "[Capture d'écran du Créateur de Programme]",
+        "benefits": {
+          "science": {
+            "title": "Basé sur la Science",
+            "description": "Chaque programme suit les recommandations soutenues par la recherche pour la distribution du volume, la sélection des exercices et la planification des séances"
+          },
+          "flexible": {
+            "title": "Totalement Flexible",
+            "description": "Ajustez selon votre équipement disponible, vos jours d'entraînement et votre focus musculaire. Fonctionne en salle et à domicile"
+          },
+          "progressive": {
+            "title": "Surcharge Progressive Intégrée",
+            "description": "Suivi automatique du volume, de l'intensité et des répétitions au fil du temps pour assurer une progression continue"
+          }
+        }
+      },
+      "exerciseDatabase": {
+        "badge": "Base de Données d'Exercices",
+        "title": "Bibliothèque d'Exercices Complète",
+        "description": "Accédez à des centaines d'exercices avec des détails complets sur les muscles ciblés, les instructions d'exécution et les exigences en matériel.",
+        "screenshot": "[Capture d'écran de la Base de Données d'Exercices]",
+        "benefits": {
+          "comprehensive": {
+            "title": "Complet",
+            "description": "Plus de 300 exercices couvrant chaque groupe musculaire avec des conseils détaillés et une répartition des muscles ciblés"
+          },
+          "equipment": {
+            "title": "Filtrer par Équipement",
+            "description": "Trouvez facilement des alternatives en fonction de votre équipement disponible - poids libres, machines ou poids du corps"
+          },
+          "smart": {
+            "title": "Alternatives Intelligentes",
+            "description": "Obtenez des recommandations d'exercices alternatifs ciblant les mêmes muscles avec des modèles de mouvement similaires"
+          }
+        }
+      },
+      "aiAssistant": {
+        "badge": "Assistant IA",
+        "title": "Expert en Entraînement Intelligent 24/7",
+        "description": "Obtenez des réponses instantanées à vos questions sur l'entraînement, la nutrition et le choix des exercices - soutenues par la recherche scientifique.",
+        "screenshot": "[Capture d'écran de l'Interface de Chat IA]",
+        "benefits": {
+          "instant": {
+            "title": "Expertise Instantanée",
+            "description": "Obtenez des réponses instantanées aux questions de programmation, de forme d'exercice, de récupération et de nutrition"
+          },
+          "evidence": {
+            "title": "Soutenu par la Recherche",
+            "description": "Chaque réponse est soutenue par les dernières recherches en hypertrophie et nutrition sportive"
+          },
+          "context": {
+            "title": "Conscient du Contexte",
+            "description": "Se souvient de votre programme, vos objectifs et vos contraintes pour fournir des conseils personnalisés"
+          }
+        }
+      }
+    },
+    "pricing": {
+      "title": "Choisissez Votre Formule",
+      "subtitle": "Commencez avec des programmes gratuits ou obtenez un accès illimité avec Pro",
+      "individual": {
+        "title": "Programmes Individuels",
+        "price": "Gratuit",
+        "period": "pour les programmes gratuits",
+        "features": {
+          "programs": "Accès aux programmes gratuits sélectionnés",
+          "exercises": "Voir les détails complets des exercices",
+          "basics": "Fonctionnalités de suivi de base",
+          "support": "Support communautaire",
+          "mobile": "Accès mobile et web"
+        },
+        "cta": "Commencer Gratuitement"
+      },
+      "pro": {
+        "badge": "Le Plus Populaire",
+        "title": "Abonnement Pro",
+        "price": "9,99 €",
+        "period": "/ mois",
+        "yearly": "ou 99€/an (économisez 17%)",
+        "features": {
+          "unlimited": "Programmes illimités",
+          "custom": "Créateur de programmes personnalisés",
+          "ai": "Conseils IA illimités",
+          "advanced": "Analyses et suivi avancés",
+          "priority": "Support prioritaire",
+          "export": "Export et impression des programmes"
+        },
+        "cta": "Obtenir Pro",
+        "guarantee": "Garantie de remboursement de 30 jours"
+      }
+    },
+    "faq": {
+      "title": "Questions Fréquentes",
+      "subtitle": "Tout ce que vous devez savoir sur HypertroQ",
+      "questions": {
+        "trainer": {
+          "question": "Ai-je besoin d'un entraîneur personnel ?",
+          "answer": "Non ! HypertroQ vous fournit des programmes professionnels basés sur la recherche scientifique et des conseils d'experts IA. C'est comme avoir un coach d'hypertrophie dans votre poche, mais pour une fraction du coût. Vous pouvez suivre des programmes pré-conçus ou les personnaliser selon vos besoins."
+        },
+        "customize": {
+          "question": "Puis-je tout personnaliser complètement ?",
+          "answer": "Oui ! Chaque programme est entièrement personnalisable. Ajustez les jours d'entraînement, changez les exercices en fonction de votre équipement disponible, ajustez le volume et réglez l'intensité. Les programmes s'adaptent à vos besoins, pas l'inverse."
+        },
+        "exercises": {
+          "question": "Combien d'exercices y a-t-il dans la base de données ?",
+          "answer": "Nous avons plus de 300 exercices avec des détails complets - muscles ciblés, instructions d'exécution, exigences en équipement et alternatives intelligentes. La base de données est régulièrement mise à jour en fonction des nouvelles recherches et des retours des utilisateurs."
+        },
+        "ai": {
+          "question": "Comment fonctionne l'IA ?",
+          "answer": "Notre assistant IA est formé sur d'immenses recherches scientifiques en hypertrophie, principes de programmation et directives nutritionnelles. Il fournit des réponses instantanées à vos questions avec des citations de recherches réelles. Pensez-y comme un expert en entraînement disponible 24/7."
+        },
+        "switch": {
+          "question": "Puis-je changer de programme ?",
+          "answer": "Absolument ! Les utilisateurs Pro peuvent accéder à tous les programmes et basculer entre eux à tout moment. Vous pouvez également exécuter plusieurs programmes simultanément (par exemple, programme haut/bas plus spécialisation des bras)."
+        },
+        "mobile": {
+          "question": "Ça fonctionne sur mobile ?",
+          "answer": "Oui ! HypertroQ est entièrement optimisé pour mobile et web. Enregistrez les entraînements depuis votre téléphone à la salle, puis consultez les analyses détaillées sur ordinateur. Vos données se synchronisent parfaitement sur tous les appareils."
+        },
+        "afterPurchase": {
+          "question": "Que se passe-t-il après l'achat d'un programme ?",
+          "answer": "Après l'achat d'un programme individuel, vous obtenez un accès permanent. Vous pouvez le consulter, le personnaliser et suivre les progrès à tout moment. Pour l'abonnement Pro, vous obtenez un accès immédiat à tous les programmes et toutes les fonctionnalités avancées tant que votre abonnement est actif."
+        }
+      }
+    },
+    "finalCta": {
+      "title": "Prêt à Développer de Vrais Muscles ?",
+      "subtitle": "Rejoignez des milliers de pratiquants qui obtiennent de vrais progrès avec des programmes basés sur la science",
+      "cta": {
+        "primary": "Commencer Gratuitement Aujourd'hui",
+        "secondary": "Parcourir les Programmes"
+      },
+      "guarantees": {
+        "moneyBack": "Garantie de remboursement de 30 jours",
+        "lifetime": "Accès à vie aux programmes achetés",
+        "cancel": "Annulez votre abonnement à tout moment"
+      }
+    }
+  },
+  "ProgramsPage": {
+    "title": "Programmes d'Entraînement",
+    "subtitle": {
+      "guest": "Programmes d'entraînement basés sur la science pour les athlètes sérieux",
+      "admin": "Accès administrateur : Voir et gérer tous les programmes d'entraînement",
+      "pro": "Membre Pro : Accès complet à tous les programmes d'entraînement",
+      "user": "Découvrez des programmes professionnels conçus pour vos objectifs"
+    },
+    "loading": {
+      "title": "Chargement du Programme",
+      "message": "Vous emmène au programme...",
+      "programs": "Chargement des programmes..."
+    },
+    "error": {
+      "title": "Impossible de Charger les Programmes",
+      "message": "Un problème est survenu lors du chargement des programmes d'entraînement. Veuillez réessayer plus tard.",
+      "retry": "Réessayer"
+    },
+    "search": {
+      "placeholder": "Rechercher des programmes...",
+      "showing": "Affichage de {count} sur {total} programmes"
+    },
+    "filters": {
+      "difficulty": {
+        "label": "Difficulté",
+        "selectLevel": "Sélectionner le Niveau",
+        "beginner": "Débutant",
+        "intermediate": "Intermédiaire",
+        "advanced": "Avancé"
+      },
+      "split": {
+        "label": "Type de Split",
+        "title": "Split d'Entraînement"
+      },
+      "duration": {
+        "label": "Durée",
+        "title": "Durée du Programme"
+      },
+      "price": {
+        "label": "Prix",
+        "title": "Gamme de Prix",
+        "under39": "Moins de $39",
+        "range4059": "$40-$59",
+        "over60": "$60+"
+      },
+      "clearAll": "Tout Effacer",
+      "activeFilters": "Recherche : {query}"
+    },
+    "sort": {
+      "label": "Trier par",
+      "popular": "Plus Populaire",
+      "newest": "Plus Récent",
+      "rating": "Mieux Noté",
+      "priceLow": "Prix : Croissant",
+      "priceHigh": "Prix : Décroissant"
+    },
+    "sections": {
+      "featured": {
+        "title": "Programmes en Vedette",
+        "badge": "Plus Populaire"
+      },
+      "myPrograms": {
+        "title": "Mes Programmes",
+        "titleAdmin": "Tous les Programmes (Admin)",
+        "titlePro": "Tous les Programmes",
+        "subtitle": "Programmes que vous possédez et pouvez configurer",
+        "subtitleAdmin": "Accès administratif à tous les programmes d'entraînement",
+        "subtitlePro": "Adhésion Pro : Accès complet à tous les programmes d'entraînement",
+        "count": "{count} programme",
+        "countPlural": "{count} programmes"
+      },
+      "browse": {
+        "titleMore": "Plus de Programmes",
+        "titleAll": "Tous les Programmes",
+        "subtitle": "Découvrez de nouveaux programmes à ajouter à votre collection",
+        "subtitleGuest": "Programmes d'entraînement professionnels conçus pour vos objectifs de fitness"
+      }
+    },
+    "card": {
+      "badges": {
+        "new": "NOUVEAU",
+        "featured": "EN VEDETTE",
+        "admin": "Admin",
+        "proAccess": "Accès Pro",
+        "owned": "Possédé"
+      },
+      "highlights": {
+        "title": "Points Forts :",
+        "item1": "Surcharge progressive intégrée",
+        "item2": "Base de données d'exercices complète",
+        "item3": "Coaching IA inclus"
+      },
+      "specs": {
+        "mobileTracking": "Suivi mobile",
+        "users": "{count}+ utilisateurs"
+      },
+      "pricing": {
+        "oneTime": "paiement unique",
+        "lifetimeAccess": "Accès à vie inclus"
+      },
+      "cta": {
+        "accessProgram": "Accéder au Programme",
+        "viewDetails": "Voir les Détails",
+        "loading": "Chargement..."
+      }
+    },
+    "proUpsell": {
+      "badge": "ABONNEMENT PRO",
+      "title": "Accédez à TOUS les Programmes",
+      "subtitle": "Débloquez un accès illimité aux programmes actuels et futurs",
+      "benefits": {
+        "allPrograms": "Tous les programmes ({count}+ et en croissance)",
+        "unlimitedAI": "Assistant IA illimité",
+        "analytics": "Analyses d'entraînement avancées",
+        "earlyAccess": "Accès anticipé aux nouveaux programmes"
+      },
+      "pricing": {
+        "monthly": "$19",
+        "perMonth": "/mois",
+        "yearly": "ou $149/an (économisez 37%)"
+      },
+      "cta": "En Savoir Plus sur Pro"
+    },
+    "proBanner": {
+      "badge": "ACCÈS ILLIMITÉ",
+      "title": "Prêt à débloquer tous les {count}+ programmes ?",
+      "subtitle": "Obtenez Pro et accédez à chaque programme, coaching IA illimité et analyses avancées pour un prix mensuel unique.",
+      "cta": "Voir les Plans Pro",
+      "guarantee": "Garantie de remboursement de 30 jours • Annulez à tout moment"
+    },
+    "signInCta": {
+      "title": "Prêt à Commencer l'Entraînement ?",
+      "subtitle": "Connectez-vous pour acheter des programmes et suivre vos progrès avec notre application mobile.",
+      "signIn": "Se Connecter",
+      "createAccount": "Créer un Compte"
+    },
+    "emptyState": {
+      "noResults": {
+        "title": "Aucun Programme Trouvé",
+        "message": "Aucun programme ne correspond à vos filtres actuels. Essayez d'ajuster vos critères de recherche.",
+        "clearFilters": "Effacer Tous les Filtres"
+      },
+      "allOwned": {
+        "title": "Tous les Programmes Possédés !",
+        "message": "Vous possédez déjà tous les programmes d'entraînement disponibles. Revenez plus tard pour les nouvelles sorties !"
+      },
+      "noPrograms": {
+        "title": "Aucun Programme Disponible",
+        "message": "Il n'y a pas de programmes d'entraînement disponibles pour le moment. Revenez bientôt !"
+      }
+    },
+    "loadMore": {
+      "button": "Charger Plus de Programmes"
+    }
   }
 }

@@ -3,891 +3,728 @@
 import { useTranslations, useLocale } from 'next-intl';
 import { Button } from "@/components/ui/button";
 import Link from "next/link";
-import Image from "next/image";
-import { useEffect, useState } from "react";
-import { createClient } from "@/lib/supabase/client";
-import type { User } from "@supabase/supabase-js";
-import PulsatingButton from "@/components/magicui/pulsating-button";
-import LineShadowText from "@/components/magicui/line-shadow-text";
-import { Check, X, MessageSquare, ArrowRight, Zap } from "lucide-react";
-import { motion, useInView } from "framer-motion";
 import { useRef } from "react";
-import AnimatedBackground from "@/components/ui/animated-background";
-import InteractiveLogo from "@/components/ui/interactive-logo";
-import Typewriter from "@/components/ui/typewriter";
-import ConnectingPath from "@/components/ui/connecting-path";
-import ClientOnly from "@/components/ui/client-only";
-import Head from "next/head";
-import { generateSchema } from "@/lib/seo";
-import ThreeDCTAButton from "@/components/ui/three-d-cta-button";
+import { Check, X, ArrowRight, Zap, Target, Users, Shield, Star, ChevronDown } from "lucide-react";
+import { motion, useInView } from "framer-motion";
+import {
+  Accordion,
+  AccordionContent,
+  AccordionItem,
+  AccordionTrigger,
+} from "@/components/ui/accordion";
 
 export default function Home() {
-  const t = useTranslations('HomePage');
+  const t = useTranslations('NewHomePage');
   const locale = useLocale();
-  const [user, setUser] = useState<User | null>(null);
-  const [showGenericAnswer, setShowGenericAnswer] = useState(false);
-  const [showHypertroQAnswer, setShowHypertroQAnswer] = useState(false);
-  const trustBarRef = useRef(null);
-  const chatButtonRef = useRef<HTMLDivElement>(null);
-  const isTrustBarInView = useInView(trustBarRef, { once: true, margin: "-50px" });
-
-  useEffect(() => {
-    const checkUser = async () => {
-      const supabase = createClient();
-      const { data: { user: currentUser } } = await supabase.auth.getUser();
-      setUser(currentUser);
-    };
-
-    checkUser();
-
-    // Start typewriter animation sequence
-    const timer1 = setTimeout(() => setShowGenericAnswer(true), 2000);
-    const timer2 = setTimeout(() => setShowHypertroQAnswer(true), 6000);
-    
-    // Auto-scroll to chat button after initial animations
-    const scrollTimer = setTimeout(() => {
-      if (chatButtonRef.current) {
-        chatButtonRef.current.scrollIntoView({ 
-          behavior: 'smooth', 
-          block: 'center',
-          inline: 'nearest' 
-        });
-      }
-    }, 3000); // Scroll after 3 seconds
-    
-    return () => {
-      clearTimeout(timer1);
-      clearTimeout(timer2);
-      clearTimeout(scrollTimer);
-    };
-  }, []);
+  const heroRef = useRef(null);
+  const isHeroInView = useInView(heroRef, { once: true });
 
   return (
-    <>
-      <Head>
-        <script
-          type="application/ld+json"
-          dangerouslySetInnerHTML={{
-            __html: JSON.stringify([
-              generateSchema('WebSite'),
-              generateSchema('Organization'),
-              generateSchema('Product')
-            ])
-          }}
-        />
-      </Head>
+    <main className="flex flex-col min-h-screen">
       
-      <main className="flex flex-col min-h-screen">
-        {/* Enhanced Hero Section */}
-        <section className="relative flex-1 flex items-center justify-center px-4 py-20 overflow-hidden">
-          {/* Animated Background */}
-          <ClientOnly fallback={<div className="absolute inset-0 bg-gradient-to-br from-blue-50/50 via-purple-50/50 to-background dark:from-blue-950/20 dark:via-purple-950/20 dark:to-background" />}>
-            <AnimatedBackground />
-          </ClientOnly>
-          
-          <div className="relative z-10 text-center max-w-6xl mx-auto">
-            <motion.div 
-              className="flex justify-center mb-8"
-              initial={{ opacity: 0, scale: 0.5 }}
-              animate={{ opacity: 1, scale: 1 }}
-              transition={{ duration: 0.8, ease: "easeOut" }}
+      {/* Hero Section */}
+      <section 
+        ref={heroRef}
+        className="relative bg-gradient-to-br from-slate-50 via-blue-50 to-purple-50 dark:from-slate-950 dark:via-blue-950 dark:to-purple-950 px-4 py-20 md:py-32 overflow-hidden"
+      >
+        {/* Background Pattern */}
+        <div className="absolute inset-0 bg-grid-slate-200/20 dark:bg-grid-slate-700/20 [mask-image:radial-gradient(ellipse_at_center,transparent_20%,black)]"></div>
+        
+        <div className="max-w-7xl mx-auto relative z-10">
+          <div className="grid lg:grid-cols-2 gap-12 items-center">
+            
+            {/* Left Column - Hero Content */}
+            <motion.div
+              initial={{ opacity: 0, x: -50 }}
+              animate={isHeroInView ? { opacity: 1, x: 0 } : {}}
+              transition={{ duration: 0.8 }}
             >
-              <ClientOnly fallback={
-                <div className="h-24 w-24 md:h-32 md:w-32">
-                  <Image 
-                    src="/logo.png"
-                    alt="HypertroQ - AI-Powered Personal Fitness Coach Logo"
-                    width={128}
-                    height={128}
-                    className="h-24 w-24 md:h-32 md:w-32 object-contain"
-                    priority
-                  />
-                </div>
-              }>
-                <InteractiveLogo 
-                  src="/logo.png"
-                  alt="HypertroQ - AI-Powered Personal Fitness Coach Logo"
-                width={128}
-                height={128}
-                className="h-24 w-24 md:h-32 md:w-32"
-              />
-            </ClientOnly>
-          </motion.div>
-          
-          {/* Main Title */}
-          <motion.h1 
-            className="text-4xl md:text-6xl lg:text-7xl font-bold mb-6 relative z-10"
-            initial={{ opacity: 0, y: 30 }}
-            animate={{ opacity: 1, y: 0 }}
-            transition={{ duration: 0.8, delay: 0.2 }}
-          >
-            <LineShadowText shadowColor="rgb(59, 130, 246)" className="text-4xl md:text-6xl lg:text-7xl">
-              {t('hero.mainTitle')}
-            </LineShadowText>
-          </motion.h1>
-          
-          {/* Subtitle */}
-          <motion.p 
-            className="text-lg md:text-xl lg:text-2xl text-muted-foreground mb-6 max-w-4xl mx-auto leading-relaxed relative z-10"
-            initial={{ opacity: 0, y: 20 }}
-            animate={{ opacity: 1, y: 0 }}
-            transition={{ duration: 0.8, delay: 0.4 }}
-          >
-            {t('hero.mainSubtitle')}
-            <br />
-            <span className="text-base md:text-lg">{t('hero.mainDescription')}</span>
-          </motion.p>
-          
-          {/* Scientific Differentiator Highlight */}
-          <motion.div 
-            className="flex flex-col sm:flex-row items-center justify-center gap-3 md:gap-4 mb-8 max-w-2xl mx-auto"
-            initial={{ opacity: 0, y: 20 }}
-            animate={{ opacity: 1, y: 0 }}
-            transition={{ duration: 0.8, delay: 0.5 }}
-          >
-            <div className="flex items-center gap-2 px-3 py-1 bg-red-500/10 text-red-600 dark:text-red-400 rounded-full text-sm font-medium">
-              <X className="w-4 h-4" />
-              {t('hero.traditionalPrograms')}
-            </div>
-            <div className="w-8 h-1 bg-gradient-to-r from-red-500 to-green-500 rounded-full" />
-            <div className="flex items-center gap-2 px-3 py-1 bg-green-500/10 text-green-600 dark:text-green-400 rounded-full text-sm font-medium">
-              <Check className="w-4 h-4" />
-              {t('hero.optimizedProtocols')}
-            </div>
-          </motion.div>
-
-          {/* Action Buttons */}
-          <motion.div 
-            ref={chatButtonRef}
-            id="action-buttons"
-            className="flex flex-col sm:flex-row gap-4 justify-center mb-12"
-            initial={{ opacity: 0, y: 20 }}
-            animate={{ opacity: 1, y: 0 }}
-            transition={{ duration: 0.8, delay: 0.6 }}
-          >
-            {user ? (
-              <div className="animate-fade-in flex justify-center">
-                <ThreeDCTAButton
-                  href={`/${locale}/chat`}
-                  label={t('hero.goToChat')}
-                  ariaLabel={t('hero.goToChat')}
-                  className="w-full sm:w-auto"
-                />
+              {/* Trust Badges */}
+              <div className="flex flex-wrap gap-3 mb-6">
+                <span className="inline-flex items-center gap-1 px-3 py-1 bg-blue-100 dark:bg-blue-900/30 text-blue-700 dark:text-blue-300 text-sm font-medium rounded-full">
+                  <Shield className="w-4 h-4" />
+                  {t('hero.trustBadges.scienceBased')}
+                </span>
+                <span className="inline-flex items-center gap-1 px-3 py-1 bg-purple-100 dark:bg-purple-900/30 text-purple-700 dark:text-purple-300 text-sm font-medium rounded-full">
+                  <Target className="w-4 h-4" />
+                  {t('hero.trustBadges.fullyCustomizable')}
+                </span>
+                <span className="inline-flex items-center gap-1 px-3 py-1 bg-green-100 dark:bg-green-900/30 text-green-700 dark:text-green-300 text-sm font-medium rounded-full">
+                  <Zap className="w-4 h-4" />
+                  {t('hero.trustBadges.mobileWebAccess')}
+                </span>
               </div>
-            ) : (
-              <div className="animate-fade-in flex flex-col sm:flex-row gap-3 md:gap-4 justify-center items-center">
+
+              {/* Headline */}
+              <h1 className="text-4xl md:text-5xl lg:text-6xl font-bold mb-6 leading-tight">
+                {t('hero.headline')}
+              </h1>
+
+              {/* Subheadline */}
+              <p className="text-xl text-slate-600 dark:text-slate-300 mb-8 leading-relaxed">
+                {t('hero.subheadline')}
+              </p>
+
+              {/* CTAs */}
+              <div className="flex flex-col sm:flex-row gap-4 mb-8">
                 <motion.div
                   whileHover={{ scale: 1.05 }}
                   whileTap={{ scale: 0.95 }}
-                  className="relative group w-full sm:w-auto"
                 >
-                  {/* Glowing background effect */}
-                  <div className="absolute -inset-1 bg-gradient-to-r from-blue-600 via-purple-600 to-cyan-600 rounded-2xl blur-lg opacity-75 group-hover:opacity-100 transition duration-1000 group-hover:duration-200 animate-tilt"></div>
-                  
-                  <PulsatingButton className="relative bg-gradient-to-r from-blue-600 via-purple-600 to-cyan-600 hover:from-blue-700 hover:via-purple-700 hover:to-cyan-700 text-white text-base md:text-lg px-8 md:px-10 py-4 md:py-5 rounded-xl font-bold shadow-2xl border border-white/20 backdrop-blur-sm w-full sm:w-auto">
-                    <Link href={`/${locale}/signup`} className="flex items-center justify-center gap-3">
-                      <Zap className="w-5 h-5 animate-pulse" />
-                      {t('hero.getStartedFree')}
-                      <ArrowRight className="w-5 h-5 group-hover:translate-x-1 transition-transform duration-300" />
-                    </Link>
-                  </PulsatingButton>
-                </motion.div>
-                
-                <motion.div
-                  whileHover={{ scale: 1.02 }}
-                  whileTap={{ scale: 0.98 }}
-                >
-                  <Button asChild variant="outline" size="lg" className="text-base md:text-lg px-6 md:px-8 py-2.5 md:py-3 rounded-xl border-2 hover:bg-muted/50 w-full sm:w-auto backdrop-blur-sm border-primary/20 hover:border-primary/40 transition-all duration-300">
-                    <Link href="#comparison-section" className="flex items-center gap-2">
-                      {t('hero.seeDemo')}
-                      <ArrowRight className="w-4 h-4" />
+                  <Button asChild size="lg" className="w-full sm:w-auto text-lg px-8 py-6 bg-gradient-to-r from-blue-600 to-purple-600 hover:from-blue-700 hover:to-purple-700 shadow-lg">
+                    <Link href={`/${locale}/programs`} className="flex items-center gap-2">
+                      {t('hero.cta.primary')}
+                      <ArrowRight className="w-5 h-5" />
                     </Link>
                   </Button>
                 </motion.div>
-              </div>
-            )}
-          </motion.div>
-
-          {/* Chat Demo */}
-          <motion.div
-            className="max-w-2xl mx-auto"
-            initial={{ opacity: 0, y: 30 }}
-            animate={{ opacity: 1, y: 0 }}
-            transition={{ duration: 0.8, delay: 0.8 }}
-          >
-            <div className="bg-background/80 backdrop-blur-sm border border-border/50 rounded-2xl p-6 shadow-2xl">
-              <div className="flex items-center gap-3 mb-4">
-                <div className="flex gap-2">
-                  <div className="w-3 h-3 bg-red-500 rounded-full"></div>
-                  <div className="w-3 h-3 bg-yellow-500 rounded-full"></div>
-                  <div className="w-3 h-3 bg-green-500 rounded-full"></div>
-                </div>
-                <h3 className="text-sm font-medium text-muted-foreground">{t('chatDemo.title')}</h3>
-              </div>
-              
-              <div className="space-y-4">
-                {/* User Question */}
-                <div className="flex justify-end">
-                  <div className="bg-primary text-primary-foreground px-4 py-2 rounded-2xl rounded-br-md max-w-xs">
-                    <p className="text-sm">{t('chatDemo.userQuestion')}</p>
-                  </div>
-                </div>
-                
-                {/* AI Response */}
-                <div className="flex items-start gap-3">
-                  <div className="w-8 h-8 bg-primary/10 rounded-full flex items-center justify-center flex-shrink-0">
-                    <Image src="/logo.png" alt="HypertroQ" width={20} height={20} className="w-5 h-5" />
-                  </div>
-                  <div className="bg-muted px-4 py-2 rounded-2xl rounded-bl-md max-w-sm">
-                    <div className="flex items-center gap-2 mb-1">
-                      <span className="text-xs font-medium text-primary">{t('chatDemo.aiName')}</span>
-                    </div>
-                    <p className="text-sm text-muted-foreground">{t('chatDemo.aiResponse')}</p>
-                  </div>
-                </div>
-              </div>
-            </div>
-          </motion.div>
-        </div>
-      </section>
-
-      {/* Dynamic Trust Bar Section */}
-      <motion.section 
-        ref={trustBarRef}
-        className="py-6 px-4 bg-gradient-to-r from-blue-50 to-purple-50 dark:from-blue-950/20 dark:to-purple-950/20 border-y border-border/50"
-        initial={{ opacity: 0, y: 20 }}
-        animate={isTrustBarInView ? { opacity: 1, y: 0 } : {}}
-        transition={{ duration: 0.8, delay: 0.5 }}
-      >
-        <div className="max-w-4xl mx-auto text-center px-4">
-          <p className="text-base md:text-lg font-medium text-muted-foreground">
-            <span className="text-primary font-semibold">{t('trustBar.scienceBased')}</span> {t('trustBar.description')}
-          </p>
-        </div>
-      </motion.section>
-
-      {/* Comparison Section */}
-      <section id="comparison-section" className="py-20 px-4 bg-muted/30 dark:bg-black">
-        <div className="max-w-7xl mx-auto">
-          <motion.div 
-            className="text-center mb-16"
-            initial={{ opacity: 0, y: 30 }}
-            whileInView={{ opacity: 1, y: 0 }}
-            viewport={{ once: true }}
-            transition={{ duration: 0.8 }}
-          >
-            <h2 className="text-3xl md:text-4xl lg:text-5xl font-bold mb-4">
-              <span className="bg-gradient-to-r from-red-400 to-green-400 bg-clip-text text-transparent dark:from-red-400 dark:to-green-400">
-                {t('comparison.title')}
-              </span>
-            </h2>
-            <p className="text-lg md:text-xl text-muted-foreground">{t('comparison.subtitle')}</p>
-          </motion.div>
-
-          <div className="grid lg:grid-cols-2 gap-8 items-stretch">
-            {/* Generic AI Card */}
-            <motion.div 
-              className="bg-red-50 dark:bg-red-950/30 rounded-3xl p-6 md:p-8 border-2 border-red-200 dark:border-red-500/30 shadow-xl"
-              initial={{ opacity: 0, x: -50 }}
-              whileInView={{ opacity: 1, x: 0 }}
-              viewport={{ once: true }}
-              transition={{ duration: 0.8, delay: 0.2 }}
-            >
-              <div className="flex items-center mb-6">
-                <div className="w-10 h-10 md:w-12 md:h-12 bg-red-100 dark:bg-red-500/20 rounded-full flex items-center justify-center mr-3 md:mr-4">
-                  <MessageSquare className="w-5 h-5 md:w-6 md:h-6 text-red-600 dark:text-red-400" />
-                </div>
-                <h3 className="text-lg md:text-2xl font-bold text-red-700 dark:text-red-400">{t('comparison.genericAI')}</h3>
-              </div>
-              
-              <div className="mb-6">
-                <div className="bg-white dark:bg-gray-800/50 rounded-lg p-3 md:p-4 mb-4">
-                  <p className="font-semibold text-sm md:text-base text-slate-600 dark:text-gray-300">{t('comparison.questionLabel')}: &quot;{t('comparison.question')}&quot;</p>
-                </div>
-                <div className="bg-red-100 dark:bg-red-950/30 rounded-lg p-3 md:p-4 min-h-[120px] md:min-h-[140px]">
-                  {showGenericAnswer && (
-                    <ClientOnly>
-                      <Typewriter
-                        text={t('comparison.genericResponse')}
-                        delay={25}
-                        className="text-sm md:text-base text-slate-700 dark:text-gray-300"
-                        highlightTerms={['8-12 reps', 'feel the burn', 'confuse the muscle']}
-                      />
-                    </ClientOnly>
-                  )}
-                </div>
+                <Button asChild variant="outline" size="lg" className="w-full sm:w-auto text-lg px-8 py-6">
+                  <Link href="#how-it-works">
+                    {t('hero.cta.secondary')}
+                    <ChevronDown className="w-5 h-5 ml-2" />
+                  </Link>
+                </Button>
               </div>
 
-              <div className="space-y-3">
-                <div className="flex items-center text-red-600 dark:text-red-400">
-                  <X className="w-4 h-4 md:w-5 md:h-5 mr-2 flex-shrink-0" />
-                  <span className="text-sm md:text-base">{t('comparison.genericCons.outdated')}</span>
+              {/* Social Proof */}
+              <div className="flex items-center gap-6 text-sm text-slate-600 dark:text-slate-400">
+                <div className="flex items-center gap-2">
+                  <Users className="w-5 h-5 text-blue-600" />
+                  <span>{t('hero.socialProof.workoutsLogged')}</span>
                 </div>
-                <div className="flex items-center text-red-600 dark:text-red-400">
-                  <X className="w-4 h-4 md:w-5 md:h-5 mr-2 flex-shrink-0" />
-                  <span className="text-sm md:text-base">{t('comparison.genericCons.myths')}</span>
-                </div>
-                <div className="flex items-center text-red-600 dark:text-red-400">
-                  <X className="w-4 h-4 md:w-5 md:h-5 mr-2 flex-shrink-0" />
-                  <span className="text-sm md:text-base">{t('comparison.genericCons.generic')}</span>
-                </div>
-                <div className="flex items-center text-red-600 dark:text-red-400">
-                  <X className="w-4 h-4 md:w-5 md:h-5 mr-2 flex-shrink-0" />
-                  <span className="text-sm md:text-base">{t('comparison.genericCons.noPersonalization')}</span>
+                <div className="flex items-center gap-2">
+                  <Star className="w-5 h-5 text-yellow-500 fill-yellow-500" />
+                  <span>{t('hero.socialProof.rating')}</span>
                 </div>
               </div>
             </motion.div>
 
-            {/* HypertroQ Card */}
-            <motion.div 
-              className="bg-green-50 dark:bg-green-950/30 rounded-3xl p-6 md:p-8 border-2 border-green-200 dark:border-green-500/30 shadow-xl"
+            {/* Right Column - Hero Visual */}
+            <motion.div
               initial={{ opacity: 0, x: 50 }}
-              whileInView={{ opacity: 1, x: 0 }}
-              viewport={{ once: true }}
-              transition={{ duration: 0.8, delay: 0.4 }}
+              animate={isHeroInView ? { opacity: 1, x: 0 } : {}}
+              transition={{ duration: 0.8, delay: 0.2 }}
+              className="relative"
             >
-              <div className="flex items-center mb-6">
-                <div className="w-10 h-10 md:w-12 md:h-12 bg-green-100 dark:bg-green-500/20 rounded-full flex items-center justify-center mr-3 md:mr-4">
-                  <Image src="/logo.png" alt="HypertroQ" width={24} height={24} className="w-5 h-5 md:w-6 md:h-6" />
+              <div className="relative bg-white dark:bg-slate-800 rounded-2xl shadow-2xl p-6 border border-slate-200 dark:border-slate-700">
+                {/* Mockup placeholder - replace with actual screenshot */}
+                <div className="aspect-video bg-gradient-to-br from-blue-100 to-purple-100 dark:from-blue-900 dark:to-purple-900 rounded-lg flex items-center justify-center">
+                  <div className="text-center p-6">
+                    <div className="w-20 h-20 mx-auto mb-4 bg-white dark:bg-slate-700 rounded-full flex items-center justify-center">
+                      <Target className="w-10 h-10 text-blue-600" />
+                    </div>
+                    <p className="text-lg font-semibold text-slate-700 dark:text-slate-200">
+                      {t('hero.mockup.title')}
+                    </p>
+                    <p className="text-sm text-slate-500 dark:text-slate-400 mt-2">
+                      {t('hero.mockup.placeholder')}
+                    </p>
+                  </div>
                 </div>
-                <h3 className="text-lg md:text-2xl font-bold text-green-700 dark:text-green-400">HypertroQ</h3>
               </div>
               
-              <div className="mb-6">
-                <div className="bg-white dark:bg-gray-800/50 rounded-lg p-3 md:p-4 mb-4">
-                  <p className="font-semibold text-sm md:text-base text-slate-600 dark:text-gray-300">{t('comparison.questionLabel')}: &quot;{t('comparison.question')}&quot;</p>
-                </div>
-                <div className="bg-green-100 dark:bg-green-950/30 rounded-lg p-3 md:p-4 min-h-[120px] md:min-h-[140px]">
-                  {showHypertroQAnswer && (
-                    <ClientOnly>
-                      <Typewriter
-                        text={t('comparison.hypertroqResponse')}
-                        delay={25}
-                        className="text-sm md:text-base text-slate-700 dark:text-gray-300"
-                        highlightTerms={['5-10 reps', 'RIR', 'mechanical tension', 'progressive overload']}
-                      />
-                    </ClientOnly>
-                  )}
-                </div>
+              {/* Floating indicators */}
+              <div className="absolute -left-6 top-20 bg-green-500 text-white px-4 py-2 rounded-lg shadow-lg text-sm font-medium">
+                ✓ {t('hero.indicators.volumeOptimal')}
               </div>
-
-              <div className="space-y-3">
-                <div className="flex items-center text-green-600 dark:text-green-400">
-                  <Check className="w-4 h-4 md:w-5 md:h-5 mr-2 flex-shrink-0" />
-                  <span className="text-sm md:text-base">{t('comparison.hypertroqPros.research')}</span>
-                </div>
-                <div className="flex items-center text-green-600 dark:text-green-400">
-                  <Check className="w-4 h-4 md:w-5 md:h-5 mr-2 flex-shrink-0" />
-                  <span className="text-sm md:text-base">{t('comparison.hypertroqPros.evidenceBased')}</span>
-                </div>
-                <div className="flex items-center text-green-600 dark:text-green-400">
-                  <Check className="w-4 h-4 md:w-5 md:h-5 mr-2 flex-shrink-0" />
-                  <span className="text-sm md:text-base">{t('comparison.hypertroqPros.personalized')}</span>
-                </div>
-                <div className="flex items-center text-green-600 dark:text-green-400">
-                  <Check className="w-4 h-4 md:w-5 md:h-5 mr-2 flex-shrink-0" />
-                  <span className="text-sm md:text-base">{t('comparison.hypertroqPros.memory')}</span>
-                </div>
+              <div className="absolute -right-6 bottom-20 bg-blue-500 text-white px-4 py-2 rounded-lg shadow-lg text-sm font-medium">
+                {t('hero.indicators.exercisesSelected')}
               </div>
             </motion.div>
           </div>
         </div>
       </section>
 
-      {/* Scientific Credibility Section */}
-      <section className="py-20 px-4 bg-gradient-to-br from-blue-50 via-purple-50 to-indigo-50 dark:from-blue-950/20 dark:via-purple-950/20 dark:to-indigo-950/20">
+      {/* Problem/Solution Section */}
+      <section className="py-20 px-4 bg-white dark:bg-slate-900">
         <div className="max-w-7xl mx-auto">
-          <motion.div 
-            className="text-center mb-16"
+          <motion.div
             initial={{ opacity: 0, y: 30 }}
             whileInView={{ opacity: 1, y: 0 }}
             viewport={{ once: true }}
-            transition={{ duration: 0.8 }}
+            className="text-center mb-16"
           >
-            <h2 className="text-2xl md:text-4xl lg:text-5xl font-bold mb-4 relative z-10">
-              <LineShadowText shadowColor="rgb(99, 102, 241)" className="text-3xl md:text-4xl lg:text-5xl">
-                {t('science.title')}
-              </LineShadowText>
+            <h2 className="text-4xl md:text-5xl font-bold mb-4">
+              {t('problemSolution.title')}
             </h2>
-            <p className="text-lg md:text-xl text-muted-foreground relative z-10">{t('science.subtitle')}</p>
+            <p className="text-xl text-slate-600 dark:text-slate-300">
+              {t('problemSolution.subtitle')}
+            </p>
           </motion.div>
 
-          <div className="grid sm:grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6 lg:gap-8">
-            <motion.div 
-              className="group relative bg-white dark:bg-slate-800/50 rounded-3xl p-6 md:p-8 border border-border/50 shadow-xl hover:shadow-2xl transition-all duration-300 hover:scale-105 backdrop-blur-sm"
-              initial={{ opacity: 0, y: 50 }}
+          <div className="grid md:grid-cols-3 gap-8">
+            {/* Problem 1 */}
+            <motion.div
+              initial={{ opacity: 0, y: 30 }}
               whileInView={{ opacity: 1, y: 0 }}
               viewport={{ once: true }}
-              transition={{ duration: 0.8, delay: 0.1 }}
-              whileHover={{ y: -5 }}
+              transition={{ delay: 0.1 }}
+              className="bg-red-50 dark:bg-red-950/20 rounded-xl p-6 border-2 border-red-200 dark:border-red-800"
             >
-              {/* Gradient background overlay */}
-              <div className="absolute inset-0 bg-gradient-to-br from-blue-50/50 via-blue-100/30 to-blue-50/50 dark:from-blue-950/20 dark:via-blue-900/10 dark:to-blue-950/20 rounded-3xl opacity-0 group-hover:opacity-100 transition-opacity duration-300" />
-              
-              {/* Animated icon container */}
-              <motion.div 
-                className="relative w-16 h-16 md:w-20 md:h-20 bg-gradient-to-br from-blue-500 to-blue-600 rounded-2xl flex items-center justify-center mx-auto mb-4 md:mb-6 shadow-lg"
-                whileHover={{ rotate: 360, scale: 1.1 }}
-                transition={{ duration: 0.6, type: "spring", stiffness: 200 }}
-              >
-                <div className="absolute inset-0 bg-gradient-to-br from-blue-400 to-blue-700 rounded-2xl opacity-0 group-hover:opacity-20 transition-opacity duration-300" />
-                <span className="text-2xl md:text-3xl relative z-10">🧬</span>
-              </motion.div>
-              
-              <div className="relative z-10">
-                <h3 className="text-xl md:text-2xl font-bold mb-3 md:mb-4 text-center group-hover:text-blue-600 dark:group-hover:text-blue-400 transition-colors duration-300">
-                  {t('features.latestResearch.title')}
-                </h3>
-                <p className="text-sm md:text-base text-muted-foreground text-center leading-relaxed group-hover:text-slate-600 dark:group-hover:text-slate-300 transition-colors duration-300">
-                  {t('features.latestResearch.description')}
+              <X className="w-12 h-12 text-red-600 mb-4" />
+              <h3 className="text-xl font-bold mb-3 text-red-900 dark:text-red-200">
+                {t('problemSolution.problems.generic.title')}
+              </h3>
+              <p className="text-slate-600 dark:text-slate-300 mb-4">
+                {t('problemSolution.problems.generic.description')}
+              </p>
+              <div className="pt-4 border-t border-red-200 dark:border-red-800">
+                <Check className="w-6 h-6 text-green-600 mb-2" />
+                <p className="text-sm font-medium text-green-900 dark:text-green-200">
+                  {t('problemSolution.problems.generic.solution')}
                 </p>
               </div>
-              
-              {/* Subtle border glow on hover */}
-              <div className="absolute inset-0 rounded-3xl border border-blue-200/0 group-hover:border-blue-200/50 dark:group-hover:border-blue-800/50 transition-all duration-300" />
             </motion.div>
 
-            <motion.div 
-              className="group relative bg-white dark:bg-slate-800/50 rounded-3xl p-6 md:p-8 border border-border/50 shadow-xl hover:shadow-2xl transition-all duration-300 hover:scale-105 backdrop-blur-sm"
-              initial={{ opacity: 0, y: 50 }}
+            {/* Problem 2 */}
+            <motion.div
+              initial={{ opacity: 0, y: 30 }}
               whileInView={{ opacity: 1, y: 0 }}
               viewport={{ once: true }}
-              transition={{ duration: 0.8, delay: 0.2 }}
-              whileHover={{ y: -5 }}
+              transition={{ delay: 0.2 }}
+              className="bg-red-50 dark:bg-red-950/20 rounded-xl p-6 border-2 border-red-200 dark:border-red-800"
             >
-              {/* Gradient background overlay */}
-              <div className="absolute inset-0 bg-gradient-to-br from-purple-50/50 via-purple-100/30 to-purple-50/50 dark:from-purple-950/20 dark:via-purple-900/10 dark:to-purple-950/20 rounded-3xl opacity-0 group-hover:opacity-100 transition-opacity duration-300" />
-              
-              {/* Animated icon container */}
-              <motion.div 
-                className="relative w-16 h-16 md:w-20 md:h-20 bg-gradient-to-br from-purple-500 to-purple-600 rounded-2xl flex items-center justify-center mx-auto mb-4 md:mb-6 shadow-lg"
-                whileHover={{ rotate: 360, scale: 1.1 }}
-                transition={{ duration: 0.6, type: "spring", stiffness: 200 }}
-              >
-                <div className="absolute inset-0 bg-gradient-to-br from-purple-400 to-purple-700 rounded-2xl opacity-0 group-hover:opacity-20 transition-opacity duration-300" />
-                <span className="text-2xl md:text-3xl relative z-10">🔬</span>
-              </motion.div>
-              
-              <div className="relative z-10">
-                <h3 className="text-xl md:text-2xl font-bold mb-3 md:mb-4 text-center group-hover:text-purple-600 dark:group-hover:text-purple-400 transition-colors duration-300">
-                  {t('features.mythFreeTraining.title')}
-                </h3>
-                <p className="text-sm md:text-base text-muted-foreground text-center leading-relaxed group-hover:text-slate-600 dark:group-hover:text-slate-300 transition-colors duration-300">
-                  {t('features.mythFreeTraining.description')}
+              <X className="w-12 h-12 text-red-600 mb-4" />
+              <h3 className="text-xl font-bold mb-3 text-red-900 dark:text-red-200">
+                {t('problemSolution.problems.volume.title')}
+              </h3>
+              <p className="text-slate-600 dark:text-slate-300 mb-4">
+                {t('problemSolution.problems.volume.description')}
+              </p>
+              <div className="pt-4 border-t border-red-200 dark:border-red-800">
+                <Check className="w-6 h-6 text-green-600 mb-2" />
+                <p className="text-sm font-medium text-green-900 dark:text-green-200">
+                  {t('problemSolution.problems.volume.solution')}
                 </p>
               </div>
-              
-              {/* Subtle border glow on hover */}
-              <div className="absolute inset-0 rounded-3xl border border-purple-200/0 group-hover:border-purple-200/50 dark:group-hover:border-purple-800/50 transition-all duration-300" />
             </motion.div>
 
-            <motion.div 
-              className="group relative bg-white dark:bg-slate-800/50 rounded-3xl p-6 md:p-8 border border-border/50 shadow-xl hover:shadow-2xl transition-all duration-300 hover:scale-105 backdrop-blur-sm md:col-span-2 lg:col-span-1"
-              initial={{ opacity: 0, y: 50 }}
+            {/* Problem 3 */}
+            <motion.div
+              initial={{ opacity: 0, y: 30 }}
               whileInView={{ opacity: 1, y: 0 }}
               viewport={{ once: true }}
-              transition={{ duration: 0.8, delay: 0.3 }}
-              whileHover={{ y: -5 }}
+              transition={{ delay: 0.3 }}
+              className="bg-red-50 dark:bg-red-950/20 rounded-xl p-6 border-2 border-red-200 dark:border-red-800"
             >
-              {/* Gradient background overlay */}
-              <div className="absolute inset-0 bg-gradient-to-br from-green-50/50 via-green-100/30 to-green-50/50 dark:from-green-950/20 dark:via-green-900/10 dark:to-green-950/20 rounded-3xl opacity-0 group-hover:opacity-100 transition-opacity duration-300" />
-              
-              {/* Animated icon container */}
-              <motion.div 
-                className="relative w-16 h-16 md:w-20 md:h-20 bg-gradient-to-br from-green-500 to-green-600 rounded-2xl flex items-center justify-center mx-auto mb-4 md:mb-6 shadow-lg"
-                whileHover={{ rotate: 360, scale: 1.1 }}
-                transition={{ duration: 0.6, type: "spring", stiffness: 200 }}
-              >
-                <div className="absolute inset-0 bg-gradient-to-br from-green-400 to-green-700 rounded-2xl opacity-0 group-hover:opacity-20 transition-opacity duration-300" />
-                <span className="text-2xl md:text-3xl relative z-10">📊</span>
-              </motion.div>
-              
-              <div className="relative z-10">
-                <h3 className="text-xl md:text-2xl font-bold mb-3 md:mb-4 text-center group-hover:text-green-600 dark:group-hover:text-green-400 transition-colors duration-300">
-                  {t('features.optimizedProgramming.title')}
-                </h3>
-                <p className="text-sm md:text-base text-muted-foreground text-center leading-relaxed group-hover:text-slate-600 dark:group-hover:text-slate-300 transition-colors duration-300">
-                  {t('features.optimizedProgramming.description')}
+              <X className="w-12 h-12 text-red-600 mb-4" />
+              <h3 className="text-xl font-bold mb-3 text-red-900 dark:text-red-200">
+                {t('problemSolution.problems.myths.title')}
+              </h3>
+              <p className="text-slate-600 dark:text-slate-300 mb-4">
+                {t('problemSolution.problems.myths.description')}
+              </p>
+              <div className="pt-4 border-t border-red-200 dark:border-red-800">
+                <Check className="w-6 h-6 text-green-600 mb-2" />
+                <p className="text-sm font-medium text-green-900 dark:text-green-200">
+                  {t('problemSolution.problems.myths.solution')}
                 </p>
               </div>
-              
-              {/* Subtle border glow on hover */}
-              <div className="absolute inset-0 rounded-3xl border border-green-200/0 group-hover:border-green-200/50 dark:group-hover:border-green-800/50 transition-all duration-300" />
             </motion.div>
           </div>
         </div>
       </section>
 
-      {/* Enhanced How It Works Section with Connecting Animation */}
-      <section className="py-20 px-4 bg-muted/30 relative">
-        <div className="max-w-6xl mx-auto">
-          <motion.div 
-            className="text-center mb-16"
+      {/* How It Works Section */}
+      <section id="how-it-works" className="py-20 px-4 bg-slate-50 dark:bg-slate-950">
+        <div className="max-w-7xl mx-auto">
+          <motion.div
             initial={{ opacity: 0, y: 30 }}
             whileInView={{ opacity: 1, y: 0 }}
             viewport={{ once: true }}
-            transition={{ duration: 0.8 }}
+            className="text-center mb-16"
           >
-            <h2 className="text-3xl md:text-4xl font-bold mb-4">{t('howToUse.title')}</h2>
-            <p className="text-xl text-muted-foreground">{t('howToUse.subtitle')}</p>
+            <h2 className="text-4xl md:text-5xl font-bold mb-4">
+              {t('howItWorks.title')}
+            </h2>
+            <p className="text-xl text-slate-600 dark:text-slate-300">
+              {t('howItWorks.subtitle')}
+            </p>
           </motion.div>
 
           <div className="grid md:grid-cols-4 gap-8 relative">
-            <ClientOnly>
-              <ConnectingPath />
-            </ClientOnly>
-            
+            {/* Connecting line */}
+            <div className="hidden md:block absolute top-20 left-[12.5%] right-[12.5%] h-1 bg-gradient-to-r from-blue-200 via-purple-200 to-green-200 dark:from-blue-800 dark:via-purple-800 dark:to-green-800"></div>
+
             {/* Step 1 */}
-            <motion.div 
-              className="text-center group"
-              initial={{ opacity: 0, y: 50 }}
+            <motion.div
+              initial={{ opacity: 0, y: 30 }}
               whileInView={{ opacity: 1, y: 0 }}
               viewport={{ once: true }}
-              transition={{ duration: 0.6, delay: 0.1 }}
+              transition={{ delay: 0.1 }}
+              className="relative text-center"
             >
-              <div className="relative mb-6">
-                <motion.div 
-                  className="w-20 h-20 bg-gradient-to-br from-blue-500 to-purple-600 rounded-2xl flex items-center justify-center mx-auto mb-4"
-                  whileHover={{ scale: 1.1, rotate: 5 }}
-                  transition={{ type: "spring", stiffness: 300 }}
-                >
-                  <span className="text-2xl">👤</span>
-                </motion.div>
-                <div className="absolute -top-2 -right-2 w-8 h-8 bg-primary text-white rounded-full flex items-center justify-center text-sm font-bold">1</div>
+              <div className="w-40 h-40 mx-auto mb-6 bg-gradient-to-br from-blue-500 to-blue-600 rounded-full flex items-center justify-center shadow-xl relative z-10">
+                <span className="text-6xl">📚</span>
               </div>
-              <h3 className="text-xl font-semibold mb-2">{t('howToUse.steps.createAccount.title')}</h3>
-              <p className="text-muted-foreground">
-                {t('howToUse.steps.createAccount.description')}
+              <div className="absolute top-0 left-1/2 -translate-x-1/2 w-12 h-12 bg-blue-600 text-white rounded-full flex items-center justify-center text-xl font-bold shadow-lg z-20">
+                1
+              </div>
+              <h3 className="text-2xl font-bold mb-3">{t('howItWorks.steps.choose.title')}</h3>
+              <p className="text-slate-600 dark:text-slate-300">
+                {t('howItWorks.steps.choose.description')}
               </p>
             </motion.div>
 
             {/* Step 2 */}
-            <motion.div 
-              className="text-center group"
-              initial={{ opacity: 0, y: 50 }}
+            <motion.div
+              initial={{ opacity: 0, y: 30 }}
               whileInView={{ opacity: 1, y: 0 }}
               viewport={{ once: true }}
-              transition={{ duration: 0.6, delay: 0.2 }}
+              transition={{ delay: 0.2 }}
+              className="relative text-center"
             >
-              <div className="relative mb-6">
-                <motion.div 
-                  className="w-20 h-20 bg-gradient-to-br from-green-500 to-teal-600 rounded-2xl flex items-center justify-center mx-auto mb-4"
-                  whileHover={{ scale: 1.1, rotate: -5 }}
-                  transition={{ type: "spring", stiffness: 300 }}
-                >
-                  <span className="text-2xl">📋</span>
-                </motion.div>
-                <div className="absolute -top-2 -right-2 w-8 h-8 bg-primary text-white rounded-full flex items-center justify-center text-sm font-bold">2</div>
+              <div className="w-40 h-40 mx-auto mb-6 bg-gradient-to-br from-purple-500 to-purple-600 rounded-full flex items-center justify-center shadow-xl relative z-10">
+                <span className="text-6xl">⚙️</span>
               </div>
-              <h3 className="text-xl font-semibold mb-2">{t('howToUse.steps.completeProfile.title')}</h3>
-              <p className="text-muted-foreground">
-                {t('howToUse.steps.completeProfile.description')}
+              <div className="absolute top-0 left-1/2 -translate-x-1/2 w-12 h-12 bg-purple-600 text-white rounded-full flex items-center justify-center text-xl font-bold shadow-lg z-20">
+                2
+              </div>
+              <h3 className="text-2xl font-bold mb-3">{t('howItWorks.steps.customize.title')}</h3>
+              <p className="text-slate-600 dark:text-slate-300">
+                {t('howItWorks.steps.customize.description')}
               </p>
             </motion.div>
 
             {/* Step 3 */}
-            <motion.div 
-              className="text-center group"
-              initial={{ opacity: 0, y: 50 }}
+            <motion.div
+              initial={{ opacity: 0, y: 30 }}
               whileInView={{ opacity: 1, y: 0 }}
               viewport={{ once: true }}
-              transition={{ duration: 0.6, delay: 0.3 }}
+              transition={{ delay: 0.3 }}
+              className="relative text-center"
             >
-              <div className="relative mb-6">
-                <motion.div 
-                  className="w-20 h-20 bg-gradient-to-br from-orange-500 to-red-600 rounded-2xl flex items-center justify-center mx-auto mb-4"
-                  whileHover={{ scale: 1.1, rotate: 5 }}
-                  transition={{ type: "spring", stiffness: 300 }}
-                >
-                  <span className="text-2xl">💬</span>
-                </motion.div>
-                <div className="absolute -top-2 -right-2 w-8 h-8 bg-primary text-white rounded-full flex items-center justify-center text-sm font-bold">3</div>
+              <div className="w-40 h-40 mx-auto mb-6 bg-gradient-to-br from-green-500 to-green-600 rounded-full flex items-center justify-center shadow-xl relative z-10">
+                <span className="text-6xl">🤖</span>
               </div>
-              <h3 className="text-xl font-semibold mb-2">{t('howToUse.steps.startChatting.title')}</h3>
-              <p className="text-muted-foreground">
-                {t('howToUse.steps.startChatting.description')}
+              <div className="absolute top-0 left-1/2 -translate-x-1/2 w-12 h-12 bg-green-600 text-white rounded-full flex items-center justify-center text-xl font-bold shadow-lg z-20">
+                3
+              </div>
+              <h3 className="text-2xl font-bold mb-3">{t('howItWorks.steps.guidance.title')}</h3>
+              <p className="text-slate-600 dark:text-slate-300">
+                {t('howItWorks.steps.guidance.description')}
               </p>
             </motion.div>
 
             {/* Step 4 */}
-            <motion.div 
-              className="text-center group"
-              initial={{ opacity: 0, y: 50 }}
+            <motion.div
+              initial={{ opacity: 0, y: 30 }}
               whileInView={{ opacity: 1, y: 0 }}
               viewport={{ once: true }}
-              transition={{ duration: 0.6, delay: 0.4 }}
+              transition={{ delay: 0.4 }}
+              className="relative text-center"
             >
-              <div className="relative mb-6">
-                <motion.div 
-                  className="w-20 h-20 bg-gradient-to-br from-purple-500 to-pink-600 rounded-2xl flex items-center justify-center mx-auto mb-4"
-                  whileHover={{ scale: 1.1, rotate: -5 }}
-                  transition={{ type: "spring", stiffness: 300 }}
-                >
-                  <span className="text-2xl">🚀</span>
-                </motion.div>
-                <div className="absolute -top-2 -right-2 w-8 h-8 bg-primary text-white rounded-full flex items-center justify-center text-sm font-bold">4</div>
+              <div className="w-40 h-40 mx-auto mb-6 bg-gradient-to-br from-orange-500 to-orange-600 rounded-full flex items-center justify-center shadow-xl relative z-10">
+                <span className="text-6xl">📱</span>
               </div>
-              <h3 className="text-xl font-semibold mb-2">{t('howToUse.steps.upgradeForMore.title')}</h3>
-              <p className="text-muted-foreground">
-                {t('howToUse.steps.upgradeForMore.description')}
+              <div className="absolute top-0 left-1/2 -translate-x-1/2 w-12 h-12 bg-orange-600 text-white rounded-full flex items-center justify-center text-xl font-bold shadow-lg z-20">
+                4
+              </div>
+              <h3 className="text-2xl font-bold mb-3">{t('howItWorks.steps.track.title')}</h3>
+              <p className="text-slate-600 dark:text-slate-300">
+                {t('howItWorks.steps.track.description')}
               </p>
             </motion.div>
           </div>
         </div>
       </section>
 
-      {/* Interactive Features Section */}
-      <section className="py-20 px-4">
-        <div className="max-w-6xl mx-auto">
-          <motion.div 
-            className="text-center mb-16"
+      {/* Interactive Features Showcase */}
+      <section className="py-20 px-4 bg-white dark:bg-slate-900">
+        <div className="max-w-7xl mx-auto">
+          <motion.div
             initial={{ opacity: 0, y: 30 }}
             whileInView={{ opacity: 1, y: 0 }}
             viewport={{ once: true }}
-            transition={{ duration: 0.8 }}
+            className="text-center mb-16"
           >
-            <h2 className="text-3xl md:text-4xl font-bold mb-4">{t('whyChoose.title')}</h2>
-            <p className="text-xl text-muted-foreground">{t('whyChoose.subtitle')}</p>
+            <h2 className="text-4xl md:text-5xl font-bold mb-4">
+              {t('features.title')}
+            </h2>
+            <p className="text-xl text-slate-600 dark:text-slate-300">
+              {t('features.subtitle')}
+            </p>
           </motion.div>
 
-          <div className="grid lg:grid-cols-2 gap-12 items-center">
-            <div className="space-y-8">
+          <div className="space-y-24">
+            {/* Feature 1 - Program Builder */}
+            <div className="grid lg:grid-cols-2 gap-12 items-center">
               <motion.div
-                className="flex items-start space-x-4"
-                initial={{ opacity: 0, x: -30 }}
+                initial={{ opacity: 0, x: -50 }}
                 whileInView={{ opacity: 1, x: 0 }}
                 viewport={{ once: true }}
-                transition={{ duration: 0.6, delay: 0.1 }}
               >
-                <div className="w-12 h-12 bg-blue-100 dark:bg-blue-900 rounded-xl flex items-center justify-center flex-shrink-0">
-                  <span className="text-2xl">🧬</span>
+                <div className="inline-flex items-center gap-2 px-4 py-2 bg-blue-100 dark:bg-blue-900/30 text-blue-700 dark:text-blue-300 rounded-full mb-4">
+                  <Target className="w-5 h-5" />
+                  <span className="font-semibold">{t('features.programBuilder.badge')}</span>
                 </div>
-                <div>
-                  <h3 className="text-xl font-semibold mb-2">{t('whyChoose.benefits.personalTrainer.title')}</h3>
-                  <p className="text-muted-foreground">{t('whyChoose.benefits.personalTrainer.description')}</p>
-                </div>
+                <h3 className="text-3xl md:text-4xl font-bold mb-4">
+                  {t('features.programBuilder.title')}
+                </h3>
+                <p className="text-lg text-slate-600 dark:text-slate-300 mb-6">
+                  {t('features.programBuilder.description')}
+                </p>
+                <ul className="space-y-3">
+                  <li className="flex items-start gap-3">
+                    <Check className="w-6 h-6 text-green-600 flex-shrink-0 mt-0.5" />
+                    <span>{t('features.programBuilder.benefits.science.description')}</span>
+                  </li>
+                  <li className="flex items-start gap-3">
+                    <Check className="w-6 h-6 text-green-600 flex-shrink-0 mt-0.5" />
+                    <span>{t('features.programBuilder.benefits.flexible.description')}</span>
+                  </li>
+                  <li className="flex items-start gap-3">
+                    <Check className="w-6 h-6 text-green-600 flex-shrink-0 mt-0.5" />
+                    <span>{t('features.programBuilder.benefits.progressive.description')}</span>
+                  </li>
+                </ul>
               </motion.div>
-
               <motion.div
-                className="flex items-start space-x-4"
-                initial={{ opacity: 0, x: -30 }}
+                initial={{ opacity: 0, x: 50 }}
                 whileInView={{ opacity: 1, x: 0 }}
                 viewport={{ once: true }}
-                transition={{ duration: 0.6, delay: 0.2 }}
+                className="relative"
               >
-                <div className="w-12 h-12 bg-green-100 dark:bg-green-900 rounded-xl flex items-center justify-center flex-shrink-0">
-                  <span className="text-2xl">📊</span>
-                </div>
-                <div>
-                  <h3 className="text-xl font-semibold mb-2">{t('whyChoose.benefits.personalizedProgramming.title')}</h3>
-                  <p className="text-muted-foreground">{t('whyChoose.benefits.personalizedProgramming.description')}</p>
-                </div>
-              </motion.div>
-
-              <motion.div
-                className="flex items-start space-x-4"
-                initial={{ opacity: 0, x: -30 }}
-                whileInView={{ opacity: 1, x: 0 }}
-                viewport={{ once: true }}
-                transition={{ duration: 0.6, delay: 0.3 }}
-              >
-                <div className="w-12 h-12 bg-purple-100 dark:bg-purple-900 rounded-xl flex items-center justify-center flex-shrink-0">
-                  <span className="text-2xl">🔬</span>
-                </div>
-                <div>
-                  <h3 className="text-xl font-semibold mb-2">{t('whyChoose.benefits.evidenceBased.title')}</h3>
-                  <p className="text-muted-foreground">{t('whyChoose.benefits.evidenceBased.description')}</p>
-                </div>
-              </motion.div>
-
-              <motion.div
-                className="flex items-start space-x-4"
-                initial={{ opacity: 0, x: -30 }}
-                whileInView={{ opacity: 1, x: 0 }}
-                viewport={{ once: true }}
-                transition={{ duration: 0.6, delay: 0.4 }}
-              >
-                <div className="w-12 h-12 bg-orange-100 dark:bg-orange-900 rounded-xl flex items-center justify-center flex-shrink-0">
-                  <span className="text-2xl">📈</span>
-                </div>
-                <div>
-                  <h3 className="text-xl font-semibold mb-2">{t('whyChoose.benefits.continuousLearning.title')}</h3>
-                  <p className="text-muted-foreground">{t('whyChoose.benefits.continuousLearning.description')}</p>
+                <div className="aspect-[4/3] bg-gradient-to-br from-blue-100 to-purple-100 dark:from-blue-900 dark:to-purple-900 rounded-xl shadow-2xl flex items-center justify-center border border-slate-200 dark:border-slate-700">
+                  <p className="text-slate-600 dark:text-slate-300">{t('features.programBuilder.screenshot')}</p>
                 </div>
               </motion.div>
             </div>
 
+            {/* Feature 2 - Exercise Database */}
+            <div className="grid lg:grid-cols-2 gap-12 items-center">
+              <motion.div
+                initial={{ opacity: 0, x: -50 }}
+                whileInView={{ opacity: 1, x: 0 }}
+                viewport={{ once: true }}
+                className="order-2 lg:order-1"
+              >
+                <div className="aspect-[4/3] bg-gradient-to-br from-green-100 to-teal-100 dark:from-green-900 dark:to-teal-900 rounded-xl shadow-2xl flex items-center justify-center border border-slate-200 dark:border-slate-700">
+                  <p className="text-slate-600 dark:text-slate-300">{t('features.exerciseDatabase.screenshot')}</p>
+                </div>
+              </motion.div>
+              <motion.div
+                initial={{ opacity: 0, x: 50 }}
+                whileInView={{ opacity: 1, x: 0 }}
+                viewport={{ once: true }}
+                className="order-1 lg:order-2"
+              >
+                <div className="inline-flex items-center gap-2 px-4 py-2 bg-green-100 dark:bg-green-900/30 text-green-700 dark:text-green-300 rounded-full mb-4">
+                  <Zap className="w-5 h-5" />
+                  <span className="font-semibold">{t('features.exerciseDatabase.badge')}</span>
+                </div>
+                <h3 className="text-3xl md:text-4xl font-bold mb-4">
+                  {t('features.exerciseDatabase.title')}
+                </h3>
+                <p className="text-lg text-slate-600 dark:text-slate-300 mb-6">
+                  {t('features.exerciseDatabase.description')}
+                </p>
+                <ul className="space-y-3">
+                  <li className="flex items-start gap-3">
+                    <Check className="w-6 h-6 text-green-600 flex-shrink-0 mt-0.5" />
+                    <span>{t('features.exerciseDatabase.benefits.comprehensive.description')}</span>
+                  </li>
+                  <li className="flex items-start gap-3">
+                    <Check className="w-6 h-6 text-green-600 flex-shrink-0 mt-0.5" />
+                    <span>{t('features.exerciseDatabase.benefits.equipment.description')}</span>
+                  </li>
+                  <li className="flex items-start gap-3">
+                    <Check className="w-6 h-6 text-green-600 flex-shrink-0 mt-0.5" />
+                    <span>{t('features.exerciseDatabase.benefits.smart.description')}</span>
+                  </li>
+                </ul>
+              </motion.div>
+            </div>
+
+            {/* Feature 3 - AI Assistant */}
+            <div className="grid lg:grid-cols-2 gap-12 items-center">
+              <motion.div
+                initial={{ opacity: 0, x: -50 }}
+                whileInView={{ opacity: 1, x: 0 }}
+                viewport={{ once: true }}
+              >
+                <div className="inline-flex items-center gap-2 px-4 py-2 bg-purple-100 dark:bg-purple-900/30 text-purple-700 dark:text-purple-300 rounded-full mb-4">
+                  <Star className="w-5 h-5" />
+                  <span className="font-semibold">{t('features.aiAssistant.badge')}</span>
+                </div>
+                <h3 className="text-3xl md:text-4xl font-bold mb-4">
+                  {t('features.aiAssistant.title')}
+                </h3>
+                <p className="text-lg text-slate-600 dark:text-slate-300 mb-6">
+                  {t('features.aiAssistant.description')}
+                </p>
+                <ul className="space-y-3">
+                  <li className="flex items-start gap-3">
+                    <Check className="w-6 h-6 text-green-600 flex-shrink-0 mt-0.5" />
+                    <span>{t('features.aiAssistant.benefits.instant.description')}</span>
+                  </li>
+                  <li className="flex items-start gap-3">
+                    <Check className="w-6 h-6 text-green-600 flex-shrink-0 mt-0.5" />
+                    <span>{t('features.aiAssistant.benefits.evidence.description')}</span>
+                  </li>
+                  <li className="flex items-start gap-3">
+                    <Check className="w-6 h-6 text-green-600 flex-shrink-0 mt-0.5" />
+                    <span>{t('features.aiAssistant.benefits.context.description')}</span>
+                  </li>
+                </ul>
+              </motion.div>
+              <motion.div
+                initial={{ opacity: 0, x: 50 }}
+                whileInView={{ opacity: 1, x: 0 }}
+                viewport={{ once: true }}
+              >
+                <div className="aspect-[4/3] bg-gradient-to-br from-purple-100 to-pink-100 dark:from-purple-900 dark:to-pink-900 rounded-xl shadow-2xl flex items-center justify-center border border-slate-200 dark:border-slate-700">
+                  <p className="text-slate-600 dark:text-slate-300">{t('features.aiAssistant.screenshot')}</p>
+                </div>
+              </motion.div>
+            </div>
+          </div>
+        </div>
+      </section>
+
+      {/* Pricing Section */}
+      <section className="py-20 px-4 bg-slate-50 dark:bg-slate-950">
+        <div className="max-w-7xl mx-auto">
+          <motion.div
+            initial={{ opacity: 0, y: 30 }}
+            whileInView={{ opacity: 1, y: 0 }}
+            viewport={{ once: true }}
+            className="text-center mb-16"
+          >
+            <h2 className="text-4xl md:text-5xl font-bold mb-4">
+              {t('pricing.title')}
+            </h2>
+            <p className="text-xl text-slate-600 dark:text-slate-300">
+              {t('pricing.subtitle')}
+            </p>
+          </motion.div>
+
+          <div className="grid lg:grid-cols-2 gap-8 max-w-5xl mx-auto">
+            {/* Individual Programs */}
             <motion.div
-              className="group relative bg-gradient-to-br from-slate-50 to-white dark:from-slate-800/80 dark:to-slate-900/80 rounded-3xl p-8 border border-border/50 shadow-xl hover:shadow-2xl transition-all duration-300 backdrop-blur-sm"
-              initial={{ opacity: 0, x: 30 }}
-              whileInView={{ opacity: 1, x: 0 }}
+              initial={{ opacity: 0, y: 30 }}
+              whileInView={{ opacity: 1, y: 0 }}
               viewport={{ once: true }}
-              transition={{ duration: 0.8, delay: 0.2 }}
-              whileHover={{ scale: 1.02, y: -5 }}
+              className="bg-white dark:bg-slate-800 rounded-2xl p-8 border-2 border-slate-200 dark:border-slate-700 shadow-xl"
             >
-              {/* Gradient background overlay */}
-              <div className="absolute inset-0 bg-gradient-to-br from-blue-50/30 via-purple-50/20 to-green-50/30 dark:from-blue-950/10 dark:via-purple-950/5 dark:to-green-950/10 rounded-3xl opacity-0 group-hover:opacity-100 transition-opacity duration-500" />
-              
-              <div className="relative z-10 space-y-6">
-                <div className="text-center">
-                  <motion.div 
-                    className="inline-flex items-center justify-center w-16 h-16 bg-gradient-to-br from-blue-500 via-purple-500 to-green-500 rounded-2xl mb-4 shadow-lg"
-                    whileHover={{ rotate: 360, scale: 1.1 }}
-                    transition={{ duration: 0.6, type: "spring", stiffness: 200 }}
-                  >
-                    <span className="text-2xl text-white">✨</span>
-                  </motion.div>
-                  <h4 className="text-2xl font-bold mb-2 bg-gradient-to-r from-blue-600 via-purple-600 to-green-600 bg-clip-text text-transparent">
-                    {t('whyChoose.specialFeatures.title')}
-                  </h4>
-                  <p className="text-sm text-muted-foreground/80">{t('whyChoose.specialFeatures.subtitle')}</p>
-                </div>
-                
-                <div className="space-y-5">
-                  <motion.div 
-                    className="flex items-center gap-4 group/item"
-                    initial={{ opacity: 0, x: -20 }}
-                    whileInView={{ opacity: 1, x: 0 }}
-                    viewport={{ once: true }}
-                    transition={{ duration: 0.5, delay: 0.3 }}
-                  >
-                    <div className="w-10 h-10 bg-gradient-to-br from-green-100 to-green-200 dark:from-green-900 dark:to-green-800 rounded-full flex items-center justify-center shadow-md group-hover:item:shadow-lg group-hover:item:scale-110 transition-all duration-300">
-                      <Check className="w-5 h-5 text-green-600 dark:text-green-400" />
-                    </div>
-                    <span className="text-base font-medium group-hover:item:text-green-600 dark:group-hover:item:text-green-400 transition-colors duration-300">
-                      {t('whyChoose.specialFeatures.fitness')}
-                    </span>
-                  </motion.div>
-                  
-                  <motion.div 
-                    className="flex items-center gap-4 group/item"
-                    initial={{ opacity: 0, x: -20 }}
-                    whileInView={{ opacity: 1, x: 0 }}
-                    viewport={{ once: true }}
-                    transition={{ duration: 0.5, delay: 0.4 }}
-                  >
-                    <div className="w-10 h-10 bg-gradient-to-br from-green-100 to-green-200 dark:from-green-900 dark:to-green-800 rounded-full flex items-center justify-center shadow-md group-hover:item:shadow-lg group-hover:item:scale-110 transition-all duration-300">
-                      <Check className="w-5 h-5 text-green-600 dark:text-green-400" />
-                    </div>
-                    <span className="text-base font-medium group-hover:item:text-green-600 dark:group-hover:item:text-green-400 transition-colors duration-300">
-                      {t('whyChoose.specialFeatures.myths')}
-                    </span>
-                  </motion.div>
-                  
-                  <motion.div 
-                    className="flex items-center gap-4 group/item"
-                    initial={{ opacity: 0, x: -20 }}
-                    whileInView={{ opacity: 1, x: 0 }}
-                    viewport={{ once: true }}
-                    transition={{ duration: 0.5, delay: 0.5 }}
-                  >
-                    <div className="w-10 h-10 bg-gradient-to-br from-green-100 to-green-200 dark:from-green-900 dark:to-green-800 rounded-full flex items-center justify-center shadow-md group-hover:item:shadow-lg group-hover:item:scale-110 transition-all duration-300">
-                      <Check className="w-5 h-5 text-green-600 dark:text-green-400" />
-                    </div>
-                    <span className="text-base font-medium group-hover:item:text-green-600 dark:group-hover:item:text-green-400 transition-colors duration-300">
-                      {t('whyChoose.specialFeatures.personalized')}
-                    </span>
-                  </motion.div>
-                  
-                  <motion.div 
-                    className="flex items-center gap-4 group/item"
-                    initial={{ opacity: 0, x: -20 }}
-                    whileInView={{ opacity: 1, x: 0 }}
-                    viewport={{ once: true }}
-                    transition={{ duration: 0.5, delay: 0.6 }}
-                  >
-                    <div className="w-10 h-10 bg-gradient-to-br from-green-100 to-green-200 dark:from-green-900 dark:to-green-800 rounded-full flex items-center justify-center shadow-md group-hover:item:shadow-lg group-hover:item:scale-110 transition-all duration-300">
-                      <Check className="w-5 h-5 text-green-600 dark:text-green-400" />
-                    </div>
-                    <span className="text-base font-medium group-hover:item:text-green-600 dark:group-hover:item:text-green-400 transition-colors duration-300">
-                      {t('whyChoose.specialFeatures.programs')}
-                    </span>
-                  </motion.div>
-                </div>
+              <h3 className="text-2xl font-bold mb-2">{t('pricing.individual.title')}</h3>
+              <div className="mb-6">
+                <span className="text-5xl font-bold">{t('pricing.individual.price')}</span>
+                <span className="text-slate-600 dark:text-slate-300 ml-2">{t('pricing.individual.period')}</span>
               </div>
-              
-              {/* Subtle border glow on hover */}
-              <div className="absolute inset-0 rounded-3xl border border-blue-200/0 group-hover:border-blue-200/30 dark:group-hover:border-blue-800/30 transition-all duration-300" />
+              <ul className="space-y-4 mb-8">
+                <li className="flex items-start gap-3">
+                  <Check className="w-6 h-6 text-green-600 flex-shrink-0 mt-0.5" />
+                  <span>{t('pricing.individual.features.programs')}</span>
+                </li>
+                <li className="flex items-start gap-3">
+                  <Check className="w-6 h-6 text-green-600 flex-shrink-0 mt-0.5" />
+                  <span>{t('pricing.individual.features.exercises')}</span>
+                </li>
+                <li className="flex items-start gap-3">
+                  <Check className="w-6 h-6 text-green-600 flex-shrink-0 mt-0.5" />
+                  <span>{t('pricing.individual.features.basics')}</span>
+                </li>
+                <li className="flex items-start gap-3">
+                  <Check className="w-6 h-6 text-green-600 flex-shrink-0 mt-0.5" />
+                  <span>{t('pricing.individual.features.support')}</span>
+                </li>
+                <li className="flex items-start gap-3">
+                  <Check className="w-6 h-6 text-green-600 flex-shrink-0 mt-0.5" />
+                  <span>{t('pricing.individual.features.mobile')}</span>
+                </li>
+              </ul>
+              <Button asChild className="w-full" size="lg">
+                <Link href={`/${locale}/programs`}>{t('pricing.individual.cta')}</Link>
+              </Button>
+            </motion.div>
+
+            {/* Pro Subscription */}
+            <motion.div
+              initial={{ opacity: 0, y: 30 }}
+              whileInView={{ opacity: 1, y: 0 }}
+              viewport={{ once: true }}
+              transition={{ delay: 0.1 }}
+              className="bg-gradient-to-br from-blue-600 to-purple-600 text-white rounded-2xl p-8 shadow-2xl relative overflow-hidden"
+            >
+              <div className="absolute top-4 right-4 bg-yellow-400 text-slate-900 px-3 py-1 rounded-full text-sm font-bold">
+                {t('pricing.pro.badge')}
+              </div>
+              <h3 className="text-2xl font-bold mb-2">{t('pricing.pro.title')}</h3>
+              <div className="mb-6">
+                <span className="text-5xl font-bold">{t('pricing.pro.price')}</span>
+                <span className="text-blue-100 ml-2">{t('pricing.pro.period')}</span>
+                <p className="text-sm text-blue-100 mt-1">{t('pricing.pro.yearly')}</p>
+              </div>
+              <ul className="space-y-4 mb-8">
+                <li className="flex items-start gap-3">
+                  <Check className="w-6 h-6 text-yellow-300 flex-shrink-0 mt-0.5" />
+                  <span>{t('pricing.pro.features.unlimited')}</span>
+                </li>
+                <li className="flex items-start gap-3">
+                  <Check className="w-6 h-6 text-yellow-300 flex-shrink-0 mt-0.5" />
+                  <span>{t('pricing.pro.features.custom')}</span>
+                </li>
+                <li className="flex items-start gap-3">
+                  <Check className="w-6 h-6 text-yellow-300 flex-shrink-0 mt-0.5" />
+                  <span>{t('pricing.pro.features.ai')}</span>
+                </li>
+                <li className="flex items-start gap-3">
+                  <Check className="w-6 h-6 text-yellow-300 flex-shrink-0 mt-0.5" />
+                  <span>{t('pricing.pro.features.advanced')}</span>
+                </li>
+                <li className="flex items-start gap-3">
+                  <Check className="w-6 h-6 text-yellow-300 flex-shrink-0 mt-0.5" />
+                  <span>{t('pricing.pro.features.priority')}</span>
+                </li>
+                <li className="flex items-start gap-3">
+                  <Check className="w-6 h-6 text-yellow-300 flex-shrink-0 mt-0.5" />
+                  <span>{t('pricing.pro.features.export')}</span>
+                </li>
+              </ul>
+              <Button asChild className="w-full bg-white text-blue-600 hover:bg-slate-100" size="lg">
+                <Link href={`/${locale}/pricing`}>{t('pricing.pro.cta')}</Link>
+              </Button>
+              <p className="text-center text-sm text-blue-100 mt-4">
+                {t('pricing.pro.guarantee')}
+              </p>
             </motion.div>
           </div>
         </div>
       </section>
 
-      {/* Enhanced Final CTA Section */}
-      <motion.section 
-        className="py-20 px-4 bg-gradient-to-br from-blue-600 via-purple-600 to-indigo-700 text-white relative overflow-hidden"
-        initial={{ opacity: 0 }}
-        whileInView={{ opacity: 1 }}
-        viewport={{ once: true }}
-        transition={{ duration: 1 }}
-      >
-        {/* Animated background elements */}
-        <motion.div
-          className="absolute top-10 left-10 w-20 h-20 bg-white/10 rounded-full"
-          animate={{ y: [0, -20, 0], rotate: [0, 180, 360] }}
-          transition={{ duration: 6, repeat: Infinity, ease: "easeInOut" }}
-        />
-        <motion.div
-          className="absolute bottom-10 right-10 w-16 h-16 bg-white/10 rounded-full"
-          animate={{ y: [0, 20, 0], rotate: [360, 180, 0] }}
-          transition={{ duration: 8, repeat: Infinity, ease: "easeInOut" }}
-        />
-        
-        <div className="max-w-4xl mx-auto text-center relative z-10">
-          <motion.h2 
-            className="text-3xl md:text-5xl font-bold mb-6 relative z-10"
+      {/* FAQ Section */}
+      <section className="py-20 px-4 bg-white dark:bg-slate-900">
+        <div className="max-w-4xl mx-auto">
+          <motion.div
             initial={{ opacity: 0, y: 30 }}
             whileInView={{ opacity: 1, y: 0 }}
             viewport={{ once: true }}
-            transition={{ duration: 0.8, delay: 0.2 }}
+            className="text-center mb-16"
           >
-            {t('finalCta.title')}
-          </motion.h2>
-          <motion.p 
-            className="text-xl md:text-2xl mb-8 opacity-90 relative z-10"
-            initial={{ opacity: 0, y: 20 }}
+            <h2 className="text-4xl md:text-5xl font-bold mb-4">
+              {t('faq.title')}
+            </h2>
+            <p className="text-xl text-slate-600 dark:text-slate-300">
+              {t('faq.subtitle')}
+            </p>
+          </motion.div>
+
+          <Accordion type="single" collapsible className="w-full space-y-4">
+            <AccordionItem value="item-1" className="border border-slate-200 dark:border-slate-700 rounded-lg px-6">
+              <AccordionTrigger className="text-left text-lg font-semibold hover:no-underline">
+                {t('faq.questions.trainer.question')}
+              </AccordionTrigger>
+              <AccordionContent className="text-slate-600 dark:text-slate-300">
+                {t('faq.questions.trainer.answer')}
+              </AccordionContent>
+            </AccordionItem>
+
+            <AccordionItem value="item-2" className="border border-slate-200 dark:border-slate-700 rounded-lg px-6">
+              <AccordionTrigger className="text-left text-lg font-semibold hover:no-underline">
+                {t('faq.questions.customize.question')}
+              </AccordionTrigger>
+              <AccordionContent className="text-slate-600 dark:text-slate-300">
+                {t('faq.questions.customize.answer')}
+              </AccordionContent>
+            </AccordionItem>
+
+            <AccordionItem value="item-3" className="border border-slate-200 dark:border-slate-700 rounded-lg px-6">
+              <AccordionTrigger className="text-left text-lg font-semibold hover:no-underline">
+                {t('faq.questions.exercises.question')}
+              </AccordionTrigger>
+              <AccordionContent className="text-slate-600 dark:text-slate-300">
+                {t('faq.questions.exercises.answer')}
+              </AccordionContent>
+            </AccordionItem>
+
+            <AccordionItem value="item-4" className="border border-slate-200 dark:border-slate-700 rounded-lg px-6">
+              <AccordionTrigger className="text-left text-lg font-semibold hover:no-underline">
+                {t('faq.questions.ai.question')}
+              </AccordionTrigger>
+              <AccordionContent className="text-slate-600 dark:text-slate-300">
+                {t('faq.questions.ai.answer')}
+              </AccordionContent>
+            </AccordionItem>
+
+            <AccordionItem value="item-5" className="border border-slate-200 dark:border-slate-700 rounded-lg px-6">
+              <AccordionTrigger className="text-left text-lg font-semibold hover:no-underline">
+                {t('faq.questions.switch.question')}
+              </AccordionTrigger>
+              <AccordionContent className="text-slate-600 dark:text-slate-300">
+                {t('faq.questions.switch.answer')}
+              </AccordionContent>
+            </AccordionItem>
+
+            <AccordionItem value="item-6" className="border border-slate-200 dark:border-slate-700 rounded-lg px-6">
+              <AccordionTrigger className="text-left text-lg font-semibold hover:no-underline">
+                {t('faq.questions.mobile.question')}
+              </AccordionTrigger>
+              <AccordionContent className="text-slate-600 dark:text-slate-300">
+                {t('faq.questions.mobile.answer')}
+              </AccordionContent>
+            </AccordionItem>
+
+            <AccordionItem value="item-7" className="border border-slate-200 dark:border-slate-700 rounded-lg px-6">
+              <AccordionTrigger className="text-left text-lg font-semibold hover:no-underline">
+                {t('faq.questions.afterPurchase.question')}
+              </AccordionTrigger>
+              <AccordionContent className="text-slate-600 dark:text-slate-300">
+                {t('faq.questions.afterPurchase.answer')}
+              </AccordionContent>
+            </AccordionItem>
+          </Accordion>
+        </div>
+      </section>
+
+      {/* Final CTA Section */}
+      <section className="py-20 px-4 bg-gradient-to-br from-blue-600 via-purple-600 to-indigo-600 text-white relative overflow-hidden">
+        {/* Decorative elements */}
+        <div className="absolute inset-0 bg-grid-white/10 [mask-image:radial-gradient(ellipse_at_center,transparent_20%,black)]"></div>
+        
+        <div className="max-w-4xl mx-auto text-center relative z-10">
+          <motion.div
+            initial={{ opacity: 0, y: 30 }}
             whileInView={{ opacity: 1, y: 0 }}
             viewport={{ once: true }}
-            transition={{ duration: 0.8, delay: 0.4 }}
           >
-            {t('finalCta.subtitle')}
-            <br />
-            <span className="text-lg">{t('finalCta.freeMessages')}</span>
-          </motion.p>
-          <motion.div
-            className="flex flex-col sm:flex-row gap-4 justify-center items-center"
-            initial={{ opacity: 0, scale: 0.8 }}
-            whileInView={{ opacity: 1, scale: 1 }}
-            viewport={{ once: true }}
-            transition={{ duration: 0.8, delay: 0.6 }}
-          >
-            <PulsatingButton 
-              className="bg-white text-blue-600 hover:bg-gray-100 text-xl px-12 py-4 rounded-2xl font-bold"
-              pulseColor="255, 255, 255"
-            >
-              <Link href={`/${locale}/signup`}>{t('finalCta.getStartedFree')}</Link>
-            </PulsatingButton>
-            <Button 
-              asChild 
-              variant="outline" 
-              size="lg" 
-              className="text-primary border-primary hover:bg-primary/10 dark:text-white dark:border-white dark:hover:bg-white/10 text-lg px-8 py-3 rounded-xl"
-            >
-              <Link href={`/${locale}/pricing`}>{t('finalCta.viewPricing')}</Link>
-            </Button>
+            <h2 className="text-4xl md:text-5xl font-bold mb-6">
+              {t('finalCta.title')}
+            </h2>
+            <p className="text-xl text-blue-100 mb-8">
+              {t('finalCta.subtitle')}
+            </p>
+            
+            <div className="flex flex-col sm:flex-row gap-4 justify-center mb-8">
+              <Button asChild size="lg" className="bg-white text-blue-600 hover:bg-slate-100 text-lg px-10 py-6">
+                <Link href={`/${locale}/programs`}>
+                  {t('finalCta.cta.primary')}
+                  <ArrowRight className="ml-2 w-5 h-5" />
+                </Link>
+              </Button>
+              <Button asChild variant="outline" size="lg" className="border-white text-white hover:bg-white/10 text-lg px-10 py-6">
+                <Link href={`/${locale}/pricing`}>{t('finalCta.cta.secondary')}</Link>
+              </Button>
+            </div>
+
+            <div className="flex flex-wrap items-center justify-center gap-6 text-sm text-blue-100">
+              <span className="flex items-center gap-2">
+                <Check className="w-5 h-5" />
+                {t('finalCta.guarantees.moneyBack')}
+              </span>
+              <span className="flex items-center gap-2">
+                <Check className="w-5 h-5" />
+                {t('finalCta.guarantees.lifetime')}
+              </span>
+              <span className="flex items-center gap-2">
+                <Check className="w-5 h-5" />
+                {t('finalCta.guarantees.cancel')}
+              </span>
+            </div>
           </motion.div>
-          <motion.p 
-            className="text-sm mt-4 opacity-75"
-            initial={{ opacity: 0 }}
-            whileInView={{ opacity: 0.75 }}
-            viewport={{ once: true }}
-            transition={{ duration: 0.8, delay: 0.8 }}
-          >
-            {t('finalCta.instantAccess')}
-          </motion.p>
         </div>
-      </motion.section>
+      </section>
+
     </main>
-    </>
   );
 }

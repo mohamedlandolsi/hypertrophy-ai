@@ -9,9 +9,10 @@ An AI-powered hypertrophy training coach using RAG (Retrieval-Augmented Generati
 **Core Concepts**:
 - **RAG-Powered AI**: All AI responses driven by vector embeddings (768-dim) stored in PostgreSQL with pgvector extension
 - **Admin Singleton Pattern**: `AIConfiguration` table contains exactly ONE admin-managed config row that controls all AI behavior
-- **Multi-language**: Automatic Arabic/English detection with RTL/LTR support via `next-intl` (`messages/ar.json`, `messages/en.json`)
+- **Multi-language**: Automatic Arabic/English/French detection with RTL/LTR support via `next-intl` (`messages/ar.json`, `messages/en.json`, `messages/fr.json`)
 - **Subscription-Gated**: Freemium model with LemonSqueezy webhooks. Server-side enforcement via `canUserSendMessage()` and `incrementUserMessageCount()`
-- **Edge Runtime Constraints**: API routes and middleware must be Edge-compatible (no Node.js-only APIs like `fs`, `child_process`)
+- **Edge Runtime Constraints**: Most API routes use `export const runtime = 'nodejs'` for Prisma/file operations. Only use Edge runtime when explicitly required
+- **Training Programs**: Interactive program builder with multi-structure support (weekly/cyclic schedules) and category-based customization (MINIMALIST, ESSENTIALIST, MAXIMALIST)
 
 ## ⚡ Critical Workflows (Start Here)
 
@@ -25,11 +26,11 @@ const config = await getAIConfiguration(); // Throws if not found
 
 ### 2. Schema Changes Workflow
 ```bash
-npm run postinstall          # Generate Prisma client
-npx prisma migrate dev       # Dev only - creates migration
-npm run build                # Verify everything compiles
+npm run postinstall          # Generate Prisma client (runs prisma generate)
+npx prisma migrate dev       # Dev only - creates migration + auto-generates client
+npm run build                # Verify everything compiles (also runs prisma generate)
 ```
-**Important**: `npm run build` auto-runs Prisma generate. Never commit without building first.
+**Important**: `npm run build` auto-runs Prisma generate via the build script. The `postinstall` script ensures Prisma client is available after `npm install`. Never commit schema changes without running `npm run build` first to catch TypeScript errors.
 
 ### 3. Pre-Commit Checklist
 ```bash
@@ -48,10 +49,12 @@ node check-ai-config.js      # Verify AI config exists
 
 ### API Route Pattern
 - **`src/app/api/chat/route.ts`** — Reference implementation showing:
-  - Edge runtime config: `export const runtime = 'nodejs'` (some routes need Node.js for file processing)
+  - Runtime config: `export const runtime = 'nodejs'` (required for Prisma, file processing, and Node.js APIs)
+  - Timeout config: `export const maxDuration = 60` (overrides Vercel's default 30s for heavy operations)
   - Error handling: `ApiErrorHandler.createContext(request)` → `ApiErrorHandler.handleError(error, context)`
   - Rate limiting: `canUserSendMessage()` → `incrementUserMessageCount()` → return 429 if exceeded
-  - Image validation: `validateImageSignature()` checks magic bytes for security
+  - Image validation: `validateImageSignature()` checks magic bytes (FFD8FF for JPEG, 89504E47 for PNG, etc.)
+  - Auth pattern: `const supabase = await createClient()` → `await supabase.auth.getUser()` → return 401 if missing
 
 ### Subscription & Auth
 - **`src/lib/subscription.ts`** — Plan limits (`PLAN_LIMITS`), usage counting, automatic downgrade on expired subscriptions
@@ -112,15 +115,16 @@ await incrementUserMessageCount(userId);
 ```
 
 ### Multi-Language Pattern
-Automatic language detection in chat:
+Automatic language detection in chat (supports Arabic, English, French):
 ```typescript
-function detectLanguage(text: string): 'ar' | 'en' {
+function detectLanguage(text: string): 'ar' | 'en' | 'fr' {
   const arabicChars = /[\u0600-\u06FF]/;
   return arabicChars.test(text) ? 'ar' : 'en';
 }
 
 // System prompt includes: "If user writes in Arabic, respond in Arabic"
 ```
+**Translation files**: `messages/{ar,en,fr}.json` loaded via `next-intl`. Use `useTranslations()` hook in client components. Pages use `[locale]` route segment (`src/app/[locale]/**/page.tsx`). Middleware in `src/middleware.ts` handles locale detection and routing.
 
 ## 🔧 Common Debugging Commands
 
@@ -172,8 +176,9 @@ See `scripts/README.md` for full script documentation.
 ```tsx
 import { useTranslations } from 'next-intl';
 const t = useTranslations('chat');
-return <Button>{t('sendMessage')}</Button>; // Auto-translates to Arabic/English
+return <Button>{t('sendMessage')}</Button>; // Auto-translates to Arabic/English/French
 ```
+- **RTL Support**: Automatic via Tailwind CSS `rtl:` prefix. Use `dir="rtl"` for Arabic, `dir="ltr"` for English/French. Example: `<div className="text-left rtl:text-right">`
 
 ## 📚 Key Data Models
 

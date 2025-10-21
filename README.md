@@ -163,6 +163,29 @@ For detailed information about each directory, see:
 - Temperature: 0.7 (Professional yet engaging)
 - Max tokens: 3000 (Detailed scientific explanations)
 
+### 🚧 Maintenance Mode
+Enable "under construction" mode for production while maintaining owner access:
+
+**Quick Setup:**
+1. Get your IP: https://whatismyipaddress.com
+2. In Vercel Dashboard → Environment Variables, add:
+   ```
+   NEXT_PUBLIC_MAINTENANCE_MODE = true
+   NEXT_PUBLIC_ALLOWED_IPS = YOUR_IP_ADDRESS
+   ```
+3. Redeploy
+
+**Documentation:**
+- Quick Reference: [MAINTENANCE_MODE_QUICK_REF.md](./MAINTENANCE_MODE_QUICK_REF.md)
+- Full Guide: [docs/MAINTENANCE_MODE_SETUP.md](./docs/MAINTENANCE_MODE_SETUP.md)
+
+**Features:**
+- ✅ Beautiful "under construction" page for all users
+- ✅ IP whitelisting for owner/admin access
+- ✅ Multiple IP support (team access)
+- ✅ Instant toggle via environment variables
+- ✅ Zero code changes required
+
 ## 🛠️ Development Scripts
 
 Common development and maintenance scripts are located in the `scripts/` directory:
