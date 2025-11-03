@@ -25,75 +25,77 @@ export default function Home() {
       {/* Hero Section */}
       <section 
         ref={heroRef}
-        className="relative bg-gradient-to-br from-slate-50 via-blue-50 to-purple-50 dark:from-slate-950 dark:via-blue-950 dark:to-purple-950 px-4 py-20 md:py-32 overflow-hidden"
+        className="relative bg-gradient-to-br from-slate-50 via-blue-50 to-purple-50 dark:from-slate-950 dark:via-blue-950 dark:to-purple-950 px-4 py-12 sm:py-20 md:py-32 overflow-hidden"
       >
         {/* Background Pattern */}
         <div className="absolute inset-0 bg-grid-slate-200/20 dark:bg-grid-slate-700/20 [mask-image:radial-gradient(ellipse_at_center,transparent_20%,black)]"></div>
         
         <div className="max-w-7xl mx-auto relative z-10">
-          <div className="grid lg:grid-cols-2 gap-12 items-center">
+          <div className="grid lg:grid-cols-2 gap-8 lg:gap-12 items-center">
             
             {/* Left Column - Hero Content */}
             <motion.div
               initial={{ opacity: 0, x: -50 }}
               animate={isHeroInView ? { opacity: 1, x: 0 } : {}}
               transition={{ duration: 0.8 }}
+              className="text-center lg:text-left"
             >
               {/* Trust Badges */}
-              <div className="flex flex-wrap gap-3 mb-6">
-                <span className="inline-flex items-center gap-1 px-3 py-1 bg-blue-100 dark:bg-blue-900/30 text-blue-700 dark:text-blue-300 text-sm font-medium rounded-full">
-                  <Shield className="w-4 h-4" />
+              <div className="flex flex-wrap justify-center lg:justify-start gap-2 mb-4 sm:mb-6">
+                <span className="inline-flex items-center gap-1 px-2.5 py-1.5 sm:px-3 sm:py-1 bg-blue-100 dark:bg-blue-900/30 text-blue-700 dark:text-blue-300 text-xs sm:text-sm font-medium rounded-full">
+                  <Shield className="w-3.5 h-3.5 sm:w-4 sm:h-4" />
                   {t('hero.trustBadges.scienceBased')}
                 </span>
-                <span className="inline-flex items-center gap-1 px-3 py-1 bg-purple-100 dark:bg-purple-900/30 text-purple-700 dark:text-purple-300 text-sm font-medium rounded-full">
-                  <Target className="w-4 h-4" />
+                <span className="inline-flex items-center gap-1 px-2.5 py-1.5 sm:px-3 sm:py-1 bg-purple-100 dark:bg-purple-900/30 text-purple-700 dark:text-purple-300 text-xs sm:text-sm font-medium rounded-full">
+                  <Target className="w-3.5 h-3.5 sm:w-4 sm:h-4" />
                   {t('hero.trustBadges.fullyCustomizable')}
                 </span>
-                <span className="inline-flex items-center gap-1 px-3 py-1 bg-green-100 dark:bg-green-900/30 text-green-700 dark:text-green-300 text-sm font-medium rounded-full">
-                  <Zap className="w-4 h-4" />
+                <span className="inline-flex items-center gap-1 px-2.5 py-1.5 sm:px-3 sm:py-1 bg-green-100 dark:bg-green-900/30 text-green-700 dark:text-green-300 text-xs sm:text-sm font-medium rounded-full">
+                  <Zap className="w-3.5 h-3.5 sm:w-4 sm:h-4" />
                   {t('hero.trustBadges.mobileWebAccess')}
                 </span>
               </div>
 
               {/* Headline */}
-              <h1 className="text-4xl md:text-5xl lg:text-6xl font-bold mb-6 leading-tight">
+              <h1 className="text-3xl sm:text-4xl md:text-5xl lg:text-6xl font-bold mb-4 sm:mb-6 leading-tight">
                 {t('hero.headline')}
               </h1>
 
               {/* Subheadline */}
-              <p className="text-xl text-slate-600 dark:text-slate-300 mb-8 leading-relaxed">
+              <p className="text-base sm:text-xl text-slate-600 dark:text-slate-300 mb-6 sm:mb-8 leading-relaxed max-w-2xl mx-auto lg:mx-0">
                 {t('hero.subheadline')}
               </p>
 
               {/* CTAs */}
-              <div className="flex flex-col sm:flex-row gap-4 mb-8">
+              <div className="flex flex-col sm:flex-row gap-3 sm:gap-4 mb-6 sm:mb-8">
                 <motion.div
                   whileHover={{ scale: 1.05 }}
                   whileTap={{ scale: 0.95 }}
+                  className="w-full sm:w-auto"
                 >
-                  <Button asChild size="lg" className="w-full sm:w-auto text-lg px-8 py-6 bg-gradient-to-r from-blue-600 to-purple-600 hover:from-blue-700 hover:to-purple-700 shadow-lg">
-                    <Link href={`/${locale}/programs`} className="flex items-center gap-2">
+                  <Button asChild size="lg" className="w-full sm:w-auto text-base sm:text-lg px-6 py-5 sm:px-8 sm:py-6 bg-gradient-to-r from-blue-600 to-purple-600 hover:from-blue-700 hover:to-purple-700 shadow-lg">
+                    <Link href={`/${locale}/programs`} className="flex items-center justify-center gap-2">
                       {t('hero.cta.primary')}
-                      <ArrowRight className="w-5 h-5" />
+                      <ArrowRight className="w-4 h-4 sm:w-5 sm:h-5" />
                     </Link>
                   </Button>
                 </motion.div>
-                <Button asChild variant="outline" size="lg" className="w-full sm:w-auto text-lg px-8 py-6">
-                  <Link href="#how-it-works">
+                <Button asChild variant="outline" size="lg" className="w-full sm:w-auto text-base sm:text-lg px-6 py-5 sm:px-8 sm:py-6">
+                  <Link href="#how-it-works" className="flex items-center justify-center gap-2">
                     {t('hero.cta.secondary')}
-                    <ChevronDown className="w-5 h-5 ml-2" />
+                    <ChevronDown className="w-4 h-4 sm:w-5 sm:h-5" />
                   </Link>
                 </Button>
               </div>
 
               {/* Social Proof */}
-              <div className="flex items-center gap-6 text-sm text-slate-600 dark:text-slate-400">
+              <div className="flex flex-col sm:flex-row items-center justify-center lg:justify-start gap-4 sm:gap-6 text-xs sm:text-sm text-slate-600 dark:text-slate-400">
                 <div className="flex items-center gap-2">
-                  <Users className="w-5 h-5 text-blue-600" />
+                  <Users className="w-4 h-4 sm:w-5 sm:h-5 text-blue-600" />
                   <span>{t('hero.socialProof.workoutsLogged')}</span>
                 </div>
                 <div className="flex items-center gap-2">
-                  <Star className="w-5 h-5 text-yellow-500 fill-yellow-500" />
+                  <Star className="w-4 h-4 sm:w-5 sm:h-5 text-yellow-500 fill-yellow-500" />
                   <span>{t('hero.socialProof.rating')}</span>
                 </div>
               </div>
@@ -104,30 +106,30 @@ export default function Home() {
               initial={{ opacity: 0, x: 50 }}
               animate={isHeroInView ? { opacity: 1, x: 0 } : {}}
               transition={{ duration: 0.8, delay: 0.2 }}
-              className="relative"
+              className="relative mt-8 lg:mt-0"
             >
-              <div className="relative bg-white dark:bg-slate-800 rounded-2xl shadow-2xl p-6 border border-slate-200 dark:border-slate-700">
+              <div className="relative bg-white dark:bg-slate-800 rounded-xl sm:rounded-2xl shadow-2xl p-4 sm:p-6 border border-slate-200 dark:border-slate-700">
                 {/* Mockup placeholder - replace with actual screenshot */}
-                <div className="aspect-video bg-gradient-to-br from-blue-100 to-purple-100 dark:from-blue-900 dark:to-purple-900 rounded-lg flex items-center justify-center">
-                  <div className="text-center p-6">
-                    <div className="w-20 h-20 mx-auto mb-4 bg-white dark:bg-slate-700 rounded-full flex items-center justify-center">
-                      <Target className="w-10 h-10 text-blue-600" />
+                <div className="aspect-video bg-gradient-to-br from-blue-100 to-purple-100 dark:from-blue-900 dark:to-purple-900 rounded-lg flex items-center justify-center p-4">
+                  <div className="text-center">
+                    <div className="w-14 h-14 sm:w-20 sm:h-20 mx-auto mb-3 sm:mb-4 bg-white dark:bg-slate-700 rounded-full flex items-center justify-center">
+                      <Target className="w-7 h-7 sm:w-10 sm:h-10 text-blue-600" />
                     </div>
-                    <p className="text-lg font-semibold text-slate-700 dark:text-slate-200">
+                    <p className="text-base sm:text-lg font-semibold text-slate-700 dark:text-slate-200 mb-1 sm:mb-2">
                       {t('hero.mockup.title')}
                     </p>
-                    <p className="text-sm text-slate-500 dark:text-slate-400 mt-2">
+                    <p className="text-xs sm:text-sm text-slate-500 dark:text-slate-400">
                       {t('hero.mockup.placeholder')}
                     </p>
                   </div>
                 </div>
               </div>
               
-              {/* Floating indicators */}
-              <div className="absolute -left-6 top-20 bg-green-500 text-white px-4 py-2 rounded-lg shadow-lg text-sm font-medium">
+              {/* Floating indicators - Hidden on very small mobile, visible from sm */}
+              <div className="hidden sm:block absolute -left-4 lg:-left-6 top-16 lg:top-20 bg-green-500 text-white px-3 py-1.5 sm:px-4 sm:py-2 rounded-lg shadow-lg text-xs sm:text-sm font-medium">
                 ✓ {t('hero.indicators.volumeOptimal')}
               </div>
-              <div className="absolute -right-6 bottom-20 bg-blue-500 text-white px-4 py-2 rounded-lg shadow-lg text-sm font-medium">
+              <div className="hidden sm:block absolute -right-4 lg:-right-6 bottom-16 lg:bottom-20 bg-blue-500 text-white px-3 py-1.5 sm:px-4 sm:py-2 rounded-lg shadow-lg text-xs sm:text-sm font-medium">
                 {t('hero.indicators.exercisesSelected')}
               </div>
             </motion.div>
@@ -696,13 +698,13 @@ export default function Home() {
             </p>
             
             <div className="flex flex-col sm:flex-row gap-4 justify-center mb-8">
-              <Button asChild size="lg" className="bg-white text-blue-600 hover:bg-slate-100 text-lg px-10 py-6">
+              <Button asChild size="lg" className="bg-white text-blue-600 hover:bg-blue-50 hover:text-blue-700 text-lg px-10 py-6 shadow-xl font-semibold">
                 <Link href={`/${locale}/programs`}>
                   {t('finalCta.cta.primary')}
                   <ArrowRight className="ml-2 w-5 h-5" />
                 </Link>
               </Button>
-              <Button asChild variant="outline" size="lg" className="border-white text-white hover:bg-white/10 text-lg px-10 py-6">
+              <Button asChild variant="outline" size="lg" className="border-2 border-white text-white hover:bg-white hover:text-blue-600 text-lg px-10 py-6 shadow-xl font-semibold">
                 <Link href={`/${locale}/pricing`}>{t('finalCta.cta.secondary')}</Link>
               </Button>
             </div>

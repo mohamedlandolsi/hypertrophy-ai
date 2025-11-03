@@ -135,22 +135,25 @@ const Navbar = () => {
 
   return (
     <header className="sticky top-0 z-50 w-full border-b bg-background/95 backdrop-blur supports-[backdrop-filter]:bg-background/60 shadow-sm">
-      <div className="relative container flex h-16 items-center justify-center px-4 lg:px-20 mx-auto">
+      <div className="relative container flex h-16 items-center justify-center px-2 sm:px-4 lg:px-20 mx-auto">
         {/* Logo/Brand - absolutely positioned left in LTR, right in RTL */}
-        <div className="absolute start-0 top-0 h-full flex items-center ps-2 lg:ps-6" style={{ minWidth: 170 }}>
-          <Link href={`/${locale}`} className="flex items-center space-x-2 lg:space-x-3 transition-colors hover:text-primary">
+        <div className="absolute start-0 top-0 h-full flex items-center ps-2 sm:ps-4 lg:ps-6">
+          <Link href={`/${locale}`} className="flex items-center space-x-1.5 sm:space-x-2 lg:space-x-3 transition-colors hover:text-primary">
             <Image 
               src={getLogoSrc()}
               alt="HypertroQ Logo" 
               width={36}
               height={36}
-              className="h-9 w-9 object-contain"
+              className="h-8 w-8 sm:h-9 sm:w-9 object-contain"
             />
-            <div className="flex items-center gap-2">
-              <span className="text-xl font-bold bg-gradient-to-r from-blue-600 to-purple-600 bg-clip-text text-transparent">
+            <div className="flex items-center gap-1.5 sm:gap-2">
+              <span className="text-base sm:text-xl font-bold bg-gradient-to-r from-blue-600 to-purple-600 bg-clip-text text-transparent whitespace-nowrap">
                 HypertroQ
               </span>
-              <BetaBadge size="sm" />
+              {/* Hide beta badge on very small screens to prevent overlap with language selector */}
+              <div className="hidden min-[380px]:block">
+                <BetaBadge size="sm" />
+              </div>
             </div>
           </Link>
         </div>
@@ -163,9 +166,9 @@ const Navbar = () => {
             </Button>
           ))}
         </nav>        {/* Right section - absolutely positioned right in LTR, left in RTL */}
-        <div className="absolute end-0 top-0 h-full flex items-center space-x-2 lg:space-x-3 pe-2 lg:pe-6 rtl:space-x-reverse">
+        <div className="absolute end-0 top-0 h-full flex items-center space-x-1.5 sm:space-x-2 lg:space-x-3 pe-2 sm:pe-4 lg:pe-6 rtl:space-x-reverse">
           {/* Theme and Language switchers - always visible on mobile, desktop for logged-out users */}
-          <div className="flex md:hidden items-center space-x-2 rtl:space-x-reverse">
+          <div className="flex md:hidden items-center space-x-1.5 sm:space-x-2 rtl:space-x-reverse">
             <LanguageSwitcher />
             <ThemeToggle />
           </div>

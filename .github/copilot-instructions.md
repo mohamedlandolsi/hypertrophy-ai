@@ -7,11 +7,11 @@ An AI-powered hypertrophy training coach using RAG (Retrieval-Augmented Generati
 **Stack**: Next.js 15 (App Router) + TypeScript + Prisma + PostgreSQL (pgvector) + Supabase Auth/Storage + Google Gemini AI
 
 **Core Concepts**:
-- **RAG-Powered AI**: All AI responses driven by vector embeddings (768-dim) stored in PostgreSQL with pgvector extension
-- **Admin Singleton Pattern**: `AIConfiguration` table contains exactly ONE admin-managed config row that controls all AI behavior
-- **Multi-language**: Automatic Arabic/English/French detection with RTL/LTR support via `next-intl` (`messages/ar.json`, `messages/en.json`, `messages/fr.json`)
-- **Subscription-Gated**: Freemium model with LemonSqueezy webhooks. Server-side enforcement via `canUserSendMessage()` and `incrementUserMessageCount()`
-- **Edge Runtime Constraints**: Most API routes use `export const runtime = 'nodejs'` for Prisma/file operations. Only use Edge runtime when explicitly required
+- **RAG-Powered AI**: All AI responses driven by vector embeddings (768-dim) stored in PostgreSQL with pgvector extension. Uses cosine similarity search with configurable thresholds.
+- **Admin Singleton Pattern**: `AIConfiguration` table contains exactly ONE admin-managed config row that controls all AI behavior. Many functions throw if missing.
+- **Multi-language**: Automatic Arabic/English/French detection with RTL/LTR support via `next-intl` (`messages/ar.json`, `messages/en.json`, `messages/fr.json`). Middleware handles locale routing.
+- **Subscription-Gated**: Freemium model with LemonSqueezy webhooks. Server-side enforcement via `canUserSendMessage()` and `incrementUserMessageCount()`. Auto-downgrades expired subscriptions.
+- **Edge Runtime Constraints**: API routes default to Edge in Next.js 15. Explicitly use `export const runtime = 'nodejs'` for Prisma, file I/O, or Node.js APIs. Check `vercel.json` for timeout overrides.
 - **Training Programs**: Interactive program builder with multi-structure support (weekly/cyclic schedules) and category-based customization (MINIMALIST, ESSENTIALIST, MAXIMALIST)
 
 ## ⚡ Critical Workflows (Start Here)
@@ -21,22 +21,25 @@ An AI-powered hypertrophy training coach using RAG (Retrieval-Augmented Generati
 ```typescript
 const config = await getAIConfiguration(); // Throws if not found
 ```
-- Check: Run `node check-ai-config.js` to verify it exists
-- Fix: Create via admin UI at `/admin/ai-config` or seed/migration
+**Verify**: `node check-ai-config.js` or `node check-detailed-ai-config.js`  
+**Fix**: Create via `/admin/ai-config` UI or run `node create-admin.js`
 
 ### 2. Schema Changes Workflow
-```bash
-npm run postinstall          # Generate Prisma client (runs prisma generate)
-npx prisma migrate dev       # Dev only - creates migration + auto-generates client
-npm run build                # Verify everything compiles (also runs prisma generate)
+```powershell
+npm run postinstall        # Generate Prisma client (auto-runs after install)
+npx prisma migrate dev     # Create migration + regenerate client
+npm run build              # REQUIRED: Verify TS compilation (auto-runs prisma generate)
 ```
-**Important**: `npm run build` auto-runs Prisma generate via the build script. The `postinstall` script ensures Prisma client is available after `npm install`. Never commit schema changes without running `npm run build` first to catch TypeScript errors.
+**Never commit schema changes without `npm run build`** — catches TypeScript errors early. The `build` script runs `prisma generate && next build`.
+
+**⚠️ Common Pitfall**: After schema changes, always restart dev server to avoid cached Prisma client issues.
 
 ### 3. Pre-Commit Checklist
-```bash
-npm run lint                 # ESLint check
-npm run build                # TypeScript + Prisma validation
-node check-ai-config.js      # Verify AI config exists
+```powershell
+npm run lint               # ESLint validation
+npm run build              # TypeScript + Prisma + Next.js build check
+node check-ai-config.js    # Verify AI config singleton exists
+node check-database-status.js  # Verify DB connection + schema
 ```
 
 ## 📁 High-Impact Files to Read
@@ -49,12 +52,13 @@ node check-ai-config.js      # Verify AI config exists
 
 ### API Route Pattern
 - **`src/app/api/chat/route.ts`** — Reference implementation showing:
-  - Runtime config: `export const runtime = 'nodejs'` (required for Prisma, file processing, and Node.js APIs)
-  - Timeout config: `export const maxDuration = 60` (overrides Vercel's default 30s for heavy operations)
+  - Runtime config: `export const runtime = 'nodejs'` (required for Prisma, file I/O, Node.js APIs)
+  - Timeout config: `export const maxDuration = 60` (overrides Vercel's default 30s)
   - Error handling: `ApiErrorHandler.createContext(request)` → `ApiErrorHandler.handleError(error, context)`
   - Rate limiting: `canUserSendMessage()` → `incrementUserMessageCount()` → return 429 if exceeded
-  - Image validation: `validateImageSignature()` checks magic bytes (FFD8FF for JPEG, 89504E47 for PNG, etc.)
+  - Image validation: `validateImageSignature()` checks magic bytes (FFD8FF=JPEG, 89504E47=PNG, 47494638=GIF, RIFF+WEBP=WebP)
   - Auth pattern: `const supabase = await createClient()` → `await supabase.auth.getUser()` → return 401 if missing
+  - **⚠️ Edge vs Node**: API routes using Prisma, file processing, or Buffer operations **MUST** use `export const runtime = 'nodejs'`. See `src/app/api/upload/route.ts`, `src/app/api/admin/exercises/upload-image/route.ts` for examples.
 
 ### Subscription & Auth
 - **`src/lib/subscription.ts`** — Plan limits (`PLAN_LIMITS`), usage counting, automatic downgrade on expired subscriptions
@@ -80,15 +84,16 @@ Vector search + keyword search for high precision:
 // 1. Generate embedding
 const embedding = await getEmbedding(query);
 
-// 2. Vector search
+// 2. Vector search (via enhanced RAG v2 with fallback)
 const vectorResults = await fetchRelevantKnowledge(embedding, 20, 0.3);
 
-// 3. Keyword search
+// 3. Keyword search (optional in hybrid mode)
 const keywordResults = await performAndKeywordSearch(query, 10);
 
 // 4. Merge and deduplicate
 const merged = mergeAndRankResults(vectorResults, keywordResults);
 ```
+**Advanced**: Use `enhancedKnowledgeRetrieval()` from `src/lib/enhanced-rag-v2.ts` for HyDE, query transformation, and reranking. Automatically falls back to SQL-based search if enhanced pipeline fails.
 
 ### Memory Extraction Pattern
 User profile and conversation memories persist across chats:
@@ -98,6 +103,7 @@ import { extractProfileInformation, saveProfileExtractions } from '@/lib/ai/memo
 const profileUpdates = await extractProfileInformation(userMessage, aiResponse);
 await saveProfileExtractions(userId, profileUpdates);
 ```
+**Memory structure**: See `src/lib/client-memory.ts` for complete `MemoryUpdate` interface. Includes 50+ fields for personal info, training details, goals, health, and environment.
 
 ### Subscription Enforcement Pattern
 **Always enforce limits before AI operations**:
@@ -128,17 +134,15 @@ function detectLanguage(text: string): 'ar' | 'en' | 'fr' {
 
 ## 🔧 Common Debugging Commands
 
-Run from project root (all CommonJS scripts):
-```bash
-node check-ai-config.js                    # Verify AIConfiguration exists
-node debug-rag-system.js                   # Test RAG retrieval pipeline
-node test-ai-integration.js                # End-to-end AI flow test
-node debug-lemonsqueezy-checkout.js        # Test subscription checkout
-node check-pgvector-status.js              # Verify pgvector extension installed
-node analyze-knowledge-base.js             # Inspect KB categories and chunks
+Run from project root (all CommonJS scripts — see `scripts/README.md` for 200+ utilities):
+```powershell
+node check-ai-config.js                    # Verify AIConfiguration singleton exists
+node debug-rag-system.js                   # Test RAG retrieval with sample queries
+node test-ai-integration.js                # End-to-end AI flow with actual knowledge base
+node debug-lemonsqueezy-checkout.js        # Test subscription checkout flow
+node check-pgvector-status.js              # Verify pgvector extension + vector ops
+node analyze-knowledge-base.js             # Inspect KB categories, chunks, and embeddings
 ```
-
-See `scripts/README.md` for full script documentation.
 
 ## 🚨 Critical Rules (Do Not Skip)
 
@@ -183,12 +187,16 @@ return <Button>{t('sendMessage')}</Button>; // Auto-translates to Arabic/English
 ## 📚 Key Data Models
 
 From `prisma/schema.prisma`:
-- **User**: Auth + subscription + plan limits. Fields: `plan` (FREE/PRO), `messagesUsedToday`, `freeMessagesRemaining`
-- **KnowledgeItem**: Uploaded content (PDFs, docs). Related to `KnowledgeChunk[]`
-- **KnowledgeChunk**: Text chunks with `embeddingData` (768-dim vector as JSON string)
-- **AIConfiguration**: Singleton admin config. Fields: `systemPrompt`, `ragHighRelevanceThreshold`, `strictMusclePriority`
-- **Chat** / **Message**: User chat history with AI
+- **User**: Auth + subscription + plan limits. Fields: `plan` (FREE/PRO), `messagesUsedToday`, `freeMessagesRemaining`, `hasCompletedOnboarding`, `role` (user/admin)
+- **KnowledgeItem**: Uploaded content (PDFs, docs). Related to `KnowledgeChunk[]` and `KnowledgeItemCategory[]`
+- **KnowledgeChunk**: Text chunks with `embeddingData` (768-dim vector as JSON string array)
+- **AIConfiguration**: Singleton admin config. Fields: `systemPrompt`, `ragHighRelevanceThreshold`, `strictMusclePriority`, `freeModelName`, `proModelName`, `toolEnforcementMode`
+- **Chat** / **Message**: User chat history with AI. Message supports `imageData` (base64) and `imageMimeType`
 - **Subscription**: LemonSqueezy sync. Fields: `status`, `lemonSqueezyId`, `currentPeriodEnd`
+- **ClientMemory**: User profile storage with 50+ fields. See `src/lib/client-memory.ts` for complete structure
+- **Exercise**: Exercise library with `volumeContributions` (JSON), `regionalBias` (JSON), `exerciseType` (COMPOUND/ISOLATION/UNILATERAL)
+- **TrainingProgram**: Programs with multi-language support (JSON fields), interactive builder, multiple structures
+- **ProgramStructure**: Supports `structureType` ("weekly"/"cyclic"), session scheduling, weekly schedules
 
 ## ✅ When Making Changes
 
@@ -201,7 +209,7 @@ From `prisma/schema.prisma`:
 ## 🔗 Related Documentation
 
 - `docs/` — Feature implementation docs (150+ markdown files)
-- `scripts/README.md` — Debug script usage guide
+- `scripts/README.md` — Debug script usage guide (200+ CommonJS utilities for testing, DB management, RAG debugging)
 - `migrations/README.md` — SQL migration history
 - `README.md` — Project overview and getting started
 

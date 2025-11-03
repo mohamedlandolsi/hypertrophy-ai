@@ -216,36 +216,78 @@ export function ProgramInfo({ program, locale, userCustomization, onNavigateToSt
             </CardDescription>
           </CardHeader>
           <CardContent>
-            <div className="space-y-4">
+            <div className="space-y-6">
               {guideContent
                 .sort((a: Record<string, unknown>, b: Record<string, unknown>) => ((a.order as number) || 0) - ((b.order as number) || 0))
                 .map((section: Record<string, unknown>, index: number) => (
-                  <div key={(section.id as string) || index} className="border rounded-lg p-6 bg-muted/40 space-y-4">
-                    <div className="flex items-start justify-between gap-3">
-                      <h3 className="text-lg font-semibold break-words">{section.title as string}</h3>
-                      <Badge variant="secondary" className="text-xs font-mono shrink-0">
+                  <div 
+                    key={(section.id as string) || index} 
+                    className="border rounded-xl p-4 sm:p-6 bg-gradient-to-br from-muted/40 to-muted/20 space-y-3 sm:space-y-4 shadow-sm hover:shadow-md transition-shadow"
+                  >
+                    <div className="flex flex-col sm:flex-row sm:items-start sm:justify-between gap-2 sm:gap-3">
+                      <h3 className="text-base sm:text-lg font-semibold break-words leading-tight pr-2">
+                        {section.title as string}
+                      </h3>
+                      <Badge variant="secondary" className="text-xs font-mono shrink-0 w-fit">
                         #{(section.order as number) || (index + 1)}
                       </Badge>
                     </div>
-                    <Separator className="my-3" />
+                    <Separator className="my-2 sm:my-3" />
                     <div 
                       className="
-                        prose prose-base lg:prose-lg max-w-none dark:prose-invert
-                        prose-headings:font-semibold prose-headings:text-foreground prose-headings:mt-6 prose-headings:mb-4 first:prose-headings:mt-0
-                        prose-h1:text-2xl prose-h2:text-xl prose-h3:text-lg
-                        prose-p:text-foreground/90 prose-p:leading-7 prose-p:mb-4 prose-p:mt-0
+                        prose prose-sm sm:prose-base max-w-none dark:prose-invert
+                        prose-headings:font-semibold prose-headings:text-foreground 
+                        prose-headings:mt-4 sm:prose-headings:mt-6 
+                        prose-headings:mb-3 sm:prose-headings:mb-4 
+                        first:prose-headings:mt-0
+                        prose-h1:text-xl sm:prose-h1:text-2xl 
+                        prose-h2:text-lg sm:prose-h2:text-xl 
+                        prose-h3:text-base sm:prose-h3:text-lg
+                        prose-p:text-foreground/90 
+                        prose-p:leading-relaxed sm:prose-p:leading-7 
+                        prose-p:mb-3 sm:prose-p:mb-4 
+                        prose-p:mt-0
+                        prose-p:text-sm sm:prose-p:text-base
                         prose-strong:text-foreground prose-strong:font-bold
-                        prose-ul:my-6 prose-ul:list-disc prose-ul:pl-8 prose-ul:space-y-3
-                        prose-ol:my-6 prose-ol:list-decimal prose-ol:pl-8 prose-ol:space-y-3
-                        prose-li:text-foreground/90 prose-li:leading-7 prose-li:my-1
+                        prose-ul:my-4 sm:prose-ul:my-6 
+                        prose-ul:list-disc 
+                        prose-ul:pl-5 sm:prose-ul:pl-8 
+                        prose-ul:space-y-2 sm:prose-ul:space-y-3
+                        prose-ol:my-4 sm:prose-ol:my-6 
+                        prose-ol:list-decimal 
+                        prose-ol:pl-5 sm:prose-ol:pl-8 
+                        prose-ol:space-y-2 sm:prose-ol:space-y-3
+                        prose-li:text-foreground/90 
+                        prose-li:leading-relaxed sm:prose-li:leading-7 
+                        prose-li:my-1
+                        prose-li:text-sm sm:prose-li:text-base
                         prose-li:marker:text-foreground/60
-                        [&_ul]:!list-disc [&_ul]:!block [&_ul]:!my-6 [&_ul]:!pl-8
-                        [&_ol]:!list-decimal [&_ol]:!block [&_ol]:!my-6 [&_ol]:!pl-8
-                        [&_li]:!block [&_li]:!my-2
-                        [&_br]:block [&_br]:my-2
+                        prose-code:text-xs sm:prose-code:text-sm
+                        prose-code:bg-muted prose-code:px-1.5 prose-code:py-0.5 prose-code:rounded
+                        prose-pre:text-xs sm:prose-pre:text-sm
+                        prose-pre:bg-muted prose-pre:border prose-pre:rounded-lg
+                        prose-blockquote:border-l-4 prose-blockquote:border-primary
+                        prose-blockquote:pl-4 prose-blockquote:italic
+                        prose-blockquote:text-foreground/80
+                        [&_ul]:!list-disc [&_ul]:!block 
+                        [&_ul]:!my-4 sm:[&_ul]:!my-6 
+                        [&_ul]:!pl-5 sm:[&_ul]:!pl-8
+                        [&_ol]:!list-decimal [&_ol]:!block 
+                        [&_ol]:!my-4 sm:[&_ol]:!my-6 
+                        [&_ol]:!pl-5 sm:[&_ol]:!pl-8
+                        [&_li]:!block [&_li]:!my-1.5 sm:[&_li]:!my-2
+                        [&_br]:block [&_br]:my-1.5 sm:[&_br]:my-2
                         [&>*:first-child]:mt-0
                         [&>*:last-child]:mb-0
-                        [&_img]:max-w-full [&_img]:h-auto [&_img]:rounded-lg [&_img]:my-4 [&_img]:mx-auto [&_img]:block"
+                        [&_img]:max-w-full [&_img]:h-auto 
+                        [&_img]:rounded-lg 
+                        [&_img]:my-3 sm:[&_img]:my-4 
+                        [&_img]:mx-auto [&_img]:block
+                        [&_img]:shadow-md
+                        [&_table]:text-xs sm:[&_table]:text-sm
+                        [&_table]:overflow-x-auto [&_table]:block sm:[&_table]:table
+                        [&_table]:w-full
+                      "
                       dangerouslySetInnerHTML={{ __html: section.content as string }}
                     />
                   </div>

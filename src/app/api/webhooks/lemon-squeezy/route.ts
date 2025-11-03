@@ -1,17 +1,34 @@
 import { NextRequest, NextResponse } from 'next/server';
-import { upgradeUserToPro, downgradeUserToFree } from '@/lib/subscription';
+import { upgradeUserToProTier, downgradeUserToFreeTier } from '@/lib/subscription';
 import { 
   ApiErrorHandler, 
   ValidationError,
   logger 
 } from '@/lib/error-handler';
 import { prisma } from '@/lib/prisma';
+import { SubscriptionTier } from '@prisma/client';
 import crypto from 'crypto';
 
 // Rate limiting for webhooks (simple in-memory store)
 const webhookRateLimit = new Map<string, { count: number; resetTime: number }>();
 const WEBHOOK_RATE_LIMIT = 10; // Max 10 requests per minute per IP
 const RATE_LIMIT_WINDOW = 60 * 1000; // 1 minute
+
+// Map LemonSqueezy variant IDs to subscription tiers
+function getSubscriptionTierFromVariant(variantId: string): 'PRO_MONTHLY' | 'PRO_YEARLY' {
+  const monthlyVariantId = process.env.LEMONSQUEEZY_PRO_MONTHLY_VARIANT_ID;
+  const yearlyVariantId = process.env.LEMONSQUEEZY_PRO_YEARLY_VARIANT_ID;
+
+  if (variantId === yearlyVariantId) {
+    return 'PRO_YEARLY';
+  } else if (variantId === monthlyVariantId) {
+    return 'PRO_MONTHLY';
+  }
+
+  // Default to PRO_MONTHLY if variant ID doesn't match (backward compatibility)
+  logger.warn('Unknown variant ID, defaulting to PRO_MONTHLY', { variantId });
+  return 'PRO_MONTHLY';
+}
 
 // Verify Lemon Squeezy webhook signature
 function verifyLemonSqueezySignature(payload: string, signature: string | null): boolean {
@@ -438,7 +455,7 @@ async function handleSubscriptionActivated(subscriptionData: {
   // Validate user exists in database
   const user = await prisma.user.findUnique({
     where: { id: userId },
-    select: { id: true, plan: true }
+    select: { id: true, subscriptionTier: true }
   });
 
   if (!user) {
@@ -446,14 +463,17 @@ async function handleSubscriptionActivated(subscriptionData: {
     throw new ValidationError('User not found in database');
   }
 
+  // Determine subscription tier from variant ID
+  const tier = getSubscriptionTierFromVariant(variant_id);
+
   // Create audit trail
   await createAuditTrail('subscription_activated', userId, subscriptionData);
 
   // Activate for active subscriptions or trial subscriptions
   if (status === 'active' || status === 'on_trial') {
-    logger.info('Upgrading user to Pro', { userId, lemonSqueezyId, status });
+    logger.info('Upgrading user to Pro', { userId, lemonSqueezyId, status, tier });
     
-    await upgradeUserToPro(userId, {
+    await upgradeUserToProTier(userId, tier, {
       lemonSqueezyId: lemonSqueezyId.toString(),
       planId: product_id.toString(),
       variantId: variant_id.toString(),
@@ -461,7 +481,7 @@ async function handleSubscriptionActivated(subscriptionData: {
       currentPeriodEnd: new Date(renews_at),
     });
     
-    logger.info('User successfully upgraded to Pro', { userId, lemonSqueezyId, status });
+    logger.info('User successfully upgraded to Pro', { userId, lemonSqueezyId, status, tier });
   } else {
     logger.warn('Subscription status does not qualify for Pro access', { status, userId });
   }
@@ -489,7 +509,7 @@ async function handleSubscriptionDeactivated(subscriptionData: {
   // Validate user exists in database
   const user = await prisma.user.findUnique({
     where: { id: userId },
-    select: { id: true, plan: true }
+    select: { id: true, subscriptionTier: true }
   });
 
   if (!user) {
@@ -500,7 +520,7 @@ async function handleSubscriptionDeactivated(subscriptionData: {
   // Create audit trail
   await createAuditTrail('subscription_deactivated', userId, subscriptionData);
 
-  await downgradeUserToFree(userId);
+  await downgradeUserToFreeTier(userId);
   
   logger.info('User downgraded to Free', { userId });
 }
@@ -544,7 +564,7 @@ async function handleSubscriptionPaymentSuccess(invoiceData: {
   // Validate user exists in database
   const user = await prisma.user.findUnique({
     where: { id: userId },
-    select: { id: true, plan: true }
+    select: { id: true, subscriptionTier: true }
   });
 
   if (!user) {
@@ -575,8 +595,9 @@ async function handleSubscriptionPaymentSuccess(invoiceData: {
     
     // For subscription payments, especially initial payments, upgrade to Pro
     if (billing_reason === 'initial' || billing_reason === 'renewal') {
-      // Determine subscription period based on amount
+      // Determine subscription tier based on amount
       const isYearly = total === 90;
+      const tier: SubscriptionTier = isYearly ? 'PRO_YEARLY' : 'PRO_MONTHLY';
       const currentPeriodEnd = new Date();
       if (isYearly) {
         currentPeriodEnd.setFullYear(currentPeriodEnd.getFullYear() + 1);
@@ -584,7 +605,7 @@ async function handleSubscriptionPaymentSuccess(invoiceData: {
         currentPeriodEnd.setMonth(currentPeriodEnd.getMonth() + 1);
       }
       
-      await upgradeUserToPro(userId, {
+      await upgradeUserToProTier(userId, tier, {
         lemonSqueezyId: subscription_id.toString(),
         planId: isYearly ? 'pro_yearly' : 'pro_monthly',
         variantId: isYearly ? 
@@ -599,7 +620,8 @@ async function handleSubscriptionPaymentSuccess(invoiceData: {
         subscription_id, 
         billing_reason,
         amount: total,
-        period: isYearly ? 'yearly' : 'monthly'
+        period: isYearly ? 'yearly' : 'monthly',
+        tier
       });
     }
   } else {

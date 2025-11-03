@@ -1077,3 +1077,13 @@
   background-size: 26px 26px, 26px 26px;
   background-position: center center;
 }
+
+/* Hide scrollbar utility for horizontal scrollable tabs */
+.scrollbar-hide {
+  -ms-overflow-style: none;  /* IE and Edge */
+  scrollbar-width: none;  /* Firefox */
+}
+
+.scrollbar-hide::-webkit-scrollbar {
+  display: none;  /* Chrome, Safari and Opera */
+}

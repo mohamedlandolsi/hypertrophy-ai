@@ -90,14 +90,14 @@ export default function ProgramGuideContent({
         
         <Card className={program.thumbnailUrl ? 'relative -mt-20 mx-4' : ''}>
           <CardHeader className="pb-4">
-            <div className="flex items-start justify-between">
-              <div className="space-y-2">
+            <div className="flex flex-col sm:flex-row items-start sm:items-start justify-between gap-3 sm:gap-4">
+              <div className="space-y-2 w-full sm:w-auto sm:flex-1">
                 <CardTitle className="text-2xl font-bold">{programName}</CardTitle>
                 <CardDescription className="text-base">
                   {programDescription}
                 </CardDescription>
               </div>
-              <div className="flex flex-col items-end space-y-2">
+              <div className="flex flex-col items-start sm:items-end space-y-2 w-full sm:w-auto flex-shrink-0">
                 {accessInfo.isAdmin ? (
                   <Badge variant="destructive" className="text-sm">
                     <CheckCircle className="w-4 h-4 mr-1" />
@@ -116,33 +116,33 @@ export default function ProgramGuideContent({
       </div>
 
       {/* Program Stats */}
-      <div className="grid grid-cols-3 gap-4">
-        <Card className="p-4">
-          <div className="flex items-center space-x-2">
-            <Target className="w-5 h-5 text-blue-500" />
-            <div>
-              <p className="text-sm font-medium">Workouts</p>
-              <p className="text-2xl font-bold">{program.workoutTemplates.length}</p>
+      <div className="grid grid-cols-3 gap-2 sm:gap-4">
+        <Card className="p-3 sm:p-4">
+          <div className="flex flex-col sm:flex-row items-center sm:items-center space-y-1 sm:space-y-0 sm:space-x-2 text-center sm:text-left">
+            <Target className="w-4 h-4 sm:w-5 sm:h-5 text-blue-500 shrink-0" />
+            <div className="min-w-0">
+              <p className="text-xs sm:text-sm font-medium truncate">Workouts</p>
+              <p className="text-lg sm:text-2xl font-bold">{program.workoutTemplates.length}</p>
             </div>
           </div>
         </Card>
         
-        <Card className="p-4">
-          <div className="flex items-center space-x-2">
-            <Target className="w-5 h-5 text-green-500" />
-            <div>
-              <p className="text-sm font-medium">Structures</p>
-              <p className="text-2xl font-bold">{program.programStructures.length}</p>
+        <Card className="p-3 sm:p-4">
+          <div className="flex flex-col sm:flex-row items-center sm:items-center space-y-1 sm:space-y-0 sm:space-x-2 text-center sm:text-left">
+            <Target className="w-4 h-4 sm:w-5 sm:h-5 text-green-500 shrink-0" />
+            <div className="min-w-0">
+              <p className="text-xs sm:text-sm font-medium truncate">Structures</p>
+              <p className="text-lg sm:text-2xl font-bold">{program.programStructures.length}</p>
             </div>
           </div>
         </Card>
         
-        <Card className="p-4">
-          <div className="flex items-center space-x-2">
-            <Clock className="w-5 h-5 text-orange-500" />
-            <div>
-              <p className="text-sm font-medium">Exercises</p>
-              <p className="text-2xl font-bold">{program.exerciseTemplates.length}</p>
+        <Card className="p-3 sm:p-4">
+          <div className="flex flex-col sm:flex-row items-center sm:items-center space-y-1 sm:space-y-0 sm:space-x-2 text-center sm:text-left">
+            <Clock className="w-4 h-4 sm:w-5 sm:h-5 text-orange-500 shrink-0" />
+            <div className="min-w-0">
+              <p className="text-xs sm:text-sm font-medium truncate">Exercises</p>
+              <p className="text-lg sm:text-2xl font-bold">{program.exerciseTemplates.length}</p>
             </div>
           </div>
         </Card>
@@ -150,30 +150,49 @@ export default function ProgramGuideContent({
 
       {/* Main Content Tabs */}
       <Tabs value={activeTab} onValueChange={handleTabChange} className="space-y-6">
-        <TabsList className="grid w-full grid-cols-4">
-          <TabsTrigger value="overview" className="flex items-center space-x-2">
-            <BookOpen className="w-4 h-4" />
-            <span>Overview</span>
-          </TabsTrigger>
-          <TabsTrigger value="customize" className="flex items-center space-x-2">
-            <Settings className="w-4 h-4" />
-            <span>Customize</span>
-          </TabsTrigger>
-          <TabsTrigger value="workouts" disabled className="flex items-center space-x-2 opacity-60 cursor-not-allowed">
-            <BotMessageSquare className="w-4 h-4" />
-            <div className="flex items-center space-x-1">
-              <span>AI Assistant</span>
-              <Badge variant="secondary" className="ml-1 text-[10px] px-1 py-0 h-4">Soon</Badge>
-            </div>
-          </TabsTrigger>
-          <TabsTrigger value="progress" disabled className="flex items-center space-x-2 opacity-60 cursor-not-allowed">
-            <TrendingUp className="w-4 h-4" />
-            <div className="flex items-center space-x-1">
-              <span>Progress</span>
-              <Badge variant="secondary" className="ml-1 text-[10px] px-1 py-0 h-4">Soon</Badge>
-            </div>
-          </TabsTrigger>
-        </TabsList>
+        <div className="relative">
+          {/* Scrollable container for mobile */}
+          <div className="overflow-x-auto scrollbar-hide -mx-4 px-4 sm:mx-0 sm:px-0">
+            <TabsList className="inline-flex w-auto min-w-full sm:grid sm:w-full sm:grid-cols-4 h-auto">
+              <TabsTrigger 
+                value="overview" 
+                className="flex-shrink-0 flex flex-col sm:flex-row items-center justify-center gap-1 sm:gap-2 px-3 sm:px-4 py-2 min-w-[90px] sm:min-w-0"
+              >
+                <BookOpen className="w-4 h-4 shrink-0" />
+                <span className="text-xs sm:text-sm whitespace-nowrap">Overview</span>
+              </TabsTrigger>
+              <TabsTrigger 
+                value="customize" 
+                className="flex-shrink-0 flex flex-col sm:flex-row items-center justify-center gap-1 sm:gap-2 px-3 sm:px-4 py-2 min-w-[90px] sm:min-w-0"
+              >
+                <Settings className="w-4 h-4 shrink-0" />
+                <span className="text-xs sm:text-sm whitespace-nowrap">Customize</span>
+              </TabsTrigger>
+              <TabsTrigger 
+                value="workouts" 
+                disabled 
+                className="flex-shrink-0 flex flex-col sm:flex-row items-center justify-center gap-1 sm:gap-2 px-3 sm:px-4 py-2 min-w-[110px] sm:min-w-0 opacity-60 cursor-not-allowed"
+              >
+                <BotMessageSquare className="w-4 h-4 shrink-0" />
+                <div className="flex flex-col sm:flex-row items-center gap-0.5 sm:gap-1">
+                  <span className="text-xs sm:text-sm whitespace-nowrap">AI Assistant</span>
+                  <Badge variant="secondary" className="text-[9px] sm:text-[10px] px-1 py-0 h-3.5 sm:h-4">Soon</Badge>
+                </div>
+              </TabsTrigger>
+              <TabsTrigger 
+                value="progress" 
+                disabled 
+                className="flex-shrink-0 flex flex-col sm:flex-row items-center justify-center gap-1 sm:gap-2 px-3 sm:px-4 py-2 min-w-[90px] sm:min-w-0 opacity-60 cursor-not-allowed"
+              >
+                <TrendingUp className="w-4 h-4 shrink-0" />
+                <div className="flex flex-col sm:flex-row items-center gap-0.5 sm:gap-1">
+                  <span className="text-xs sm:text-sm whitespace-nowrap">Progress</span>
+                  <Badge variant="secondary" className="text-[9px] sm:text-[10px] px-1 py-0 h-3.5 sm:h-4">Soon</Badge>
+                </div>
+              </TabsTrigger>
+            </TabsList>
+          </div>
+        </div>
 
         <TabsContent value="overview" className="space-y-6">
           <ProgramInfo 

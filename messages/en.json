@@ -1782,6 +1782,8 @@
       "showing": "Showing {count} of {total} programs"
     },
     "filters": {
+      "hideFilters": "Hide Filters",
+      "showFilters": "Show Filters",
       "difficulty": {
         "label": "Difficulty",
         "selectLevel": "Select Level",

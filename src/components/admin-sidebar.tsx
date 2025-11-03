@@ -20,7 +20,8 @@ import {
   FileText,
   MessageSquare,
   Dumbbell,
-  Activity
+  Activity,
+  Split
 } from 'lucide-react';
 
 interface AdminSidebarProps {
@@ -39,6 +40,12 @@ const adminNavItems = [
     href: '/admin/programs',
     icon: Dumbbell,
     description: 'Manage training programs and workouts'
+  },
+  {
+    title: 'Training Splits',
+    href: '/admin/training-splits',
+    icon: Split,
+    description: 'Manage training split templates'
   },
   {
     title: 'Exercise Management',

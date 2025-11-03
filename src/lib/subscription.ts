@@ -1,6 +1,6 @@
 import { createClient } from '@/lib/supabase/server';
 import { prisma } from './prisma';
-import { UserPlan } from '@prisma/client';
+import { SubscriptionTier, UserPlan } from '@prisma/client';
 
 export interface UserPlanLimits {
   dailyMessages: number;
@@ -10,19 +10,28 @@ export interface UserPlanLimits {
   canAccessProFeatures: boolean;
   canAccessAdvancedRAG: boolean;
   maxKnowledgeItems: number;
+  customPrograms: number;
+  customizationsPerMonth: number;
+  canExportPDF: boolean;
+  hasPrioritySupport: boolean;
 }
 
-export const PLAN_LIMITS: Record<UserPlan, UserPlanLimits> = {
+// New subscription tier limits (aligned with seed data)
+export const SUBSCRIPTION_TIER_LIMITS: Record<SubscriptionTier, UserPlanLimits> = {
   FREE: {
-    dailyMessages: 5,
+    dailyMessages: 10,
     monthlyUploads: 5,
     maxFileSize: 10, // 10MB
     hasConversationMemory: false,
     canAccessProFeatures: false,
     canAccessAdvancedRAG: false,
     maxKnowledgeItems: 10,
+    customPrograms: 2,
+    customizationsPerMonth: 5,
+    canExportPDF: false,
+    hasPrioritySupport: false,
   },
-  PRO: {
+  PRO_MONTHLY: {
     dailyMessages: -1, // unlimited
     monthlyUploads: -1, // unlimited
     maxFileSize: 100, // 100MB
@@ -30,18 +39,42 @@ export const PLAN_LIMITS: Record<UserPlan, UserPlanLimits> = {
     canAccessProFeatures: true,
     canAccessAdvancedRAG: true,
     maxKnowledgeItems: -1, // unlimited
+    customPrograms: -1, // unlimited
+    customizationsPerMonth: -1, // unlimited
+    canExportPDF: false,
+    hasPrioritySupport: false,
+  },
+  PRO_YEARLY: {
+    dailyMessages: -1, // unlimited
+    monthlyUploads: -1, // unlimited
+    maxFileSize: 100, // 100MB
+    hasConversationMemory: true,
+    canAccessProFeatures: true,
+    canAccessAdvancedRAG: true,
+    maxKnowledgeItems: -1, // unlimited
+    customPrograms: -1, // unlimited
+    customizationsPerMonth: -1, // unlimited
+    canExportPDF: true,
+    hasPrioritySupport: true,
   },
 };
 
+// Legacy plan limits (kept for backward compatibility during migration)
+export const PLAN_LIMITS: Record<UserPlan, UserPlanLimits> = {
+  FREE: SUBSCRIPTION_TIER_LIMITS.FREE,
+  PRO: SUBSCRIPTION_TIER_LIMITS.PRO_YEARLY, // Map old PRO to PRO_YEARLY
+};
+
 /**
- * Get the user's current plan and subscription details
+ * Get the user's current subscription tier and limits
  * Includes automatic expiry checking and plan validation
  */
-export async function getUserPlan(): Promise<{
-  plan: UserPlan;
+export async function getUserSubscriptionTier(): Promise<{
+  tier: SubscriptionTier;
   limits: UserPlanLimits;
   messagesUsedToday: number;
-  freeMessagesRemaining: number;
+  customizationsThisMonth: number;
+  customProgramsCount: number;
   subscription?: {
     id: string;
     status: string;
@@ -74,8 +107,8 @@ export async function getUserPlan(): Promise<{
     }
 
     // SECURITY: Check subscription validity and automatically downgrade if expired
-    let userPlan = userData.plan;
-    if (userData.subscription && userData.plan === 'PRO') {
+    let userTier = userData.subscriptionTier;
+    if (userData.subscription && (userData.subscriptionTier === 'PRO_MONTHLY' || userData.subscriptionTier === 'PRO_YEARLY')) {
       const subscription = userData.subscription;
       const now = new Date();
       
@@ -94,8 +127,8 @@ export async function getUserPlan(): Promise<{
         });
         
         // Automatically downgrade to free
-        await downgradeUserToFree(user.id);
-        userPlan = 'FREE';
+        await downgradeUserToFreeTier(user.id);
+        userTier = 'FREE';
         
         // Update the subscription status
         await prisma.subscription.update({
@@ -122,17 +155,71 @@ export async function getUserPlan(): Promise<{
       messagesUsedToday = 0;
     }
 
+    // Reset monthly customizations count if it's a new month
+    const lastCustomizationReset = userData.updatedAt;
+    const isNewMonth = today.getMonth() !== lastCustomizationReset.getMonth() || 
+                      today.getFullYear() !== lastCustomizationReset.getFullYear();
+
+    let customizationsThisMonth = userData.customizationsThisMonth;
+    if (isNewMonth && userData.customizationsThisMonth > 0) {
+      await prisma.user.update({
+        where: { id: user.id },
+        data: {
+          customizationsThisMonth: 0,
+        },
+      });
+      customizationsThisMonth = 0;
+    }
+
     return {
-      plan: userPlan,
-      limits: PLAN_LIMITS[userPlan],
+      tier: userTier,
+      limits: SUBSCRIPTION_TIER_LIMITS[userTier],
       messagesUsedToday,
-      freeMessagesRemaining: userData.freeMessagesRemaining,
+      customizationsThisMonth,
+      customProgramsCount: userData.customProgramsCount,
       subscription: userData.subscription || undefined,
     };
   } catch (error) {
-    console.error('Error getting user plan:', error);
+    console.error('Error getting user subscription tier:', error);
     return null;
   }
+}
+
+/**
+ * Get the user's current plan and subscription details
+ * LEGACY FUNCTION - Use getUserSubscriptionTier() for new code
+ * @deprecated Use getUserSubscriptionTier() instead
+ */
+export async function getUserPlan(): Promise<{
+  plan: UserPlan;
+  limits: UserPlanLimits;
+  messagesUsedToday: number;
+  freeMessagesRemaining: number;
+  subscription?: {
+    id: string;
+    status: string;
+    lemonSqueezyId: string | null;
+    planId: string | null;
+    variantId: string | null;
+    currentPeriodStart: Date | null;
+    currentPeriodEnd: Date | null;
+    createdAt: Date;
+    updatedAt: Date;
+  };
+} | null> {
+  const tierInfo = await getUserSubscriptionTier();
+  if (!tierInfo) return null;
+
+  // Map subscription tier to legacy plan
+  const legacyPlan: UserPlan = tierInfo.tier === 'FREE' ? 'FREE' : 'PRO';
+
+  return {
+    plan: legacyPlan,
+    limits: PLAN_LIMITS[legacyPlan],
+    messagesUsedToday: tierInfo.messagesUsedToday,
+    freeMessagesRemaining: 0, // No longer used in new system
+    subscription: tierInfo.subscription,
+  };
 }
 
 /**
@@ -144,47 +231,36 @@ export async function canUserSendMessage(): Promise<{
   messagesRemaining?: number;
   freeMessagesRemaining?: number;
 }> {
-  const planInfo = await getUserPlan();
+  const tierInfo = await getUserSubscriptionTier();
   
-  if (!planInfo) {
+  if (!tierInfo) {
     return { canSend: false, reason: 'User not found or not authenticated' };
   }
 
-  const { plan, limits, messagesUsedToday, freeMessagesRemaining } = planInfo;
+  const { tier, limits, messagesUsedToday } = tierInfo;
 
-  // Pro users have unlimited messages
-  if (plan === 'PRO') {
-    return { canSend: true, freeMessagesRemaining };
+  // Pro users (both monthly and yearly) have unlimited messages
+  if (tier === 'PRO_MONTHLY' || tier === 'PRO_YEARLY') {
+    return { canSend: true };
   }
 
-  // Free users: Check free messages first, then daily limits
-  if (freeMessagesRemaining > 0) {
-    return { 
-      canSend: true, 
-      freeMessagesRemaining,
-      messagesRemaining: limits.dailyMessages - messagesUsedToday 
-    };
-  }
-
-  // No free messages left, check daily limits
+  // Free users: Check daily limits
   if (messagesUsedToday >= limits.dailyMessages) {
     return {
       canSend: false,
       reason: `Daily message limit reached (${limits.dailyMessages} messages). Upgrade to Pro for unlimited messages.`,
       messagesRemaining: 0,
-      freeMessagesRemaining: 0,
     };
   }
 
   return {
     canSend: true,
     messagesRemaining: limits.dailyMessages - messagesUsedToday,
-    freeMessagesRemaining: 0,
   };
 }
 
 /**
- * Increment user's daily message count and handle free messages
+ * Increment user's daily message count
  */
 export async function incrementUserMessageCount(): Promise<void> {
   try {
@@ -193,36 +269,24 @@ export async function incrementUserMessageCount(): Promise<void> {
 
     if (!user) return;
 
-    // Get current user data to check free messages
+    // Get current user data to check tier
     const userData = await prisma.user.findUnique({
       where: { id: user.id },
-      select: { freeMessagesRemaining: true, plan: true }
+      select: { subscriptionTier: true }
     });
 
     if (!userData) return;
 
-    // If user has free messages remaining, use those first
-    if (userData.freeMessagesRemaining > 0) {
+    // Only increment for free users (Pro users have unlimited)
+    if (userData.subscriptionTier === 'FREE') {
       await prisma.user.update({
         where: { id: user.id },
         data: {
-          freeMessagesRemaining: {
-            decrement: 1,
+          messagesUsedToday: {
+            increment: 1,
           },
         },
       });
-    } else {
-      // No free messages left, increment daily count (for free users only)
-      if (userData.plan === 'FREE') {
-        await prisma.user.update({
-          where: { id: user.id },
-          data: {
-            messagesUsedToday: {
-              increment: 1,
-            },
-          },
-        });
-      }
     }
   } catch (error) {
     console.error('Error incrementing message count:', error);
@@ -233,15 +297,16 @@ export async function incrementUserMessageCount(): Promise<void> {
  * Check if user has access to Pro features
  */
 export async function hasProAccess(): Promise<boolean> {
-  const planInfo = await getUserPlan();
-  return planInfo?.plan === 'PRO' || false;
+  const tierInfo = await getUserSubscriptionTier();
+  return tierInfo?.tier === 'PRO_MONTHLY' || tierInfo?.tier === 'PRO_YEARLY' || false;
 }
 
 /**
- * Upgrade user to Pro plan
+ * Upgrade user to Pro tier (Monthly or Yearly)
  */
-export async function upgradeUserToPro(
+export async function upgradeUserToProTier(
   userId: string,
+  tier: 'PRO_MONTHLY' | 'PRO_YEARLY',
   subscriptionData: {
     lemonSqueezyId: string;
     planId: string;
@@ -251,11 +316,15 @@ export async function upgradeUserToPro(
   }
 ): Promise<void> {
   await prisma.$transaction([
-    // Update user plan
+    // Update user subscription tier and legacy plan
     prisma.user.update({
       where: { id: userId },
       data: {
-        plan: 'PRO',
+        subscriptionTier: tier,
+        plan: 'PRO', // Keep legacy plan in sync
+        subscriptionStatus: 'active',
+        subscriptionStartDate: subscriptionData.currentPeriodStart,
+        subscriptionEndDate: subscriptionData.currentPeriodEnd,
         messagesUsedToday: 0, // Reset message count when upgrading
       },
     }),
@@ -284,13 +353,40 @@ export async function upgradeUserToPro(
 }
 
 /**
- * Downgrade user to Free plan (when subscription is canceled/expired)
+ * Upgrade user to Pro plan
+ * LEGACY FUNCTION - Use upgradeUserToProTier() for new code
+ * @deprecated Use upgradeUserToProTier() instead
  */
-export async function downgradeUserToFree(userId: string): Promise<void> {
+export async function upgradeUserToPro(
+  userId: string,
+  subscriptionData: {
+    lemonSqueezyId: string;
+    planId: string;
+    variantId: string;
+    currentPeriodStart: Date;
+    currentPeriodEnd: Date;
+  }
+): Promise<void> {
+  // Determine tier from planId or default to PRO_MONTHLY
+  const tier: 'PRO_MONTHLY' | 'PRO_YEARLY' = 
+    subscriptionData.planId.toLowerCase().includes('yearly') || 
+    subscriptionData.planId.toLowerCase().includes('annual')
+      ? 'PRO_YEARLY'
+      : 'PRO_MONTHLY';
+  
+  await upgradeUserToProTier(userId, tier, subscriptionData);
+}
+
+/**
+ * Downgrade user to Free tier (when subscription is canceled/expired)
+ */
+export async function downgradeUserToFreeTier(userId: string): Promise<void> {
   await prisma.user.update({
     where: { id: userId },
     data: {
-      plan: 'FREE',
+      subscriptionTier: 'FREE',
+      plan: 'FREE', // Keep legacy plan in sync
+      subscriptionStatus: 'cancelled',
       messagesUsedToday: 0, // Reset message count
     },
   });
@@ -305,6 +401,15 @@ export async function downgradeUserToFree(userId: string): Promise<void> {
 }
 
 /**
+ * Downgrade user to Free plan (when subscription is canceled/expired)
+ * LEGACY FUNCTION - Use downgradeUserToFreeTier() for new code
+ * @deprecated Use downgradeUserToFreeTier() instead
+ */
+export async function downgradeUserToFree(userId: string): Promise<void> {
+  await downgradeUserToFreeTier(userId);
+}
+
+/**
  * Check if user can upload a file (respects monthly limits and file size)
  */
 export async function canUserUploadFile(fileSizeInMB: number): Promise<{
@@ -313,13 +418,13 @@ export async function canUserUploadFile(fileSizeInMB: number): Promise<{
   uploadsRemaining?: number;
   maxFileSize?: number;
 }> {
-  const planInfo = await getUserPlan();
+  const tierInfo = await getUserSubscriptionTier();
   
-  if (!planInfo) {
+  if (!tierInfo) {
     return { canUpload: false, reason: 'User plan not found' };
   }
 
-  const { limits } = planInfo;
+  const { limits } = tierInfo;
   
   // Check file size limit
   if (fileSizeInMB > limits.maxFileSize) {
@@ -420,13 +525,13 @@ export async function canUserCreateKnowledgeItem(): Promise<{
   reason?: string;
   itemsRemaining?: number;
 }> {
-  const planInfo = await getUserPlan();
+  const tierInfo = await getUserSubscriptionTier();
   
-  if (!planInfo) {
+  if (!tierInfo) {
     return { canCreate: false, reason: 'User plan not found' };
   }
 
-  const { limits } = planInfo;
+  const { limits } = tierInfo;
   
   // PRO users have unlimited knowledge items
   if (limits.maxKnowledgeItems === -1) {
@@ -495,8 +600,8 @@ export async function validateSubscriptionSecurity(): Promise<{
       });
 
       // Downgrade user to free if they're still on PRO
-      if (subscription.user.plan === 'PRO') {
-        await downgradeUserToFree(subscription.userId);
+      if (subscription.user.subscriptionTier !== 'FREE') {
+        await downgradeUserToFreeTier(subscription.userId);
         actionsPerformed.push(`Downgraded user ${subscription.userId} from expired subscription`);
       }
     }
@@ -504,7 +609,9 @@ export async function validateSubscriptionSecurity(): Promise<{
     // Find PRO users without valid subscriptions
     const proUsersWithoutValidSubs = await prisma.user.findMany({
       where: {
-        plan: 'PRO',
+        subscriptionTier: {
+          in: ['PRO_MONTHLY', 'PRO_YEARLY']
+        },
         OR: [
           { subscription: null },
           {
@@ -521,14 +628,14 @@ export async function validateSubscriptionSecurity(): Promise<{
 
     // Downgrade PRO users without valid subscriptions
     for (const user of proUsersWithoutValidSubs) {
-      await downgradeUserToFree(user.id);
+      await downgradeUserToFreeTier(user.id);
       actionsPerformed.push(`Downgraded PRO user ${user.id} without valid subscription`);
     }
 
     // Find FREE users with active subscriptions (shouldn't happen but let's check)
     const freeUsersWithActiveSubs = await prisma.user.findMany({
       where: {
-        plan: 'FREE',
+        subscriptionTier: 'FREE',
         subscription: {
           status: 'active',
           currentPeriodEnd: { gt: new Date() }
@@ -542,7 +649,14 @@ export async function validateSubscriptionSecurity(): Promise<{
     // Upgrade FREE users with active subscriptions
     for (const user of freeUsersWithActiveSubs) {
       if (user.subscription) {
-        await upgradeUserToPro(user.id, {
+        // Determine tier from planId
+        const tier: 'PRO_MONTHLY' | 'PRO_YEARLY' = 
+          user.subscription.planId?.toLowerCase().includes('yearly') || 
+          user.subscription.planId?.toLowerCase().includes('annual')
+            ? 'PRO_YEARLY'
+            : 'PRO_MONTHLY';
+
+        await upgradeUserToProTier(user.id, tier, {
           lemonSqueezyId: user.subscription.lemonSqueezyId || '',
           planId: user.subscription.planId || 'pro',
           variantId: user.subscription.variantId || '',
@@ -584,13 +698,13 @@ export async function validateProAccess(userId: string): Promise<boolean> {
     }
 
     // If user is not PRO, they don't have access
-    if (userData.plan !== 'PRO') {
+    if (userData.subscriptionTier === 'FREE') {
       return false;
     }
 
     // If user has no subscription, downgrade them and deny access
     if (!userData.subscription) {
-      await downgradeUserToFree(userId);
+      await downgradeUserToFreeTier(userId);
       return false;
     }
 
@@ -603,7 +717,7 @@ export async function validateProAccess(userId: string): Promise<boolean> {
     
     if (isExpired || isInactive) {
       // Auto-downgrade expired/inactive subscription
-      await downgradeUserToFree(userId);
+      await downgradeUserToFreeTier(userId);
       await prisma.subscription.update({
         where: { id: subscription.id },
         data: { status: 'expired' }

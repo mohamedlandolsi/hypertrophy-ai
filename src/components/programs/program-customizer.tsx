@@ -1017,24 +1017,24 @@ export function ProgramCustomizer({
                 value={customization.structureId} 
                 onValueChange={(value: string) => updateCustomization({ structureId: value })}
               >
-                <div className="space-y-4">
+                <div className="space-y-3 sm:space-y-4">
                   {/* eslint-disable-next-line @typescript-eslint/no-explicit-any */}
                   {program.programStructures.map((structure: any) => {
                     const structureName = getLocalizedContent(structure.name, `Structure ${structure.order + 1}`);
                     
                     return (
-                      <div key={structure.id} className="flex items-start space-x-3 p-4 border rounded-lg">
-                        <RadioGroupItem value={structure.id} id={structure.id} className="mt-1" />
-                        <Label htmlFor={structure.id} className="flex-1 cursor-pointer">
+                      <div key={structure.id} className="flex items-start space-x-2 sm:space-x-3 p-3 sm:p-4 border rounded-lg">
+                        <RadioGroupItem value={structure.id} id={structure.id} className="mt-1 shrink-0" />
+                        <Label htmlFor={structure.id} className="flex-1 cursor-pointer min-w-0">
                           <div className="space-y-2">
-                            <div className="flex items-center space-x-2">
-                              <h4 className="font-medium">{structureName}</h4>
+                            <div className="flex flex-col sm:flex-row sm:items-center gap-2">
+                              <h4 className="font-medium text-sm sm:text-base">{structureName}</h4>
                               {structure.isDefault && (
-                                <Badge variant="secondary">Recommended</Badge>
+                                <Badge variant="secondary" className="w-fit text-xs">Recommended</Badge>
                               )}
                             </div>
                             
-                            <div className="text-sm text-gray-600 dark:text-gray-400">
+                            <div className="text-xs sm:text-sm text-gray-600 dark:text-gray-400">
                               <p>
                                 {structure.structureType === 'weekly' 
                                   ? `${structure.sessionCount} sessions per week`
@@ -1045,7 +1045,7 @@ export function ProgramCustomizer({
                             
                             {structure.weeklySchedule && (
                               <div className="mt-2">
-                                <div className="flex space-x-1 text-xs">
+                                <div className="flex flex-wrap gap-1 text-xs">
                                   {Object.entries(structure.weeklySchedule as Record<string, string>).map(([day, workout]) => {
                                     const isRestDay = !workout || workout.trim() === '' || workout.toLowerCase() === 'rest';
                                     const displayLabel = isRestDay ? 'Rest' : workout;
@@ -1053,13 +1053,13 @@ export function ProgramCustomizer({
                                     return (
                                       <div 
                                         key={day} 
-                                        className={`px-2 py-1 rounded text-center min-w-12 ${
+                                        className={`px-2 py-1 rounded text-center min-w-[3rem] sm:min-w-[3.5rem] flex-shrink-0 ${
                                           isRestDay
                                             ? 'bg-gray-100 dark:bg-gray-800 text-gray-600 dark:text-gray-400' 
                                             : 'bg-blue-100 dark:bg-blue-900 text-blue-800 dark:text-blue-200'
                                         }`}
                                       >
-                                        {displayLabel}
+                                        <span className="block truncate text-[10px] sm:text-xs">{displayLabel}</span>
                                       </div>
                                     );
                                   })}
@@ -1381,10 +1381,20 @@ export function ProgramCustomizer({
                       <AccordionTrigger className="hover:no-underline">
                         <div className="flex items-center justify-between w-full pr-4">
                           <div className="flex items-center space-x-3">
-                            <Dumbbell className="w-5 h-5 text-blue-500" />
-                            <div className="text-left">
-                              <h4 className="font-semibold">{displayName}</h4>
-                              <div className="flex flex-wrap gap-1 mt-1">
+                            <Dumbbell className="w-5 h-5 text-blue-500 flex-shrink-0" />
+                            <div className="text-left min-w-0">
+                              <h4 className="font-semibold truncate">{displayName}</h4>
+                              {/* Mobile: Show count only */}
+                              <div className="flex sm:hidden items-center gap-2 mt-1">
+                                <Badge variant="secondary" className="text-xs">
+                                  {validMuscleGroups.length} muscle{validMuscleGroups.length !== 1 ? 's' : ''}
+                                </Badge>
+                                <Badge variant="outline" className="text-xs">
+                                  {selectedExercises.length} ex
+                                </Badge>
+                              </div>
+                              {/* Desktop: Show full badges */}
+                              <div className="hidden sm:flex flex-wrap gap-1 mt-1">
                                 {validMuscleGroups.slice(0, 3).map((muscleGroupId) => {
                                   const muscleInfo = getMuscleGroupInfo(muscleGroupId);
                                   const volume = calculateMuscleVolume(template, muscleGroupId);
@@ -1398,7 +1408,7 @@ export function ProgramCustomizer({
                                       >
                                         {muscleInfo.name}
                                       </Badge>
-                                      <Badge className={`${status.color} text-xs`}>
+                                      <Badge className={`${status.color} text-[10px] px-1.5 py-0.5`}>
                                         {status.icon} {volume}/{range.min}-{range.max}
                                       </Badge>
                                     </div>
@@ -1412,7 +1422,7 @@ export function ProgramCustomizer({
                               </div>
                             </div>
                           </div>
-                          <Badge variant="outline" className="ml-auto">
+                          <Badge variant="outline" className="ml-auto hidden sm:inline-flex">
                             {selectedExercises.length} exercise{selectedExercises.length !== 1 ? 's' : ''}
                           </Badge>
                         </div>
@@ -1502,8 +1512,12 @@ export function ProgramCustomizer({
                                   <Badge variant="secondary" className={muscleInfo.color}>
                                     {muscleInfo.name}
                                   </Badge>
-                                  <Badge className={`${status.color} text-xs`}>
-                                    {status.icon} {volume}/{range.min}-{range.max} sets ({status.label})
+                                  <Badge className={`${status.color} text-[10px] sm:text-xs px-1.5 py-0.5 leading-tight`}>
+                                    <span className="flex items-center gap-0.5">
+                                      <span>{status.icon}</span>
+                                      <span className="font-medium">{volume}/{range.min}-{range.max}</span>
+                                      <span className="hidden sm:inline ml-0.5">({status.label})</span>
+                                    </span>
                                   </Badge>
                                 </div>
                                 <Badge variant="outline" className="text-xs">
@@ -1575,13 +1589,13 @@ export function ProgramCustomizer({
                                                   </div>
                                                 </div>
                                                 {/* Equipment and Sets Selection Row */}
-                                                <div className="flex items-center gap-2 mt-2 pt-2 border-t border-blue-200 dark:border-blue-800">
-                                                  <div className="flex-1">
+                                                <div className="flex flex-col sm:flex-row items-stretch sm:items-center gap-2 mt-2 pt-2 border-t border-blue-200 dark:border-blue-800">
+                                                  <div className="flex-1 min-w-0">
                                                     <Select
                                                       value={getExerciseEquipment(template.displayId, exercise.id) || exercise.equipment[0] || ''}
                                                       onValueChange={(value) => setExerciseEquipmentChoice(template.displayId, exercise.id, value)}
                                                     >
-                                                      <SelectTrigger className="w-full h-9 text-xs">
+                                                      <SelectTrigger className="w-full h-10 text-xs sm:text-sm">
                                                         <SelectValue placeholder="Equipment" />
                                                       </SelectTrigger>
                                                       <SelectContent>
@@ -1593,30 +1607,32 @@ export function ProgramCustomizer({
                                                       </SelectContent>
                                                     </Select>
                                                   </div>
-                                                  <div className="w-28">
-                                                    <Select
-                                                      value={getExerciseSets(template.displayId, exercise.id).toString()}
-                                                      onValueChange={(value) => setExerciseSetCount(template.displayId, exercise.id, parseInt(value))}
+                                                  <div className="flex items-center gap-2">
+                                                    <div className="flex-1 sm:w-32">
+                                                      <Select
+                                                        value={getExerciseSets(template.displayId, exercise.id).toString()}
+                                                        onValueChange={(value) => setExerciseSetCount(template.displayId, exercise.id, parseInt(value))}
+                                                      >
+                                                        <SelectTrigger className="w-full h-10 text-xs sm:text-sm">
+                                                          <SelectValue />
+                                                        </SelectTrigger>
+                                                        <SelectContent>
+                                                          {[1, 2, 3, 4].map(num => (
+                                                            <SelectItem key={num} value={num.toString()}>{num} sets</SelectItem>
+                                                          ))}
+                                                        </SelectContent>
+                                                      </Select>
+                                                    </div>
+                                                    <Button
+                                                      type="button"
+                                                      variant="ghost"
+                                                      size="sm"
+                                                      className="h-10 w-10 p-0 flex-shrink-0"
+                                                      onClick={() => toggleExerciseSelection(template.displayId, exercise.id)}
                                                     >
-                                                      <SelectTrigger className="w-full h-9 text-xs">
-                                                        <SelectValue />
-                                                      </SelectTrigger>
-                                                      <SelectContent>
-                                                        {[1, 2, 3, 4].map(num => (
-                                                          <SelectItem key={num} value={num.toString()}>{num} sets</SelectItem>
-                                                        ))}
-                                                      </SelectContent>
-                                                    </Select>
+                                                      <X className="h-4 w-4" />
+                                                    </Button>
                                                   </div>
-                                                  <Button
-                                                    type="button"
-                                                    variant="ghost"
-                                                    size="sm"
-                                                    className="h-9 w-9 p-0 flex-shrink-0"
-                                                    onClick={() => toggleExerciseSelection(template.displayId, exercise.id)}
-                                                  >
-                                                    <X className="h-4 w-4" />
-                                                  </Button>
                                                 </div>
                                               </div>
                                               
@@ -1727,11 +1743,11 @@ export function ProgramCustomizer({
                                         </Button>
                                       </DialogTrigger>
                                       <DialogContent className="max-w-4xl max-h-[90vh] md:max-h-[85vh] overflow-hidden flex flex-col p-0">
-                                        <DialogHeader className="px-6 pt-6 pb-4 border-b">
-                                          <div className="flex items-start justify-between gap-4">
-                                            <div className="flex-1">
-                                              <DialogTitle className="text-2xl font-bold mb-2">Select Exercises for {muscleGroup}</DialogTitle>
-                                              <DialogDescription className="text-base">
+                                        <DialogHeader className="px-4 md:px-6 pt-3 md:pt-6 pb-2 md:pb-4 border-b">
+                                          <div className="flex items-start justify-between gap-2 md:gap-4">
+                                            <div className="flex-1 min-w-0">
+                                              <DialogTitle className="text-lg md:text-2xl font-bold mb-1 md:mb-2">Select Exercises for {muscleGroup}</DialogTitle>
+                                              <DialogDescription className="text-xs md:text-base hidden md:block">
                                                 Choose exercises that target this muscle group effectively.  
                                                 <TooltipProvider>
                                                   <Tooltip>
@@ -1749,28 +1765,29 @@ export function ProgramCustomizer({
                                               </DialogDescription>
                                             </div>
                                             {/* Selection Counter Badge */}
-                                            <Badge variant="secondary" className="text-lg px-4 py-2 whitespace-nowrap">
+                                            <Badge variant="secondary" className="text-sm md:text-lg px-2 md:px-4 py-1 md:py-2 whitespace-nowrap flex-shrink-0">
                                               {tempSelectedExercises.length}/{getExerciseLimit(template, muscleGroup)}
                                             </Badge>
                                           </div>
                                         </DialogHeader>
                                         
                                         {/* Search and Filter Bar */}
-                                        <div className="px-6 py-4 border-b bg-muted/30 space-y-3">
+                                        <div className="px-4 md:px-6 py-2 md:py-4 border-b bg-muted/30 space-y-2 md:space-y-3">
                                           <div className="relative">
-                                            <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 h-5 w-5 text-muted-foreground" />
+                                            <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 h-4 md:h-5 w-4 md:w-5 text-muted-foreground" />
                                             <Input
                                               placeholder="Search exercises by name..."
                                               value={exerciseSearchQuery}
                                               onChange={(e) => setExerciseSearchQuery(e.target.value)}
-                                              className="pl-10 h-12 text-base"
+                                              className="pl-9 md:pl-10 h-9 md:h-12 text-sm md:text-base"
                                             />
                                           </div>
-                                          <div className="flex gap-2 flex-wrap">
+                                          <div className="flex gap-1.5 md:gap-2 flex-wrap">
                                             <Button
                                               type="button"
                                               variant={equipmentFilter === 'all' ? 'default' : 'outline'}
                                               size="sm"
+                                              className="h-7 md:h-9 text-xs md:text-sm px-2 md:px-3"
                                               onClick={() => setEquipmentFilter('all')}
                                             >
                                               All Equipment
@@ -1779,6 +1796,7 @@ export function ProgramCustomizer({
                                               type="button"
                                               variant={equipmentFilter === 'barbell' ? 'default' : 'outline'}
                                               size="sm"
+                                              className="h-7 md:h-9 text-xs md:text-sm px-2 md:px-3"
                                               onClick={() => setEquipmentFilter('barbell')}
                                             >
                                               Barbell
@@ -1787,6 +1805,7 @@ export function ProgramCustomizer({
                                               type="button"
                                               variant={equipmentFilter === 'dumbbell' ? 'default' : 'outline'}
                                               size="sm"
+                                              className="h-7 md:h-9 text-xs md:text-sm px-2 md:px-3"
                                               onClick={() => setEquipmentFilter('dumbbell')}
                                             >
                                               Dumbbell
@@ -1795,6 +1814,7 @@ export function ProgramCustomizer({
                                               type="button"
                                               variant={equipmentFilter === 'machine' ? 'default' : 'outline'}
                                               size="sm"
+                                              className="h-7 md:h-9 text-xs md:text-sm px-2 md:px-3"
                                               onClick={() => setEquipmentFilter('machine')}
                                             >
                                               Machine
@@ -1803,6 +1823,7 @@ export function ProgramCustomizer({
                                               type="button"
                                               variant={equipmentFilter === 'cable' ? 'default' : 'outline'}
                                               size="sm"
+                                              className="h-7 md:h-9 text-xs md:text-sm px-2 md:px-3"
                                               onClick={() => setEquipmentFilter('cable')}
                                             >
                                               Cable
@@ -1811,8 +1832,8 @@ export function ProgramCustomizer({
                                         </div>
                                         
                                         {/* Exercise Grid - Scrollable */}
-                                        <div className="flex-1 overflow-y-auto px-6 py-4">
-                                          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
+                                        <div className="flex-1 overflow-y-auto px-3 md:px-6 py-3 md:py-4">
+                                          <div className="grid grid-cols-1 md:grid-cols-2 gap-3 md:gap-4">
                                             {availableExercises
                                               .filter((exercise: Exercise) => {
                                                 // Filter logic
@@ -1880,7 +1901,7 @@ export function ProgramCustomizer({
                                                   )}
                                                   
                                                   {/* Exercise Image */}
-                                                  <div className="relative h-40 bg-muted">
+                                                  <div className="relative h-48 md:h-40 bg-muted">
                                                     {exercise.imageUrl ? (
                                                       <Image 
                                                         src={exercise.imageUrl} 
@@ -1896,9 +1917,9 @@ export function ProgramCustomizer({
                                                   </div>
                                                   
                                                   {/* Exercise Info */}
-                                                  <div className="p-4 space-y-2">
+                                                  <div className="p-4 space-y-2.5">
                                                     <div className="flex items-start justify-between gap-2">
-                                                      <h4 className="font-semibold text-base line-clamp-2 flex-1">{exercise.name}</h4>
+                                                      <h4 className="font-semibold text-base md:text-sm line-clamp-2 flex-1">{exercise.name}</h4>
                                                       <Button
                                                         type="button"
                                                         variant="ghost"
@@ -1995,15 +2016,17 @@ export function ProgramCustomizer({
                                         </div>
                                         
                                         {/* Sticky Footer with Actions */}
-                                        <DialogFooter className="px-6 py-4 border-t bg-muted/30">
-                                          <div className="flex items-center justify-between w-full gap-4">
-                                            <div className="text-sm text-muted-foreground">
-                                              <span className="font-medium">{tempSelectedExercises.length}</span> of {getExerciseLimit(template, muscleGroup)} exercises selected
+                                        <DialogFooter className="px-4 md:px-6 py-2.5 md:py-4 border-t bg-muted/30">
+                                          <div className="flex items-center justify-between w-full gap-2 md:gap-4">
+                                            <div className="text-xs md:text-sm text-muted-foreground">
+                                              <span className="font-medium">{tempSelectedExercises.length}</span>/{getExerciseLimit(template, muscleGroup)}
                                             </div>
                                             <div className="flex gap-2">
                                               <Button
                                                 type="button"
                                                 variant="outline"
+                                                size="sm"
+                                                className="h-8 md:h-10 text-xs md:text-sm"
                                                 onClick={() => {
                                                   setDialogOpen(false);
                                                   setTempSelectedExercises([]);
@@ -2013,6 +2036,8 @@ export function ProgramCustomizer({
                                               </Button>
                                               <Button
                                                 type="button"
+                                                size="sm"
+                                                className="h-8 md:h-10 text-xs md:text-sm"
                                                 onClick={() => {
                                                   // Apply selections
                                                   const currentExercises = customization.workoutConfiguration[template.displayId] || [];
@@ -2037,9 +2062,8 @@ export function ProgramCustomizer({
                                                   setTempSelectedExercises([]);
                                                 }}
                                                 disabled={tempSelectedExercises.length === 0}
-                                                className="min-w-[140px]"
                                               >
-                                                <CheckCircle className="mr-2 h-4 w-4" />
+                                                <CheckCircle className="mr-1.5 md:mr-2 h-3.5 md:h-4 w-3.5 md:w-4" />
                                                 Add Selected
                                               </Button>
                                             </div>
@@ -2113,18 +2137,19 @@ export function ProgramCustomizer({
       })}
 
       {/* Action Buttons */}
-      <div className="flex items-center justify-between p-4 bg-gray-50 dark:bg-gray-800/50 rounded-lg">
+      <div className="flex flex-col sm:flex-row items-stretch sm:items-center justify-between gap-3 sm:gap-4 p-3 sm:p-4 bg-gray-50 dark:bg-gray-800/50 rounded-lg">
         <Button
           variant="outline"
           onClick={resetToDefaults}
           disabled={isSaving}
+          className="w-full sm:w-auto justify-center"
         >
           <RotateCcw className="w-4 h-4 mr-2" />
-          Reset to Defaults
+          <span className="text-sm sm:text-base">Reset to Defaults</span>
         </Button>
         
-        <div className="flex items-center space-x-3">
-          <p className="text-sm text-muted-foreground">
+        <div className="flex items-center justify-center sm:justify-end">
+          <p className="text-xs sm:text-sm text-muted-foreground text-center sm:text-right">
             Use individual save buttons for each section
           </p>
         </div>

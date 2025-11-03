@@ -1916,6 +1916,8 @@
       "showing": "Affichage de {count} sur {total} programmes"
     },
     "filters": {
+      "hideFilters": "Masquer les Filtres",
+      "showFilters": "Afficher les Filtres",
       "difficulty": {
         "label": "Difficulté",
         "selectLevel": "Sélectionner le Niveau",

@@ -25,30 +25,44 @@ model KnowledgeChunk {
 }
 
 model User {
-  id                     String          @id @default(cuid())
-  role                   String          @default("user")
-  hasCompletedOnboarding Boolean         @default(false)
-  lastMessageReset       DateTime        @default(now())
-  messagesUsedToday      Int             @default(0)
-  plan                   UserPlan        @default(FREE)
-  lastUploadReset        DateTime        @default(now())
-  uploadsThisMonth       Int             @default(0)
+  id                     String    @id @default(cuid())
+  role                   String    @default("user")
+  hasCompletedOnboarding Boolean   @default(false)
+  lastMessageReset       DateTime  @default(now())
+  messagesUsedToday      Int       @default(0)
+  plan                   UserPlan  @default(FREE)
+  lastUploadReset        DateTime  @default(now())
+  uploadsThisMonth       Int       @default(0)
   consentTimestamp       DateTime?
-  dataProcessingConsent  Boolean         @default(false)
+  dataProcessingConsent  Boolean   @default(false)
   privacyPolicyVersion   String?
-  freeMessagesRemaining  Int             @default(15)
-  chats                  Chat[]
-  clientMemory           ClientMemory?
-  knowledgeItems         KnowledgeItem[]
-  subscription           Subscription?
-  // Coach chat relations
-  userCoachChats         CoachChat[]     @relation("UserCoachChats")
-  coachCoachChats        CoachChat[]     @relation("CoachCoachChats")
-  sentCoachMessages      CoachMessage[]
+  freeMessagesRemaining  Int       @default(15)
 
-  // Training program relations
+  // New subscription fields
+  subscriptionTier        SubscriptionTier @default(FREE)
+  subscriptionStatus      String           @default("active") // 'active', 'cancelled', 'expired'
+  subscriptionStartDate   DateTime?
+  subscriptionEndDate     DateTime?
+  lemonSqueezyCustomerId  String?          @unique
+  customProgramsCount     Int              @default(0)
+  customizationsThisMonth Int              @default(0)
+  updatedAt               DateTime         @default(now()) @updatedAt
+
+  chats             Chat[]
+  clientMemory      ClientMemory?
+  knowledgeItems    KnowledgeItem[]
+  subscription      Subscription?
+  // Coach chat relations
+  userCoachChats    CoachChat[]     @relation("UserCoachChats")
+  coachCoachChats   CoachChat[]     @relation("CoachCoachChats")
+  sentCoachMessages CoachMessage[]
+
+  // Training program relations (old system)
   userPurchases UserPurchase[]
   userPrograms  UserProgram[]
+
+  // New training program relations
+  customTrainingPrograms CustomTrainingProgram[]
 
   @@index([lastMessageReset])
   @@index([lastUploadReset])
@@ -218,32 +232,44 @@ model AIConfiguration {
 }
 
 model Exercise {
-  id           String           @id
-  name         String           @unique
-  exerciseType ExerciseType     @default(COMPOUND) // Default to COMPOUND for existing exercises
-  description  String?
-  instructions String?
-  equipment    String[]
-  category     ExerciseCategory @default(APPROVED)
-  isActive     Boolean          @default(true)
-  isRecommended Boolean         @default(false)
+  id                  String           @id
+  name                String           @unique
+  exerciseType        ExerciseType     @default(COMPOUND) // Default to COMPOUND for existing exercises
+  description         String?
+  instructions        String?
+  equipment           String[]
+  category            ExerciseCategory @default(APPROVED)
+  isActive            Boolean          @default(true)
+  isRecommended       Boolean          @default(false)
   // Image URL for exercise demonstration (can be image or GIF)
-  imageUrl     String?
-  imageType    String?          // 'image/jpeg', 'image/png', 'image/gif', etc.
+  imageUrl            String?
+  imageType           String? // 'image/jpeg', 'image/png', 'image/gif', etc.
   // Volume contributions for each muscle group (1.0 = direct/primary, 0.5 = indirect/secondary)
   // This defines which muscles are trained and how much
   // Format: { "CHEST": 1.0, "FRONT_DELTS": 0.5, "TRICEPS": 0.5 }
-  volumeContributions Json?         @default("{}")
+  volumeContributions Json?            @default("{}")
   // Regional bias for muscles with 1.0 volume contribution (optional)
   // Format: { "CHEST": "UPPER_CHEST", "QUADRICEPS": "RECTUS_FEMORIS" }
-  regionalBias Json?         @default("{}")
-  createdAt    DateTime         @default(now())
-  updatedAt    DateTime
+  regionalBias        Json?            @default("{}")
+
+  // New fields for workout customization
+  primaryMuscle    String?
+  secondaryMuscles String[] @default([])
+  isCompound       Boolean  @default(true)
+  canBeUnilateral  Boolean  @default(false)
+  volumeMetrics    Json?    @default("{}")
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  // Relations
+  workoutExercises WorkoutExercise[]
 
   @@index([category])
   @@index([isActive])
   @@index([exerciseType, category])
   @@index([exerciseType])
+  @@index([primaryMuscle])
 }
 
 model KnowledgeCategory {
@@ -281,10 +307,10 @@ model TrainingProgram {
   // Interactive Features
   hasInteractiveBuilder Boolean @default(true)
   allowsCustomization   Boolean @default(true)
-  
+
   // Workout Names (general for all structures)
   workoutNames Json? // Array of workout names: ["Push Day", "Pull Day", "Leg Day"]
-  
+
   // About Program
   thumbnailUrl String?
   aboutContent String?
@@ -306,19 +332,19 @@ model TrainingProgram {
 }
 
 model ProgramStructure {
-  id                String   @id @default(cuid())
+  id                String @id @default(cuid())
   trainingProgramId String
   name              Json // Multilingual name for the structure variant
-  
+
   // Structure Configuration
-  structureType  String  // "weekly" or "cyclic"
-  sessionCount   Int     @default(4) // Number of sessions per week (for weekly) or total sessions (for cyclic)
-  trainingDays   Int     @default(3) // Training days in cyclic structure
-  restDays       Int     @default(1) // Rest days in cyclic structure
-  
+  structureType String // "weekly" or "cyclic"
+  sessionCount  Int    @default(4) // Number of sessions per week (for weekly) or total sessions (for cyclic)
+  trainingDays  Int    @default(3) // Training days in cyclic structure
+  restDays      Int    @default(1) // Rest days in cyclic structure
+
   // Weekly Schedule (when structureType is "weekly")
   weeklySchedule Json? // {"monday": "Upper Body", "tuesday": "Lower Body", "wednesday": "", ...}
-  
+
   order     Int      @default(0) // Order of this structure variant
   isDefault Boolean  @default(false) // Whether this is the default structure
   createdAt DateTime @default(now())
@@ -344,15 +370,15 @@ model ProgramGuide {
 }
 
 model WorkoutTemplate {
-  id                     String   @id @default(cuid())
-  trainingProgramId      String
-  name                   Json // Multilingual: {"en": "Upper Body A", "ar": "الجزء العلوي أ", "fr": "Haut du Corps A"}
-  order                  Int // Order within the program
-  requiredMuscleGroups   String[] // Array of required muscle groups for this workout
-  exercisesPerMuscle     Json? // Per-muscle exercise limits: {"chest": 2, "back": 3, ...}
-  volumeRange            Json? // Per-muscle volume range: {"chest": {"min": 2, "max": 5}, "back": {"min": 3, "max": 7}, ...}
-  createdAt              DateTime @default(now())
-  updatedAt              DateTime @updatedAt
+  id                   String   @id @default(cuid())
+  trainingProgramId    String
+  name                 Json // Multilingual: {"en": "Upper Body A", "ar": "الجزء العلوي أ", "fr": "Haut du Corps A"}
+  order                Int // Order within the program
+  requiredMuscleGroups String[] // Array of required muscle groups for this workout
+  exercisesPerMuscle   Json? // Per-muscle exercise limits: {"chest": 2, "back": 3, ...}
+  volumeRange          Json? // Per-muscle volume range: {"chest": {"min": 2, "max": 5}, "back": {"min": 3, "max": 7}, ...}
+  createdAt            DateTime @default(now())
+  updatedAt            DateTime @updatedAt
 
   // Relations
   trainingProgram TrainingProgram @relation(fields: [trainingProgramId], references: [id], onDelete: Cascade)
@@ -446,6 +472,166 @@ model UserProgram {
   @@index([userId, trainingProgramId])
 }
 
+// ============================================
+// NEW TRAINING PROGRAM SYSTEM MODELS
+// ============================================
+
+model TrainingSplit {
+  id          String   @id @default(cuid())
+  name        String   @unique
+  description String
+  focusAreas  String[] // e.g., ["Chest", "Back", "Shoulders"]
+  difficulty  String // 'Beginner', 'Intermediate', 'Advanced'
+  isActive    Boolean  @default(true)
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+
+  // Relations
+  trainingStructures     TrainingSplitStructure[]
+  customTrainingPrograms CustomTrainingProgram[]
+
+  @@index([isActive])
+  @@index([difficulty])
+}
+
+model TrainingSplitStructure {
+  id            String   @id @default(cuid())
+  splitId       String
+  daysPerWeek   Int
+  pattern       String // e.g., "2 on 1 off", "every other day"
+  isWeeklyBased Boolean
+  createdAt     DateTime @default(now())
+  updatedAt     DateTime @updatedAt
+
+  // Relations
+  trainingSplit          TrainingSplit           @relation(fields: [splitId], references: [id], onDelete: Cascade)
+  trainingDayAssignments TrainingDayAssignment[]
+  customTrainingPrograms CustomTrainingProgram[]
+
+  @@index([splitId])
+  @@index([isWeeklyBased])
+}
+
+model TrainingDayAssignment {
+  id          String   @id @default(cuid())
+  structureId String
+  dayOfWeek   String? // 'Monday', 'Tuesday', etc. (only for weekly-based)
+  dayNumber   Int // order of day in structure
+  workoutType String // e.g., "Upper", "Lower", "Chest", "Back"
+  createdAt   DateTime @default(now())
+
+  // Relations
+  structure TrainingSplitStructure @relation(fields: [structureId], references: [id], onDelete: Cascade)
+
+  @@index([structureId])
+  @@index([dayNumber])
+}
+
+model CustomTrainingProgram {
+  id                   String               @id @default(cuid())
+  userId               String
+  name                 String
+  description          String               @default("")
+  splitId              String
+  structureId          String
+  workoutStructureType WorkoutStructureType
+  status               ProgramStatus        @default(DRAFT)
+  createdAt            DateTime             @default(now())
+  updatedAt            DateTime             @updatedAt
+
+  // Relations
+  user           User                   @relation(fields: [userId], references: [id], onDelete: Cascade)
+  trainingSplit  TrainingSplit          @relation(fields: [splitId], references: [id])
+  splitStructure TrainingSplitStructure @relation(fields: [structureId], references: [id])
+  workouts       Workout[]
+
+  @@index([userId])
+  @@index([splitId])
+  @@index([structureId])
+}
+
+model Workout {
+  id           String   @id @default(cuid())
+  programId    String
+  name         String
+  type         String // e.g., "Upper A", "Lower", "Chest"
+  assignedDays String[] @default([]) // array of day names
+  createdAt    DateTime @default(now())
+  updatedAt    DateTime @updatedAt
+
+  // Relations
+  program   CustomTrainingProgram @relation(fields: [programId], references: [id], onDelete: Cascade)
+  exercises WorkoutExercise[]
+
+  @@index([programId])
+}
+
+model WorkoutExercise {
+  id           String   @id @default(cuid())
+  workoutId    String
+  exerciseId   String
+  sets         Int
+  reps         String // e.g., "8-12"
+  isUnilateral Boolean  @default(false)
+  order        Int // for ordering in workout
+  createdAt    DateTime @default(now())
+  updatedAt    DateTime @updatedAt
+
+  // Relations
+  workout  Workout  @relation(fields: [workoutId], references: [id], onDelete: Cascade)
+  exercise Exercise @relation(fields: [exerciseId], references: [id])
+
+  @@index([workoutId])
+  @@index([exerciseId])
+  @@index([workoutId, order])
+}
+
+// ============================================
+// SUBSCRIPTION TIER FEATURES
+// ============================================
+
+model SubscriptionTierFeature {
+  id           String           @id @default(cuid())
+  tier         SubscriptionTier
+  featureName  String // e.g., "custom_programs", "ai_interactions", "workout_logging"
+  featureLimit Int // -1 for unlimited, 0 for disabled, positive for limit
+  resetPeriod  String? // "daily", "monthly", "yearly", null for one-time limits
+  description  String?
+  isActive     Boolean          @default(true)
+  createdAt    DateTime         @default(now())
+  updatedAt    DateTime         @updatedAt
+
+  @@unique([tier, featureName])
+  @@index([tier])
+  @@index([isActive])
+}
+
+// ============================================
+// AI ASSISTANT INTERACTION LOGS
+// ============================================
+
+model AIAssistantLog {
+  id              String   @id @default(cuid())
+  userId          String
+  sessionId       String? // Optional session grouping
+  interactionType String // "chat", "program_generation", "workout_review", "exercise_suggestion"
+  userMessage     String // User's input/question
+  assistantReply  String // AI's response
+  tokensUsed      Int? // Token count for rate limiting
+  modelUsed       String? // Model name used (gemini-2.5-flash, gemini-2.5-pro)
+  responseTime    Int? // Response time in milliseconds
+  wasSuccessful   Boolean  @default(true)
+  errorMessage    String? // Error details if failed
+  metadata        Json? // Additional context: program_id, exercise_ids, etc.
+  createdAt       DateTime @default(now())
+
+  @@index([userId])
+  @@index([userId, createdAt])
+  @@index([sessionId])
+  @@index([interactionType])
+  @@index([createdAt])
+}
+
 enum Role {
   USER
   ASSISTANT
@@ -507,7 +693,7 @@ enum ExerciseMuscleGroup {
   SIDE_DELTS
   REAR_DELTS
   // Elbow flexors (anatomically accurate grouping)
-  ELBOW_FLEXORS  // Contains: Biceps, Brachialis, Brachioradialis
+  ELBOW_FLEXORS // Contains: Biceps, Brachialis, Brachioradialis
   TRICEPS
   // Forearm muscles (separated by function)
   WRIST_FLEXORS
@@ -527,62 +713,62 @@ enum VolumeTrackingMuscle {
   UPPER_CHEST
   MIDDLE_CHEST
   LOWER_CHEST
-  
+
   // Arms - Biceps and Related
   BICEPS
   BRACHIALIS
   BRACHIORADIALIS
-  
+
   // Arms - Triceps
   TRICEPS_LONG_HEAD
   TRICEPS_MEDIAL_HEAD
   TRICEPS_LATERAL_HEAD
-  
+
   // Shoulders
   FRONT_DELTS
   SIDE_DELTS
   REAR_DELTS
-  
+
   // Forearms
   WRIST_FLEXORS
   WRIST_EXTENSORS
-  
+
   // Back - Lats
   UPPER_LATS
   MIDDLE_LATS
   LOWER_LATS
-  
+
   // Back - Other
   TRAPEZIUS
   RHOMBOIDS
   ERECTOR_SPINAE
-  
+
   // Glutes
   GLUTEUS_MAXIMUS
   GLUTEUS_MEDIUS
   GLUTEUS_MINIMUS
-  
+
   // Adductors
   ADDUCTOR_MAGNUS
   OTHER_ADDUCTORS
-  
+
   // Quadriceps
   RECTUS_FEMORIS
   VASTUS_LATERALIS
   VASTUS_MEDIALIS
   VASTUS_INTERMEDIUS
-  
+
   // Hamstrings
   HAMSTRINGS
-  
+
   // Calves and Lower Leg
   CALVES
   TIBIALIS_ANTERIOR
-  
+
   // Core
   ABS
   OBLIQUES
-  
+
   // Additional muscles
   HIP_FLEXORS
   SERRATUS_ANTERIOR
@@ -625,4 +811,26 @@ enum TrainingMuscleGroup {
   REAR_DELTS
   MIDDLE_DELTS
   FRONT_DELTS
+}
+
+// ============================================
+// NEW TRAINING PROGRAM SYSTEM ENUMS
+// ============================================
+
+enum SubscriptionTier {
+  FREE
+  PRO_MONTHLY
+  PRO_YEARLY
+}
+
+enum WorkoutStructureType {
+  REPEATING
+  AB
+  ABC
+}
+
+enum ProgramStatus {
+  DRAFT
+  ACTIVE
+  PAUSED
 }

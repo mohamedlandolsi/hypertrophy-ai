@@ -10,7 +10,11 @@
     "lint": "next lint",
     "postinstall": "prisma generate",
     "reprocess-kb": "node scripts/reprocess-knowledge-base.js",
-    "test-reprocess-setup": "node scripts/test-reprocess-setup.js"
+    "test-reprocess-setup": "node scripts/test-reprocess-setup.js",
+    "seed": "tsx prisma/seed.ts"
+  },
+  "prisma": {
+    "seed": "tsx prisma/seed.ts"
   },
   "dependencies": {
     "@google/generative-ai": "^0.24.1",

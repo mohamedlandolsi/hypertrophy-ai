@@ -9,9 +9,9 @@ import { Badge } from '@/components/ui/badge';
 import { Separator } from '@/components/ui/separator';
 import { Input } from '@/components/ui/input';
 import { 
-  Loader2, BookOpen, Settings, Star, DollarSign, Crown, Sparkles,
-  Search, Filter, Grid3x3, List, ChevronDown, Users, Dumbbell, Clock, TrendingUp,
-  Check, X, Eye, BarChart3, Target
+  Loader2, BookOpen, Settings, DollarSign, Crown, Sparkles,
+  Search, Filter, ChevronDown, ChevronUp, Dumbbell, TrendingUp,
+  Check, X, Eye, BarChart3
 } from 'lucide-react';
 import { toast } from 'sonner';
 import { createClient } from '@/lib/supabase/client';
@@ -78,12 +78,13 @@ export default function ProgramsPage() {
 
   // Filter and view state
   const [searchQuery, setSearchQuery] = useState('');
-  const [viewMode, setViewMode] = useState<'grid' | 'list'>('grid');
+  const viewMode = 'grid'; // Fixed to grid view
   const [sortBy, setSortBy] = useState('popular');
   const [selectedDifficulty, setSelectedDifficulty] = useState<string[]>([]);
   const [selectedSplit, setSelectedSplit] = useState<string[]>([]);
   const [selectedDuration, setSelectedDuration] = useState<string[]>([]);
   const [priceRange, setPriceRange] = useState<string[]>([]);
+  const [isFilterVisible, setIsFilterVisible] = useState(true);
 
   useEffect(() => {
     async function loadPrograms() {
@@ -231,15 +232,6 @@ export default function ProgramsPage() {
     }
   };
 
-  const getDifficultyColor = (difficulty?: string) => {
-    switch (difficulty) {
-      case 'beginner': return 'bg-green-500';
-      case 'intermediate': return 'bg-orange-500';
-      case 'advanced': return 'bg-red-500';
-      default: return 'bg-gray-500';
-    }
-  };
-
   const getDifficultyLabel = (difficulty?: string) => {
     if (!difficulty) return 'Unknown';
     return difficulty.charAt(0).toUpperCase() + difficulty.slice(1);
@@ -297,11 +289,6 @@ export default function ProgramsPage() {
             
             {/* Badges */}
             <div className="absolute top-3 left-3 flex flex-wrap gap-2">
-              {program.difficulty && (
-                <Badge className={`${getDifficultyColor(program.difficulty)} text-white border-none`}>
-                  {getDifficultyLabel(program.difficulty)}
-                </Badge>
-              )}
               {program.isNew && (
                 <Badge className="bg-yellow-500 text-black border-none">{t('card.badges.new')}</Badge>
               )}
@@ -314,12 +301,7 @@ export default function ProgramsPage() {
 
             {/* Owned/Pro badge */}
             <div className="absolute top-3 right-3">
-              {program.isOwned && program.isAdminAccess ? (
-                <Badge variant="destructive" className="text-xs shadow-lg">
-                  <Crown className="h-3 w-3 mr-1" />
-                  {t('card.badges.admin')}
-                </Badge>
-              ) : program.isOwned && program.isProAccess ? (
+              {program.isOwned && program.isProAccess ? (
                 <Badge className="text-xs bg-gradient-to-r from-purple-600 to-blue-600 shadow-lg">
                   <Crown className="h-3 w-3 mr-1" />
                   {t('card.badges.proAccess')}
@@ -345,40 +327,10 @@ export default function ProgramsPage() {
             </CardHeader>
 
             <CardContent className="flex-1 flex flex-col gap-4">
-              {/* Rating and Users */}
-              <div className="flex items-center gap-4 text-sm">
-                {program.rating && (
-                  <div className="flex items-center gap-1">
-                    <Star className="h-4 w-4 fill-yellow-400 text-yellow-400" />
-                    <span className="font-semibold">{program.rating.toFixed(1)}</span>
-                  </div>
-                )}
-                {program.userCount && (
-                  <div className="flex items-center gap-1 text-muted-foreground">
-                    <Users className="h-4 w-4" />
-                    <span>{t('card.specs.users', { count: program.userCount })}</span>
-                  </div>
-                )}
-              </div>
-
-              {/* Key Specs */}
-              <div className="flex flex-wrap gap-3 text-sm">
-                {program.split && (
-                  <div className="flex items-center gap-1.5">
-                    <Target className="h-4 w-4 text-primary" />
-                    <span className="text-muted-foreground">{program.split}</span>
-                  </div>
-                )}
-                {program.duration && (
-                  <div className="flex items-center gap-1.5">
-                    <Clock className="h-4 w-4 text-primary" />
-                    <span className="text-muted-foreground">{program.duration}</span>
-                  </div>
-                )}
-                <div className="flex items-center gap-1.5">
-                  <BarChart3 className="h-4 w-4 text-primary" />
-                  <span className="text-muted-foreground">{t('card.specs.mobileTracking')}</span>
-                </div>
+              {/* Mobile Tracking Badge */}
+              <div className="flex items-center gap-1.5 text-sm">
+                <BarChart3 className="h-4 w-4 text-primary" />
+                <span className="text-muted-foreground">{t('card.specs.mobileTracking')}</span>
               </div>
 
               {isFeatured && (
@@ -597,225 +549,250 @@ export default function ProgramsPage() {
         </div>
 
         {/* Sticky Filter Bar */}
-        <div className="sticky top-0 z-40 bg-background/95 backdrop-blur-sm border-b pb-4 mb-8 -mx-4 px-4 pt-4">
-          <div className="flex flex-col lg:flex-row gap-4">
-            {/* Search */}
-            <div className="relative flex-1 max-w-md">
-              <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
-              <Input
-                placeholder={t('search.placeholder')}
-                value={searchQuery}
-                onChange={(e) => setSearchQuery(e.target.value)}
-                className="pl-9"
-              />
-            </div>
-
-            {/* Filters */}
-            <div className="flex flex-wrap gap-2">
-              {/* Difficulty Filter */}
-              <DropdownMenu>
-                <DropdownMenuTrigger asChild>
-                  <Button variant="outline" size="sm" className="h-10">
-                    <Filter className="h-4 w-4 mr-2" />
-                    {t('filters.difficulty.label')}
-                    {selectedDifficulty.length > 0 && (
-                      <Badge variant="secondary" className="ml-2 px-1.5 py-0">
-                        {selectedDifficulty.length}
-                      </Badge>
-                    )}
-                  </Button>
-                </DropdownMenuTrigger>
-                <DropdownMenuContent align="start" className="w-48">
-                  <DropdownMenuLabel>{t('filters.difficulty.selectLevel')}</DropdownMenuLabel>
-                  <DropdownMenuSeparator />
-                  {['beginner', 'intermediate', 'advanced'].map((level) => (
-                    <DropdownMenuCheckboxItem
-                      key={level}
-                      checked={selectedDifficulty.includes(level)}
-                      onCheckedChange={(checked) => {
-                        setSelectedDifficulty(checked 
-                          ? [...selectedDifficulty, level]
-                          : selectedDifficulty.filter(d => d !== level)
-                        );
-                      }}
-                    >
-                      {t(`filters.difficulty.${level}`)}
-                    </DropdownMenuCheckboxItem>
-                  ))}
-                </DropdownMenuContent>
-              </DropdownMenu>
-
-              {/* Split Filter */}
-              <DropdownMenu>
-                <DropdownMenuTrigger asChild>
-                  <Button variant="outline" size="sm" className="h-10">
-                    {t('filters.split.label')}
-                    {selectedSplit.length > 0 && (
-                      <Badge variant="secondary" className="ml-2 px-1.5 py-0">
-                        {selectedSplit.length}
-                      </Badge>
-                    )}
-                  </Button>
-                </DropdownMenuTrigger>
-                <DropdownMenuContent align="start" className="w-48">
-                  <DropdownMenuLabel>{t('filters.split.title')}</DropdownMenuLabel>
-                  <DropdownMenuSeparator />
-                  {['3-Day', '4-Day', '5-Day', '6-Day', 'PPL', 'Upper/Lower'].map((split) => (
-                    <DropdownMenuCheckboxItem
-                      key={split}
-                      checked={selectedSplit.includes(split)}
-                      onCheckedChange={(checked) => {
-                        setSelectedSplit(checked 
-                          ? [...selectedSplit, split]
-                          : selectedSplit.filter(s => s !== split)
-                        );
-                      }}
-                    >
-                      {split}
-                    </DropdownMenuCheckboxItem>
-                  ))}
-                </DropdownMenuContent>
-              </DropdownMenu>
-
-              {/* Duration Filter */}
-              <DropdownMenu>
-                <DropdownMenuTrigger asChild>
-                  <Button variant="outline" size="sm" className="h-10">
-                    {t('filters.duration.label')}
-                    {selectedDuration.length > 0 && (
-                      <Badge variant="secondary" className="ml-2 px-1.5 py-0">
-                        {selectedDuration.length}
-                      </Badge>
-                    )}
-                  </Button>
-                </DropdownMenuTrigger>
-                <DropdownMenuContent align="start" className="w-48">
-                  <DropdownMenuLabel>{t('filters.duration.title')}</DropdownMenuLabel>
-                  <DropdownMenuSeparator />
-                  {['4-8 weeks', '8-12 weeks', '12+ weeks'].map((duration) => (
-                    <DropdownMenuCheckboxItem
-                      key={duration}
-                      checked={selectedDuration.includes(duration)}
-                      onCheckedChange={(checked) => {
-                        setSelectedDuration(checked 
-                          ? [...selectedDuration, duration]
-                          : selectedDuration.filter(d => d !== duration)
-                        );
-                      }}
-                    >
-                      {duration}
-                    </DropdownMenuCheckboxItem>
-                  ))}
-                </DropdownMenuContent>
-              </DropdownMenu>
-
-              {/* Price Filter */}
-              <DropdownMenu>
-                <DropdownMenuTrigger asChild>
-                  <Button variant="outline" size="sm" className="h-10">
-                    <DollarSign className="h-4 w-4 mr-1" />
-                    {t('filters.price.label')}
-                    {priceRange.length > 0 && (
-                      <Badge variant="secondary" className="ml-2 px-1.5 py-0">
-                        {priceRange.length}
-                      </Badge>
-                    )}
-                  </Button>
-                </DropdownMenuTrigger>
-                <DropdownMenuContent align="start" className="w-48">
-                  <DropdownMenuLabel>{t('filters.price.title')}</DropdownMenuLabel>
-                  <DropdownMenuSeparator />
+        <div className="sticky top-0 z-40 bg-background/95 backdrop-blur-sm border-b -mx-4 px-4">
+          {/* Toggle Button - Always Visible */}
+          <div className="flex items-center justify-between py-3 sm:py-3">
+            <div className="flex items-center gap-2">
+              <Search className="h-4 w-4 text-muted-foreground" />
+              <span className="text-sm font-medium">
+                {isFilterVisible ? t('filters.hideFilters') || 'Hide Filters' : t('filters.showFilters') || 'Show Filters'}
+              </span>
+              {hasActiveFilters && !isFilterVisible && (
+                <Badge variant="secondary" className="text-xs">
                   {[
-                    { value: 'under-39', label: t('filters.price.under39') },
-                    { value: '40-59', label: t('filters.price.range4059') },
-                    { value: '60-plus', label: t('filters.price.over60') }
-                  ].map((range) => (
-                    <DropdownMenuCheckboxItem
-                      key={range.value}
-                      checked={priceRange.includes(range.value)}
-                      onCheckedChange={(checked) => {
-                        setPriceRange(checked 
-                          ? [...priceRange, range.value]
-                          : priceRange.filter(p => p !== range.value)
-                        );
-                      }}
-                    >
-                      {range.label}
-                    </DropdownMenuCheckboxItem>
-                  ))}
-                </DropdownMenuContent>
-              </DropdownMenu>
-
-              {/* Clear Filters */}
-              {hasActiveFilters && (
-                <Button variant="ghost" size="sm" className="h-10" onClick={clearAllFilters}>
-                  <X className="h-4 w-4 mr-1" />
-                  {t('filters.clearAll')}
-                </Button>
+                    searchQuery ? 1 : 0,
+                    selectedDifficulty.length,
+                    selectedSplit.length,
+                    selectedDuration.length,
+                    priceRange.length
+                  ].reduce((a, b) => a + b, 0)}
+                </Badge>
               )}
             </div>
-
-            {/* Sort and View */}
-            <div className="flex gap-2 ml-auto">
-              <Select value={sortBy} onValueChange={setSortBy}>
-                <SelectTrigger className="w-[180px] h-10">
-                  <SelectValue placeholder={t('sort.label')} />
-                </SelectTrigger>
-                <SelectContent>
-                  <SelectItem value="popular">{t('sort.popular')}</SelectItem>
-                  <SelectItem value="newest">{t('sort.newest')}</SelectItem>
-                  <SelectItem value="rating">{t('sort.rating')}</SelectItem>
-                  <SelectItem value="price-low">{t('sort.priceLow')}</SelectItem>
-                  <SelectItem value="price-high">{t('sort.priceHigh')}</SelectItem>
-                </SelectContent>
-              </Select>
-
-              <div className="flex border rounded-md">
-                <Button
-                  variant={viewMode === 'grid' ? 'default' : 'ghost'}
-                  size="sm"
-                  className="h-10 rounded-r-none"
-                  onClick={() => setViewMode('grid')}
-                >
-                  <Grid3x3 className="h-4 w-4" />
-                </Button>
-                <Button
-                  variant={viewMode === 'list' ? 'default' : 'ghost'}
-                  size="sm"
-                  className="h-10 rounded-l-none"
-                  onClick={() => setViewMode('list')}
-                >
-                  <List className="h-4 w-4" />
-                </Button>
-              </div>
-            </div>
+            <Button
+              variant="ghost"
+              size="sm"
+              onClick={() => setIsFilterVisible(!isFilterVisible)}
+              className="h-8"
+            >
+              {isFilterVisible ? (
+                <ChevronUp className="h-4 w-4" />
+              ) : (
+                <ChevronDown className="h-4 w-4" />
+              )}
+            </Button>
           </div>
 
-          {/* Active Filters Display */}
-          {hasActiveFilters && (
-            <div className="flex flex-wrap gap-2 mt-4">
-              {searchQuery && (
-                <Badge variant="secondary" className="gap-1">
-                  Search: {searchQuery}
-                  <X className="h-3 w-3 cursor-pointer" onClick={() => setSearchQuery('')} />
-                </Badge>
+          {/* Collapsible Filter Section */}
+          {isFilterVisible && (
+            <div className="pb-3 sm:pb-4 mb-6 sm:mb-8 space-y-3 sm:space-y-4 border-t pt-3 sm:pt-4">
+              {/* Search Bar - Full Width on Mobile */}
+              <div className="relative w-full">
+                <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
+                <Input
+                  placeholder={t('search.placeholder')}
+                  value={searchQuery}
+                  onChange={(e) => setSearchQuery(e.target.value)}
+                  className="pl-9 h-11 sm:h-10"
+                />
+              </div>
+
+              {/* Filters Row */}
+              <div className="flex flex-col sm:flex-row sm:items-center gap-3 sm:gap-2">
+                {/* Filter Buttons */}
+                <div className="grid grid-cols-2 sm:flex sm:flex-wrap gap-2 flex-1">
+                  {/* Difficulty Filter */}
+                  <DropdownMenu>
+                    <DropdownMenuTrigger asChild>
+                      <Button variant="outline" size="sm" className="h-10 justify-start sm:justify-center">
+                        <Filter className="h-4 w-4 mr-2" />
+                        <span className="truncate">{t('filters.difficulty.label')}</span>
+                        {selectedDifficulty.length > 0 && (
+                          <Badge variant="secondary" className="ml-auto sm:ml-2 px-1.5 py-0 text-xs">
+                            {selectedDifficulty.length}
+                          </Badge>
+                        )}
+                      </Button>
+                    </DropdownMenuTrigger>
+                    <DropdownMenuContent align="start" className="w-48">
+                      <DropdownMenuLabel>{t('filters.difficulty.selectLevel')}</DropdownMenuLabel>
+                      <DropdownMenuSeparator />
+                      {['beginner', 'intermediate', 'advanced'].map((level) => (
+                        <DropdownMenuCheckboxItem
+                          key={level}
+                          checked={selectedDifficulty.includes(level)}
+                          onCheckedChange={(checked) => {
+                            setSelectedDifficulty(checked 
+                              ? [...selectedDifficulty, level]
+                              : selectedDifficulty.filter(d => d !== level)
+                            );
+                          }}
+                        >
+                          {t(`filters.difficulty.${level}`)}
+                        </DropdownMenuCheckboxItem>
+                      ))}
+                    </DropdownMenuContent>
+                  </DropdownMenu>
+
+                  {/* Split Filter */}
+                  <DropdownMenu>
+                    <DropdownMenuTrigger asChild>
+                      <Button variant="outline" size="sm" className="h-10 justify-start sm:justify-center">
+                        <span className="truncate">{t('filters.split.label')}</span>
+                        {selectedSplit.length > 0 && (
+                          <Badge variant="secondary" className="ml-auto sm:ml-2 px-1.5 py-0 text-xs">
+                            {selectedSplit.length}
+                          </Badge>
+                        )}
+                      </Button>
+                    </DropdownMenuTrigger>
+                    <DropdownMenuContent align="start" className="w-48">
+                      <DropdownMenuLabel>{t('filters.split.title')}</DropdownMenuLabel>
+                      <DropdownMenuSeparator />
+                      {['3-Day', '4-Day', '5-Day', '6-Day', 'PPL', 'Upper/Lower'].map((split) => (
+                        <DropdownMenuCheckboxItem
+                          key={split}
+                          checked={selectedSplit.includes(split)}
+                          onCheckedChange={(checked) => {
+                            setSelectedSplit(checked 
+                              ? [...selectedSplit, split]
+                              : selectedSplit.filter(s => s !== split)
+                            );
+                          }}
+                        >
+                          {split}
+                        </DropdownMenuCheckboxItem>
+                      ))}
+                    </DropdownMenuContent>
+                  </DropdownMenu>
+
+                  {/* Duration Filter */}
+                  <DropdownMenu>
+                    <DropdownMenuTrigger asChild>
+                      <Button variant="outline" size="sm" className="h-10 justify-start sm:justify-center">
+                        <span className="truncate">{t('filters.duration.label')}</span>
+                        {selectedDuration.length > 0 && (
+                          <Badge variant="secondary" className="ml-auto sm:ml-2 px-1.5 py-0 text-xs">
+                            {selectedDuration.length}
+                          </Badge>
+                        )}
+                      </Button>
+                    </DropdownMenuTrigger>
+                    <DropdownMenuContent align="start" className="w-48">
+                      <DropdownMenuLabel>{t('filters.duration.title')}</DropdownMenuLabel>
+                      <DropdownMenuSeparator />
+                      {['4-8 weeks', '8-12 weeks', '12+ weeks'].map((duration) => (
+                        <DropdownMenuCheckboxItem
+                          key={duration}
+                          checked={selectedDuration.includes(duration)}
+                          onCheckedChange={(checked) => {
+                            setSelectedDuration(checked 
+                              ? [...selectedDuration, duration]
+                              : selectedDuration.filter(d => d !== duration)
+                            );
+                          }}
+                        >
+                          {duration}
+                        </DropdownMenuCheckboxItem>
+                      ))}
+                    </DropdownMenuContent>
+                  </DropdownMenu>
+
+                  {/* Price Filter */}
+                  <DropdownMenu>
+                    <DropdownMenuTrigger asChild>
+                      <Button variant="outline" size="sm" className="h-10 justify-start sm:justify-center">
+                        <DollarSign className="h-4 w-4 mr-1" />
+                        <span className="truncate">{t('filters.price.label')}</span>
+                        {priceRange.length > 0 && (
+                          <Badge variant="secondary" className="ml-auto sm:ml-2 px-1.5 py-0 text-xs">
+                            {priceRange.length}
+                          </Badge>
+                        )}
+                      </Button>
+                    </DropdownMenuTrigger>
+                    <DropdownMenuContent align="start" className="w-48">
+                      <DropdownMenuLabel>{t('filters.price.title')}</DropdownMenuLabel>
+                      <DropdownMenuSeparator />
+                      {[
+                        { value: 'under-39', label: t('filters.price.under39') },
+                        { value: '40-59', label: t('filters.price.range4059') },
+                        { value: '60-plus', label: t('filters.price.over60') }
+                      ].map((range) => (
+                        <DropdownMenuCheckboxItem
+                          key={range.value}
+                          checked={priceRange.includes(range.value)}
+                          onCheckedChange={(checked) => {
+                            setPriceRange(checked 
+                              ? [...priceRange, range.value]
+                              : priceRange.filter(p => p !== range.value)
+                            );
+                          }}
+                        >
+                          {range.label}
+                        </DropdownMenuCheckboxItem>
+                      ))}
+                    </DropdownMenuContent>
+                  </DropdownMenu>
+
+                  {/* Clear Filters - Full Width on Mobile */}
+                  {hasActiveFilters && (
+                    <Button 
+                      variant="ghost" 
+                      size="sm" 
+                      className="h-10 col-span-2 sm:col-span-1 sm:w-auto" 
+                      onClick={clearAllFilters}
+                    >
+                      <X className="h-4 w-4 mr-1" />
+                      {t('filters.clearAll')}
+                    </Button>
+                  )}
+                </div>
+
+                {/* Sort Dropdown - Full Width on Mobile */}
+                <div className="w-full sm:w-auto sm:min-w-[180px]">
+                  <Select value={sortBy} onValueChange={setSortBy}>
+                    <SelectTrigger className="w-full h-10">
+                      <SelectValue placeholder={t('sort.label')} />
+                    </SelectTrigger>
+                    <SelectContent>
+                      <SelectItem value="popular">{t('sort.popular')}</SelectItem>
+                      <SelectItem value="newest">{t('sort.newest')}</SelectItem>
+                      <SelectItem value="rating">{t('sort.rating')}</SelectItem>
+                      <SelectItem value="price-low">{t('sort.priceLow')}</SelectItem>
+                      <SelectItem value="price-high">{t('sort.priceHigh')}</SelectItem>
+                    </SelectContent>
+                  </Select>
+                </div>
+              </div>
+
+              {/* Active Filters Display */}
+              {hasActiveFilters && (
+                <div className="flex flex-wrap gap-2">
+                  {searchQuery && (
+                    <Badge variant="secondary" className="gap-1">
+                      Search: {searchQuery}
+                      <X className="h-3 w-3 cursor-pointer" onClick={() => setSearchQuery('')} />
+                    </Badge>
+                  )}
+                  {selectedDifficulty.map(d => (
+                    <Badge key={d} variant="secondary" className="gap-1">
+                      {getDifficultyLabel(d)}
+                      <X className="h-3 w-3 cursor-pointer" onClick={() => 
+                        setSelectedDifficulty(selectedDifficulty.filter(item => item !== d))
+                      } />
+                    </Badge>
+                  ))}
+                  {selectedSplit.map(s => (
+                    <Badge key={s} variant="secondary" className="gap-1">
+                      {s}
+                      <X className="h-3 w-3 cursor-pointer" onClick={() => 
+                        setSelectedSplit(selectedSplit.filter(item => item !== s))
+                      } />
+                    </Badge>
+                  ))}
+                </div>
               )}
-              {selectedDifficulty.map(d => (
-                <Badge key={d} variant="secondary" className="gap-1">
-                  {getDifficultyLabel(d)}
-                  <X className="h-3 w-3 cursor-pointer" onClick={() => 
-                    setSelectedDifficulty(selectedDifficulty.filter(item => item !== d))
-                  } />
-                </Badge>
-              ))}
-              {selectedSplit.map(s => (
-                <Badge key={s} variant="secondary" className="gap-1">
-                  {s}
-                  <X className="h-3 w-3 cursor-pointer" onClick={() => 
-                    setSelectedSplit(selectedSplit.filter(item => item !== s))
-                  } />
-                </Badge>
-              ))}
             </div>
           )}
         </div>

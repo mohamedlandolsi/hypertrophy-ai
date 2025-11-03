@@ -1887,6 +1887,8 @@
       "showing": "عرض {count} من {total} برنامج"
     },
     "filters": {
+      "hideFilters": "إخفاء الفلاتر",
+      "showFilters": "إظهار الفلاتر",
       "difficulty": {
         "label": "المستوى",
         "selectLevel": "اختر المستوى",
