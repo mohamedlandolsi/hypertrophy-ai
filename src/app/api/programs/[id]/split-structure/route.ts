@@ -43,11 +43,23 @@ export async function GET(
           }
         },
         workouts: {
-          select: {
-            id: true,
-            name: true,
-            type: true,
-            assignedDays: true
+          include: {
+            exercises: {
+              include: {
+                exercise: {
+                  select: {
+                    id: true,
+                    name: true,
+                    primaryMuscle: true,
+                    secondaryMuscles: true,
+                    exerciseType: true,
+                    volumeContributions: true,
+                    canBeUnilateral: true
+                  }
+                }
+              },
+              orderBy: { order: 'asc' }
+            }
           },
           orderBy: { createdAt: 'asc' }
         }
@@ -68,6 +80,7 @@ export async function GET(
         name: program.name,
         description: program.description,
         status: program.status,
+        workoutStructureType: program.workoutStructureType,
         split: program.trainingSplit,
         structure: program.splitStructure,
         workouts: program.workouts
