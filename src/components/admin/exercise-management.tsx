@@ -46,6 +46,11 @@ interface ExerciseFormData {
   imageType?: string;
   volumeContributions: Record<string, number>;
   regionalBias: Record<string, string>; // Stores which region/specific muscle is biased for muscles at 1.0
+  primaryMuscle: string;
+  secondaryMuscles: string[];
+  isCompound: boolean;
+  canBeUnilateral: boolean;
+  volumeMetrics: Record<string, number>;
 }
 
 const EXERCISE_TYPES = [
@@ -137,7 +142,12 @@ const initialFormData: ExerciseFormData = {
   isActive: true,
   isRecommended: false,
   volumeContributions: {},
-  regionalBias: {}
+  regionalBias: {},
+  primaryMuscle: '',
+  secondaryMuscles: [],
+  isCompound: true,
+  canBeUnilateral: false,
+  volumeMetrics: {}
 };
 
 export default function ExerciseManagement() {
@@ -356,7 +366,12 @@ export default function ExerciseManagement() {
       imageUrl: exercise.imageUrl,
       imageType: exercise.imageType,
       volumeContributions: exercise.volumeContributions || {},
-      regionalBias: (exercise as Exercise & { regionalBias?: Record<string, string> }).regionalBias || {}
+      regionalBias: (exercise as Exercise & { regionalBias?: Record<string, string> }).regionalBias || {},
+      primaryMuscle: (exercise as Exercise & { primaryMuscle?: string }).primaryMuscle || '',
+      secondaryMuscles: (exercise as Exercise & { secondaryMuscles?: string[] }).secondaryMuscles || [],
+      isCompound: (exercise as Exercise & { isCompound?: boolean }).isCompound ?? (exercise.exerciseType === 'COMPOUND'),
+      canBeUnilateral: (exercise as Exercise & { canBeUnilateral?: boolean }).canBeUnilateral || false,
+      volumeMetrics: (exercise as Exercise & { volumeMetrics?: Record<string, number> }).volumeMetrics || {}
     });
     setEquipmentInput(exercise.equipment.join(', '));
     setImagePreview(exercise.imageUrl || null);
@@ -455,6 +470,16 @@ export default function ExerciseManagement() {
     return formData.regionalBias[muscle] || 'NONE';
   };
 
+  const calculateTotalVolume = () => {
+    return Object.values(formData.volumeContributions).reduce((sum, val) => sum + val, 0);
+  };
+
+  const getVolumeColor = (totalVolume: number) => {
+    if (totalVolume < 0.5) return 'bg-red-100 text-red-800 dark:bg-red-900 dark:text-red-300';
+    if (totalVolume <= 1) return 'bg-yellow-100 text-yellow-800 dark:bg-yellow-900 dark:text-yellow-300';
+    return 'bg-green-100 text-green-800 dark:bg-green-900 dark:text-green-300';
+  };
+
   const getExerciseTypeColor = (exerciseType: string) => {
     const colors = {
       'COMPOUND': 'bg-purple-100 text-purple-800 dark:bg-purple-900 dark:text-purple-300',
@@ -531,6 +556,83 @@ export default function ExerciseManagement() {
                         ))}
                       </SelectContent>
                     </Select>
+                  </div>
+                </div>
+
+                {/* Exercise Categorization Section */}
+                <div className="grid grid-cols-2 gap-4">
+                  <div className="flex items-center space-x-2">
+                    <Checkbox
+                      id="isCompound"
+                      checked={formData.isCompound}
+                      onCheckedChange={(checked: boolean) => 
+                        setFormData({ ...formData, isCompound: checked })
+                      }
+                    />
+                    <Label htmlFor="isCompound" className="cursor-pointer">
+                      Compound Exercise
+                    </Label>
+                  </div>
+                  <div className="flex items-center space-x-2">
+                    <Checkbox
+                      id="canBeUnilateral"
+                      checked={formData.canBeUnilateral}
+                      onCheckedChange={(checked: boolean) => 
+                        setFormData({ ...formData, canBeUnilateral: checked })
+                      }
+                    />
+                    <Label htmlFor="canBeUnilateral" className="cursor-pointer">
+                      Can Be Performed Unilaterally
+                    </Label>
+                  </div>
+                </div>
+
+                {/* Primary and Secondary Muscles */}
+                <div className="grid grid-cols-2 gap-4">
+                  <div>
+                    <Label htmlFor="primaryMuscle">Primary Muscle</Label>
+                    <Select
+                      value={formData.primaryMuscle}
+                      onValueChange={(value: string) => 
+                        setFormData({ ...formData, primaryMuscle: value })
+                      }
+                    >
+                      <SelectTrigger>
+                        <SelectValue placeholder="Select primary muscle" />
+                      </SelectTrigger>
+                      <SelectContent>
+                        <SelectItem value="">None</SelectItem>
+                        {VOLUME_MUSCLES.map(({ value, label }) => (
+                          <SelectItem key={value} value={value}>
+                            {label}
+                          </SelectItem>
+                        ))}
+                      </SelectContent>
+                    </Select>
+                  </div>
+                  <div>
+                    <Label>Secondary Muscles (Multi-select)</Label>
+                    <div className="border rounded-md p-3 max-h-40 overflow-y-auto">
+                      <div className="grid grid-cols-1 gap-2">
+                        {VOLUME_MUSCLES.map(({ value, label }) => (
+                          <div key={value} className="flex items-center space-x-2">
+                            <Checkbox
+                              id={`secondary-${value}`}
+                              checked={formData.secondaryMuscles.includes(value)}
+                              onCheckedChange={(checked: boolean) => {
+                                const newSecondaryMuscles = checked
+                                  ? [...formData.secondaryMuscles, value]
+                                  : formData.secondaryMuscles.filter(m => m !== value);
+                                setFormData({ ...formData, secondaryMuscles: newSecondaryMuscles });
+                              }}
+                            />
+                            <Label htmlFor={`secondary-${value}`} className="cursor-pointer text-sm">
+                              {label}
+                            </Label>
+                          </div>
+                        ))}
+                      </div>
+                    </div>
                   </div>
                 </div>
 
@@ -671,6 +773,23 @@ export default function ExerciseManagement() {
                       Set how much each muscle is targeted: 1.0 (primary), 0.75 (strong secondary), 0.5 (standard secondary), 0.25 (light secondary), 0 (not targeted)
                     </p>
                   </div>
+                  
+                  {/* Total Volume Display with Warning */}
+                  {Object.keys(formData.volumeContributions).length > 0 && (
+                    <div className="p-3 border rounded-md bg-muted/50">
+                      <div className="flex items-center justify-between">
+                        <span className="text-sm font-medium">Total Volume:</span>
+                        <Badge className={getVolumeColor(calculateTotalVolume())}>
+                          {calculateTotalVolume().toFixed(2)}
+                        </Badge>
+                      </div>
+                      {calculateTotalVolume() > 2 && (
+                        <p className="mt-2 text-sm text-orange-600 dark:text-orange-400">
+                          ⚠️ Warning: Total volume exceeds 2.0. This exercise may be targeting too many muscles significantly. Consider adjusting values.
+                        </p>
+                      )}
+                    </div>
+                  )}
                   
                   {/* Muscle Search Bar */}
                   <div className="relative">
@@ -924,9 +1043,11 @@ export default function ExerciseManagement() {
                     <TableHead className="min-w-[80px]">Image</TableHead>
                     <TableHead className="min-w-[120px]">Exercise Type</TableHead>
                     <TableHead className="min-w-[100px]">Category</TableHead>
+                    <TableHead className="min-w-[120px]">Classification</TableHead>
                     <TableHead className="min-w-[100px]">Recommended</TableHead>
                     <TableHead className="min-w-[150px]">Equipment</TableHead>
-                    <TableHead className="min-w-[180px]">Volume Contributions</TableHead>
+                    <TableHead className="min-w-[200px]">Volume Contributions</TableHead>
+                    <TableHead className="min-w-[150px]">Primary/Secondary</TableHead>
                     <TableHead className="min-w-[80px]">Status</TableHead>
                     <TableHead className="min-w-[120px]">Actions</TableHead>
                   </TableRow>
@@ -970,6 +1091,20 @@ export default function ExerciseManagement() {
                         </Badge>
                       </TableCell>
                       <TableCell>
+                        <div className="flex flex-col gap-1">
+                          {((exercise as Exercise & { isCompound?: boolean }).isCompound || exercise.exerciseType === 'COMPOUND') && (
+                            <Badge variant="outline" className="text-xs w-fit">
+                              Compound
+                            </Badge>
+                          )}
+                          {((exercise as Exercise & { canBeUnilateral?: boolean }).canBeUnilateral) && (
+                            <Badge variant="outline" className="text-xs w-fit">
+                              Unilateral
+                            </Badge>
+                          )}
+                        </div>
+                      </TableCell>
+                      <TableCell>
                         <div className="flex items-center justify-center">
                           {exercise.isRecommended ? (
                             <Badge variant="default" className="bg-green-600">
@@ -995,22 +1130,63 @@ export default function ExerciseManagement() {
                         </div>
                       </TableCell>
                       <TableCell>
-                        <div className="max-w-[180px]">
+                        <div className="max-w-[200px]">
                           {exercise.volumeContributions && Object.keys(exercise.volumeContributions).length > 0 ? (
-                            <div className="flex flex-wrap gap-1">
-                              {Object.entries(exercise.volumeContributions).slice(0, 3).map(([muscle, volume]) => (
-                                <Badge key={muscle} variant="outline" className="text-xs">
-                                  {VOLUME_MUSCLES.find(m => m.value === muscle)?.label || muscle}: {volume}
+                            <div className="space-y-2">
+                              {/* Total Volume Badge */}
+                              <div className="flex items-center gap-2">
+                                <span className="text-xs text-muted-foreground">Total:</span>
+                                <Badge className={getVolumeColor(
+                                  Object.values(exercise.volumeContributions).reduce((sum: number, val: number) => sum + val, 0)
+                                )}>
+                                  {Object.values(exercise.volumeContributions).reduce((sum: number, val: number) => sum + val, 0).toFixed(2)}
                                 </Badge>
-                              ))}
-                              {Object.keys(exercise.volumeContributions).length > 3 && (
-                                <Badge variant="outline" className="text-xs">
-                                  +{Object.keys(exercise.volumeContributions).length - 3} more
-                                </Badge>
-                              )}
+                              </div>
+                              {/* Individual Muscle Volumes */}
+                              <div className="flex flex-wrap gap-1">
+                                {Object.entries(exercise.volumeContributions).slice(0, 3).map(([muscle, volume]) => (
+                                  <Badge key={muscle} variant="outline" className="text-xs">
+                                    {VOLUME_MUSCLES.find(m => m.value === muscle)?.label || muscle}: {volume}
+                                  </Badge>
+                                ))}
+                                {Object.keys(exercise.volumeContributions).length > 3 && (
+                                  <Badge variant="outline" className="text-xs">
+                                    +{Object.keys(exercise.volumeContributions).length - 3} more
+                                  </Badge>
+                                )}
+                              </div>
                             </div>
                           ) : (
                             <span className="text-sm text-muted-foreground">No volumes set</span>
+                          )}
+                        </div>
+                      </TableCell>
+                      <TableCell>
+                        <div className="max-w-[150px]">
+                          {((exercise as Exercise & { primaryMuscle?: string }).primaryMuscle) && (
+                            <div className="mb-1">
+                              <span className="text-xs text-muted-foreground">Primary: </span>
+                              <Badge variant="default" className="text-xs">
+                                {VOLUME_MUSCLES.find(m => m.value === (exercise as Exercise & { primaryMuscle?: string }).primaryMuscle)?.label || (exercise as Exercise & { primaryMuscle?: string }).primaryMuscle}
+                              </Badge>
+                            </div>
+                          )}
+                          {((exercise as Exercise & { secondaryMuscles?: string[] }).secondaryMuscles?.length || 0) > 0 && (
+                            <div>
+                              <span className="text-xs text-muted-foreground">Secondary: </span>
+                              <div className="flex flex-wrap gap-1 mt-1">
+                                {(exercise as Exercise & { secondaryMuscles?: string[] }).secondaryMuscles?.slice(0, 2).map((muscle) => (
+                                  <Badge key={muscle} variant="secondary" className="text-xs">
+                                    {VOLUME_MUSCLES.find(m => m.value === muscle)?.label || muscle}
+                                  </Badge>
+                                ))}
+                                {((exercise as Exercise & { secondaryMuscles?: string[] }).secondaryMuscles?.length || 0) > 2 && (
+                                  <Badge variant="secondary" className="text-xs">
+                                    +{((exercise as Exercise & { secondaryMuscles?: string[] }).secondaryMuscles?.length || 0) - 2}
+                                  </Badge>
+                                )}
+                              </div>
+                            </div>
                           )}
                         </div>
                       </TableCell>

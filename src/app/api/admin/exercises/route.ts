@@ -132,7 +132,12 @@ export async function POST(request: NextRequest) {
       imageUrl,
       imageType,
       volumeContributions,
-      regionalBias
+      regionalBias,
+      primaryMuscle,
+      secondaryMuscles,
+      isCompound,
+      canBeUnilateral,
+      volumeMetrics
     } = body;
 
     // Validate required fields
@@ -159,6 +164,11 @@ export async function POST(request: NextRequest) {
         imageType: imageType || null,
         volumeContributions: volumeContributions || {},
         regionalBias: regionalBias || {},
+        primaryMuscle: primaryMuscle || null,
+        secondaryMuscles: secondaryMuscles || [],
+        isCompound: isCompound ?? true,
+        canBeUnilateral: canBeUnilateral ?? false,
+        volumeMetrics: volumeMetrics || {},
         updatedAt: new Date()
       }
     });

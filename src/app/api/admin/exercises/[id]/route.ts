@@ -92,7 +92,12 @@ export async function PUT(request: NextRequest, { params }: { params: Promise<{ 
       imageUrl,
       imageType,
       volumeContributions,
-      regionalBias
+      regionalBias,
+      primaryMuscle,
+      secondaryMuscles,
+      isCompound,
+      canBeUnilateral,
+      volumeMetrics
     } = body;
 
     // Validate required fields
@@ -131,6 +136,11 @@ export async function PUT(request: NextRequest, { params }: { params: Promise<{ 
         imageType: imageType !== undefined ? imageType : existingExercise.imageType,
         volumeContributions: volumeContributions || {},
         regionalBias: regionalBias || {},
+        primaryMuscle: primaryMuscle !== undefined ? primaryMuscle : existingExercise.primaryMuscle,
+        secondaryMuscles: secondaryMuscles !== undefined ? secondaryMuscles : existingExercise.secondaryMuscles,
+        isCompound: isCompound !== undefined ? isCompound : existingExercise.isCompound,
+        canBeUnilateral: canBeUnilateral !== undefined ? canBeUnilateral : existingExercise.canBeUnilateral,
+        volumeMetrics: volumeMetrics !== undefined ? volumeMetrics : existingExercise.volumeMetrics,
         updatedAt: new Date()
       }
     });
