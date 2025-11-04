@@ -1,6 +1,7 @@
 'use client';
 
 import { useState, useEffect, useCallback } from 'react';
+import Link from 'next/link';
 import { 
   DndContext, 
   closestCenter, 
@@ -23,7 +24,7 @@ import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Badge } from '@/components/ui/badge';
-import { Alert, AlertDescription } from '@/components/ui/alert';
+import { Alert, AlertDescription, AlertTitle } from '@/components/ui/alert';
 import { Sheet, SheetContent, SheetDescription, SheetHeader, SheetTitle } from '@/components/ui/sheet';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { Skeleton } from '@/components/ui/skeleton';
@@ -43,10 +44,14 @@ import {
   AlertCircle,
   Dumbbell,
   Target,
-  TrendingUp
+  TrendingUp,
+  Lock,
+  Sparkles
 } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import { toast } from 'sonner';
+import { useUsageLimit, useCanAccessFeature } from '@/hooks/use-tier-limits';
+import { TierBadge } from '@/components/tier-gate/tier-gate-ui';
 
 // Types
 export interface Exercise {
@@ -199,11 +204,13 @@ function SortableExerciseCard({
 function AddExerciseSheet({ 
   isOpen, 
   onOpenChange, 
-  onAdd 
+  onAdd,
+  isPro
 }: { 
   isOpen: boolean;
   onOpenChange: (open: boolean) => void;
   onAdd: (exercise: Exercise, sets: number, reps: number, isBilateral: boolean) => void;
+  isPro: boolean;
 }) {
   const [step, setStep] = useState(1);
   const [selectedMuscle, setSelectedMuscle] = useState<string>('');
@@ -229,14 +236,21 @@ function AddExerciseSheet({
       if (!response.ok) throw new Error('Failed to fetch exercises');
       
       const data = await response.json();
-      setExercises(data.exercises || []);
+      
+      // For FREE users, show only the most popular 10 exercises
+      let exerciseList = data.exercises || [];
+      if (!isPro) {
+        exerciseList = exerciseList.slice(0, 10);
+      }
+      
+      setExercises(exerciseList);
     } catch (error) {
       toast.error('Failed to load exercises');
       console.error(error);
     } finally {
       setLoading(false);
     }
-  }, [selectedMuscle]);
+  }, [selectedMuscle, isPro]);
 
   useEffect(() => {
     if (step === 2 && selectedMuscle) {
@@ -381,6 +395,23 @@ function AddExerciseSheet({
                         </CardContent>
                       </Card>
                     ))}
+                    
+                    {/* FREE tier limitation notice */}
+                    {!isPro && exercises.length >= 10 && (
+                      <Alert className="border-amber-200 bg-amber-50 dark:border-amber-900 dark:bg-amber-950">
+                        <Lock className="h-4 w-4 text-amber-600 dark:text-amber-400" />
+                        <AlertTitle className="text-amber-900 dark:text-amber-200">
+                          Limited Exercise Library
+                        </AlertTitle>
+                        <AlertDescription className="text-amber-700 dark:text-amber-300">
+                          You&apos;re viewing the top 10 most popular exercises. 
+                          <Link href="/pricing" className="ml-1 font-medium underline">
+                            Upgrade to Pro
+                          </Link>
+                          {' '}to access the full exercise library with 500+ exercises.
+                        </AlertDescription>
+                      </Alert>
+                    )}
                   </div>
                 </ScrollArea>
               )}
@@ -506,9 +537,11 @@ function AddExerciseSheet({
 
 // Volume Feedback Component
 function VolumeFeedback({ 
-  metrics 
+  metrics,
+  isPro
 }: { 
-  metrics: MuscleVolumeMetric[] 
+  metrics: MuscleVolumeMetric[];
+  isPro: boolean;
 }) {
   const criticalMuscles = metrics.filter(m => m.status === 'critical');
   const lowMuscles = metrics.filter(m => m.status === 'low');
@@ -541,6 +574,43 @@ function VolumeFeedback({
             <AlertDescription className="text-yellow-800 dark:text-yellow-200">
               <strong>Low Volume:</strong> Consider adding more exercises for{' '}
               {lowMuscles.map(m => m.muscle).join(', ')}
+            </AlertDescription>
+          </Alert>
+        )}
+        
+        {/* AI Recommendations for PRO users */}
+        {isPro && (criticalMuscles.length > 0 || lowMuscles.length > 0) && (
+          <Alert className="border-violet-200 bg-violet-50 dark:border-violet-900 dark:bg-violet-950">
+            <Sparkles className="h-4 w-4 text-violet-600 dark:text-violet-400" />
+            <AlertTitle className="text-violet-900 dark:text-violet-200">
+              AI Recommendations
+            </AlertTitle>
+            <AlertDescription className="text-violet-700 dark:text-violet-300">
+              Based on missing volume, consider adding:
+              <ul className="mt-2 list-disc list-inside space-y-1">
+                {criticalMuscles.slice(0, 3).map(m => (
+                  <li key={m.muscle}>
+                    <strong>{m.muscle}</strong>: Add {Math.ceil((m.target - m.volume) / 3)} exercises (3 sets each)
+                  </li>
+                ))}
+              </ul>
+            </AlertDescription>
+          </Alert>
+        )}
+        
+        {/* PRO feature prompt for FREE users */}
+        {!isPro && (criticalMuscles.length > 0 || lowMuscles.length > 0) && (
+          <Alert className="border-amber-200 bg-amber-50 dark:border-amber-900 dark:bg-amber-950">
+            <Lock className="h-4 w-4 text-amber-600 dark:text-amber-400" />
+            <AlertTitle className="text-amber-900 dark:text-amber-200 flex items-center gap-2">
+              <Badge variant="secondary" className="text-xs">PRO</Badge>
+              AI Exercise Recommendations
+            </AlertTitle>
+            <AlertDescription className="text-amber-700 dark:text-amber-300">
+              Get personalized AI recommendations for missing muscle groups.{' '}
+              <Link href="/pricing" className="font-medium underline">
+                Upgrade to Pro
+              </Link>
             </AlertDescription>
           </Alert>
         )}
@@ -596,6 +666,11 @@ export default function WorkoutEditor({
   const [saving, setSaving] = useState(false);
   const [isAddExerciseOpen, setIsAddExerciseOpen] = useState(false);
   const [volumeMetrics, setVolumeMetrics] = useState<MuscleVolumeMetric[]>([]);
+
+  // Tier checking hooks
+  const { allowed: canCustomize, current, limit, remaining } = useUsageLimit('customizations');
+  const { hasAccess: canImportTemplate, reason: _templateReason } = useCanAccessFeature('workout_templates');
+  const { hasAccess: isPro } = useCanAccessFeature('advanced_analytics');
 
   const sensors = useSensors(
     useSensor(PointerSensor),
@@ -732,6 +807,18 @@ export default function WorkoutEditor({
   const handleSaveWorkout = async () => {
     if (!workout) return;
 
+    // Check customization limit for FREE users
+    if (!canCustomize) {
+      toast.error('Customization limit reached', {
+        description: `You've reached your customization limit (${current}/${limit} this month). Upgrade to Pro for unlimited customizations.`,
+        action: {
+          label: 'Upgrade',
+          onClick: () => window.location.href = '/pricing'
+        }
+      });
+      return;
+    }
+
     setSaving(true);
     try {
       const response = await fetch(`/api/programs/${programId}/workouts/${workoutId}`, {
@@ -781,6 +868,25 @@ export default function WorkoutEditor({
 
   return (
     <div className="space-y-6">
+      {/* Customization Limit Banner */}
+      {!isPro && remaining !== undefined && remaining <= 2 && (
+        <Alert className="border-amber-200 bg-amber-50 dark:bg-amber-950/30 dark:border-amber-900">
+          <Lock className="h-4 w-4 text-amber-600" />
+          <AlertTitle className="text-amber-900 dark:text-amber-100">
+            {remaining === 0 ? 'Customization Limit Reached' : 'Customization Limit Almost Reached'}
+          </AlertTitle>
+          <AlertDescription className="text-amber-800 dark:text-amber-200">
+            {remaining === 0 
+              ? `You've used all ${limit} customizations this month. `
+              : `You have ${remaining} customization${remaining === 1 ? '' : 's'} remaining this month. `
+            }
+            <Link href="/pricing" className="font-semibold underline hover:no-underline">
+              Upgrade to Pro
+            </Link> for unlimited customizations.
+          </AlertDescription>
+        </Alert>
+      )}
+
       {/* Header Section */}
       <Card>
         <CardHeader>
@@ -876,7 +982,7 @@ export default function WorkoutEditor({
 
         {/* Volume Feedback Section */}
         <div className="space-y-4">
-          <VolumeFeedback metrics={volumeMetrics} />
+          <VolumeFeedback metrics={volumeMetrics} isPro={isPro} />
         </div>
       </div>
 
@@ -884,10 +990,20 @@ export default function WorkoutEditor({
       <Card>
         <CardContent className="p-4">
           <div className="flex items-center justify-between gap-4">
-            <Button variant="outline" disabled>
-              <Download className="h-4 w-4 mr-2" />
-              Import Template
-            </Button>
+            <div className="flex items-center gap-2">
+              <Button 
+                variant="outline" 
+                disabled={!canImportTemplate}
+                title={!canImportTemplate ? 'Template import is a Pro feature' : undefined}
+              >
+                {!canImportTemplate && <Lock className="h-4 w-4 mr-2" />}
+                <Download className="h-4 w-4 mr-2" />
+                Import Template
+              </Button>
+              {!canImportTemplate && (
+                <TierBadge tier="PRO_MONTHLY" size="sm" />
+              )}
+            </div>
             
             <div className="flex gap-2">
               {onPreview && (
@@ -910,6 +1026,7 @@ export default function WorkoutEditor({
         isOpen={isAddExerciseOpen}
         onOpenChange={setIsAddExerciseOpen}
         onAdd={handleAddExercise}
+        isPro={isPro}
       />
     </div>
   );
