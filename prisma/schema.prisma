@@ -263,7 +263,8 @@ model Exercise {
   updatedAt DateTime @updatedAt
 
   // Relations
-  workoutExercises WorkoutExercise[]
+  workoutExercises  WorkoutExercise[]
+  templateExercises TemplateExercise[] @relation("TemplateExercises")
 
   @@index([category])
   @@index([isActive])
@@ -294,6 +295,81 @@ model KnowledgeItemCategory {
   @@index([knowledgeItemId])
 }
 
+// ============================================
+// PROGRAM TEMPLATE SYSTEM (Reusable Templates)
+// ============================================
+
+model ProgramTemplate {
+  id                     String               @id @default(cuid())
+  name                   String               @unique
+  description            String
+  difficultyLevel        String // 'Beginner', 'Intermediate', 'Advanced'
+  splitId                String
+  structureId            String
+  workoutStructureType   WorkoutStructureType
+  estimatedDurationWeeks Int // How long this program is designed for
+  targetAudience         String // e.g., "Beginners", "Muscle Gain", "Strength"
+  popularity             Int                  @default(0) // Track how many times used
+  isActive               Boolean              @default(true)
+  thumbnailUrl           String? // Image for the template
+  createdAt              DateTime             @default(now())
+  updatedAt              DateTime             @updatedAt
+
+  // Relations
+  trainingSplit    TrainingSplit          @relation(fields: [splitId], references: [id])
+  splitStructure   TrainingSplitStructure @relation(fields: [structureId], references: [id])
+  templateWorkouts TemplateWorkout[]
+  trainingPrograms TrainingProgram[] // User programs created from this template
+
+  @@index([isActive])
+  @@index([difficultyLevel])
+  @@index([splitId])
+  @@index([structureId])
+  @@index([popularity])
+}
+
+model TemplateWorkout {
+  id           String   @id @default(cuid())
+  templateId   String
+  name         String
+  type         String // e.g., "Upper A", "Lower"
+  assignedDays String[] @default([])
+  order        Int      @default(0)
+  createdAt    DateTime @default(now())
+  updatedAt    DateTime @updatedAt
+
+  // Relations
+  template          ProgramTemplate    @relation(fields: [templateId], references: [id], onDelete: Cascade)
+  templateExercises TemplateExercise[]
+
+  @@index([templateId])
+  @@index([templateId, order])
+}
+
+model TemplateExercise {
+  id           String   @id @default(cuid())
+  workoutId    String
+  exerciseId   String
+  sets         Int
+  reps         String // e.g., "8-12"
+  isUnilateral Boolean  @default(false)
+  order        Int
+  createdAt    DateTime @default(now())
+  updatedAt    DateTime @updatedAt
+
+  // Relations
+  workout  TemplateWorkout @relation(fields: [workoutId], references: [id], onDelete: Cascade)
+  exercise Exercise        @relation("TemplateExercises", fields: [exerciseId], references: [id])
+
+  @@index([workoutId])
+  @@index([exerciseId])
+  @@index([workoutId, order])
+}
+
+// ============================================
+// USER TRAINING PROGRAMS (User-owned instances)
+// ============================================
+
 // Training Program Models
 model TrainingProgram {
   id                    String  @id @default(cuid())
@@ -303,6 +379,10 @@ model TrainingProgram {
   lemonSqueezyId        String? @unique // LemonSqueezy product ID
   lemonSqueezyVariantId String? // LemonSqueezy variant ID
   isActive              Boolean @default(true)
+
+  // Template Reference (nullable - if created from template)
+  templateId String? // Reference to ProgramTemplate
+  userId     String? // Owner of this program instance
 
   // Interactive Features
   hasInteractiveBuilder Boolean @default(true)
@@ -319,6 +399,7 @@ model TrainingProgram {
   updatedAt DateTime @updatedAt
 
   // Relations
+  programTemplate   ProgramTemplate?   @relation(fields: [templateId], references: [id])
   programGuide      ProgramGuide?
   programStructures ProgramStructure[] // Multiple structures support
   workoutTemplates  WorkoutTemplate[]
@@ -329,6 +410,9 @@ model TrainingProgram {
 
   @@index([isActive])
   @@index([lemonSqueezyId])
+  @@index([templateId])
+  @@index([userId])
+  @@index([userId, templateId])
 }
 
 model ProgramStructure {
@@ -489,6 +573,7 @@ model TrainingSplit {
   // Relations
   trainingStructures     TrainingSplitStructure[]
   customTrainingPrograms CustomTrainingProgram[]
+  programTemplates       ProgramTemplate[]
 
   @@index([isActive])
   @@index([difficulty])
@@ -507,6 +592,7 @@ model TrainingSplitStructure {
   trainingSplit          TrainingSplit           @relation(fields: [splitId], references: [id], onDelete: Cascade)
   trainingDayAssignments TrainingDayAssignment[]
   customTrainingPrograms CustomTrainingProgram[]
+  programTemplates       ProgramTemplate[]
 
   @@index([splitId])
   @@index([isWeeklyBased])
