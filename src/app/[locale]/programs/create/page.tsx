@@ -19,12 +19,13 @@ import { Separator } from '@/components/ui/separator';
 import { Progress } from '@/components/ui/progress';
 import { 
   ArrowLeft, ArrowRight, Check, Loader2,
-  FileText, Layout, CheckCircle2
+  FileText, Layout, CheckCircle2, Sparkles, Plus
 } from 'lucide-react';
 import { toast } from 'sonner';
 import { cn } from '@/lib/utils';
 // import SplitSelector, { type SplitSelectorData } from '@/components/SplitSelector';
 import { type SplitSelectorData } from '@/components/SplitSelector';
+import { UserTemplateSelector } from '@/components/UserTemplateSelector';
 
 interface ProgramInfo {
   name: string;
@@ -36,6 +37,10 @@ export default function CreateProgramPage() {
   const params = useParams();
   const router = useRouter();
   const locale = params.locale as string;
+
+  // Template selector state
+  const [showTemplateSelector, setShowTemplateSelector] = useState(false);
+  const [creationMode, setCreationMode] = useState<'template' | 'scratch' | null>(null);
 
   // Step management
   const [currentStep, setCurrentStep] = useState(1);
@@ -158,46 +163,136 @@ export default function CreateProgramPage() {
         </p>
       </div>
 
-      {/* Progress Bar */}
-      <div className="mb-8">
-        <div className="flex items-center justify-between mb-4">
-          {[1, 2, 3, 4].map((step) => (
-            <div
-              key={step}
-              className={cn(
-                "flex items-center",
-                step < 4 && "flex-1"
-              )}
-            >
-              <div
-                className={cn(
-                  "flex items-center justify-center w-10 h-10 rounded-full border-2 transition-colors",
-                  step < currentStep
-                    ? "bg-primary border-primary text-primary-foreground"
-                    : step === currentStep
-                    ? "border-primary text-primary"
-                    : "border-muted-foreground/30 text-muted-foreground"
-                )}
+      {/* Creation Mode Selection (Step 0) */}
+      {!creationMode && (
+        <div className="space-y-6">
+          <Card>
+            <CardHeader>
+              <CardTitle>How would you like to start?</CardTitle>
+              <CardDescription>
+                Choose between starting from a pre-built template or creating from scratch
+              </CardDescription>
+            </CardHeader>
+            <CardContent className="grid grid-cols-1 md:grid-cols-2 gap-4">
+              {/* Use Template Option */}
+              <Card 
+                className="cursor-pointer hover:border-primary transition-colors border-2"
+                onClick={() => setShowTemplateSelector(true)}
               >
-                {step < currentStep ? (
-                  <Check className="h-5 w-5" />
-                ) : (
-                  getStepIcon(step)
-                )}
-              </div>
-              {step < 4 && (
-                <div
-                  className={cn(
-                    "flex-1 h-0.5 mx-2 transition-colors",
-                    step < currentStep ? "bg-primary" : "bg-muted-foreground/30"
-                  )}
-                />
-              )}
-            </div>
-          ))}
+                <CardHeader>
+                  <div className="flex items-center gap-2 mb-2">
+                    <Sparkles className="h-5 w-5 text-primary" />
+                    <CardTitle className="text-lg">Use Template</CardTitle>
+                  </div>
+                  <CardDescription>
+                    Start with a professionally designed program and customize it to your needs
+                  </CardDescription>
+                </CardHeader>
+                <CardContent>
+                  <ul className="space-y-2 text-sm text-muted-foreground">
+                    <li className="flex items-start gap-2">
+                      <Check className="h-4 w-4 text-green-600 mt-0.5 flex-shrink-0" />
+                      <span>Pre-built workouts and exercises</span>
+                    </li>
+                    <li className="flex items-start gap-2">
+                      <Check className="h-4 w-4 text-green-600 mt-0.5 flex-shrink-0" />
+                      <span>Proven program structures</span>
+                    </li>
+                    <li className="flex items-start gap-2">
+                      <Check className="h-4 w-4 text-green-600 mt-0.5 flex-shrink-0" />
+                      <span>Get started in seconds</span>
+                    </li>
+                  </ul>
+                  <Button className="w-full mt-4" size="lg">
+                    <Sparkles className="h-4 w-4 mr-2" />
+                    Browse Templates
+                  </Button>
+                </CardContent>
+              </Card>
+
+              {/* Start from Scratch Option */}
+              <Card 
+                className="cursor-pointer hover:border-primary transition-colors border-2"
+                onClick={() => setCreationMode('scratch')}
+              >
+                <CardHeader>
+                  <div className="flex items-center gap-2 mb-2">
+                    <Plus className="h-5 w-5 text-primary" />
+                    <CardTitle className="text-lg">Start from Scratch</CardTitle>
+                  </div>
+                  <CardDescription>
+                    Build your program from the ground up with complete control
+                  </CardDescription>
+                </CardHeader>
+                <CardContent>
+                  <ul className="space-y-2 text-sm text-muted-foreground">
+                    <li className="flex items-start gap-2">
+                      <Check className="h-4 w-4 text-green-600 mt-0.5 flex-shrink-0" />
+                      <span>Full customization control</span>
+                    </li>
+                    <li className="flex items-start gap-2">
+                      <Check className="h-4 w-4 text-green-600 mt-0.5 flex-shrink-0" />
+                      <span>Choose your split and structure</span>
+                    </li>
+                    <li className="flex items-start gap-2">
+                      <Check className="h-4 w-4 text-green-600 mt-0.5 flex-shrink-0" />
+                      <span>Build workouts your way</span>
+                    </li>
+                  </ul>
+                  <Button className="w-full mt-4" variant="outline" size="lg">
+                    <Plus className="h-4 w-4 mr-2" />
+                    Create Custom Program
+                  </Button>
+                </CardContent>
+              </Card>
+            </CardContent>
+          </Card>
         </div>
-        <Progress value={(currentStep / totalSteps) * 100} className="h-2" />
-      </div>
+      )}
+
+      {/* Rest of the creation flow (only show if scratch mode selected) */}
+      {creationMode === 'scratch' && (
+        <>
+          {/* Progress Bar */}
+          <div className="mb-8">
+            <div className="flex items-center justify-between mb-4">
+              {[1, 2, 3, 4].map((step) => (
+                <div
+                  key={step}
+                  className={cn(
+                    "flex items-center",
+                    step < 4 && "flex-1"
+                  )}
+                >
+                  <div
+                    className={cn(
+                      "flex items-center justify-center w-10 h-10 rounded-full border-2 transition-colors",
+                      step < currentStep
+                        ? "bg-primary border-primary text-primary-foreground"
+                        : step === currentStep
+                        ? "border-primary text-primary"
+                        : "border-muted-foreground/30 text-muted-foreground"
+                    )}
+                  >
+                    {step < currentStep ? (
+                      <Check className="h-5 w-5" />
+                    ) : (
+                      getStepIcon(step)
+                    )}
+                  </div>
+                  {step < 4 && (
+                    <div
+                      className={cn(
+                        "flex-1 h-0.5 mx-2 transition-colors",
+                        step < currentStep ? "bg-primary" : "bg-muted-foreground/30"
+                      )}
+                    />
+                  )}
+                </div>
+              ))}
+            </div>
+            <Progress value={(currentStep / totalSteps) * 100} className="h-2" />
+          </div>
 
       {/* Step Content */}
       <Card className="mb-8">
@@ -388,43 +483,52 @@ export default function CreateProgramPage() {
         </CardContent>
       </Card>
 
-      {/* Navigation Buttons */}
-      <div className="flex items-center justify-between">
-        <Button
-          variant="outline"
-          onClick={handleBack}
-          disabled={currentStep === 1 || creating}
-        >
-          <ArrowLeft className="h-4 w-4 mr-2" />
-          Back
-        </Button>
+          {/* Navigation Buttons */}
+          <div className="flex items-center justify-between">
+            <Button
+              variant="outline"
+              onClick={handleBack}
+              disabled={currentStep === 1 || creating}
+            >
+              <ArrowLeft className="h-4 w-4 mr-2" />
+              Back
+            </Button>
 
-        {currentStep < totalSteps ? (
-          <Button onClick={handleNext}>
-            Next
-            <ArrowRight className="h-4 w-4 ml-2" />
-          </Button>
-        ) : (
-          <Button
-            onClick={handleCreateProgram}
-            disabled={creating}
-            size="lg"
-            className="min-w-[200px]"
-          >
-            {creating ? (
-              <>
-                <Loader2 className="h-4 w-4 mr-2 animate-spin" />
-                Creating Program...
-              </>
+            {currentStep < totalSteps ? (
+              <Button onClick={handleNext}>
+                Next
+                <ArrowRight className="h-4 w-4 ml-2" />
+              </Button>
             ) : (
-              <>
-                <Check className="h-4 w-4 mr-2" />
-                Create Program
-              </>
+              <Button
+                onClick={handleCreateProgram}
+                disabled={creating}
+                size="lg"
+                className="min-w-[200px]"
+              >
+                {creating ? (
+                  <>
+                    <Loader2 className="h-4 w-4 mr-2 animate-spin" />
+                    Creating Program...
+                  </>
+                ) : (
+                  <>
+                    <Check className="h-4 w-4 mr-2" />
+                    Create Program
+                  </>
+                )}
+              </Button>
             )}
-          </Button>
-        )}
-      </div>
+          </div>
+        </>
+      )}
+
+      {/* Template Selector Modal */}
+      <UserTemplateSelector
+        open={showTemplateSelector}
+        onOpenChange={setShowTemplateSelector}
+        locale={locale}
+      />
     </div>
   );
 }
