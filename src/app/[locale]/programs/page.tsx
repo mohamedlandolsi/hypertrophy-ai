@@ -1,7 +1,7 @@
 'use client';
 
 import { useEffect, useState } from 'react';
-import { useRouter } from 'next/navigation';
+import { useRouter, useParams } from 'next/navigation';
 import { useTranslations } from 'next-intl';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
@@ -11,7 +11,7 @@ import { Input } from '@/components/ui/input';
 import { 
   Loader2, BookOpen, Settings, DollarSign, Crown, Sparkles,
   Search, Filter, ChevronDown, ChevronUp, Dumbbell, TrendingUp,
-  Check, X, Eye, BarChart3
+  Check, X, Eye, BarChart3, Users, Calendar, Zap
 } from 'lucide-react';
 import { toast } from 'sonner';
 import { createClient } from '@/lib/supabase/client';
@@ -31,6 +31,13 @@ import {
   DropdownMenuSeparator,
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
+import {
+  Dialog,
+  DialogContent,
+  DialogDescription,
+  DialogHeader,
+  DialogTitle,
+} from "@/components/ui/dialog";
 import { motion } from "framer-motion";
 
 interface TrainingProgram {
@@ -68,13 +75,74 @@ interface ProgramsData {
   isPro?: boolean;
 }
 
+// Template interfaces
+interface Template {
+  id: string;
+  name: string;
+  description: string | null;
+  difficultyLevel: string;
+  popularity: number;
+  trainingSplit: {
+    name: string;
+  } | null;
+  splitStructure: {
+    pattern: string | null;
+    daysPerWeek: number | null;
+  } | null;
+  _count: {
+    trainingPrograms: number;
+    templateWorkouts: number;
+  };
+}
+
+interface TemplateExercise {
+  id: string;
+  exerciseId: string;
+  sets: number;
+  reps: string;
+  isUnilateral: boolean;
+  order: number;
+  exercise: {
+    name: string;
+    primaryMuscle: string;
+    secondaryMuscles: string[];
+  };
+}
+
+interface TemplateWorkout {
+  id: string;
+  name: string;
+  workoutType: string;
+  assignedDays: string[];
+  order: number;
+  templateExercises: TemplateExercise[];
+}
+
+interface TemplateDetail extends Template {
+  templateWorkouts: TemplateWorkout[];
+}
+
 export default function ProgramsPage() {
   const t = useTranslations('ProgramsPage');
+  const params = useParams();
+  const locale = params?.locale as string || 'en';
   const [programsData, setProgramsData] = useState<ProgramsData | null>(null);
   const [isLoading, setIsLoading] = useState(true);
   const [isAuthenticated, setIsAuthenticated] = useState(false);
   const [navigatingToProgramId, setNavigatingToProgramId] = useState<string | null>(null);
   const router = useRouter();
+
+  // Template state
+  const [templates, setTemplates] = useState<Template[]>([]);
+  const [isLoadingTemplates, setIsLoadingTemplates] = useState(false);
+  const [selectedTemplate, setSelectedTemplate] = useState<TemplateDetail | null>(null);
+  const [isTemplatePreviewOpen, setIsTemplatePreviewOpen] = useState(false);
+  const [templateFilters, setTemplateFilters] = useState({
+    difficulty: [] as string[],
+    split: [] as string[],
+  });
+  const [userProgramCount, setUserProgramCount] = useState(0);
+  const [userPlan, setUserPlan] = useState<'FREE' | 'PRO'>('FREE');
 
   // Filter and view state
   const [searchQuery, setSearchQuery] = useState('');
@@ -161,6 +229,92 @@ export default function ProgramsPage() {
 
     loadPrograms();
   }, []);
+
+  // Fetch templates
+  useEffect(() => {
+    async function loadTemplates() {
+      if (!isAuthenticated) return;
+      
+      setIsLoadingTemplates(true);
+      try {
+        const supabase = createClient();
+        const { data: { user } } = await supabase.auth.getUser();
+        
+        if (!user) return;
+
+        // Fetch templates
+        const templatesResponse = await fetch('/api/programs/templates');
+        if (templatesResponse.ok) {
+          const templatesData = await templatesResponse.json();
+          setTemplates(templatesData);
+        }
+
+        // Fetch user's program count and plan
+        const userResponse = await fetch('/api/user/programs-count');
+        if (userResponse.ok) {
+          const userData = await userResponse.json();
+          setUserProgramCount(userData.count || 0);
+          setUserPlan(userData.plan || 'FREE');
+        }
+      } catch (error) {
+        console.error('Error loading templates:', error);
+      } finally {
+        setIsLoadingTemplates(false);
+      }
+    }
+
+    loadTemplates();
+  }, [isAuthenticated]);
+
+  // Fetch template details for preview
+  const fetchTemplateDetails = async (templateId: string) => {
+    try {
+      const response = await fetch(`/api/programs/templates/${templateId}`);
+      if (response.ok) {
+        const data = await response.json();
+        setSelectedTemplate(data);
+        setIsTemplatePreviewOpen(true);
+      } else {
+        toast.error('Failed to load template details');
+      }
+    } catch (error) {
+      console.error('Error fetching template details:', error);
+      toast.error('Failed to load template details');
+    }
+  };
+
+  // Get difficulty badge color
+  const getDifficultyColor = (difficulty: string) => {
+    switch (difficulty.toUpperCase()) {
+      case 'BEGINNER':
+        return 'bg-green-500/10 text-green-700 border-green-500/20';
+      case 'INTERMEDIATE':
+        return 'bg-yellow-500/10 text-yellow-700 border-yellow-500/20';
+      case 'ADVANCED':
+        return 'bg-red-500/10 text-red-700 border-red-500/20';
+      default:
+        return 'bg-gray-500/10 text-gray-700 border-gray-500/20';
+    }
+  };
+
+  // Filter templates
+  const getFilteredTemplates = () => {
+    return templates.filter(template => {
+      const matchesDifficulty = templateFilters.difficulty.length === 0 || 
+        templateFilters.difficulty.includes(template.difficultyLevel.toUpperCase());
+      
+      const matchesSplit = templateFilters.split.length === 0 || 
+        (template.trainingSplit && templateFilters.split.includes(template.trainingSplit.name));
+      
+      return matchesDifficulty && matchesSplit;
+    });
+  };
+
+  // Check if user can create more programs
+  const canCreateProgram = () => {
+    if (userPlan === 'PRO') return true;
+    return userProgramCount < 2;
+  };
 
   const formatPrice = (priceInCents: number) => {
     return new Intl.NumberFormat('en-US', {
@@ -474,6 +628,249 @@ export default function ProgramsPage() {
       </CardContent>
     </Card>
   );
+
+  // Template Card Component
+  const TemplateCard = ({ template }: { template: Template }) => {
+    const canCreate = canCreateProgram();
+    const totalExercises = template._count.templateWorkouts * 6; // Rough estimate
+
+    return (
+      <motion.div
+        initial={{ opacity: 0, y: 20 }}
+        animate={{ opacity: 1, y: 0 }}
+        whileHover={{ y: -4 }}
+        transition={{ duration: 0.2 }}
+      >
+        <Card 
+          className="group relative overflow-hidden cursor-pointer border-2 hover:border-primary hover:shadow-xl transition-all duration-300"
+          onClick={() => fetchTemplateDetails(template.id)}
+        >
+          {/* Background gradient */}
+          <div className="absolute inset-0 bg-gradient-to-br from-primary/5 via-transparent to-transparent opacity-0 group-hover:opacity-100 transition-opacity duration-300" />
+          
+          <CardHeader className="relative pb-3">
+            <div className="flex items-start justify-between gap-2 mb-2">
+              <CardTitle className="text-lg line-clamp-1 group-hover:text-primary transition-colors">
+                {template.name}
+              </CardTitle>
+              <Badge className={`${getDifficultyColor(template.difficultyLevel)} border shrink-0`}>
+                {template.difficultyLevel}
+              </Badge>
+            </div>
+            
+            {template.description && (
+              <CardDescription className="line-clamp-2 text-sm">
+                {template.description}
+              </CardDescription>
+            )}
+          </CardHeader>
+
+          <CardContent className="relative space-y-4">
+            {/* Template Info */}
+            <div className="flex items-center gap-4 text-sm text-muted-foreground">
+              <div className="flex items-center gap-1.5">
+                <Dumbbell className="h-4 w-4 text-primary" />
+                <span>{template.trainingSplit?.name || 'Custom Split'}</span>
+              </div>
+              <div className="flex items-center gap-1.5">
+                <Users className="h-4 w-4 text-primary" />
+                <span>{template._count.trainingPrograms} {template._count.trainingPrograms === 1 ? 'use' : 'uses'}</span>
+              </div>
+            </div>
+
+            {/* Stats */}
+            <div className="flex items-center gap-4 text-sm">
+              <div className="flex items-center gap-1.5 text-muted-foreground">
+                <Calendar className="h-4 w-4" />
+                <span>{template._count.templateWorkouts} workouts</span>
+              </div>
+              <div className="flex items-center gap-1.5 text-muted-foreground">
+                <Zap className="h-4 w-4" />
+                <span>~{totalExercises} exercises</span>
+              </div>
+            </div>
+
+            {/* CTA Button */}
+            <div className="pt-2 border-t">
+              {userPlan === 'FREE' && (
+                <p className="text-xs text-muted-foreground mb-2 flex items-center gap-1">
+                  <Crown className="h-3 w-3" />
+                  Uses 1 program slot ({userProgramCount}/2 used)
+                </p>
+              )}
+              
+              {!canCreate ? (
+                <div className="space-y-2">
+                  <Button 
+                    className="w-full bg-gradient-to-r from-purple-600 to-blue-600 hover:from-purple-700 hover:to-blue-700"
+                    onClick={(e) => {
+                      e.stopPropagation();
+                      router.push(`/${locale}/pricing`);
+                    }}
+                  >
+                    <Crown className="h-4 w-4 mr-2" />
+                    Upgrade to Pro
+                  </Button>
+                  <p className="text-xs text-center text-muted-foreground">
+                    Upgrade to create unlimited programs
+                  </p>
+                </div>
+              ) : (
+                <Button 
+                  className="w-full group-hover:shadow-lg transition-shadow"
+                  onClick={(e) => {
+                    e.stopPropagation();
+                    fetchTemplateDetails(template.id);
+                  }}
+                >
+                  <Sparkles className="h-4 w-4 mr-2" />
+                  Use Template
+                </Button>
+              )}
+            </div>
+          </CardContent>
+        </Card>
+      </motion.div>
+    );
+  };
+
+  // Template Preview Modal
+  const TemplatePreviewModal = () => {
+    if (!selectedTemplate) return null;
+
+    const totalExercises = selectedTemplate.templateWorkouts.reduce(
+      (sum, workout) => sum + workout.templateExercises.length,
+      0
+    );
+
+    return (
+      <Dialog open={isTemplatePreviewOpen} onOpenChange={setIsTemplatePreviewOpen}>
+        <DialogContent className="max-w-4xl max-h-[90vh] overflow-y-auto">
+          <DialogHeader>
+            <div className="flex items-start justify-between gap-4">
+              <div className="flex-1">
+                <DialogTitle className="text-2xl mb-2">{selectedTemplate.name}</DialogTitle>
+                <DialogDescription className="text-base">
+                  {selectedTemplate.description || 'A comprehensive training template to help you achieve your goals.'}
+                </DialogDescription>
+              </div>
+              <Badge className={`${getDifficultyColor(selectedTemplate.difficultyLevel)} border shrink-0`}>
+                {selectedTemplate.difficultyLevel}
+              </Badge>
+            </div>
+          </DialogHeader>
+
+          <div className="space-y-6 mt-4">
+            {/* Template Overview */}
+            <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
+              <Card>
+                <CardContent className="pt-6">
+                  <div className="text-center">
+                    <Dumbbell className="h-8 w-8 mx-auto mb-2 text-primary" />
+                    <p className="text-2xl font-bold">{selectedTemplate._count.templateWorkouts}</p>
+                    <p className="text-sm text-muted-foreground">Workouts</p>
+                  </div>
+                </CardContent>
+              </Card>
+              <Card>
+                <CardContent className="pt-6">
+                  <div className="text-center">
+                    <Zap className="h-8 w-8 mx-auto mb-2 text-primary" />
+                    <p className="text-2xl font-bold">{totalExercises}</p>
+                    <p className="text-sm text-muted-foreground">Exercises</p>
+                  </div>
+                </CardContent>
+              </Card>
+              <Card>
+                <CardContent className="pt-6">
+                  <div className="text-center">
+                    <TrendingUp className="h-8 w-8 mx-auto mb-2 text-primary" />
+                    <p className="text-2xl font-bold">{selectedTemplate.trainingSplit?.name || 'Custom'}</p>
+                    <p className="text-sm text-muted-foreground">Split Type</p>
+                  </div>
+                </CardContent>
+              </Card>
+              <Card>
+                <CardContent className="pt-6">
+                  <div className="text-center">
+                    <Users className="h-8 w-8 mx-auto mb-2 text-primary" />
+                    <p className="text-2xl font-bold">{selectedTemplate._count.trainingPrograms}</p>
+                    <p className="text-sm text-muted-foreground">Times Used</p>
+                  </div>
+                </CardContent>
+              </Card>
+            </div>
+
+            {/* Workouts List */}
+            <div>
+              <h3 className="text-lg font-semibold mb-4">Training Workouts</h3>
+              <div className="space-y-3">
+                {selectedTemplate.templateWorkouts.map((workout, index) => (
+                  <Card key={workout.id}>
+                    <CardHeader className="pb-3">
+                      <div className="flex items-center justify-between">
+                        <CardTitle className="text-base">
+                          Day {index + 1}: {workout.name}
+                        </CardTitle>
+                        <Badge variant="outline">
+                          {workout.templateExercises.length} exercises
+                        </Badge>
+                      </div>
+                      {workout.assignedDays.length > 0 && (
+                        <CardDescription className="text-sm">
+                          Scheduled: {workout.assignedDays.join(', ')}
+                        </CardDescription>
+                      )}
+                    </CardHeader>
+                    <CardContent>
+                      <div className="space-y-2">
+                        {workout.templateExercises.slice(0, 3).map((exercise) => (
+                          <div key={exercise.id} className="flex items-center justify-between text-sm">
+                            <span className="font-medium">{exercise.exercise.name}</span>
+                            <span className="text-muted-foreground">
+                              {exercise.sets} × {exercise.reps}
+                              {exercise.isUnilateral && ' (each side)'}
+                            </span>
+                          </div>
+                        ))}
+                        {workout.templateExercises.length > 3 && (
+                          <p className="text-sm text-muted-foreground text-center pt-2 border-t">
+                            +{workout.templateExercises.length - 3} more exercises
+                          </p>
+                        )}
+                      </div>
+                    </CardContent>
+                  </Card>
+                ))}
+              </div>
+            </div>
+
+            {/* CTA Section */}
+            <div className="flex gap-3 pt-4 border-t">
+              <Button
+                variant="outline"
+                className="flex-1"
+                onClick={() => setIsTemplatePreviewOpen(false)}
+              >
+                Close
+              </Button>
+              <Button
+                className="flex-1 bg-gradient-to-r from-primary to-blue-600 hover:from-primary/90 hover:to-blue-700"
+                onClick={() => {
+                  setIsTemplatePreviewOpen(false);
+                  router.push(`/${locale}/programs/create?template=${selectedTemplate.id}`);
+                }}
+                disabled={!canCreateProgram()}
+              >
+                <Sparkles className="h-4 w-4 mr-2" />
+                Use This Template
+              </Button>
+            </div>
+          </div>
+        </DialogContent>
+      </Dialog>
+    );
+  };
 
   if (isLoading) {
     return (
@@ -850,6 +1247,144 @@ export default function ProgramsPage() {
             <Separator className="my-12" />
           </>
         )}
+
+        {/* Browse Templates Section */}
+        {isAuthenticated && (
+          <>
+            <div className="mb-8">
+              <div className="flex items-center justify-between mb-4">
+                <div className="flex items-center gap-3">
+                  <Sparkles className="h-6 w-6 text-primary" />
+                  <div>
+                    <h2 className="text-2xl font-bold">Browse Templates</h2>
+                    <p className="text-sm text-muted-foreground mt-1">
+                      Start with a pre-built template and customize it to your needs
+                    </p>
+                  </div>
+                </div>
+
+                {/* Template Filters */}
+                <DropdownMenu>
+                  <DropdownMenuTrigger asChild>
+                    <Button variant="outline" size="sm">
+                      <Filter className="h-4 w-4 mr-2" />
+                      Filters
+                      {(templateFilters.difficulty.length + templateFilters.split.length) > 0 && (
+                        <Badge variant="secondary" className="ml-2 px-1.5 py-0 text-xs">
+                          {templateFilters.difficulty.length + templateFilters.split.length}
+                        </Badge>
+                      )}
+                    </Button>
+                  </DropdownMenuTrigger>
+                  <DropdownMenuContent align="end" className="w-56">
+                    <DropdownMenuLabel>Difficulty Level</DropdownMenuLabel>
+                    <DropdownMenuSeparator />
+                    {['BEGINNER', 'INTERMEDIATE', 'ADVANCED'].map((difficulty) => (
+                      <DropdownMenuCheckboxItem
+                        key={difficulty}
+                        checked={templateFilters.difficulty.includes(difficulty)}
+                        onCheckedChange={(checked) => {
+                          setTemplateFilters(prev => ({
+                            ...prev,
+                            difficulty: checked 
+                              ? [...prev.difficulty, difficulty]
+                              : prev.difficulty.filter(d => d !== difficulty)
+                          }));
+                        }}
+                      >
+                        {difficulty.charAt(0) + difficulty.slice(1).toLowerCase()}
+                      </DropdownMenuCheckboxItem>
+                    ))}
+                    
+                    <DropdownMenuSeparator />
+                    <DropdownMenuLabel>Training Split</DropdownMenuLabel>
+                    <DropdownMenuSeparator />
+                    {Array.from(new Set(templates.map(t => t.trainingSplit?.name).filter(Boolean))).map((split) => (
+                      <DropdownMenuCheckboxItem
+                        key={split}
+                        checked={templateFilters.split.includes(split as string)}
+                        onCheckedChange={(checked) => {
+                          setTemplateFilters(prev => ({
+                            ...prev,
+                            split: checked 
+                              ? [...prev.split, split as string]
+                              : prev.split.filter(s => s !== split)
+                          }));
+                        }}
+                      >
+                        {split}
+                      </DropdownMenuCheckboxItem>
+                    ))}
+
+                    {(templateFilters.difficulty.length + templateFilters.split.length) > 0 && (
+                      <>
+                        <DropdownMenuSeparator />
+                        <Button 
+                          variant="ghost" 
+                          size="sm" 
+                          className="w-full"
+                          onClick={() => setTemplateFilters({ difficulty: [], split: [] })}
+                        >
+                          <X className="h-4 w-4 mr-2" />
+                          Clear Filters
+                        </Button>
+                      </>
+                    )}
+                  </DropdownMenuContent>
+                </DropdownMenu>
+              </div>
+
+              {isLoadingTemplates ? (
+                <div className="grid gap-6 md:grid-cols-2 lg:grid-cols-3">
+                  {[1, 2, 3].map((i) => (
+                    <Card key={i} className="animate-pulse">
+                      <CardHeader>
+                        <div className="h-6 bg-muted rounded w-3/4 mb-2" />
+                        <div className="h-4 bg-muted rounded w-full" />
+                        <div className="h-4 bg-muted rounded w-2/3" />
+                      </CardHeader>
+                      <CardContent>
+                        <div className="h-10 bg-muted rounded" />
+                      </CardContent>
+                    </Card>
+                  ))}
+                </div>
+              ) : getFilteredTemplates().length === 0 ? (
+                <Card className="border-dashed">
+                  <CardContent className="flex flex-col items-center justify-center py-12">
+                    <Sparkles className="h-12 w-12 text-muted-foreground mb-4" />
+                    <h3 className="text-lg font-semibold mb-2">No templates found</h3>
+                    <p className="text-muted-foreground text-center mb-4 max-w-md">
+                      {(templateFilters.difficulty.length + templateFilters.split.length) > 0 
+                        ? 'Try adjusting your filters to see more templates'
+                        : 'Templates will appear here once they are created by administrators'
+                      }
+                    </p>
+                    {(templateFilters.difficulty.length + templateFilters.split.length) > 0 && (
+                      <Button 
+                        onClick={() => setTemplateFilters({ difficulty: [], split: [] })}
+                        variant="outline"
+                      >
+                        <X className="h-4 w-4 mr-2" />
+                        Clear Filters
+                      </Button>
+                    )}
+                  </CardContent>
+                </Card>
+              ) : (
+                <div className="grid gap-6 md:grid-cols-2 lg:grid-cols-3">
+                  {getFilteredTemplates().map(template => (
+                    <TemplateCard key={template.id} template={template} />
+                  ))}
+                </div>
+              )}
+            </div>
+            <Separator className="my-12" />
+          </>
+        )}
+
+        {/* Template Preview Modal */}
+        <TemplatePreviewModal />
 
         {/* Browse Programs Section */}
         <div>
