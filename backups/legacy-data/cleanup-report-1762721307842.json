@@ -1,0 +1,17 @@
+{
+  "timestamp": "2025-11-09T20:48:27.840Z",
+  "dryRun": true,
+  "orphanedExercises": 0,
+  "orphanedWorkouts": 0,
+  "oldPurchaseRecords": 0,
+  "integrityChecks": {
+    "brokenExerciseRelations": 0,
+    "brokenWorkoutRelations": 0,
+    "brokenProgramRelations": 0
+  },
+  "archivedData": {
+    "exercises": [],
+    "workouts": [],
+    "purchaseRecords": []
+  }
+}
