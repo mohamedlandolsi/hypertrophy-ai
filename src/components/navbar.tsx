@@ -2,7 +2,7 @@
 
 import Link from 'next/link';
 import Image from 'next/image';
-import { Menu, User, MessageSquare, Settings, LogOut, LayoutDashboard, UserCircle, Crown, Dumbbell, BookOpen } from 'lucide-react';
+import { Menu, User, MessageSquare, Settings, LogOut, LayoutDashboard, UserCircle, Crown, Dumbbell } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Sheet, SheetContent, SheetTrigger, SheetClose, SheetTitle } from '@/components/ui/sheet';
 import { useState, useEffect } from 'react';
@@ -28,6 +28,7 @@ import LanguageSwitcher from '@/components/language-switcher';
 import { useTranslations } from 'next-intl';
 import { BetaBadge } from '@/components/beta-badge';
 import { CoachInboxNotification } from '@/components/coach-inbox-notification';
+import { SubscriptionBadge } from '@/components/subscription-badge';
 
 const Navbar = () => {
   const [isMobileMenuOpen, setIsMobileMenuOpen] = useState(false);
@@ -125,7 +126,6 @@ const Navbar = () => {
 
   const navLinks = [
     { href: `/${locale}/pricing`, label: t('pricing'), icon: Crown },
-    { href: `/${locale}/programs`, label: t('programs'), icon: BookOpen },
     ...(user ? [{ href: `/${locale}/profile`, label: t('profile'), icon: UserCircle }] : []),
     ...(userRole?.split(',').map(r => r.trim()).includes('coach') ? [{ href: `/${locale}/coach-inbox`, label: 'Coach Inbox', icon: MessageSquare }] : []),
     ...(userRole === 'admin' ? [{ href: `/${locale}/admin`, label: t('dashboard'), icon: LayoutDashboard }] : []),
@@ -176,8 +176,9 @@ const Navbar = () => {
           {isLoadingUser ? (
             <div className="h-9 w-9 rounded-full bg-muted animate-pulse" /> // Placeholder for loading state
           ) : user ? (
-              // Logged-in state: Language switcher, theme toggle, coach inbox (if coach), and avatar dropdown (desktop only)
+              // Logged-in state: Subscription badge, language switcher, theme toggle, coach inbox (if coach), and avatar dropdown (desktop only)
               <div className="hidden md:flex items-center space-x-2 rtl:space-x-reverse">
+                <SubscriptionBadge />
                 <LanguageSwitcher />
                 <ThemeToggle />
                 <CoachInboxNotification />
@@ -287,6 +288,11 @@ const Navbar = () => {
                       <div className="h-12 w-full rounded-md bg-muted animate-pulse" /> // Placeholder for loading state
                     ) : user ? (
                       <>
+                        {/* Subscription Badge */}
+                        <div className="px-2">
+                          <SubscriptionBadge />
+                        </div>
+                        
                         {/* User Profile Section */}
                         <div className="flex items-center space-x-3 p-3 border rounded-lg bg-muted/30 rtl:space-x-reverse">
                           <Avatar className="h-10 w-10">

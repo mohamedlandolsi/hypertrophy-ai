@@ -57,7 +57,6 @@ export async function GET(
 
     // Check if user owns this program (if authenticated)
     let isOwned = false;
-    let hasPurchased = false;
     let hasProAccess_check = false;
     
     if (user) {
@@ -69,17 +68,6 @@ export async function GET(
       });
       isOwned = !!userProgram;
 
-      // Check purchase status
-      const userPurchase = await prisma.userPurchase.findUnique({
-        where: {
-          userId_trainingProgramId: {
-            userId: user.id,
-            trainingProgramId: program.id,
-          },
-        },
-      });
-      hasPurchased = !!userPurchase;
-
       // Check Pro subscription access
       hasProAccess_check = await hasProAccess(user.id);
     }
@@ -87,7 +75,6 @@ export async function GET(
     const responseData = {
       ...program,
       isOwned,
-      hasPurchased,
       hasProAccess: hasProAccess_check,
     };
 

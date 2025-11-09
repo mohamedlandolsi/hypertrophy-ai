@@ -27,6 +27,16 @@ An AI-powered fitness coaching application that specializes in muscle hypertroph
 - User-specific data isolation
 - Secure file storage and access
 
+### 💪 Training Programs (Pro Feature)
+- **Program Templates**: Browse admin-curated training program templates
+- **Custom Programs**: Clone templates and customize to your needs
+- **Interactive Builder**: Personalize workouts, exercises, and training splits
+- **Multi-Structure Support**: Weekly schedules or cyclic programming
+- **Program Guide**: Detailed instructions and guidance for each program
+- **Subscription Model**: Unlimited access to all programs with Pro subscription
+  - Free users: Browse templates and use limited features
+  - Pro subscribers: Unlimited programs, unlimited AI coaching, exclusive features
+
 ### 🌍 Language Support
 - **Automatic Language Detection**: Detects Arabic text in user messages
 - **Bilingual Responses**: Responds in Arabic when user prompts in Arabic

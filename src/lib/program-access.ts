@@ -43,18 +43,17 @@ export async function hasProAccess(userId: string): Promise<boolean> {
  * Check if a user can access a specific training program
  * Access is granted if:
  * 1. User is an admin, OR
- * 2. User has Pro subscription (access to all programs), OR
- * 3. User has purchased the specific program, OR
- * 4. Program is free (price = 0)
+ * 2. User has Pro subscription (access to all programs)
+ * 
+ * Note: Individual program purchases deprecated Nov 2025 (subscription-only model)
  */
 export async function canAccessProgram(
   userId: string,
   programId: string
 ): Promise<{
   hasAccess: boolean;
-  reason: 'admin' | 'pro_subscription' | 'purchased' | 'free' | 'no_access';
+  reason: 'admin' | 'pro_subscription' | 'no_access';
   isPro: boolean;
-  hasPurchased: boolean;
   isAdmin: boolean;
 }> {
   try {
@@ -72,7 +71,6 @@ export async function canAccessProgram(
         hasAccess: false,
         reason: 'no_access',
         isPro: false,
-        hasPurchased: false,
         isAdmin: false,
       };
     }
@@ -85,7 +83,6 @@ export async function canAccessProgram(
         hasAccess: true,
         reason: 'admin',
         isPro: user.plan === 'PRO',
-        hasPurchased: false,
         isAdmin: true,
       };
     }
@@ -99,15 +96,14 @@ export async function canAccessProgram(
         hasAccess: true,
         reason: 'pro_subscription',
         isPro: true,
-        hasPurchased: false,
         isAdmin: false,
       };
     }
 
-    // Get program details
+    // Verify program exists and is active
     const program = await prisma.trainingProgram.findUnique({
       where: { id: programId },
-      select: { price: true, isActive: true },
+      select: { isActive: true },
     });
 
     if (!program || !program.isActive) {
@@ -115,39 +111,15 @@ export async function canAccessProgram(
         hasAccess: false,
         reason: 'no_access',
         isPro: false,
-        hasPurchased: false,
         isAdmin: false,
       };
     }
 
-    // Check if program is free
-    if (program.price === 0) {
-      return {
-        hasAccess: true,
-        reason: 'free',
-        isPro: false,
-        hasPurchased: false,
-        isAdmin: false,
-      };
-    }
-
-    // Check if user has purchased this specific program
-    const purchase = await prisma.userPurchase.findUnique({
-      where: {
-        userId_trainingProgramId: {
-          userId,
-          trainingProgramId: programId,
-        },
-      },
-    });
-
-    const hasPurchased = !!purchase;
-
+    // No access without Pro subscription
     return {
-      hasAccess: hasPurchased,
-      reason: hasPurchased ? 'purchased' : 'no_access',
+      hasAccess: false,
+      reason: 'no_access',
       isPro: false,
-      hasPurchased,
       isAdmin: false,
     };
   } catch (error) {
@@ -156,7 +128,6 @@ export async function canAccessProgram(
       hasAccess: false,
       reason: 'no_access',
       isPro: false,
-      hasPurchased: false,
       isAdmin: false,
     };
   }
@@ -164,10 +135,12 @@ export async function canAccessProgram(
 
 /**
  * Get a list of all programs the user has access to
- * Includes purchased programs and all programs if user has Pro subscription
+ * Returns all active programs if user has Pro subscription or is admin
+ * 
+ * Note: Individual program purchases deprecated Nov 2025 (subscription-only model)
  */
 export async function getUserAccessiblePrograms(userId: string): Promise<{
-  allAccess: boolean; // True if user has Pro (access to all programs)
+  allAccess: boolean; // True if user has Pro or is admin (access to all programs)
   accessibleProgramIds: string[];
   isPro: boolean;
   isAdmin: boolean;
@@ -225,25 +198,10 @@ export async function getUserAccessiblePrograms(userId: string): Promise<{
       };
     }
 
-    // Get purchased programs + free programs
-    const [purchases, freePrograms] = await Promise.all([
-      prisma.userPurchase.findMany({
-        where: { userId },
-        select: { trainingProgramId: true },
-      }),
-      prisma.trainingProgram.findMany({
-        where: { price: 0, isActive: true },
-        select: { id: true },
-      }),
-    ]);
-
-    const purchasedIds = purchases.map((p) => p.trainingProgramId);
-    const freeIds = freePrograms.map((p) => p.id);
-    const accessibleProgramIds = [...new Set([...purchasedIds, ...freeIds])];
-
+    // Free users have no program access (subscription required)
     return {
       allAccess: false,
-      accessibleProgramIds,
+      accessibleProgramIds: [],
       isPro: false,
       isAdmin: false,
     };
@@ -261,82 +219,48 @@ export async function getUserAccessiblePrograms(userId: string): Promise<{
 /**
  * Get upgrade information for a user
  * Shows what they would gain by upgrading to Pro
+ * 
+ * Note: Simplified for subscription-only model (Nov 2025)
  */
 export async function getUpgradeInfo(userId: string): Promise<{
   shouldShowUpgrade: boolean;
-  currentProgramCount: number;
   totalProgramCount: number;
-  potentialSavings: number; // How much they would save vs buying all programs
   upgradeMessage: string;
 }> {
   try {
     const user = await prisma.user.findUnique({
       where: { id: userId },
-      select: { plan: true },
+      select: { plan: true, role: true },
     });
 
-    // Don't show upgrade to Pro users
-    if (user?.plan === 'PRO') {
+    // Don't show upgrade to Pro users or admins
+    if (user?.plan === 'PRO' || user?.role === 'admin') {
       return {
         shouldShowUpgrade: false,
-        currentProgramCount: 0,
         totalProgramCount: 0,
-        potentialSavings: 0,
         upgradeMessage: '',
       };
     }
 
-    // Get user's purchased programs
-    const purchases = await prisma.userPurchase.count({
-      where: { userId },
+    // Get total active program count
+    const totalPrograms = await prisma.trainingProgram.count({
+      where: { isActive: true },
     });
 
-    // Get total program count and value
-    const [totalPrograms, totalValue] = await Promise.all([
-      prisma.trainingProgram.count({
-        where: { isActive: true, price: { gt: 0 } },
-      }),
-      prisma.trainingProgram.aggregate({
-        where: { isActive: true, price: { gt: 0 } },
-        _sum: { price: true },
-      }),
-    ]);
+    const shouldShowUpgrade = true; // Always show to free users
 
-    const totalProgramValue = (totalValue._sum.price || 0) / 100; // Convert cents to dollars
-
-    // Pro subscription annual cost (assuming $149/year from strategy)
-    const proAnnualCost = 149;
-
-    // Calculate potential savings
-    const potentialSavings = Math.max(0, totalProgramValue - proAnnualCost);
-
-    // Show upgrade if they have 2+ programs or total value > $100
-    const shouldShowUpgrade =
-      purchases >= 2 || totalProgramValue >= 100;
-
-    let upgradeMessage = '';
-    if (shouldShowUpgrade) {
-      if (purchases >= 2) {
-        upgradeMessage = `You've purchased ${purchases} programs. Upgrade to Pro for unlimited access to all ${totalPrograms} programs!`;
-      } else {
-        upgradeMessage = `Get unlimited access to all ${totalPrograms} programs and save $${potentialSavings.toFixed(0)} with Pro!`;
-      }
-    }
+    const upgradeMessage = `Upgrade to Pro for unlimited access to all ${totalPrograms} programs, unlimited AI coaching, and exclusive features!`;
 
     return {
       shouldShowUpgrade,
-      currentProgramCount: purchases,
       totalProgramCount: totalPrograms,
-      potentialSavings,
       upgradeMessage,
     };
   } catch (error) {
     console.error('Error getting upgrade info:', error);
     return {
       shouldShowUpgrade: false,
-      currentProgramCount: 0,
       totalProgramCount: 0,
-      potentialSavings: 0,
       upgradeMessage: '',
     };
   }

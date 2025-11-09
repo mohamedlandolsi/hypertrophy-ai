@@ -43,7 +43,6 @@ async function getUserAccessInfo(userId: string, programId: string) {
 
   return {
     isAdmin: accessInfo.isAdmin,
-    hasPurchased: accessInfo.hasPurchased,
     hasAccess: accessInfo.hasAccess,
     isPro: accessInfo.isPro,
     accessReason: accessInfo.reason,

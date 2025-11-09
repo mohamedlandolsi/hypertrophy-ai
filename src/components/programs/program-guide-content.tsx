@@ -28,7 +28,6 @@ interface ProgramGuideContentProps {
   locale: string;
   accessInfo: {
     isAdmin: boolean;
-    hasPurchased: boolean;
     hasAccess: boolean;
   };
 }

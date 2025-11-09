@@ -375,9 +375,13 @@ model TrainingProgram {
   id                    String  @id @default(cuid())
   name                  Json // Multilingual: {"en": "Upper/Lower", "ar": "علوي/سفلي", "fr": "Haut/Bas"}
   description           Json // Multilingual description
-  price                 Int // Price in cents
-  lemonSqueezyId        String? @unique // LemonSqueezy product ID
-  lemonSqueezyVariantId String? // LemonSqueezy variant ID
+  
+  // DEPRECATED: Individual program purchases (subscription-only model since Nov 2025)
+  // Kept for historical data only - do not use for new programs
+  price                 Int // Price in cents - DEPRECATED
+  lemonSqueezyId        String? @unique // LemonSqueezy product ID - DEPRECATED
+  lemonSqueezyVariantId String? // LemonSqueezy variant ID - DEPRECATED
+  
   isActive              Boolean @default(true)
 
   // Template Reference (nullable - if created from template)
@@ -521,6 +525,8 @@ model ExerciseTemplate {
   @@index([categoryType])
 }
 
+// DEPRECATED: Individual program purchase tracking (subscription-only model since Nov 2025)
+// Kept for historical data only - do not use for new purchases
 model UserPurchase {
   id                String   @id @default(cuid())
   userId            String

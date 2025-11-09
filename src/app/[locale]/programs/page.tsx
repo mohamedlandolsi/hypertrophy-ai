@@ -7,22 +7,14 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/com
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
 import { Separator } from '@/components/ui/separator';
-import { Input } from '@/components/ui/input';
 import { 
-  Loader2, BookOpen, Settings, DollarSign, Crown, Sparkles,
-  Search, Filter, ChevronDown, ChevronUp, Dumbbell, TrendingUp,
+  Loader2, BookOpen, Settings, Crown, Sparkles,
+  Filter, Dumbbell,
   Check, X, Eye, BarChart3, Users, Calendar, Zap
 } from 'lucide-react';
 import { toast } from 'sonner';
 import { createClient } from '@/lib/supabase/client';
 import Image from 'next/image';
-import {
-  Select,
-  SelectContent,
-  SelectItem,
-  SelectTrigger,
-  SelectValue,
-} from "@/components/ui/select";
 import {
   DropdownMenu,
   DropdownMenuContent,
@@ -39,6 +31,7 @@ import {
   DialogTitle,
 } from "@/components/ui/dialog";
 import { motion } from "framer-motion";
+import { ProgramDashboardCTA } from '@/components/program-dashboard-cta';
 
 interface TrainingProgram {
   id: string;
@@ -67,10 +60,7 @@ interface TrainingProgram {
 
 interface ProgramsData {
   ownedPrograms: TrainingProgram[];
-  browsePrograms: TrainingProgram[];
-  totalPrograms: number;
   ownedCount: number;
-  browseCount: number;
   isAdmin?: boolean;
   isPro?: boolean;
 }
@@ -144,16 +134,6 @@ export default function ProgramsPage() {
   const [userProgramCount, setUserProgramCount] = useState(0);
   const [userPlan, setUserPlan] = useState<'FREE' | 'PRO'>('FREE');
 
-  // Filter and view state
-  const [searchQuery, setSearchQuery] = useState('');
-  const viewMode = 'grid'; // Fixed to grid view
-  const [sortBy, setSortBy] = useState('popular');
-  const [selectedDifficulty, setSelectedDifficulty] = useState<string[]>([]);
-  const [selectedSplit, setSelectedSplit] = useState<string[]>([]);
-  const [selectedDuration, setSelectedDuration] = useState<string[]>([]);
-  const [priceRange, setPriceRange] = useState<string[]>([]);
-  const [isFilterVisible, setIsFilterVisible] = useState(true);
-
   useEffect(() => {
     async function loadPrograms() {
       setIsLoading(true);
@@ -163,27 +143,11 @@ export default function ProgramsPage() {
         
         if (userError || !currentUser) {
           setIsAuthenticated(false);
-          const response = await fetch('/api/programs');
-          if (response.ok) {
-            const data = await response.json();
-            setProgramsData({
-              ownedPrograms: [],
-              browsePrograms: data.data.browsePrograms.map((p: TrainingProgram) => ({
-                ...p,
-                // Mock data for demo - would come from DB
-                difficulty: (['beginner', 'intermediate', 'advanced'][Math.floor(Math.random() * 3)]) as 'beginner' | 'intermediate' | 'advanced',
-                rating: 4.5 + Math.random() * 0.4,
-                userCount: Math.floor(Math.random() * 500) + 50,
-                split: ['3-Day', '4-Day', '5-Day', 'PPL'][Math.floor(Math.random() * 4)],
-                duration: ['4-8 weeks', '8-12 weeks', '12+ weeks'][Math.floor(Math.random() * 3)],
-                isFeatured: Math.random() > 0.7,
-                isNew: Math.random() > 0.8
-              })),
-              totalPrograms: data.data.totalPrograms,
-              ownedCount: 0,
-              browseCount: data.data.browseCount
-            });
-          }
+          // Guest users see minimal data
+          setProgramsData({
+            ownedPrograms: [],
+            ownedCount: 0
+          });
           return;
         }
 
@@ -192,29 +156,12 @@ export default function ProgramsPage() {
         const response = await fetch('/api/programs');
         if (response.ok) {
           const data = await response.json();
-          // Add mock metadata
-          const enrichedData = {
-            ...data.data,
-            browsePrograms: data.data.browsePrograms.map((p: TrainingProgram) => ({
-              ...p,
-              difficulty: (['beginner', 'intermediate', 'advanced'][Math.floor(Math.random() * 3)]) as 'beginner' | 'intermediate' | 'advanced',
-              rating: 4.5 + Math.random() * 0.4,
-              userCount: Math.floor(Math.random() * 500) + 50,
-              split: ['3-Day', '4-Day', '5-Day', 'PPL'][Math.floor(Math.random() * 4)],
-              duration: ['4-8 weeks', '8-12 weeks', '12+ weeks'][Math.floor(Math.random() * 3)],
-              isFeatured: Math.random() > 0.7,
-              isNew: Math.random() > 0.8
-            })),
-            ownedPrograms: data.data.ownedPrograms.map((p: TrainingProgram) => ({
-              ...p,
-              difficulty: (['beginner', 'intermediate', 'advanced'][Math.floor(Math.random() * 3)]) as 'beginner' | 'intermediate' | 'advanced',
-              rating: 4.5 + Math.random() * 0.4,
-              userCount: Math.floor(Math.random() * 500) + 50,
-              split: ['3-Day', '4-Day', '5-Day', 'PPL'][Math.floor(Math.random() * 4)],
-              duration: ['4-8 weeks', '8-12 weeks', '12+ weeks'][Math.floor(Math.random() * 3)]
-            }))
-          };
-          setProgramsData(enrichedData);
+          setProgramsData({
+            ownedPrograms: data.data.ownedPrograms || [],
+            ownedCount: data.data.ownedCount || 0,
+            isAdmin: data.data.isAdmin,
+            isPro: data.data.isPro
+          });
         } else {
           throw new Error('Failed to fetch programs');
         }
@@ -325,82 +272,8 @@ export default function ProgramsPage() {
 
   const handleProgramClick = (program: TrainingProgram) => {
     setNavigatingToProgramId(program.id);
-    if (program.isOwned) {
-      router.push(`/programs/${program.id}/guide`);
-    } else {
-      router.push(`/programs/${program.id}/about`);
-    }
+    router.push(`/${locale}/programs/${program.id}/guide`);
   };
-
-  // Filter programs
-  const getFilteredPrograms = (programs: TrainingProgram[]) => {
-    return programs.filter(program => {
-      // Search filter
-      const programName = program.name.en || Object.values(program.name)[0] || '';
-      const programDesc = program.description.en || Object.values(program.description)[0] || '';
-      const matchesSearch = !searchQuery || 
-        programName.toLowerCase().includes(searchQuery.toLowerCase()) ||
-        programDesc.toLowerCase().includes(searchQuery.toLowerCase());
-
-      // Difficulty filter
-      const matchesDifficulty = selectedDifficulty.length === 0 || 
-        (program.difficulty && selectedDifficulty.includes(program.difficulty));
-
-      // Split filter
-      const matchesSplit = selectedSplit.length === 0 || 
-        (program.split && selectedSplit.includes(program.split));
-
-      // Duration filter
-      const matchesDuration = selectedDuration.length === 0 || 
-        (program.duration && selectedDuration.includes(program.duration));
-
-      // Price range filter
-      const priceInDollars = program.price / 100;
-      const matchesPrice = priceRange.length === 0 || priceRange.some(range => {
-        if (range === 'under-39') return priceInDollars < 39;
-        if (range === '40-59') return priceInDollars >= 40 && priceInDollars <= 59;
-        if (range === '60-plus') return priceInDollars >= 60;
-        return true;
-      });
-
-      return matchesSearch && matchesDifficulty && matchesSplit && matchesDuration && matchesPrice;
-    });
-  };
-
-  // Sort programs
-  const getSortedPrograms = (programs: TrainingProgram[]) => {
-    const sorted = [...programs];
-    switch (sortBy) {
-      case 'popular':
-        return sorted.sort((a, b) => (b.userCount || 0) - (a.userCount || 0));
-      case 'newest':
-        return sorted.sort((a, b) => new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime());
-      case 'price-low':
-        return sorted.sort((a, b) => a.price - b.price);
-      case 'price-high':
-        return sorted.sort((a, b) => b.price - a.price);
-      case 'rating':
-        return sorted.sort((a, b) => (b.rating || 0) - (a.rating || 0));
-      default:
-        return sorted;
-    }
-  };
-
-  const getDifficultyLabel = (difficulty?: string) => {
-    if (!difficulty) return 'Unknown';
-    return difficulty.charAt(0).toUpperCase() + difficulty.slice(1);
-  };
-
-  const clearAllFilters = () => {
-    setSelectedDifficulty([]);
-    setSelectedSplit([]);
-    setSelectedDuration([]);
-    setPriceRange([]);
-    setSearchQuery('');
-  };
-
-  const hasActiveFilters = selectedDifficulty.length > 0 || selectedSplit.length > 0 || 
-    selectedDuration.length > 0 || priceRange.length > 0 || searchQuery.length > 0;
 
   // Modern Program Card Component
   const ProgramCard = ({ program, variant = 'default' }: { program: TrainingProgram; variant?: 'default' | 'featured' }) => {
@@ -571,64 +444,6 @@ export default function ProgramsPage() {
     );
   };
 
-  // Pro Upsell Card
-  const ProUpsellCard = () => (
-    <Card className="border-2 border-purple-200 dark:border-purple-800 bg-gradient-to-br from-purple-50 via-blue-50 to-purple-50 dark:from-purple-950/30 dark:via-blue-950/30 dark:to-purple-950/30 overflow-hidden">
-      <div className="absolute top-0 right-0 w-32 h-32 bg-gradient-to-br from-yellow-400/20 to-purple-600/20 rounded-full blur-3xl" />
-      <CardContent className="relative py-8">
-        <div className="flex flex-col items-center text-center gap-4">
-          <Badge className="bg-gradient-to-r from-purple-600 to-blue-600 px-4 py-1">
-            <Crown className="h-4 w-4 mr-1" />
-            {t('proUpsell.badge')}
-          </Badge>
-          
-          <div>
-            <h3 className="text-2xl font-bold mb-2">{t('proUpsell.title')}</h3>
-            <p className="text-muted-foreground text-sm">
-              {t('proUpsell.subtitle')}
-            </p>
-          </div>
-
-          <div className="w-full space-y-2 my-2">
-            <div className="flex items-center gap-2 text-sm">
-              <Check className="h-4 w-4 text-green-600 flex-shrink-0" />
-              <span>{t('proUpsell.benefits.allPrograms', { count: programsData?.totalPrograms || 0 })}</span>
-            </div>
-            <div className="flex items-center gap-2 text-sm">
-              <Check className="h-4 w-4 text-green-600 flex-shrink-0" />
-              <span>{t('proUpsell.benefits.unlimitedAI')}</span>
-            </div>
-            <div className="flex items-center gap-2 text-sm">
-              <Check className="h-4 w-4 text-green-600 flex-shrink-0" />
-              <span>{t('proUpsell.benefits.analytics')}</span>
-            </div>
-            <div className="flex items-center gap-2 text-sm">
-              <Check className="h-4 w-4 text-green-600 flex-shrink-0" />
-              <span>{t('proUpsell.benefits.earlyAccess')}</span>
-            </div>
-          </div>
-
-          <div className="text-center">
-            <div className="flex items-baseline justify-center gap-2 mb-1">
-              <span className="text-3xl font-bold">{t('proUpsell.pricing.monthly')}</span>
-              <span className="text-muted-foreground">{t('proUpsell.pricing.perMonth')}</span>
-            </div>
-            <p className="text-xs text-muted-foreground">{t('proUpsell.pricing.yearly')}</p>
-          </div>
-
-          <Button 
-            onClick={() => router.push('/pricing')}
-            className="w-full bg-gradient-to-r from-purple-600 to-blue-600 hover:from-purple-700 hover:to-blue-700"
-            size="lg"
-          >
-            <Sparkles className="h-4 w-4 mr-2" />
-            {t('proUpsell.cta')}
-          </Button>
-        </div>
-      </CardContent>
-    </Card>
-  );
-
   // Template Card Component
   const TemplateCard = ({ template }: { template: Template }) => {
     const canCreate = canCreateProgram();
@@ -784,7 +599,7 @@ export default function ProgramsPage() {
               <Card>
                 <CardContent className="pt-6">
                   <div className="text-center">
-                    <TrendingUp className="h-8 w-8 mx-auto mb-2 text-primary" />
+                    <Dumbbell className="h-8 w-8 mx-auto mb-2 text-primary" />
                     <p className="text-2xl font-bold">{selectedTemplate.trainingSplit?.name || 'Custom'}</p>
                     <p className="text-sm text-muted-foreground">Split Type</p>
                   </div>
@@ -904,11 +719,6 @@ export default function ProgramsPage() {
     );
   }
 
-  // Get filtered and sorted programs
-  const filteredBrowsePrograms = getSortedPrograms(getFilteredPrograms(programsData.browsePrograms));
-  const featuredPrograms = filteredBrowsePrograms.filter(p => p.isFeatured).slice(0, 2);
-  const regularPrograms = filteredBrowsePrograms.filter(p => !p.isFeatured || !featuredPrograms.includes(p));
-
   return (
     <div className="min-h-screen bg-gradient-to-b from-slate-50 to-white dark:from-slate-950 dark:to-slate-900">
       {/* Loading overlay */}
@@ -945,275 +755,19 @@ export default function ProgramsPage() {
           </p>
         </div>
 
-        {/* Sticky Filter Bar */}
-        <div className="sticky top-0 z-40 bg-background/95 backdrop-blur-sm border-b -mx-4 px-4">
-          {/* Toggle Button - Always Visible */}
-          <div className="flex items-center justify-between py-3 sm:py-3">
-            <div className="flex items-center gap-2">
-              <Search className="h-4 w-4 text-muted-foreground" />
-              <span className="text-sm font-medium">
-                {isFilterVisible ? t('filters.hideFilters') || 'Hide Filters' : t('filters.showFilters') || 'Show Filters'}
-              </span>
-              {hasActiveFilters && !isFilterVisible && (
-                <Badge variant="secondary" className="text-xs">
-                  {[
-                    searchQuery ? 1 : 0,
-                    selectedDifficulty.length,
-                    selectedSplit.length,
-                    selectedDuration.length,
-                    priceRange.length
-                  ].reduce((a, b) => a + b, 0)}
-                </Badge>
-              )}
-            </div>
-            <Button
-              variant="ghost"
-              size="sm"
-              onClick={() => setIsFilterVisible(!isFilterVisible)}
-              className="h-8"
-            >
-              {isFilterVisible ? (
-                <ChevronUp className="h-4 w-4" />
-              ) : (
-                <ChevronDown className="h-4 w-4" />
-              )}
-            </Button>
-          </div>
-
-          {/* Collapsible Filter Section */}
-          {isFilterVisible && (
-            <div className="pb-3 sm:pb-4 mb-6 sm:mb-8 space-y-3 sm:space-y-4 border-t pt-3 sm:pt-4">
-              {/* Search Bar - Full Width on Mobile */}
-              <div className="relative w-full">
-                <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
-                <Input
-                  placeholder={t('search.placeholder')}
-                  value={searchQuery}
-                  onChange={(e) => setSearchQuery(e.target.value)}
-                  className="pl-9 h-11 sm:h-10"
-                />
-              </div>
-
-              {/* Filters Row */}
-              <div className="flex flex-col sm:flex-row sm:items-center gap-3 sm:gap-2">
-                {/* Filter Buttons */}
-                <div className="grid grid-cols-2 sm:flex sm:flex-wrap gap-2 flex-1">
-                  {/* Difficulty Filter */}
-                  <DropdownMenu>
-                    <DropdownMenuTrigger asChild>
-                      <Button variant="outline" size="sm" className="h-10 justify-start sm:justify-center">
-                        <Filter className="h-4 w-4 mr-2" />
-                        <span className="truncate">{t('filters.difficulty.label')}</span>
-                        {selectedDifficulty.length > 0 && (
-                          <Badge variant="secondary" className="ml-auto sm:ml-2 px-1.5 py-0 text-xs">
-                            {selectedDifficulty.length}
-                          </Badge>
-                        )}
-                      </Button>
-                    </DropdownMenuTrigger>
-                    <DropdownMenuContent align="start" className="w-48">
-                      <DropdownMenuLabel>{t('filters.difficulty.selectLevel')}</DropdownMenuLabel>
-                      <DropdownMenuSeparator />
-                      {['beginner', 'intermediate', 'advanced'].map((level) => (
-                        <DropdownMenuCheckboxItem
-                          key={level}
-                          checked={selectedDifficulty.includes(level)}
-                          onCheckedChange={(checked) => {
-                            setSelectedDifficulty(checked 
-                              ? [...selectedDifficulty, level]
-                              : selectedDifficulty.filter(d => d !== level)
-                            );
-                          }}
-                        >
-                          {t(`filters.difficulty.${level}`)}
-                        </DropdownMenuCheckboxItem>
-                      ))}
-                    </DropdownMenuContent>
-                  </DropdownMenu>
-
-                  {/* Split Filter */}
-                  <DropdownMenu>
-                    <DropdownMenuTrigger asChild>
-                      <Button variant="outline" size="sm" className="h-10 justify-start sm:justify-center">
-                        <span className="truncate">{t('filters.split.label')}</span>
-                        {selectedSplit.length > 0 && (
-                          <Badge variant="secondary" className="ml-auto sm:ml-2 px-1.5 py-0 text-xs">
-                            {selectedSplit.length}
-                          </Badge>
-                        )}
-                      </Button>
-                    </DropdownMenuTrigger>
-                    <DropdownMenuContent align="start" className="w-48">
-                      <DropdownMenuLabel>{t('filters.split.title')}</DropdownMenuLabel>
-                      <DropdownMenuSeparator />
-                      {['3-Day', '4-Day', '5-Day', '6-Day', 'PPL', 'Upper/Lower'].map((split) => (
-                        <DropdownMenuCheckboxItem
-                          key={split}
-                          checked={selectedSplit.includes(split)}
-                          onCheckedChange={(checked) => {
-                            setSelectedSplit(checked 
-                              ? [...selectedSplit, split]
-                              : selectedSplit.filter(s => s !== split)
-                            );
-                          }}
-                        >
-                          {split}
-                        </DropdownMenuCheckboxItem>
-                      ))}
-                    </DropdownMenuContent>
-                  </DropdownMenu>
-
-                  {/* Duration Filter */}
-                  <DropdownMenu>
-                    <DropdownMenuTrigger asChild>
-                      <Button variant="outline" size="sm" className="h-10 justify-start sm:justify-center">
-                        <span className="truncate">{t('filters.duration.label')}</span>
-                        {selectedDuration.length > 0 && (
-                          <Badge variant="secondary" className="ml-auto sm:ml-2 px-1.5 py-0 text-xs">
-                            {selectedDuration.length}
-                          </Badge>
-                        )}
-                      </Button>
-                    </DropdownMenuTrigger>
-                    <DropdownMenuContent align="start" className="w-48">
-                      <DropdownMenuLabel>{t('filters.duration.title')}</DropdownMenuLabel>
-                      <DropdownMenuSeparator />
-                      {['4-8 weeks', '8-12 weeks', '12+ weeks'].map((duration) => (
-                        <DropdownMenuCheckboxItem
-                          key={duration}
-                          checked={selectedDuration.includes(duration)}
-                          onCheckedChange={(checked) => {
-                            setSelectedDuration(checked 
-                              ? [...selectedDuration, duration]
-                              : selectedDuration.filter(d => d !== duration)
-                            );
-                          }}
-                        >
-                          {duration}
-                        </DropdownMenuCheckboxItem>
-                      ))}
-                    </DropdownMenuContent>
-                  </DropdownMenu>
-
-                  {/* Price Filter */}
-                  <DropdownMenu>
-                    <DropdownMenuTrigger asChild>
-                      <Button variant="outline" size="sm" className="h-10 justify-start sm:justify-center">
-                        <DollarSign className="h-4 w-4 mr-1" />
-                        <span className="truncate">{t('filters.price.label')}</span>
-                        {priceRange.length > 0 && (
-                          <Badge variant="secondary" className="ml-auto sm:ml-2 px-1.5 py-0 text-xs">
-                            {priceRange.length}
-                          </Badge>
-                        )}
-                      </Button>
-                    </DropdownMenuTrigger>
-                    <DropdownMenuContent align="start" className="w-48">
-                      <DropdownMenuLabel>{t('filters.price.title')}</DropdownMenuLabel>
-                      <DropdownMenuSeparator />
-                      {[
-                        { value: 'under-39', label: t('filters.price.under39') },
-                        { value: '40-59', label: t('filters.price.range4059') },
-                        { value: '60-plus', label: t('filters.price.over60') }
-                      ].map((range) => (
-                        <DropdownMenuCheckboxItem
-                          key={range.value}
-                          checked={priceRange.includes(range.value)}
-                          onCheckedChange={(checked) => {
-                            setPriceRange(checked 
-                              ? [...priceRange, range.value]
-                              : priceRange.filter(p => p !== range.value)
-                            );
-                          }}
-                        >
-                          {range.label}
-                        </DropdownMenuCheckboxItem>
-                      ))}
-                    </DropdownMenuContent>
-                  </DropdownMenu>
-
-                  {/* Clear Filters - Full Width on Mobile */}
-                  {hasActiveFilters && (
-                    <Button 
-                      variant="ghost" 
-                      size="sm" 
-                      className="h-10 col-span-2 sm:col-span-1 sm:w-auto" 
-                      onClick={clearAllFilters}
-                    >
-                      <X className="h-4 w-4 mr-1" />
-                      {t('filters.clearAll')}
-                    </Button>
-                  )}
-                </div>
-
-                {/* Sort Dropdown - Full Width on Mobile */}
-                <div className="w-full sm:w-auto sm:min-w-[180px]">
-                  <Select value={sortBy} onValueChange={setSortBy}>
-                    <SelectTrigger className="w-full h-10">
-                      <SelectValue placeholder={t('sort.label')} />
-                    </SelectTrigger>
-                    <SelectContent>
-                      <SelectItem value="popular">{t('sort.popular')}</SelectItem>
-                      <SelectItem value="newest">{t('sort.newest')}</SelectItem>
-                      <SelectItem value="rating">{t('sort.rating')}</SelectItem>
-                      <SelectItem value="price-low">{t('sort.priceLow')}</SelectItem>
-                      <SelectItem value="price-high">{t('sort.priceHigh')}</SelectItem>
-                    </SelectContent>
-                  </Select>
-                </div>
-              </div>
-
-              {/* Active Filters Display */}
-              {hasActiveFilters && (
-                <div className="flex flex-wrap gap-2">
-                  {searchQuery && (
-                    <Badge variant="secondary" className="gap-1">
-                      Search: {searchQuery}
-                      <X className="h-3 w-3 cursor-pointer" onClick={() => setSearchQuery('')} />
-                    </Badge>
-                  )}
-                  {selectedDifficulty.map(d => (
-                    <Badge key={d} variant="secondary" className="gap-1">
-                      {getDifficultyLabel(d)}
-                      <X className="h-3 w-3 cursor-pointer" onClick={() => 
-                        setSelectedDifficulty(selectedDifficulty.filter(item => item !== d))
-                      } />
-                    </Badge>
-                  ))}
-                  {selectedSplit.map(s => (
-                    <Badge key={s} variant="secondary" className="gap-1">
-                      {s}
-                      <X className="h-3 w-3 cursor-pointer" onClick={() => 
-                        setSelectedSplit(selectedSplit.filter(item => item !== s))
-                      } />
-                    </Badge>
-                  ))}
-                </div>
-              )}
-            </div>
-          )}
-        </div>
-
-        {/* Featured Programs Section */}
-        {!isAuthenticated && featuredPrograms.length > 0 && (
-          <div className="mb-12">
-            <div className="flex items-center gap-3 mb-6">
-              <TrendingUp className="h-6 w-6 text-primary" />
-              <h2 className="text-2xl font-bold">{t('sections.featured.title')}</h2>
-              <Badge className="bg-gradient-to-r from-yellow-400 to-orange-500 text-black">
-                {t('sections.featured.badge')}
-              </Badge>
-            </div>
-            <div className="grid gap-6 lg:grid-cols-1">
-              {featuredPrograms.map(program => (
-                <ProgramCard key={`featured-${program.id}`} program={program} variant="featured" />
-              ))}
-            </div>
-          </div>
+        {/* Quick Actions CTA */}
+        {isAuthenticated && programsData && (
+          <>
+            <ProgramDashboardCTA 
+              isPro={programsData.isPro || false} 
+              programCount={programsData.ownedCount}
+            />
+            <Separator className="my-8" />
+          </>
         )}
 
         {/* My Programs Section */}
-        {isAuthenticated && programsData.ownedCount > 0 && (
+        {isAuthenticated && programsData && programsData.ownedCount > 0 && (
           <>
             <div className="mb-8">
               <div className="flex items-center justify-between mb-6">
@@ -1238,7 +792,7 @@ export default function ProgramsPage() {
                   {programsData.ownedCount} program{programsData.ownedCount !== 1 ? 's' : ''}
                 </Badge>
               </div>
-              <div className={`grid gap-6 ${viewMode === 'grid' ? 'md:grid-cols-2 lg:grid-cols-3' : 'grid-cols-1'}`}>
+              <div className="grid gap-6 md:grid-cols-2 lg:grid-cols-3">
                 {programsData.ownedPrograms.map(program => (
                   <ProgramCard key={`owned-${program.id}`} program={program} />
                 ))}
@@ -1386,92 +940,48 @@ export default function ProgramsPage() {
         {/* Template Preview Modal */}
         <TemplatePreviewModal />
 
-        {/* Browse Programs Section */}
-        <div>
-          <div className="flex items-center justify-between mb-6">
-            <div className="flex items-center gap-3">
-              <BookOpen className="h-6 w-6 text-primary" />
-              <h2 className="text-2xl font-bold">
-                {isAuthenticated && programsData.ownedCount > 0 
-                  ? t('sections.browse.titleMore')
-                  : t('sections.browse.titleAll')
-                }
-              </h2>
-            </div>
-            <div className="flex items-center gap-2 text-sm text-muted-foreground">
-              <span>{t('search.showing', { count: filteredBrowsePrograms.length, total: programsData.browseCount })}</span>
-            </div>
-          </div>
-
-          {filteredBrowsePrograms.length === 0 ? (
-            <Card className="border-dashed">
-              <CardContent className="flex flex-col items-center justify-center py-16">
-                <Filter className="h-12 w-12 text-muted-foreground mb-4" />
-                <h3 className="text-lg font-semibold mb-2">{t('emptyState.noResults.title')}</h3>
-                <p className="text-muted-foreground text-center mb-4 max-w-md">
-                  {t('emptyState.noResults.message')}
-                </p>
-                {hasActiveFilters && (
-                  <Button onClick={clearAllFilters} variant="outline">
-                    <X className="h-4 w-4 mr-2" />
-                    {t('emptyState.noResults.clearFilters')}
-                  </Button>
-                )}
-              </CardContent>
-            </Card>
-          ) : (
-            <>
-              <div className={`grid gap-6 ${viewMode === 'grid' ? 'md:grid-cols-2 lg:grid-cols-3' : 'grid-cols-1'}`}>
-                {regularPrograms.map((program, index) => (
-                  <>
-                    <ProgramCard key={`browse-${program.id}`} program={program} />
-                    {/* Pro Upsell every 6 programs */}
-                    {!isAuthenticated && !programsData.isPro && index === 5 && viewMode === 'grid' && (
-                      <ProUpsellCard key="pro-upsell" />
-                    )}
-                  </>
-                ))}
-              </div>
-
-              {/* Load More Button */}
-              {regularPrograms.length >= 12 && (
-                <div className="flex justify-center mt-12">
-                  <Button variant="outline" size="lg">
-                    {t('loadMore.button')}
-                    <ChevronDown className="h-4 w-4 ml-2" />
-                  </Button>
-                </div>
-              )}
-            </>
-          )}
-        </div>
-
-        {/* Pro Banner at Bottom */}
+        {/* Upgrade to Pro Section */}
         {isAuthenticated && !programsData.isPro && !programsData.isAdmin && (
-          <div className="mt-16">
+          <div className="mt-8">
             <Card className="border-2 border-purple-200 dark:border-purple-800 bg-gradient-to-r from-purple-50 via-blue-50 to-purple-50 dark:from-purple-950/30 dark:via-blue-950/30 dark:to-purple-950/30">
               <CardContent className="py-12">
-                <div className="max-w-3xl mx-auto text-center">
-                  <Badge className="bg-gradient-to-r from-purple-600 to-blue-600 mb-4">
+                <div className="max-w-3xl mx-auto text-center space-y-6">
+                  <Badge className="bg-gradient-to-r from-purple-600 to-blue-600">
                     <Sparkles className="h-4 w-4 mr-1" />
-                    {t('proBanner.badge')}
+                    Unlock Full Potential
                   </Badge>
-                  <h2 className="text-3xl font-bold mb-4">
-                    {t('proBanner.title', { count: programsData.totalPrograms })}
+                  <h2 className="text-3xl md:text-4xl font-bold">
+                    Upgrade to Pro for Unlimited Access
                   </h2>
-                  <p className="text-lg text-muted-foreground mb-6">
-                    {t('proBanner.subtitle')}
+                  <p className="text-lg text-muted-foreground leading-relaxed">
+                    Get unlimited custom programs, unlimited AI coaching conversations, unlimited knowledge uploads, and access to all future features
                   </p>
+                  
+                  <div className="grid md:grid-cols-3 gap-4 my-8">
+                    <div className="p-4 rounded-lg bg-background/60 backdrop-blur">
+                      <div className="text-3xl font-bold mb-2">Unlimited</div>
+                      <div className="text-sm text-muted-foreground">Custom Programs</div>
+                    </div>
+                    <div className="p-4 rounded-lg bg-background/60 backdrop-blur">
+                      <div className="text-3xl font-bold mb-2">Unlimited</div>
+                      <div className="text-sm text-muted-foreground">AI Conversations</div>
+                    </div>
+                    <div className="p-4 rounded-lg bg-background/60 backdrop-blur">
+                      <div className="text-3xl font-bold mb-2">Unlimited</div>
+                      <div className="text-sm text-muted-foreground">Knowledge Uploads</div>
+                    </div>
+                  </div>
+
                   <Button 
-                    onClick={() => router.push('/pricing')}
+                    onClick={() => router.push(`/${locale}/pricing`)}
                     className="bg-gradient-to-r from-purple-600 to-blue-600 hover:from-purple-700 hover:to-blue-700"
                     size="lg"
                   >
                     <Crown className="h-5 w-5 mr-2" />
-                    {t('proBanner.cta')}
+                    View Pro Plans
                   </Button>
-                  <p className="text-sm text-muted-foreground mt-4">
-                    {t('proBanner.guarantee')}
+                  <p className="text-sm text-muted-foreground">
+                    Starting at just $19/month • Cancel anytime
                   </p>
                 </div>
               </CardContent>
