@@ -68,6 +68,9 @@ model User {
   @@index([lastUploadReset])
   @@index([plan])
   @@index([role])
+  @@index([subscriptionTier])
+  @@index([subscriptionStatus])
+  @@index([subscriptionTier, subscriptionStatus]) // Optimize subscription-based queries
 }
 
 model Chat {
@@ -271,6 +274,9 @@ model Exercise {
   @@index([exerciseType, category])
   @@index([exerciseType])
   @@index([primaryMuscle])
+  @@index([primaryMuscle, isActive]) // Optimize filtering exercises by muscle and active status
+  @@index([category, isActive]) // Optimize filtering by category and status
+  @@index([isActive, isRecommended]) // Optimize fetching recommended active exercises
 }
 
 model KnowledgeCategory {
@@ -326,6 +332,8 @@ model ProgramTemplate {
   @@index([splitId])
   @@index([structureId])
   @@index([popularity])
+  @@index([isActive, popularity]) // Optimize fetching popular active templates
+  @@index([isActive, difficultyLevel]) // Optimize filtering active templates by difficulty
 }
 
 model TemplateWorkout {
@@ -417,6 +425,8 @@ model TrainingProgram {
   @@index([templateId])
   @@index([userId])
   @@index([userId, templateId])
+  @@index([userId, isActive]) // Optimize fetching active programs for a user
+  @@index([createdAt]) // Optimize sorting by creation date
 }
 
 model ProgramStructure {
@@ -583,6 +593,7 @@ model TrainingSplit {
 
   @@index([isActive])
   @@index([difficulty])
+  @@index([isActive, difficulty]) // Composite for filtering active splits by difficulty
 }
 
 model TrainingSplitStructure {
@@ -602,6 +613,7 @@ model TrainingSplitStructure {
 
   @@index([splitId])
   @@index([isWeeklyBased])
+  @@index([splitId, daysPerWeek]) // Optimize queries filtering structures by split and days
 }
 
 model TrainingDayAssignment {
@@ -617,6 +629,8 @@ model TrainingDayAssignment {
 
   @@index([structureId])
   @@index([dayNumber])
+  @@index([structureId, dayNumber]) // Composite for efficient day assignment queries
+  @@index([dayOfWeek]) // Optimize filtering by day of week
 }
 
 model CustomTrainingProgram {
@@ -640,6 +654,9 @@ model CustomTrainingProgram {
   @@index([userId])
   @@index([splitId])
   @@index([structureId])
+  @@index([userId, status]) // Optimize fetching user programs by status
+  @@index([userId, createdAt]) // Optimize sorting user programs by date
+  @@index([status]) // Optimize filtering all programs by status
 }
 
 model Workout {
@@ -656,6 +673,7 @@ model Workout {
   exercises WorkoutExercise[]
 
   @@index([programId])
+  @@index([programId, type]) // Optimize filtering workouts by type within a program
 }
 
 model WorkoutExercise {
