@@ -130,7 +130,8 @@ ANALYZE "Exercise";
 ANALYZE "ProgramTemplate";
 ANALYZE "User";
 
--- Vacuum to reclaim space and update statistics
-VACUUM ANALYZE "TrainingProgram";
-VACUUM ANALYZE "CustomTrainingProgram";
-VACUUM ANALYZE "Exercise";
+-- Note: VACUUM commands removed because they cannot run inside a transaction block
+-- If you need to vacuum tables, run these commands separately outside a transaction:
+-- VACUUM ANALYZE "TrainingProgram";
+-- VACUUM ANALYZE "CustomTrainingProgram";
+-- VACUUM ANALYZE "Exercise";
