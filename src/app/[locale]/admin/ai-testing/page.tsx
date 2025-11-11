@@ -23,11 +23,11 @@ export default function AITestingPage() {
         const response = await fetch('/api/admin/check-status');
         const data = await response.json();
 
-        console.log('Admin check response:', data);
+        if (process.env.NODE_ENV === 'development') { console.log('Admin check response:', data); }
 
         if (!response.ok) {
           if (response.status === 401) {
-            console.log('Not authenticated, redirecting to login');
+            if (process.env.NODE_ENV === 'development') { console.log('Not authenticated, redirecting to login'); }
             router.push('/login');
             return;
           }
@@ -42,7 +42,7 @@ export default function AITestingPage() {
 
         setUser(data.user);
         setIsAdmin(true);
-        console.log('Admin access confirmed for:', data.user.email);
+        if (process.env.NODE_ENV === 'development') { console.log('Admin access confirmed for:', data.user.email); }
 
       } catch (error) {
         console.error('Error checking admin access:', error);

@@ -9,7 +9,7 @@ import { createClient } from '@/lib/supabase/server';
 async function createAuditTrail(eventType: string, userId: string, data: Record<string, unknown>): Promise<void> {
   try {
     // You can store audit data in a dedicated table or just log it
-    console.log('Audit Trail:', { eventType, userId, data, timestamp: new Date().toISOString() });
+    if (process.env.NODE_ENV === 'development') { console.log('Audit Trail:', { eventType, userId, data, timestamp: new Date().toISOString() }); }
     // TODO: Implement proper audit trail storage if needed
   } catch (error) {
     console.error('Failed to create audit trail:', error);

@@ -11,7 +11,7 @@ import SplitSelector, { type SplitSelectorData } from '@/components/SplitSelecto
 // Example 1: New Program Creation
 function CreateProgramPage() {
   const handleComplete = async (data: SplitSelectorData) => {
-    console.log('User selections:', data);
+    if (process.env.NODE_ENV === 'development') { console.log('User selections:', data); }
     
     // Save to database
     const response = await fetch('/api/programs', {

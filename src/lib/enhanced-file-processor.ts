@@ -83,7 +83,7 @@ export async function processFileWithEmbeddings(
   const warnings: string[] = [];
 
   try {
-    console.log(`🔄 Processing file with embeddings: ${fileName}`);
+    if (process.env.NODE_ENV === 'development') { console.log(`🔄 Processing file with embeddings: ${fileName}`); }
 
     // Step 1: Extract text from file
     const extractedText = await extractTextFromFile(fileBuffer, mimeType, fileName);
@@ -129,12 +129,12 @@ export async function processFileWithEmbeddings(
     }
 
     // Step 1.5: Clean the extracted text
-    console.log(`🧹 Cleaning extracted text (${extractedText.length} characters)...`);
+    if (process.env.NODE_ENV === 'development') { console.log(`🧹 Cleaning extracted text (${extractedText.length} characters)...`); }
     const cleanedText = cleanText(extractedText);
-    console.log(`✨ Text cleaned (${cleanedText.length} characters after cleaning)`);
+    if (process.env.NODE_ENV === 'development') { console.log(`✨ Text cleaned (${cleanedText.length} characters after cleaning)`); }
 
     // Step 2: Chunk the cleaned text using semantic chunking
-    console.log(`📄 Chunking text with semantic analysis...`);
+    if (process.env.NODE_ENV === 'development') { console.log(`📄 Chunking text with semantic analysis...`); }
     const semanticChunks = fitnessSemanticChunking(cleanedText);
     
     // Convert semantic chunks to TextChunk format
@@ -153,18 +153,18 @@ export async function processFileWithEmbeddings(
       };
     }
 
-    console.log(`✂️ Created ${chunks.length} chunks`);
+    if (process.env.NODE_ENV === 'development') { console.log(`✂️ Created ${chunks.length} chunks`); }
 
     // Step 3: Validate chunks
     const validation = validateChunks(chunks);
     warnings.push(...validation.warnings);
 
     if (!validation.isValid) {
-      console.log('⚠️ Chunk validation warnings:', validation.warnings);
+      if (process.env.NODE_ENV === 'development') { console.log('⚠️ Chunk validation warnings:', validation.warnings); }
     }
 
     // Step 4: Create knowledge chunks in database
-    console.log('💾 Saving chunks to database...');
+    if (process.env.NODE_ENV === 'development') { console.log('💾 Saving chunks to database...'); }
     const knowledgeChunks = await createKnowledgeChunks(knowledgeItemId, chunks);
     
     if (knowledgeChunks.length === 0) {
@@ -184,7 +184,7 @@ export async function processFileWithEmbeddings(
 
     // Step 5: Generate embeddings if enabled
     if (opts.generateEmbeddings) {
-      console.log('🧠 Generating embeddings...');
+      if (process.env.NODE_ENV === 'development') { console.log('🧠 Generating embeddings...'); }
       embeddingsGenerated = await generateAndStoreEmbeddings(
         knowledgeChunks,
         opts.batchSize
@@ -202,7 +202,7 @@ export async function processFileWithEmbeddings(
     });
 
     const processingTime = Date.now() - startTime;
-    console.log(`✅ Processing complete in ${processingTime}ms`);
+    if (process.env.NODE_ENV === 'development') { console.log(`✅ Processing complete in ${processingTime}ms`); }
 
     return {
       success: true,
@@ -315,7 +315,7 @@ async function generateAndStoreEmbeddings(
       chunkIndex: chunk.chunkIndex
     }));
 
-    console.log(`🔄 Generating embeddings for ${texts.length} chunks...`);
+    if (process.env.NODE_ENV === 'development') { console.log(`🔄 Generating embeddings for ${texts.length} chunks...`); }
 
     // Generate embeddings in batches
     const embeddingResults = await generateEmbeddingsBatch(texts, metadata, batchSize);
@@ -342,11 +342,11 @@ async function generateAndStoreEmbeddings(
 
       // Progress logging
       if (i % 10 === 0 || i === embeddingResults.length - 1) {
-        console.log(`📊 Embedding progress: ${i + 1}/${embeddingResults.length}`);
+        if (process.env.NODE_ENV === 'development') { console.log(`📊 Embedding progress: ${i + 1}/${embeddingResults.length}`); }
       }
     }
 
-    console.log(`✅ Successfully generated and stored ${successCount} embeddings`);
+    if (process.env.NODE_ENV === 'development') { console.log(`✅ Successfully generated and stored ${successCount} embeddings`); }
 
   } catch (error) {
     console.error('❌ Error generating embeddings:', error);
@@ -399,7 +399,7 @@ export async function reprocessWithEmbeddings(
       };
     }
 
-    console.log(`🔄 Reprocessing knowledge item: ${knowledgeItem.fileName || 'Unknown'}`);
+    if (process.env.NODE_ENV === 'development') { console.log(`🔄 Reprocessing knowledge item: ${knowledgeItem.fileName || 'Unknown'}`); }
 
     // Delete existing chunks
     await prisma.knowledgeChunk.deleteMany({

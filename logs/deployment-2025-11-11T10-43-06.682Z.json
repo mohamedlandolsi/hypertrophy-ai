@@ -1,0 +1,30 @@
+{
+  "startTime": "2025-11-11T10:43:06.682Z",
+  "phase": "notifications",
+  "errors": [
+    {
+      "phase": "pre-deployment-validation",
+      "error": "Command failed: npx tsx scripts/pre-deployment.ts\n",
+      "timestamp": "2025-11-11T10:43:26.900Z"
+    },
+    {
+      "phase": "pre-deployment-validation",
+      "error": "Deployment failed at phase: Pre-Deployment Validation",
+      "timestamp": "2025-11-11T10:43:26.902Z"
+    }
+  ],
+  "endTime": "2025-11-11T10:43:26.904Z",
+  "duration": 20222,
+  "success": false,
+  "options": {
+    "skipValidation": false,
+    "skipSeed": false,
+    "dryRun": true,
+    "rollback": false
+  },
+  "config": {
+    "platform": "vercel",
+    "backupBeforeDeploy": true,
+    "rollbackOnFailure": true
+  }
+}

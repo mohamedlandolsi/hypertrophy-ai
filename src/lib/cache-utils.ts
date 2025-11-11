@@ -9,7 +9,7 @@ export async function clearAllCaches(): Promise<void> {
       await Promise.all(
         cacheNames.map(cacheName => caches.delete(cacheName))
       );
-      console.log('All caches cleared successfully');
+      if (process.env.NODE_ENV === 'development') { console.log('All caches cleared successfully'); }
     } catch (error) {
       console.error('Failed to clear caches:', error);
       throw error;
@@ -24,7 +24,7 @@ export async function clearServiceWorker(): Promise<void> {
       await Promise.all(
         registrations.map(registration => registration.unregister())
       );
-      console.log('Service worker unregistered successfully');
+      if (process.env.NODE_ENV === 'development') { console.log('Service worker unregistered successfully'); }
     } catch (error) {
       console.error('Failed to unregister service worker:', error);
       throw error;

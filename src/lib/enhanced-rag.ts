@@ -40,30 +40,30 @@ export async function enhancedKnowledgeRetrieval(
   options: SearchOptions
 ): Promise<EnhancedKnowledgeContext[]> {
   
-  console.log('🚀 Starting Enhanced RAG Retrieval');
-  console.log(`📝 Query: "${userQuery}"`);
-  console.log(`⚙️ Options:`, options);
+  if (process.env.NODE_ENV === 'development') { console.log('🚀 Starting Enhanced RAG Retrieval'); }
+  if (process.env.NODE_ENV === 'development') { console.log(`📝 Query: "${userQuery}"`); }
+  if (process.env.NODE_ENV === 'development') { console.log(`⚙️ Options:`, options); }
   
   const startTime = Date.now();
   
   try {
     // Step 1: Query Enhancement with Conversation History
     const enhancedQuery = await enhanceQueryWithHistory(userQuery, options.conversationHistory);
-    console.log(`🔍 Enhanced query: "${enhancedQuery}"`);
+    if (process.env.NODE_ENV === 'development') { console.log(`🔍 Enhanced query: "${enhancedQuery}"`); }
     
     // Step 2: Multi-Query Generation (if beneficial)
     const queries = await generateSearchQueries(enhancedQuery);
-    console.log(`📚 Generated ${queries.length} search queries`);
+    if (process.env.NODE_ENV === 'development') { console.log(`📚 Generated ${queries.length} search queries`); }
     
     // Step 3: Hybrid Search - Get candidates from both vector and keyword search
     const candidates = await performHybridSearch(queries, options);
-    console.log(`📊 Retrieved ${candidates.length} hybrid candidates`);
+    if (process.env.NODE_ENV === 'development') { console.log(`📊 Retrieved ${candidates.length} hybrid candidates`); }
     
     // Step 4: Re-ranking (if enabled)
     let finalResults = candidates;
     if (options.useReranking && candidates.length > options.maxChunks) {
       finalResults = await reRankCandidates(enhancedQuery, candidates, options.maxChunks);
-      console.log(`🎯 Re-ranked to ${finalResults.length} final results`);
+      if (process.env.NODE_ENV === 'development') { console.log(`🎯 Re-ranked to ${finalResults.length} final results`); }
     } else {
       finalResults = candidates.slice(0, options.maxChunks);
     }
@@ -72,7 +72,7 @@ export async function enhancedKnowledgeRetrieval(
     const diversifiedResults = diversifyResults(finalResults, options.maxChunks);
     
     const totalTime = Date.now() - startTime;
-    console.log(`✅ Enhanced RAG completed in ${totalTime}ms`);
+    if (process.env.NODE_ENV === 'development') { console.log(`✅ Enhanced RAG completed in ${totalTime}ms`); }
     
     // Log performance metrics
     logRetrievalMetrics(diversifiedResults, totalTime);
@@ -135,7 +135,7 @@ Return only the enhanced query, no explanation.`;
     const result = await model.generateContent(contextPrompt);
     const enhancedQuery = result.response.text().trim();
     
-    console.log(`🔄 Query enhanced with conversation context`);
+    if (process.env.NODE_ENV === 'development') { console.log(`🔄 Query enhanced with conversation context`); }
     return enhancedQuery;
     
   } catch (error) {
@@ -281,7 +281,7 @@ async function performKeywordSearch(query: string, limit: number): Promise<Enhan
     
     if (!searchTerms) return [];
     
-    console.log(`🔍 Keyword search with AND logic: "${searchTerms}"`);
+    if (process.env.NODE_ENV === 'development') { console.log(`🔍 Keyword search with AND logic: "${searchTerms}"`); }
     
     // Use PostgreSQL to_tsvector and to_tsquery for full-text search with AND logic
     const chunks = await prisma.$queryRaw`
@@ -517,12 +517,12 @@ function logRetrievalMetrics(results: EnhancedKnowledgeContext[], timeMs: number
     return types;
   }, {} as Record<string, number>);
   
-  console.log('📊 Enhanced RAG Metrics:');
-  console.log(`   ⏱️  Total time: ${timeMs}ms`);
-  console.log(`   📄 Results: ${results.length}`);
-  console.log(`   🔍 Search types:`, searchTypes);
-  console.log(`   📚 Source distribution:`, sourceDistribution);
-  console.log(`   🎯 Avg similarity: ${(results.reduce((sum, r) => sum + r.similarity, 0) / results.length).toFixed(3)}`);
+  if (process.env.NODE_ENV === 'development') { console.log('📊 Enhanced RAG Metrics:'); }
+  if (process.env.NODE_ENV === 'development') { console.log(`   ⏱️  Total time: ${timeMs}ms`); }
+  if (process.env.NODE_ENV === 'development') { console.log(`   📄 Results: ${results.length}`); }
+  if (process.env.NODE_ENV === 'development') { console.log(`   🔍 Search types:`, searchTypes); }
+  if (process.env.NODE_ENV === 'development') { console.log(`   📚 Source distribution:`, sourceDistribution); }
+  if (process.env.NODE_ENV === 'development') { console.log(`   🎯 Avg similarity: ${(results.reduce((sum, r) => sum + r.similarity, 0) / results.length).toFixed(3)}`); }
 }
 
 export default enhancedKnowledgeRetrieval;

@@ -64,7 +64,7 @@ export async function POST(request: NextRequest) {
         }
       });
       
-      console.log(`✅ Created new knowledge item: ${knowledgeItem.id}`);
+      if (process.env.NODE_ENV === 'development') { console.log(`✅ Created new knowledge item: ${knowledgeItem.id}`); }
     }
 
     // Update status to processing if not already
@@ -91,7 +91,7 @@ export async function POST(request: NextRequest) {
     // Call the Edge Function
     const edgeFunctionUrl = `${supabaseUrl}/functions/v1/file-processor`;
     
-    console.log('🚀 Calling Edge Function for file processing:', fileName);
+    if (process.env.NODE_ENV === 'development') { console.log('🚀 Calling Edge Function for file processing:', fileName); }
     
     const response = await fetch(edgeFunctionUrl, {
       method: 'POST',
@@ -117,7 +117,7 @@ export async function POST(request: NextRequest) {
 
     const result: EdgeFunctionResponse = await response.json();
     
-    console.log('✅ Edge Function completed:', result);
+    if (process.env.NODE_ENV === 'development') { console.log('✅ Edge Function completed:', result); }
 
     if (result.success) {
       // Update knowledge item status to ready

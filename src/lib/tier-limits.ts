@@ -608,7 +608,7 @@ export function withTierCheck(
       // Log usage if specified
       if (options.logUsage && options.limitType) {
         // Log to analytics/metrics system (implement as needed)
-        console.log(`[Usage] User ${userId} - ${options.limitType}`);
+        if (process.env.NODE_ENV === 'development') { console.log(`[Usage] User ${userId} - ${options.limitType}`); }
       }
 
       // Call original handler

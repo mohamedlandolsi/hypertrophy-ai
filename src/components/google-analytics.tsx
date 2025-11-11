@@ -22,7 +22,7 @@ export const GoogleAnalytics = () => {
       return;
     }
 
-    console.log('Google Analytics: Loading scripts...');
+    if (process.env.NODE_ENV === 'development') { console.log('Google Analytics: Loading scripts...'); }
 
     // Load Google Analytics with error handling
     const script1 = document.createElement('script');
@@ -50,7 +50,7 @@ export const GoogleAnalytics = () => {
         page_title: document.title,
         page_location: window.location.href,
       });
-      console.log('Google Analytics: Configuration loaded successfully');
+      if (process.env.NODE_ENV === 'development') { console.log('Google Analytics: Configuration loaded successfully'); }
     `;
     
     try {

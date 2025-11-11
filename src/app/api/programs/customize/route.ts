@@ -36,7 +36,7 @@ export async function POST(request: NextRequest) {
     const body: CustomizationRequest = await request.json();
     const { trainingProgramId, customization } = body;
 
-    console.log('Received customization:', JSON.stringify(customization, null, 2));
+    if (process.env.NODE_ENV === 'development') { console.log('Received customization:', JSON.stringify(customization, null, 2)); }
 
     if (!trainingProgramId || !customization) {
       return NextResponse.json({

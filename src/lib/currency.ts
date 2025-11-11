@@ -309,13 +309,13 @@ export async function getDefaultCurrency(): Promise<CurrencyCode> {
     // First, try IP-based geolocation
     const countryCode = await getUserCountryCode();
     if (countryCode && COUNTRY_TO_CURRENCY[countryCode]) {
-      console.log(`Currency detected from location: ${countryCode} -> ${COUNTRY_TO_CURRENCY[countryCode]}`);
+      if (process.env.NODE_ENV === 'development') { console.log(`Currency detected from location: ${countryCode} -> ${COUNTRY_TO_CURRENCY[countryCode]}`); }
       return COUNTRY_TO_CURRENCY[countryCode];
     }
 
     // Fallback to browser locale
     const localeCurrency = getCurrencyFromLocale();
-    console.log(`Currency detected from locale: ${localeCurrency}`);
+    if (process.env.NODE_ENV === 'development') { console.log(`Currency detected from locale: ${localeCurrency}`); }
     return localeCurrency;
 
   } catch {

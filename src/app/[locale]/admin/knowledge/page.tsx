@@ -103,32 +103,32 @@ export default function KnowledgePage() {
 
   const checkAdminAccess = useCallback(async () => {
     try {
-      console.log('🔐 Checking admin access...');
+      if (process.env.NODE_ENV === 'development') { console.log('🔐 Checking admin access...'); }
       const supabase = createClient();
       const { data: { user: currentUser } } = await supabase.auth.getUser();
       
       if (!currentUser) {
-        console.log('❌ No authenticated user found, redirecting to login');
+        if (process.env.NODE_ENV === 'development') { console.log('❌ No authenticated user found, redirecting to login'); }
         router.push('/login');
         return;
       }
 
-      console.log('👤 Authenticated user:', currentUser.id);
+      if (process.env.NODE_ENV === 'development') { console.log('👤 Authenticated user:', currentUser.id); }
       setUser(currentUser);
 
       // Verify admin access using dedicated check-status endpoint
-      console.log('🔍 Verifying admin access via /api/admin/check-status...');
+      if (process.env.NODE_ENV === 'development') { console.log('🔍 Verifying admin access via /api/admin/check-status...'); }
       const response = await fetch('/api/admin/check-status');
-      console.log('📡 Admin check response status:', response.status);
+      if (process.env.NODE_ENV === 'development') { console.log('📡 Admin check response status:', response.status); }
       
       if (!response.ok) {
         const data = await response.json().catch(() => ({}));
         if (response.status === 401) {
-          console.log('❌ Unauthorized, redirecting to login');
+          if (process.env.NODE_ENV === 'development') { console.log('❌ Unauthorized, redirecting to login'); }
           router.push('/login');
           return;
         } else {
-          console.log('❌ Admin access denied');
+          if (process.env.NODE_ENV === 'development') { console.log('❌ Admin access denied'); }
           const errorMessage = data.error || 'Access denied. Admin privileges required to access knowledge management.';
           setAdminAccessError(errorMessage);
           setIsLoading(false);
@@ -139,14 +139,14 @@ export default function KnowledgePage() {
       const data = await response.json();
       
       if (!data.isAdmin) {
-        console.log('❌ User is not admin');
+        if (process.env.NODE_ENV === 'development') { console.log('❌ User is not admin'); }
         const errorMessage = data.error || 'Access denied. Admin privileges required to access knowledge management.';
         setAdminAccessError(errorMessage);
         setIsLoading(false);
         return;
       }
 
-      console.log('✅ Admin access verified, fetching knowledge items...');
+      if (process.env.NODE_ENV === 'development') { console.log('✅ Admin access verified, fetching knowledge items...'); }
       // Admin access verified, fetch knowledge items
       await fetchKnowledgeItems();
     } catch (error) {
@@ -162,14 +162,14 @@ export default function KnowledgePage() {
   const fetchKnowledgeItems = async () => {
     setIsLoading(true);
     try {
-      console.log('🔍 Fetching knowledge items...');
+      if (process.env.NODE_ENV === 'development') { console.log('🔍 Fetching knowledge items...'); }
       const response = await fetch('/api/knowledge');
-      console.log('📡 Knowledge API response status:', response.status);
+      if (process.env.NODE_ENV === 'development') { console.log('📡 Knowledge API response status:', response.status); }
       
       if (response.ok) {
         const data = await response.json();
-        console.log('📊 Knowledge API response data:', data);
-        console.log(`✅ Setting ${data.knowledgeItems?.length || 0} knowledge items`);
+        if (process.env.NODE_ENV === 'development') { console.log('📊 Knowledge API response data:', data); }
+        if (process.env.NODE_ENV === 'development') { console.log(`✅ Setting ${data.knowledgeItems?.length || 0} knowledge items`); }
         setKnowledgeItems(data.knowledgeItems || []);
       } else {
         const errorText = await response.text();
@@ -185,7 +185,7 @@ export default function KnowledgePage() {
       setKnowledgeItems([]);
     } finally {
       setIsLoading(false);
-      console.log('🏁 Finished fetching knowledge items');
+      if (process.env.NODE_ENV === 'development') { console.log('🏁 Finished fetching knowledge items'); }
     }
   };
 
@@ -243,7 +243,7 @@ export default function KnowledgePage() {
         const uploadToast = showToast.uploadProgress(file.name);
         
         try {
-          console.log(`🚀 Starting upload for: ${file.name}`);
+          if (process.env.NODE_ENV === 'development') { console.log(`🚀 Starting upload for: ${file.name}`); }
           
           // Step 1: Request signed upload URL
           const startResponse = await fetch('/api/knowledge/upload/start', {
@@ -264,7 +264,7 @@ export default function KnowledgePage() {
           }
 
           const { uploadUrl, filePath } = await startResponse.json();
-          console.log(`✅ Upload URL obtained for: ${file.name}`);
+          if (process.env.NODE_ENV === 'development') { console.log(`✅ Upload URL obtained for: ${file.name}`); }
 
           // Step 2: Upload file directly to Supabase Storage
           const uploadResponse = await fetch(uploadUrl, {
@@ -279,7 +279,7 @@ export default function KnowledgePage() {
             throw new Error(`Failed to upload file to storage: ${uploadResponse.statusText}`);
           }
 
-          console.log(`📤 File uploaded to storage: ${file.name}`);
+          if (process.env.NODE_ENV === 'development') { console.log(`📤 File uploaded to storage: ${file.name}`); }
           
           // Update toast to show processing state
           showToast.dismiss(uploadToast);
@@ -305,7 +305,7 @@ export default function KnowledgePage() {
 
           if (processResponse.ok) {
             const data = await processResponse.json();
-            console.log(`✅ File processed successfully with Edge Function: ${file.name}`, data);
+            if (process.env.NODE_ENV === 'development') { console.log(`✅ File processed successfully with Edge Function: ${file.name}`, data); }
             
             // Show enhanced success toast with Edge Function details
             if (data.result) {
@@ -382,7 +382,7 @@ export default function KnowledgePage() {
 
       if (response.ok) {
         const data = await response.json();
-        console.log('Text content added successfully:', data);
+        if (process.env.NODE_ENV === 'development') { console.log('Text content added successfully:', data); }
         
         showToast.success(tToasts('textContentAddedTitle'), tToasts('textContentAddedText', { title: textTitle }));
         

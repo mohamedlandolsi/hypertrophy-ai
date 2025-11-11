@@ -44,7 +44,7 @@ export async function fetchKnowledgeContext(
     similarityThreshold: number,
 ): Promise<KnowledgeContext[]> {
     try {
-        console.log(`🚀 Starting vector search for "${query}" with threshold ${similarityThreshold}`);
+        if (process.env.NODE_ENV === 'development') { console.log(`🚀 Starting vector search for "${query}" with threshold ${similarityThreshold}`); }
         
         // 1. Generate an embedding for the user's query
         const queryEmbedding = await getEmbedding(query);
@@ -84,20 +84,20 @@ export async function fetchKnowledgeContext(
         );
 
         if (relevantChunks.length === 0) {
-            console.log(`⚠️ No relevant chunks found above threshold ${similarityThreshold}`);
+            if (process.env.NODE_ENV === 'development') { console.log(`⚠️ No relevant chunks found above threshold ${similarityThreshold}`); }
             return [];
         }
 
         // 4. Take the top 'maxChunks' from the filtered, high-quality results
         const finalResults = relevantChunks.slice(0, maxChunks);
         
-        console.log(`✅ Retrieved ${finalResults.length} high-quality chunks (${relevantChunks.length} above threshold)`);
+        if (process.env.NODE_ENV === 'development') { console.log(`✅ Retrieved ${finalResults.length} high-quality chunks (${relevantChunks.length} above threshold)`); }
         return finalResults;
 
     } catch (error) {
         console.error("Error fetching knowledge context:", error);
         // Fallback to JSON similarity search if pgvector fails
-        console.log("🔄 Falling back to JSON similarity search...");
+        if (process.env.NODE_ENV === 'development') { console.log("🔄 Falling back to JSON similarity search..."); }
         const queryEmbedding = await getEmbedding(query);
         return await fallbackJsonSimilaritySearch(queryEmbedding, maxChunks, similarityThreshold);
     }

@@ -36,7 +36,7 @@ export async function POST(request: NextRequest) {
 
     const { knowledgeItemId, categoryIds } = await request.json();
 
-    console.log('🔍 Raw request data:', {
+    if (process.env.NODE_ENV === 'development') { console.log('🔍 Raw request data:', { }
       knowledgeItemId,
       categoryIds,
       categoryIdsType: typeof categoryIds,
@@ -45,7 +45,7 @@ export async function POST(request: NextRequest) {
       categoryIdsContent: Array.isArray(categoryIds) ? categoryIds.map(id => ({ id, type: typeof id, length: id?.length })) : 'Not an array'
     });
 
-    console.log('🔍 Knowledge item category assignment:', {
+    if (process.env.NODE_ENV === 'development') { console.log('🔍 Knowledge item category assignment:', { }
       knowledgeItemId,
       categoryIds,
       categoryIdsType: typeof categoryIds,
@@ -59,7 +59,7 @@ export async function POST(request: NextRequest) {
     // Deduplicate category IDs to avoid validation errors
     const uniqueCategoryIds = [...new Set(categoryIds.filter(id => id && typeof id === 'string' && id.trim() !== ''))];
     
-    console.log('🔧 Deduplication applied:', {
+    if (process.env.NODE_ENV === 'development') { console.log('🔧 Deduplication applied:', { }
       originalIds: categoryIds,
       originalCount: categoryIds.length,
       uniqueIds: uniqueCategoryIds,
@@ -81,7 +81,7 @@ export async function POST(request: NextRequest) {
       where: { id: { in: uniqueCategoryIds } }
     });
 
-    console.log('📊 Category validation details:', {
+    if (process.env.NODE_ENV === 'development') { console.log('📊 Category validation details:', { }
       requestedCount: uniqueCategoryIds.length,
       foundCount: categories.length,
       requestedIds: uniqueCategoryIds.map((id, index) => ({ index, id, type: typeof id, length: id?.length })),

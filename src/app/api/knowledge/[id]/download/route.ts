@@ -7,19 +7,19 @@ export async function GET(
   { params }: { params: Promise<{ id: string }> }
 ) {
   try {
-    console.log('📥 Download API called');
+    if (process.env.NODE_ENV === 'development') { console.log('📥 Download API called'); }
     
     // Get the authenticated user
     const supabase = await createClient();
     const { data: { user }, error: authError } = await supabase.auth.getUser();
 
     if (authError || !user) {
-      console.log('❌ Authentication failed:', authError);
+      if (process.env.NODE_ENV === 'development') { console.log('❌ Authentication failed:', authError); }
       return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
     }
 
     const { id } = await params;
-    console.log('📄 Fetching knowledge item:', id);
+    if (process.env.NODE_ENV === 'development') { console.log('📄 Fetching knowledge item:', id); }
     
     // Get the knowledge item
     const knowledgeItem = await prisma.knowledgeItem.findFirst({
@@ -31,16 +31,16 @@ export async function GET(
     });
 
     if (!knowledgeItem) {
-      console.log('❌ Knowledge item not found');
+      if (process.env.NODE_ENV === 'development') { console.log('❌ Knowledge item not found'); }
       return NextResponse.json({ error: 'Knowledge item not found' }, { status: 404 });
     }
 
     if (!knowledgeItem.fileName || !knowledgeItem.filePath) {
-      console.log('❌ File not available for download');
+      if (process.env.NODE_ENV === 'development') { console.log('❌ File not available for download'); }
       return NextResponse.json({ error: 'File not available for download' }, { status: 400 });
     }
 
-    console.log('📥 Downloading file from Supabase Storage:', knowledgeItem.filePath);
+    if (process.env.NODE_ENV === 'development') { console.log('📥 Downloading file from Supabase Storage:', knowledgeItem.filePath); }
     
     // Download file from Supabase Storage
     const { data: fileData, error: downloadError } = await supabase.storage
@@ -55,7 +55,7 @@ export async function GET(
       );
     }
 
-    console.log('✅ File downloaded successfully from storage');
+    if (process.env.NODE_ENV === 'development') { console.log('✅ File downloaded successfully from storage'); }
 
     // Return the file as a response
     return new NextResponse(fileData, {

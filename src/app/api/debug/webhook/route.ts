@@ -10,7 +10,7 @@ export async function POST(request: NextRequest) {
       return NextResponse.json({ error: 'User ID required' }, { status: 400 });
     }
     
-    console.log('Debug: Manually upgrading user to Pro:', userId);
+    // Removed debug console.log
     
     // Simulate a successful subscription
     await upgradeUserToPro(userId, {

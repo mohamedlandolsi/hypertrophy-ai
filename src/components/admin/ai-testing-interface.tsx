@@ -198,15 +198,17 @@ export function AITestingInterface() {
         }
 
         const data = await response.json();
-        console.log('AI Test Response:', {
-          prompt,
-          hasContent: !!data.content,
-          citationsCount: data.citations?.length || 0,
-          conversationId: data.conversationId,
-          userMessageId: data.userMessage?.id,
-          assistantMessageId: data.assistantMessage?.id,
-          responseKeys: Object.keys(data)
-        });
+        if (process.env.NODE_ENV === 'development') {
+          console.log('AI Test Response:', {
+            prompt,
+            hasContent: !!data.content,
+            citationsCount: data.citations?.length || 0,
+            conversationId: data.conversationId,
+            userMessageId: data.userMessage?.id,
+            assistantMessageId: data.assistantMessage?.id,
+            responseKeys: Object.keys(data)
+          });
+        }
         
         const result: TestResult = {
           prompt,

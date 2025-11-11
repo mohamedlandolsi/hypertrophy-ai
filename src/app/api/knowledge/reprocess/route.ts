@@ -14,7 +14,7 @@ import { existsSync } from 'fs';
 
 export async function POST(request: NextRequest) {
   try {
-    console.log('🔄 Reprocessing API called');
+    if (process.env.NODE_ENV === 'development') { console.log('🔄 Reprocessing API called'); }
     
     // Check authentication
     const supabase = await createClient();
@@ -32,7 +32,7 @@ export async function POST(request: NextRequest) {
       specificItemId = null
     } = body;
 
-    console.log(`🔍 Finding knowledge items to reprocess (limit: ${limit}, force: ${forceReprocess})...`);
+    if (process.env.NODE_ENV === 'development') { console.log(`🔍 Finding knowledge items to reprocess (limit: ${limit}, force: ${forceReprocess})...`); }
 
     // Find knowledge items that need reprocessing
     let knowledgeItems;
@@ -80,18 +80,18 @@ export async function POST(request: NextRequest) {
       });
     }
 
-    console.log(`📄 Found ${knowledgeItems.length} items to reprocess`);
+    if (process.env.NODE_ENV === 'development') { console.log(`📄 Found ${knowledgeItems.length} items to reprocess`); }
 
     const processed = [];
     const skipped = [];
 
     for (const item of knowledgeItems) {
-      console.log(`🔄 Processing: ${item.title} (${item.id})`);
+      if (process.env.NODE_ENV === 'development') { console.log(`🔄 Processing: ${item.title} (${item.id})`); }
 
       try {
         // Check if file still exists
         if (!item.filePath || !existsSync(item.filePath)) {
-          console.log(`⚠️ File not found for ${item.title}: ${item.filePath}`);
+          if (process.env.NODE_ENV === 'development') { console.log(`⚠️ File not found for ${item.title}: ${item.filePath}`); }
           skipped.push({
             id: item.id,
             title: item.title,
@@ -141,7 +141,7 @@ export async function POST(request: NextRequest) {
           errors: processingResult.errors
         });
 
-        console.log(`✅ Reprocessed: ${item.title} (${processingResult.chunksCreated} chunks, ${processingResult.embeddingsGenerated} embeddings)`);
+        if (process.env.NODE_ENV === 'development') { console.log(`✅ Reprocessed: ${item.title} (${processingResult.chunksCreated} chunks, ${processingResult.embeddingsGenerated} embeddings)`); }
 
       } catch (error) {
         console.error(`❌ Failed to reprocess ${item.title}:`, error);
@@ -171,7 +171,7 @@ export async function POST(request: NextRequest) {
       successfulProcessing: processed.filter(p => p.success).length
     };
 
-    console.log(`🎉 Reprocessing complete:`, summary);
+    if (process.env.NODE_ENV === 'development') { console.log(`🎉 Reprocessing complete:`, summary); }
 
     return NextResponse.json({
       message: `Reprocessing complete: ${summary.successfulProcessing}/${summary.totalFound} items successfully processed`,

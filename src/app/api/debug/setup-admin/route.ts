@@ -12,8 +12,8 @@ export async function POST() {
       return NextResponse.json({ error: 'Not authenticated' }, { status: 401 });
     }
 
-    console.log(`🔍 Current Supabase user ID: ${user.id}`);
-    console.log(`📧 Current user email: ${user.email}`);
+    if (process.env.NODE_ENV === 'development') { console.log(`🔍 Current Supabase user ID: ${user.id}`); }
+    if (process.env.NODE_ENV === 'development') { console.log(`📧 Current user email: ${user.email}`); }
     
     // Check if user exists in database
     let dbUser = await prisma.user.findUnique({
@@ -21,7 +21,7 @@ export async function POST() {
     });
     
     if (!dbUser) {
-      console.log('❌ User not found in database. Creating...');
+      if (process.env.NODE_ENV === 'development') { console.log('❌ User not found in database. Creating...'); }
       
       // Create user with correct Supabase ID
       dbUser = await prisma.user.create({
@@ -31,9 +31,9 @@ export async function POST() {
         }
       });
       
-      console.log('✅ Created user in database with admin role');
+      if (process.env.NODE_ENV === 'development') { console.log('✅ Created user in database with admin role'); }
     } else {
-      console.log('✅ User exists in database');
+      if (process.env.NODE_ENV === 'development') { console.log('✅ User exists in database'); }
       
       // Update to admin if not already
       if (dbUser.role !== 'admin') {
@@ -41,9 +41,9 @@ export async function POST() {
           where: { id: user.id },
           data: { role: 'admin' }
         });
-        console.log('✅ Updated user role to admin');
+        if (process.env.NODE_ENV === 'development') { console.log('✅ Updated user role to admin'); }
       } else {
-        console.log('✅ User is already admin');
+        if (process.env.NODE_ENV === 'development') { console.log('✅ User is already admin'); }
       }
     }
     

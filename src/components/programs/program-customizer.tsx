@@ -156,7 +156,7 @@ export function ProgramCustomizer({
   onCustomizationSaved
 }: ProgramCustomizerProps) {
   // Use userId to avoid unused variable warning
-  console.log('User ID:', userId);
+  if (process.env.NODE_ENV === 'development') { console.log('User ID:', userId); }
   
   const { toast } = useToast();
   const [isSaving, setIsSaving] = useState(false);
@@ -478,7 +478,7 @@ export function ProgramCustomizer({
   const selectedStructure = program.programStructures.find((s: Record<string, unknown>) => s.id === customization.structureId);
   
   // Use selectedStructure to avoid unused warning
-  console.log('Selected structure:', selectedStructure?.id);
+  if (process.env.NODE_ENV === 'development') { console.log('Selected structure:', selectedStructure?.id); }
 
   // Helper function to auto-schedule remaining days based on program structure
   const autoScheduleRemainingDays = (selectedDay: string, selectedWeekday: string) => {

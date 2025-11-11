@@ -48,7 +48,7 @@ export async function getEnhancedRAGContext(
 ): Promise<EnhancedRAGResponse> {
   
   const startTime = Date.now();
-  console.log(`🚀 Starting enhanced RAG for query: "${query}"`);
+  if (process.env.NODE_ENV === 'development') { console.log(`🚀 Starting enhanced RAG for query: "${query}"`); }
   
   // Get AI configuration for RAG parameters
   const aiConfig = await getAIConfiguration();
@@ -73,7 +73,7 @@ export async function getEnhancedRAGContext(
       const userProfile = await fetchUserProfile(userId);
       if (userProfile) {
         userContext = generatePersonalizationPrompt(userProfile);
-        console.log(`👤 Retrieved user profile context (${userContext.length} chars)`);
+        if (process.env.NODE_ENV === 'development') { console.log(`👤 Retrieved user profile context (${userContext.length} chars)`); }
       }
     } catch (error) {
       console.warn('⚠️ Failed to retrieve user profile context:', error);
@@ -82,7 +82,7 @@ export async function getEnhancedRAGContext(
   
   // Step 2: Execute enhanced RAG search
   const ragResults = await enhancedKnowledgeRetrieval(query, ragOptions);
-  console.log(`🔍 Enhanced RAG completed: ${ragResults.length} results retrieved`);
+  if (process.env.NODE_ENV === 'development') { console.log(`🔍 Enhanced RAG completed: ${ragResults.length} results retrieved`); }
   
   // Step 3: Get source metadata and create enhanced sources
   const enhancedSources = await enhanceSourcesWithMetadata(ragResults);
@@ -95,7 +95,7 @@ export async function getEnhancedRAGContext(
   }
   
   const processingTime = Date.now() - startTime;
-  console.log(`✅ Enhanced RAG integration completed in ${processingTime}ms`);
+  if (process.env.NODE_ENV === 'development') { console.log(`✅ Enhanced RAG integration completed in ${processingTime}ms`); }
   
   return {
     context: combinedContext,
@@ -122,7 +122,7 @@ export async function processFileWithEnhancedChunking(
 }> {
   
   const startTime = Date.now();
-  console.log(`📁 Processing file with enhanced chunking: ${fileName}`);
+  if (process.env.NODE_ENV === 'development') { console.log(`📁 Processing file with enhanced chunking: ${fileName}`); }
   
   try {
     // Extract text content based on file type
@@ -154,7 +154,7 @@ export async function processFileWithEnhancedChunking(
       knowledgeItemId
     );
     
-    console.log(`📚 Created ${structuredChunks.length} structured chunks`);
+    if (process.env.NODE_ENV === 'development') { console.log(`📚 Created ${structuredChunks.length} structured chunks`); }
     
     // Store chunks in database with embeddings
     const chunksWithEmbeddings = await Promise.all(
@@ -189,7 +189,7 @@ export async function processFileWithEnhancedChunking(
     });
     
     const processingTime = Date.now() - startTime;
-    console.log(`✅ Enhanced file processing completed in ${processingTime}ms`);
+    if (process.env.NODE_ENV === 'development') { console.log(`✅ Enhanced file processing completed in ${processingTime}ms`); }
     
     return {
       chunksCreated: validChunks.length,
@@ -288,8 +288,8 @@ export async function testEnhancedRAGSystem(
   testUserId?: string
 ): Promise<void> {
   
-  console.log('🧪 Testing Enhanced RAG System');
-  console.log('================================');
+  if (process.env.NODE_ENV === 'development') { console.log('🧪 Testing Enhanced RAG System'); }
+  if (process.env.NODE_ENV === 'development') { console.log('================================'); }
   
   try {
     const result = await getEnhancedRAGContext(testQuery, testUserId, {
@@ -297,25 +297,25 @@ export async function testEnhancedRAGSystem(
       enableHybridSearch: true
     });
     
-    console.log('\n📊 Test Results:');
-    console.log(`Query: "${testQuery}"`);
-    console.log(`Processing Time: ${result.processingTime}ms`);
-    console.log(`Total Chunks Retrieved: ${result.totalChunksRetrieved}`);
-    console.log(`Search Strategies Used: ${result.searchStrategies.join(', ')}`);
-    console.log(`User Context Length: ${result.userContext.length} chars`);
-    console.log(`Knowledge Context Length: ${result.context.length} chars`);
+    if (process.env.NODE_ENV === 'development') { console.log('\n📊 Test Results:'); }
+    if (process.env.NODE_ENV === 'development') { console.log(`Query: "${testQuery}"`); }
+    if (process.env.NODE_ENV === 'development') { console.log(`Processing Time: ${result.processingTime}ms`); }
+    if (process.env.NODE_ENV === 'development') { console.log(`Total Chunks Retrieved: ${result.totalChunksRetrieved}`); }
+    if (process.env.NODE_ENV === 'development') { console.log(`Search Strategies Used: ${result.searchStrategies.join(', ')}`); }
+    if (process.env.NODE_ENV === 'development') { console.log(`User Context Length: ${result.userContext.length} chars`); }
+    if (process.env.NODE_ENV === 'development') { console.log(`Knowledge Context Length: ${result.context.length} chars`); }
     
-    console.log('\n📚 Sources Found:');
+    if (process.env.NODE_ENV === 'development') { console.log('\n📚 Sources Found:'); }
     result.sources.forEach((source, index) => {
-      console.log(`${index + 1}. ${source.title} (Score: ${source.relevanceScore.toFixed(3)})`);
-      console.log(`   Section: ${source.metadata.section || 'N/A'}`);
-      console.log(`   Importance: ${source.metadata.importance}`);
-      console.log(`   Tags: ${source.metadata.conceptTags.join(', ')}`);
-      console.log(`   Snippet: ${source.snippet}`);
-      console.log('');
+      if (process.env.NODE_ENV === 'development') { console.log(`${index + 1}. ${source.title} (Score: ${source.relevanceScore.toFixed(3)})`); }
+      if (process.env.NODE_ENV === 'development') { console.log(`   Section: ${source.metadata.section || 'N/A'}`); }
+      if (process.env.NODE_ENV === 'development') { console.log(`   Importance: ${source.metadata.importance}`); }
+      if (process.env.NODE_ENV === 'development') { console.log(`   Tags: ${source.metadata.conceptTags.join(', ')}`); }
+      if (process.env.NODE_ENV === 'development') { console.log(`   Snippet: ${source.snippet}`); }
+      if (process.env.NODE_ENV === 'development') { console.log(''); }
     });
     
-    console.log('✅ Enhanced RAG test completed successfully');
+    if (process.env.NODE_ENV === 'development') { console.log('✅ Enhanced RAG test completed successfully'); }
     
   } catch (error) {
     console.error('❌ Enhanced RAG test failed:', error);

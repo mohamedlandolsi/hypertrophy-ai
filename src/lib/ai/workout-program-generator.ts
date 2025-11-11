@@ -25,12 +25,12 @@ function getGeminiModelName(selectedModel?: string, config?: Record<string, unkn
   };
   
   if (selectedModel && modelMap[selectedModel]) {
-    console.log(`🎯 Workout program using selected model: ${selectedModel} → ${modelMap[selectedModel]}`);
+    if (process.env.NODE_ENV === 'development') { console.log(`🎯 Workout program using selected model: ${selectedModel} → ${modelMap[selectedModel]}`); }
     return modelMap[selectedModel];
   }
   
   const fallbackModel = (config?.proModelName as string) || 'gemini-2.5-pro';
-  console.log(`🔄 Workout program using fallback model: ${fallbackModel}`);
+  if (process.env.NODE_ENV === 'development') { console.log(`🔄 Workout program using fallback model: ${fallbackModel}`); }
   return fallbackModel;
 }
 
@@ -216,7 +216,7 @@ async function performMultiQueryRAG(
   userPrompt: string,
   config: Record<string, unknown>
 ): Promise<WorkoutProgramContext[]> {
-  console.log("🔍 Starting Multi-Query RAG for workout program generation...");
+  if (process.env.NODE_ENV === 'development') { console.log("🔍 Starting Multi-Query RAG for workout program generation..."); }
   
   const corePrinciplesCategories = getCoreTrainingPrinciples();
   const mentionedMuscles = extractMuscleGroups(userPrompt);
@@ -233,7 +233,7 @@ async function performMultiQueryRAG(
   // Remove duplicates
   const uniqueCategories = Array.from(new Set(allCategories));
   
-  console.log(`📋 Searching ${uniqueCategories.length} KB categories:`, uniqueCategories);
+  if (process.env.NODE_ENV === 'development') { console.log(`📋 Searching ${uniqueCategories.length} KB categories:`, uniqueCategories); }
   
   const aiConfig = await getAIConfiguration();
   
@@ -257,7 +257,7 @@ async function performMultiQueryRAG(
   
   const searchResults = await Promise.all(searchPromises);
   const totalChunks = searchResults.reduce((sum, result) => sum + result.chunks.length, 0);
-  console.log(`✅ Multi-Query RAG complete: ${totalChunks} total chunks from ${uniqueCategories.length} categories`);
+  if (process.env.NODE_ENV === 'development') { console.log(`✅ Multi-Query RAG complete: ${totalChunks} total chunks from ${uniqueCategories.length} categories`); }
   
   return searchResults;
 }
@@ -426,7 +426,7 @@ export async function generateWorkoutProgram(
   selectedModel?: string
 ): Promise<{ content: string; citations: string[] }> {
   try {
-    console.log("🏋️ Starting enhanced workout program generation...");
+    if (process.env.NODE_ENV === 'development') { console.log("🏋️ Starting enhanced workout program generation..."); }
     
     // 1. Perform multi-query RAG first to get context
     const searchResults = await performMultiQueryRAG(userPrompt, config);
@@ -434,14 +434,14 @@ export async function generateWorkoutProgram(
     // 2. Format comprehensive knowledge context
     const knowledgeContext = formatProgramGenerationContext(searchResults);
     
-    console.log(`📚 Knowledge context prepared: ${knowledgeContext.length} characters`);
+    if (process.env.NODE_ENV === 'development') { console.log(`📚 Knowledge context prepared: ${knowledgeContext.length} characters`); }
     
     // 3. Generate Context-QA system prompt with workout program focus
     const baseSystemPrompt = await getContextQASystemPrompt(userProfile);
     
     // 4. Get hypertrophy training instructions from config
     const hypertrophyInstructions = config.hypertrophyInstructions as string || '';
-    console.log(`💪 Hypertrophy instructions included: ${hypertrophyInstructions ? 'Yes' : 'No'}`);
+    if (process.env.NODE_ENV === 'development') { console.log(`💪 Hypertrophy instructions included: ${hypertrophyInstructions ? 'Yes' : 'No'}`); }
     
     // 5. Create enhanced program designer prompt with hypertrophy instructions
     const fullPrompt = createProgramDesignerPrompt(
@@ -451,7 +451,7 @@ export async function generateWorkoutProgram(
       hypertrophyInstructions
     );
     
-    console.log(`🔨 Enhanced program designer prompt assembled with hypertrophy guidance`);
+    if (process.env.NODE_ENV === 'development') { console.log(`🔨 Enhanced program designer prompt assembled with hypertrophy guidance`); }
     
     // 6. Call Gemini API
     const modelName = getGeminiModelName(selectedModel, config);
@@ -472,7 +472,7 @@ export async function generateWorkoutProgram(
       }))
     });
 
-    console.log("🤖 Calling Gemini API with enhanced prompt...");
+    if (process.env.NODE_ENV === 'development') { console.log("🤖 Calling Gemini API with enhanced prompt..."); }
     
     const result = await chat.sendMessage([{ text: fullPrompt }]);
     const response = await result.response;
@@ -482,7 +482,7 @@ export async function generateWorkoutProgram(
       throw new Error("AI generated an empty program response");
     }
     
-    console.log(`✅ Enhanced workout program generated: ${content.length} characters`);
+    if (process.env.NODE_ENV === 'development') { console.log(`✅ Enhanced workout program generated: ${content.length} characters`); }
     
     // 6. Extract citations
     const citations = searchResults

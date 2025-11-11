@@ -148,23 +148,23 @@ export async function DELETE(
     }
 
     // Delete the embeddings first
-    console.log(`🗑️ Deleting embeddings for knowledge item: ${id}`);
+    if (process.env.NODE_ENV === 'development') { console.log(`🗑️ Deleting embeddings for knowledge item: ${id}`); }
     try {
       await deleteEmbeddings(id);
-      console.log(`✅ Embeddings deleted for knowledge item: ${id}`);
+      if (process.env.NODE_ENV === 'development') { console.log(`✅ Embeddings deleted for knowledge item: ${id}`); }
     } catch (embeddingError) {
       console.error(`❌ Failed to delete embeddings for knowledge item ${id}:`, embeddingError);
       // Continue with deleting the knowledge item even if embedding cleanup fails
     }
 
     // Delete the knowledge item (this will cascade delete the chunks due to Prisma schema)
-    console.log(`🗑️ Deleting knowledge item: ${id}`);
+    if (process.env.NODE_ENV === 'development') { console.log(`🗑️ Deleting knowledge item: ${id}`); }
     await prisma.knowledgeItem.delete({
       where: {
         id: id,
       }
     });
-    console.log(`✅ Knowledge item deleted successfully: ${id}`);
+    if (process.env.NODE_ENV === 'development') { console.log(`✅ Knowledge item deleted successfully: ${id}`); }
 
     return NextResponse.json({ message: 'Knowledge item deleted successfully' });
   } catch (error) {

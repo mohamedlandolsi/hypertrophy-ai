@@ -88,7 +88,7 @@ export async function POST(request: NextRequest) {
     const bytes = await file.arrayBuffer();
     const buffer = Buffer.from(bytes);
 
-    console.log(`[AVATAR_UPLOAD] User ${user.id} uploading file: ${file.name} (${formatFileSize(file.size)})`);
+    if (process.env.NODE_ENV === 'development') { console.log(`[AVATAR_UPLOAD] User ${user.id} uploading file: ${file.name} (${formatFileSize(file.size)})`); }
 
     // Upload to Supabase Storage
     const { error: uploadError } = await supabase.storage
@@ -134,7 +134,7 @@ export async function POST(request: NextRequest) {
       }, { status: 500 });
     }
 
-    console.log(`[AVATAR_UPLOAD] Success for user ${user.id}: ${urlData.publicUrl}`);
+    if (process.env.NODE_ENV === 'development') { console.log(`[AVATAR_UPLOAD] Success for user ${user.id}: ${urlData.publicUrl}`); }
 
     return NextResponse.json({
       success: true,
@@ -172,7 +172,7 @@ export async function DELETE(request: NextRequest) {
     const currentAvatarUrl = user.user_metadata?.avatar_url;
     const currentAvatarFilename = user.user_metadata?.avatar_filename;
 
-    console.log(`[AVATAR_DELETE] User ${user.id} removing avatar: ${currentAvatarUrl}`);
+    if (process.env.NODE_ENV === 'development') { console.log(`[AVATAR_DELETE] User ${user.id} removing avatar: ${currentAvatarUrl}`); }
 
     // Delete specific file if we have the filename
     if (currentAvatarFilename) {
@@ -202,7 +202,7 @@ export async function DELETE(request: NextRequest) {
         if (deleteError) {
           console.error('[AVATAR_DELETE] Error deleting files from storage:', deleteError);
         } else {
-          console.log(`[AVATAR_DELETE] Deleted ${filesToDelete.length} files for user ${user.id}`);
+          if (process.env.NODE_ENV === 'development') { console.log(`[AVATAR_DELETE] Deleted ${filesToDelete.length} files for user ${user.id}`); }
         }
       }
     }
@@ -225,7 +225,7 @@ export async function DELETE(request: NextRequest) {
       }, { status: 500 });
     }
 
-    console.log(`[AVATAR_DELETE] Success for user ${user.id}`);
+    if (process.env.NODE_ENV === 'development') { console.log(`[AVATAR_DELETE] Success for user ${user.id}`); }
 
     return NextResponse.json({
       success: true,

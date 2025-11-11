@@ -243,7 +243,7 @@ export default function InteractiveProgramViewerPage() {
 
   const handleShareProgress = () => {
     // Mock share functionality
-    console.log('Sharing progress:', progress);
+    if (process.env.NODE_ENV === 'development') { console.log('Sharing progress:', progress); }
     alert('Progress shared successfully!');
   };
 

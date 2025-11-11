@@ -556,7 +556,7 @@ export async function measureQuery<T>(
     if (duration > 1000) {
       console.warn(`[SLOW QUERY] ${name} took ${duration.toFixed(2)}ms`);
     } else if (process.env.NODE_ENV === 'development') {
-      console.log(`[QUERY] ${name} took ${duration.toFixed(2)}ms`);
+      if (process.env.NODE_ENV === 'development') { console.log(`[QUERY] ${name} took ${duration.toFixed(2)}ms`); }
     }
     
     return result;

@@ -10,7 +10,7 @@ export async function POST(request: NextRequest) {
       return NextResponse.json({ error: 'Message is required' }, { status: 400 });
     }
 
-    console.log('Testing Gemini with message:', message);
+    // Removed debug console.log
 
     // Simple test conversation
     const conversation = [
@@ -20,7 +20,7 @@ export async function POST(request: NextRequest) {
     // Test Gemini API
     const response = await sendToGemini(conversation);
     
-    console.log('Gemini response:', response);
+    if (process.env.NODE_ENV === 'development') { console.log('Gemini response:', response); }
 
     return NextResponse.json({ 
       success: true, 

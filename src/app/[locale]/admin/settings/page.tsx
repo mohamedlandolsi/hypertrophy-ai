@@ -79,7 +79,7 @@ export default function AdminSettingsPage() {
         return;
       }
 
-      console.log('🔍 Admin page: Checking admin access for user:', user.id);
+      if (process.env.NODE_ENV === 'development') { console.log('🔍 Admin page: Checking admin access for user:', user.id); }
 
       // Fetch the configuration (this will also verify admin access)
       await fetchConfig();

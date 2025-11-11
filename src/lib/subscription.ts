@@ -117,7 +117,7 @@ export async function getUserSubscriptionTier(): Promise<{
       const isInactive = !['active', 'on_trial'].includes(subscription.status);
       
       if (isExpired || isInactive) {
-        console.log('Auto-downgrading expired/inactive subscription', {
+        if (process.env.NODE_ENV === 'development') { console.log('Auto-downgrading expired/inactive subscription', { }
           userId: user.id,
           subscriptionId: subscription.id,
           status: subscription.status,

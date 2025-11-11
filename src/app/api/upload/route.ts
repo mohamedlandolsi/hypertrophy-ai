@@ -46,40 +46,40 @@ export async function POST(request: NextRequest) {
   const context = ApiErrorHandler.createContext(request);
 
   try {
-    console.log('[UPLOAD_API] Request received');
+    if (process.env.NODE_ENV === 'development') { console.log('[UPLOAD_API] Request received'); }
     
     const supabase = await createClient();
     const { data: { user }, error: authError } = await supabase.auth.getUser();
 
     if (authError || !user) {
-      console.log('[UPLOAD_API] Authentication failed:', authError);
+      if (process.env.NODE_ENV === 'development') { console.log('[UPLOAD_API] Authentication failed:', authError); }
       return NextResponse.json({
         error: 'Authentication required',
         message: 'Please log in to upload a thumbnail image.'
       }, { status: 401 });
     }
 
-    console.log('[UPLOAD_API] User authenticated:', { userId: user.id });
+    if (process.env.NODE_ENV === 'development') { console.log('[UPLOAD_API] User authenticated:', { userId: user.id }); }
 
     const dbUser = await prisma.user.findUnique({
       where: { id: user.id },
       select: { role: true }
     });
 
-    console.log('[UPLOAD_API] Database user:', dbUser);
+    if (process.env.NODE_ENV === 'development') { console.log('[UPLOAD_API] Database user:', dbUser); }
 
     if (!dbUser || dbUser.role !== 'admin') {
-      console.log('[UPLOAD_API] Access denied - not admin:', { dbUser });
+      if (process.env.NODE_ENV === 'development') { console.log('[UPLOAD_API] Access denied - not admin:', { dbUser }); }
       return NextResponse.json({
         error: 'Admin access required',
         message: 'Only administrators can upload training program thumbnails.'
       }, { status: 403 });
     }
 
-    console.log('[UPLOAD_API] Admin access confirmed');
+    if (process.env.NODE_ENV === 'development') { console.log('[UPLOAD_API] Admin access confirmed'); }
 
     const formData = await request.formData();
-    console.log('[UPLOAD_API] FormData received, entries:', Array.from(formData.entries()).map(([key, value]) => ({
+    if (process.env.NODE_ENV === 'development') { console.log('[UPLOAD_API] FormData received, entries:', Array.from(formData.entries()).map(([key, value]) => ({ }
       key,
       valueType: typeof value,
       isFile: value instanceof File,
@@ -92,7 +92,7 @@ export async function POST(request: NextRequest) {
     const type = formData.get('type') as string | null;
     const existingPath = formData.get('currentPath') as string | null;
 
-    console.log('[UPLOAD_API] Parsed form data:', { 
+    if (process.env.NODE_ENV === 'development') { console.log('[UPLOAD_API] Parsed form data:', { }
       hasFile: !!file, 
       type, 
       existingPath,
@@ -104,7 +104,7 @@ export async function POST(request: NextRequest) {
     });
 
     if (!file) {
-      console.log('[UPLOAD_API] No file provided in request');
+      if (process.env.NODE_ENV === 'development') { console.log('[UPLOAD_API] No file provided in request'); }
       return NextResponse.json({
         error: 'No file provided',
         message: 'Please select an image file to upload.'

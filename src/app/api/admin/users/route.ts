@@ -67,7 +67,7 @@ export async function GET() {
     let supabaseError;
     
     try {
-      console.log('Attempting to fetch users with admin client...');
+      if (process.env.NODE_ENV === 'development') { console.log('Attempting to fetch users with admin client...'); }
       const result = await adminClient.auth.admin.listUsers();
       authUsers = result.data;
       supabaseError = result.error;
@@ -79,7 +79,7 @@ export async function GET() {
           code: supabaseError.code || 'unknown'
         });
       } else {
-        console.log(`Successfully fetched ${authUsers?.users?.length || 0} auth users`);
+        if (process.env.NODE_ENV === 'development') { console.log(`Successfully fetched ${authUsers?.users?.length || 0} auth users`); }
       }
     } catch (adminError) {
       console.error('Admin client error:', adminError);
@@ -88,7 +88,7 @@ export async function GET() {
     
     if (supabaseError || !authUsers?.users) {
       console.error('Failed to get user data from Supabase admin API. Error:', supabaseError);
-      console.log('Attempting fallback approach...');
+      if (process.env.NODE_ENV === 'development') { console.log('Attempting fallback approach...'); }
       
       // Fallback: Try to get at least some user data by using regular client for current user
       // and provide a more informative response

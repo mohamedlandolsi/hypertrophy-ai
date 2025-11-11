@@ -41,7 +41,7 @@ export default function AuthDebugPage() {
     // Listen for auth changes
     const { data: { subscription } } = supabase.auth.onAuthStateChange(
       (event, session) => {
-        console.log('Auth state changed:', event, session);        setAuthState({
+        if (process.env.NODE_ENV === 'development') { console.log('Auth state changed:', event, session);        setAuthState({ }
           user: session?.user || null,
           event,
           session,
@@ -86,7 +86,7 @@ export default function AuthDebugPage() {
               onClick={() => {
                 const supabase = createClient();
                 supabase.auth.signOut().then(() => {
-                  console.log('Signed out');
+                  if (process.env.NODE_ENV === 'development') { console.log('Signed out'); }
                 });
               }}
               className="px-4 py-2 bg-red-500 text-white rounded hover:bg-red-600"

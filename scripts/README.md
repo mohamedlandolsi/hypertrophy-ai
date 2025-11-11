@@ -1,4 +1,147 @@
-# Knowledge Base Re-processing Script
+# HypertroQ Scripts Documentation
+
+This directory contains utility scripts for managing and maintaining the HypertroQ application.
+
+## 🚀 Quick Access
+
+| Script | Command | Purpose |
+|--------|---------|---------|
+| **Pre-Deployment Validation** | `npm run validate:deployment` | Validate app before deployment |
+| **Knowledge Base Re-processing** | `npm run reprocess-kb` | Re-process knowledge base |
+| **AI Configuration Check** | `node scripts/check-ai-config.js` | Verify AI config singleton |
+| **Performance Tests** | `npm run test:performance` | Run database performance tests |
+
+---
+
+## 📋 Pre-Deployment Validation Script
+
+**File**: `scripts/pre-deployment.ts`  
+**Command**: `npm run validate:deployment` or `npm run pre-deploy`
+
+### Overview
+
+Comprehensive validation script that performs **40+ checks** before deployment to ensure:
+- Database is properly configured and migrated
+- Code compiles without errors
+- Environment variables are set correctly
+- Features are properly configured
+- UI/UX elements are in place
+
+### Usage
+
+```powershell
+# Run full validation
+npm run validate:deployment
+
+# Or use the shorter alias
+npm run pre-deploy
+
+# Direct execution
+npx tsx scripts/pre-deployment.ts
+```
+
+### What Gets Validated
+
+**1. Database (8 checks)**
+- PostgreSQL connection
+- Migrations applied
+- pgvector extension installed
+- Performance indexes created
+- No orphaned records
+- AI Configuration singleton exists
+- Sample data seeded
+- Data integrity verified
+
+**2. Code Quality (5 checks)**
+- TypeScript compilation (`npm run build`)
+- ESLint validation
+- No console.log in production code
+- TODO/FIXME comments tracked
+- Build artifacts generated
+
+**3. Environment (7 checks)**
+- .env.local file exists
+- All required env variables set
+- Supabase connection working
+- Gemini API key valid
+- LemonSqueezy API key valid
+- Third-party services responding
+
+**4. Features (6 checks)**
+- Subscription tiers defined
+- Tier enforcement functions present
+- Free trial configured
+- Webhook endpoints accessible
+- RAG system has embeddings
+- Exercise library populated
+
+**5. UI/UX (6 checks)**
+- Critical pages exist
+- API routes present
+- Tailwind config exists
+- Mobile responsive setup
+- Internationalization configured
+- No broken navigation
+
+### Output Example
+
+```
+═══════════════════════════════════════════════════════════════
+  HYPERTROQ PRE-DEPLOYMENT VALIDATION
+═══════════════════════════════════════════════════════════════
+
+▶ 1. Database Validation
+  ✓ Database connection: Successfully connected to PostgreSQL
+  ✓ Migrations applied: Latest: 20241107_add_subscription_tiers
+  ✓ pgvector extension: Installed and enabled
+  ✓ Performance indexes: 18 key indexes found
+  
+▶ 2. Code Quality Validation
+  ✓ TypeScript compilation: Build successful
+  ✓ ESLint: No linting errors
+  
+... (more checks)
+
+Summary:
+  Total Checks:     42
+  ✓ Passed:        42
+  ✗ Failed:        0
+  ⚠ Warnings:      0
+
+✅ DEPLOYMENT READY!
+All checks passed. The application is ready for deployment.
+═══════════════════════════════════════════════════════════════
+```
+
+### Status Indicators
+
+- ✓ **PASS** (Green) - Check passed successfully
+- ✗ **FAIL** (Red) - Critical failure - MUST fix before deployment
+- ⚠ **WARN** (Yellow) - Non-critical issue - review before deployment
+- ○ **SKIP** (Cyan) - Check skipped (usually due to missing dependencies)
+
+### Quick Fixes
+
+| Issue | Fix |
+|-------|-----|
+| "AI Configuration not found" | `node scripts/check-ai-config.js` |
+| "pgvector extension missing" | Run in Supabase: `CREATE EXTENSION IF NOT EXISTS vector;` |
+| "Migrations not applied" | `npx prisma migrate deploy` |
+| "TypeScript compilation failed" | `npm run build` → fix errors |
+| "Missing .env.local" | `cp .env.example .env.local` → edit with real values |
+
+### Documentation
+
+- **Complete guide**: `docs/PRE_DEPLOYMENT_VALIDATION.md`
+- **Quick reference**: `docs/PRE_DEPLOYMENT_QUICK_REFERENCE.md`
+- **Implementation summary**: `docs/PRE_DEPLOYMENT_VALIDATION_COMPLETE.md`
+
+---
+
+## 🔄 Knowledge Base Re-processing Script
+
+**File**: `scripts/reprocess-knowledge-base.js`  
+**Command**: `npm run reprocess-kb`
 
 This script re-processes all existing documents in your knowledge base using the new Supabase Edge Function for improved performance and reliability.
 

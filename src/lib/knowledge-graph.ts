@@ -41,7 +41,7 @@ function getDriver(): Driver {
 
     driver = neo4j.driver(uri, neo4j.auth.basic(user, password));
     
-    console.log(`📊 Neo4j driver initialized for ${uri}`);
+    if (process.env.NODE_ENV === 'development') { console.log(`📊 Neo4j driver initialized for ${uri}`); }
   }
   
   return driver;
@@ -54,7 +54,7 @@ export async function closeDriver(): Promise<void> {
   if (driver) {
     await driver.close();
     driver = null;
-    console.log('📊 Neo4j driver closed');
+    if (process.env.NODE_ENV === 'development') { console.log('📊 Neo4j driver closed'); }
   }
 }
 
@@ -66,7 +66,7 @@ export async function testConnection(): Promise<boolean> {
     const session = getDriver().session();
     await session.run('RETURN 1');
     await session.close();
-    console.log('✅ Neo4j connection successful');
+    if (process.env.NODE_ENV === 'development') { console.log('✅ Neo4j connection successful'); }
     return true;
   } catch (error) {
     console.error('❌ Neo4j connection failed:', error);
@@ -142,7 +142,7 @@ Return only the JSON object:`;
  */
 async function extractEntitiesAndRelationships(text: string): Promise<GraphExtraction> {
   try {
-    console.log('🧠 Extracting entities and relationships with Gemini...');
+    if (process.env.NODE_ENV === 'development') { console.log('🧠 Extracting entities and relationships with Gemini...'); }
     
     const config = await getAIConfiguration();
     if (!config) {
@@ -158,7 +158,7 @@ async function extractEntitiesAndRelationships(text: string): Promise<GraphExtra
     const result = await model.generateContent(prompt);
     const response = result.response.text();
     
-    console.log('📝 Raw Gemini response preview:', response.substring(0, 200) + '...');
+    if (process.env.NODE_ENV === 'development') { console.log('📝 Raw Gemini response preview:', response.substring(0, 200) + '...'); }
 
     // Clean and parse JSON response
     let jsonText = response.trim();
@@ -172,7 +172,7 @@ async function extractEntitiesAndRelationships(text: string): Promise<GraphExtra
 
     const extraction: GraphExtraction = JSON.parse(jsonText);
     
-    console.log(`✅ Extracted ${extraction.nodes.length} nodes and ${extraction.relationships.length} relationships`);
+    if (process.env.NODE_ENV === 'development') { console.log(`✅ Extracted ${extraction.nodes.length} nodes and ${extraction.relationships.length} relationships`); }
     
     return extraction;
   } catch (error) {
@@ -204,7 +204,7 @@ async function createNodes(session: Session, nodes: GraphNode[], knowledgeItemId
     });
   }
   
-  console.log(`✅ Created ${nodes.length} nodes`);
+  if (process.env.NODE_ENV === 'development') { console.log(`✅ Created ${nodes.length} nodes`); }
 }
 
 /**
@@ -231,7 +231,7 @@ async function createRelationships(session: Session, relationships: GraphRelatio
     }
   }
   
-  console.log(`✅ Created ${relationships.length} relationships`);
+  if (process.env.NODE_ENV === 'development') { console.log(`✅ Created ${relationships.length} relationships`); }
 }
 
 /**
@@ -241,13 +241,13 @@ export async function buildKnowledgeGraph(text: string, knowledgeItemId: string)
   const session = getDriver().session();
   
   try {
-    console.log(`🏗️ Building knowledge graph for knowledge item: ${knowledgeItemId}`);
+    if (process.env.NODE_ENV === 'development') { console.log(`🏗️ Building knowledge graph for knowledge item: ${knowledgeItemId}`); }
     
     // Step 1: Extract entities and relationships using Gemini
     const extraction = await extractEntitiesAndRelationships(text);
     
     if (extraction.nodes.length === 0) {
-      console.log('ℹ️ No entities extracted from text');
+      if (process.env.NODE_ENV === 'development') { console.log('ℹ️ No entities extracted from text'); }
       return;
     }
 
@@ -259,7 +259,7 @@ export async function buildKnowledgeGraph(text: string, knowledgeItemId: string)
       await createRelationships(session, extraction.relationships);
     }
     
-    console.log(`🎉 Knowledge graph built successfully for ${knowledgeItemId}`);
+    if (process.env.NODE_ENV === 'development') { console.log(`🎉 Knowledge graph built successfully for ${knowledgeItemId}`); }
     
   } catch (error) {
     console.error('❌ Failed to build knowledge graph:', error);
@@ -371,9 +371,9 @@ export async function clearKnowledgeGraph(): Promise<void> {
   const session = getDriver().session();
   
   try {
-    console.log('🗑️ Clearing knowledge graph...');
+    if (process.env.NODE_ENV === 'development') { console.log('🗑️ Clearing knowledge graph...'); }
     await session.run('MATCH (n) DETACH DELETE n');
-    console.log('✅ Knowledge graph cleared');
+    if (process.env.NODE_ENV === 'development') { console.log('✅ Knowledge graph cleared'); }
   } finally {
     await session.close();
   }

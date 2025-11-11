@@ -253,7 +253,7 @@ export async function saveProfileExtractions(
         data: updateData
       });
 
-      console.log(`✅ Profile updated with ${Object.keys(updateData).length} new fields:`, Object.keys(updateData));
+      if (process.env.NODE_ENV === 'development') { console.log(`✅ Profile updated with ${Object.keys(updateData).length} new fields:`, Object.keys(updateData)); }
     }
 
   } catch (error) {
@@ -308,7 +308,7 @@ export async function saveConversationMemories(
       }
     });
 
-    console.log(`✅ Saved ${memories.length} conversation memories`);
+    if (process.env.NODE_ENV === 'development') { console.log(`✅ Saved ${memories.length} conversation memories`); }
 
   } catch (error) {
     console.error('❌ Error saving conversation memories:', error);

@@ -4,7 +4,7 @@ import { prisma } from '@/lib/prisma';
 
 export async function GET(request: NextRequest) {
   const startTime = Date.now();
-  console.log('📝 Conversations API: Starting request');
+  if (process.env.NODE_ENV === 'development') { console.log('📝 Conversations API: Starting request'); }
   
   try {
     // Get the authenticated user
@@ -12,11 +12,11 @@ export async function GET(request: NextRequest) {
     const { data: { user }, error: authError } = await supabase.auth.getUser();
     
     if (authError || !user) {
-      console.log('❌ Conversations API: Authentication failed');
+      if (process.env.NODE_ENV === 'development') { console.log('❌ Conversations API: Authentication failed'); }
       return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
     }
 
-    console.log(`👤 Conversations API: User authenticated - ${user.id}`);
+    if (process.env.NODE_ENV === 'development') { console.log(`👤 Conversations API: User authenticated - ${user.id}`); }
 
     // Get pagination parameters from URL
     const { searchParams } = new URL(request.url);
@@ -24,10 +24,10 @@ export async function GET(request: NextRequest) {
     const limit = parseInt(searchParams.get('limit') || '10', 10);
     const skip = (page - 1) * limit;
 
-    console.log(`📄 Conversations API: Pagination - page: ${page}, limit: ${limit}, skip: ${skip}`);
+    if (process.env.NODE_ENV === 'development') { console.log(`📄 Conversations API: Pagination - page: ${page}, limit: ${limit}, skip: ${skip}`); }
 
     // Ensure user exists in our database (simple upsert)
-    console.log('🔄 Conversations API: Upserting user');
+    if (process.env.NODE_ENV === 'development') { console.log('🔄 Conversations API: Upserting user'); }
     await prisma.user.upsert({
       where: { id: user.id },
       update: {},
@@ -35,16 +35,16 @@ export async function GET(request: NextRequest) {
     });
 
     // Get total count for pagination info
-    console.log('🔢 Conversations API: Getting total count');
+    if (process.env.NODE_ENV === 'development') { console.log('🔢 Conversations API: Getting total count'); }
     const totalCount = await prisma.chat.count({
       where: {
         userId: user.id,
       }
     });
-    console.log(`📊 Conversations API: Total count - ${totalCount}`);
+    if (process.env.NODE_ENV === 'development') { console.log(`📊 Conversations API: Total count - ${totalCount}`); }
 
     // Fetch conversations for the user with pagination (optimized - no message includes)
-    console.log('💬 Conversations API: Fetching conversations');
+    if (process.env.NODE_ENV === 'development') { console.log('💬 Conversations API: Fetching conversations'); }
     const conversations = await prisma.chat.findMany({
       where: {
         userId: user.id,
@@ -55,7 +55,7 @@ export async function GET(request: NextRequest) {
       skip,
       take: limit,
     });
-    console.log(`✅ Conversations API: Found ${conversations.length} conversations`);
+    if (process.env.NODE_ENV === 'development') { console.log(`✅ Conversations API: Found ${conversations.length} conversations`); }
 
     // Format the response (simplified without message data for performance)
     const formattedConversations = conversations.map(chat => ({
@@ -71,7 +71,7 @@ export async function GET(request: NextRequest) {
     const totalPages = Math.ceil(totalCount / limit);
 
     const duration = Date.now() - startTime;
-    console.log(`🎉 Conversations API: Request completed in ${duration}ms`);
+    if (process.env.NODE_ENV === 'development') { console.log(`🎉 Conversations API: Request completed in ${duration}ms`); }
 
     return NextResponse.json({ 
       conversations: formattedConversations,

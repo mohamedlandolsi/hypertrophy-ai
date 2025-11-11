@@ -196,6 +196,43 @@ Enable "under construction" mode for production while maintaining owner access:
 - ✅ Instant toggle via environment variables
 - ✅ Zero code changes required
 
+## 🧪 Testing
+
+The project includes a comprehensive integration test suite for the subscription flow system.
+
+### Quick Start
+```bash
+# Run all tests
+npm run test
+
+# Run integration tests only
+npm run test:integration
+
+# Run with coverage report
+npm run test:coverage
+```
+
+### Test Coverage (27 tests)
+- ✅ FREE tier limitations and enforcement
+- ✅ PRO subscription features and unlimited access
+- ✅ Subscription lifecycle (subscribe, upgrade, cancel, reactivate)
+- ✅ Tier enforcement and feature gating
+- ✅ Edge cases and error handling
+
+### Setup Test Database
+Before running tests, you need a test database:
+
+1. Create test database (Supabase or local PostgreSQL)
+2. Copy `.env.test.example` to `.env.test`
+3. Add your test database credentials
+4. Run migrations: `npx prisma migrate deploy`
+5. Run tests: `npm run test:integration`
+
+**Documentation:**
+- **Quick Start**: [QUICK_START_TESTS.md](./QUICK_START_TESTS.md) - 5-minute setup guide
+- **Complete Guide**: [tests/README.md](./tests/README.md) - Detailed testing documentation
+- **Implementation Details**: [docs/TEST_SUITE_IMPLEMENTATION_COMPLETE.md](./docs/TEST_SUITE_IMPLEMENTATION_COMPLETE.md)
+
 ## 🛠️ Development Scripts
 
 Common development and maintenance scripts are located in the `scripts/` directory:

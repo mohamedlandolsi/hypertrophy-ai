@@ -507,7 +507,7 @@ async function fallbackSimpleChunking(
   fileName: string
 ): Promise<StructuredChunk[]> {
   
-  console.log('🔄 Using fallback simple chunking');
+  if (process.env.NODE_ENV === 'development') { console.log('🔄 Using fallback simple chunking'); }
   
   const chunkSize = 512;
   const overlap = 100;

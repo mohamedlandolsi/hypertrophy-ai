@@ -124,7 +124,7 @@ function getPrioritizedCategories(queryAnalysis: ReturnType<typeof detectQueryTy
         categories.push('hypertrophy_principles');
     }
     
-    console.log(`🎯 Prioritized categories for query: [${categories.join(', ')}]`);
+    if (process.env.NODE_ENV === 'development') { console.log(`🎯 Prioritized categories for query: [${categories.join(', ')}]`); }
     return categories;
 }
 
@@ -138,11 +138,11 @@ export async function fetchKnowledgeContext(
     categoryIds?: string[]
 ): Promise<KnowledgeContext[]> {
     try {
-        console.log(`🚀 Enhanced RAG search for: "${query}" (threshold: ${similarityThreshold})`);
+        if (process.env.NODE_ENV === 'development') { console.log(`🚀 Enhanced RAG search for: "${query}" (threshold: ${similarityThreshold})`); }
         
         // Analyze query to determine priorities
         const queryAnalysis = detectQueryType(query);
-        console.log(`📊 Query analysis:`, queryAnalysis);
+        if (process.env.NODE_ENV === 'development') { console.log(`📊 Query analysis:`, queryAnalysis); }
         
         // Get prioritized categories (overrides manual categoryIds for requirements compliance)
         const prioritizedCategories = getPrioritizedCategories(queryAnalysis);
@@ -154,7 +154,7 @@ export async function fetchKnowledgeContext(
         
         // Multi-stage search: Priority categories first, then fallback
         let chunks: KnowledgeContext[] = [];        if (searchCategories.length > 0) {
-            console.log(`🏷️ Searching priority categories: ${searchCategories.join(', ')}`);
+            if (process.env.NODE_ENV === 'development') { console.log(`🏷️ Searching priority categories: ${searchCategories.join(', ')}`); }
             
             // Stage 1: Search priority categories
             chunks = await prisma.$queryRaw`
@@ -175,12 +175,12 @@ export async function fetchKnowledgeContext(
                 LIMIT ${Math.min(maxChunks * 2, 30)}
             `;
             
-            console.log(`📊 Priority search returned ${chunks.length} candidates`);
+            if (process.env.NODE_ENV === 'development') { console.log(`📊 Priority search returned ${chunks.length} candidates`); }
         }
         
         // Stage 2: If insufficient results, search entire KB  
         if (chunks.length < maxChunks) {
-            console.log(`🔄 Insufficient priority results (${chunks.length}), searching entire KB...`);
+            if (process.env.NODE_ENV === 'development') { console.log(`🔄 Insufficient priority results (${chunks.length}), searching entire KB...`); }
             
             const fallbackChunks = await prisma.$queryRaw`
                 SELECT
@@ -209,7 +209,7 @@ export async function fetchKnowledgeContext(
         }>).filter(chunk => chunk.score >= similarityThreshold);
 
         if (relevantChunks.length === 0) {
-            console.log(`⚠️ No relevant chunks found above threshold ${similarityThreshold}`);
+            if (process.env.NODE_ENV === 'development') { console.log(`⚠️ No relevant chunks found above threshold ${similarityThreshold}`); }
             return [];
         }
 
@@ -228,7 +228,7 @@ export async function fetchKnowledgeContext(
         
         const finalResults = sortedChunks.slice(0, maxChunks);
         
-        console.log(`✅ Enhanced RAG retrieved ${finalResults.length} chunks (from ${relevantChunks.length} above threshold)`);
+        if (process.env.NODE_ENV === 'development') { console.log(`✅ Enhanced RAG retrieved ${finalResults.length} chunks (from ${relevantChunks.length} above threshold)`); }
         
         // Log category distribution for debugging
         const categoryDistribution: Record<string, number> = {};
@@ -240,7 +240,7 @@ export async function fetchKnowledgeContext(
             const category = categoryMatch || 'other';
             categoryDistribution[category] = (categoryDistribution[category] || 0) + 1;
         });
-        console.log(`📈 Category distribution:`, categoryDistribution);
+        if (process.env.NODE_ENV === 'development') { console.log(`📈 Category distribution:`, categoryDistribution); }
         
         return finalResults;
 
@@ -393,7 +393,7 @@ export async function reembedMissingChunks() {
 
 export async function deleteEmbeddings(knowledgeItemId: string) {
   // TODO: Implement embedding deletion functionality
-  console.log(`Deleting embeddings for knowledge item: ${knowledgeItemId}`);
+  if (process.env.NODE_ENV === 'development') { console.log(`Deleting embeddings for knowledge item: ${knowledgeItemId}`); }
   return {
     deleted: 0,
     message: 'Embedding deletion functionality not yet implemented'
@@ -422,11 +422,11 @@ export async function performAndKeywordSearch(
       .join(' & '); // PostgreSQL AND syntax for precise results
     
     if (!searchTerms) {
-      console.log('⚠️ No valid search terms extracted from query');
+      if (process.env.NODE_ENV === 'development') { console.log('⚠️ No valid search terms extracted from query'); }
       return [];
     }
     
-    console.log(`🔍 AND keyword search: "${searchTerms}"`);
+    if (process.env.NODE_ENV === 'development') { console.log(`🔍 AND keyword search: "${searchTerms}"`); }
     
     // Use PostgreSQL to_tsvector and to_tsquery for full-text search
     const chunks = await prisma.$queryRaw`
@@ -513,14 +513,14 @@ export async function graphSearch(
   maxChunks: number = 10
 ): Promise<KnowledgeContext[]> {
   try {
-    console.log(`🕸️ Starting graph search for: "${query}"`);
+    if (process.env.NODE_ENV === 'development') { console.log(`🕸️ Starting graph search for: "${query}"`); }
     
     // Extract potential entity names from the query
     const entities = extractEntitiesFromQuery(query);
-    console.log(`🏷️ Extracted potential entities: [${entities.join(', ')}]`);
+    if (process.env.NODE_ENV === 'development') { console.log(`🏷️ Extracted potential entities: [${entities.join(', ')}]`); }
     
     if (entities.length === 0) {
-      console.log('⚠️ No entities extracted from query, skipping graph search');
+      if (process.env.NODE_ENV === 'development') { console.log('⚠️ No entities extracted from query, skipping graph search'); }
       return [];
     }
     
@@ -548,7 +548,7 @@ export async function graphSearch(
       });
     });
     
-    console.log(`🔗 Found ${allRelatedEntities.size} related entities from graph`);
+    if (process.env.NODE_ENV === 'development') { console.log(`🔗 Found ${allRelatedEntities.size} related entities from graph`); }
     
     if (allRelatedEntities.size === 0) {
       return [];
@@ -559,7 +559,7 @@ export async function graphSearch(
       .slice(0, 10) // Limit to prevent too long queries
       .join(' ');
     
-    console.log(`🔍 Graph-enhanced query: "${graphEntityQuery}"`);
+    if (process.env.NODE_ENV === 'development') { console.log(`🔍 Graph-enhanced query: "${graphEntityQuery}"`); }
     
     // Search knowledge chunks using graph-enhanced query
     const searchTerms = graphEntityQuery
@@ -571,7 +571,7 @@ export async function graphSearch(
       .join(' | '); // PostgreSQL OR syntax for broad coverage
     
     if (!searchTerms) {
-      console.log('⚠️ No valid search terms from graph entities');
+      if (process.env.NODE_ENV === 'development') { console.log('⚠️ No valid search terms from graph entities'); }
       return [];
     }
     
@@ -602,7 +602,7 @@ export async function graphSearch(
       score: chunk.score * 0.9 // Slightly lower weight than direct searches
     }));
     
-    console.log(`✅ Graph search returned ${results.length} results`);
+    if (process.env.NODE_ENV === 'development') { console.log(`✅ Graph search returned ${results.length} results`); }
     return results;
     
   } catch (error) {
@@ -761,22 +761,22 @@ export async function hybridSearch(
   config?: { enableGraphRAG?: boolean; graphSearchWeight?: number }
 ): Promise<KnowledgeContext[]> {
   try {
-    console.log(`🔄 Starting Graph RAG hybrid search for: "${query}"`);
-    console.log(`📊 Parameters: maxChunks=${maxChunks}, threshold=${similarityThreshold}`);
+    if (process.env.NODE_ENV === 'development') { console.log(`🔄 Starting Graph RAG hybrid search for: "${query}"`); }
+    if (process.env.NODE_ENV === 'development') { console.log(`📊 Parameters: maxChunks=${maxChunks}, threshold=${similarityThreshold}`); }
     
     // Check if Graph RAG is enabled
     const enableGraphRAG = config?.enableGraphRAG ?? true;
     const graphSearchWeight = config?.graphSearchWeight ?? 0.9;
     
-    console.log(`🕸️ Graph RAG enabled: ${enableGraphRAG}, weight: ${graphSearchWeight}`);
+    if (process.env.NODE_ENV === 'development') { console.log(`🕸️ Graph RAG enabled: ${enableGraphRAG}, weight: ${graphSearchWeight}`); }
     
     // Extract and analyze keywords
     const keywords = extractKeywords(query);
-    console.log(`🏷️ Extracted keywords: [${keywords.join(', ')}]`);
+    if (process.env.NODE_ENV === 'development') { console.log(`🏷️ Extracted keywords: [${keywords.join(', ')}]`); }
     
     // Calculate keyword relevance scores
     const keywordRelevance = await calculateKeywordRelevance(keywords);
-    console.log(`📈 Top keywords by relevance: [${keywordRelevance.slice(0, 5).map(k => `${k.keyword}:${k.score.toFixed(2)}`).join(', ')}]`);
+    if (process.env.NODE_ENV === 'development') { console.log(`📈 Top keywords by relevance: [${keywordRelevance.slice(0, 5).map(k => `${k.keyword}:${k.score.toFixed(2)}`).join(', ')}]`); }
     
     // Prepare search promises for parallel execution
     const searchPromises = [];
@@ -833,7 +833,7 @@ export async function hybridSearch(
     const combinedResults = new Map<string, KnowledgeContext & { sources: string[], hybridScore: number }>();
     
     searchResults.forEach(({ source, results }) => {
-      console.log(`📊 ${source} search returned ${results.length} results`);
+      if (process.env.NODE_ENV === 'development') { console.log(`📊 ${source} search returned ${results.length} results`); }
       
       results.forEach((result, index) => {
         const existing = combinedResults.get(result.id);
@@ -894,8 +894,8 @@ export async function hybridSearch(
         score: hybridScore // Use hybrid score as final score
       }));
     
-    console.log(`✅ Graph RAG hybrid search complete: ${finalResults.length} final results`);
-    console.log(`📈 Score distribution: min=${Math.min(...finalResults.map(r => r.score)).toFixed(3)}, max=${Math.max(...finalResults.map(r => r.score)).toFixed(3)}`);
+    if (process.env.NODE_ENV === 'development') { console.log(`✅ Graph RAG hybrid search complete: ${finalResults.length} final results`); }
+    if (process.env.NODE_ENV === 'development') { console.log(`📈 Score distribution: min=${Math.min(...finalResults.map(r => r.score)).toFixed(3)}, max=${Math.max(...finalResults.map(r => r.score)).toFixed(3)}`); }
     
     // Log source distribution for debugging
     const sourceDistribution: Record<string, number> = {};
@@ -904,7 +904,7 @@ export async function hybridSearch(
         sourceDistribution[source] = (sourceDistribution[source] || 0) + 1;
       });
     });
-    console.log(`🔗 Source distribution:`, sourceDistribution);
+    if (process.env.NODE_ENV === 'development') { console.log(`🔗 Source distribution:`, sourceDistribution); }
     
     return finalResults;
     
@@ -912,7 +912,7 @@ export async function hybridSearch(
     console.error('❌ Graph RAG hybrid search error:', error);
     
     // Fallback to vector search only
-    console.log('🔄 Falling back to vector search only...');
+    if (process.env.NODE_ENV === 'development') { console.log('🔄 Falling back to vector search only...'); }
     try {
       return await fetchKnowledgeContext(query, maxChunks, similarityThreshold, categoryIds);
     } catch (fallbackError) {

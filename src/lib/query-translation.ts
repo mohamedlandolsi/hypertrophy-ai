@@ -93,7 +93,7 @@ English translation:`;
     }
     translationCache.set(query, translation);
 
-    console.log(`🌐 Translated "${query}" → "${translation}"`);
+    if (process.env.NODE_ENV === 'development') { console.log(`🌐 Translated "${query}" → "${translation}"`); }
     return translation;
 
   } catch (error) {
@@ -170,8 +170,8 @@ export function applySemanticMapping(query: string): string {
   }
   
   if (appliedMappings.length > 0) {
-    console.log(`🧠 Semantic mapping applied for: [${appliedMappings.join(', ')}]`);
-    console.log(`📝 Enhanced query: "${enhancedQuery}"`);
+    if (process.env.NODE_ENV === 'development') { console.log(`🧠 Semantic mapping applied for: [${appliedMappings.join(', ')}]`); }
+    if (process.env.NODE_ENV === 'development') { console.log(`📝 Enhanced query: "${enhancedQuery}"`); }
   }
   
   return enhancedQuery;
@@ -201,7 +201,7 @@ export async function expandQuery(query: string): Promise<string[]> {
     return [query]; // Return original query if not broad
   }
 
-  console.log(`🔄 Expanding broad query: "${query}"`);
+  if (process.env.NODE_ENV === 'development') { console.log(`🔄 Expanding broad query: "${query}"`); }
 
   // Select relevant expansion terms based on query content
   const relevantExpansions: string[] = [];
@@ -226,7 +226,7 @@ export async function expandQuery(query: string): Promise<string[]> {
   // Combine original query with relevant expansions
   const expandedQueries = [query, ...relevantExpansions.slice(0, 3)]; // Limit to 3 additional terms
   
-  console.log(`✅ Expanded to ${expandedQueries.length} queries:`, expandedQueries);
+  if (process.env.NODE_ENV === 'development') { console.log(`✅ Expanded to ${expandedQueries.length} queries:`, expandedQueries); }
   return expandedQueries;
 }
 
@@ -240,7 +240,7 @@ export async function processQueryForRAG(originalQuery: string): Promise<{
   expandedQueries: string[];
   isTranslated: boolean;
 }> {
-  console.log(`🔄 Processing query for RAG: "${originalQuery}"`);
+  if (process.env.NODE_ENV === 'development') { console.log(`🔄 Processing query for RAG: "${originalQuery}"`); }
   
   // Step 1: Translate to English if needed
   const translatedQuery = await translateQueryToEnglish(originalQuery);
@@ -260,7 +260,7 @@ export async function processQueryForRAG(originalQuery: string): Promise<{
     isTranslated
   };
   
-  console.log(`✅ Query processing complete:`, {
+  if (process.env.NODE_ENV === 'development') { console.log(`✅ Query processing complete:`, { }
     original: originalQuery,
     translated: translatedQuery,
     semanticallyMapped: semanticallyMappedQuery !== translatedQuery ? semanticallyMappedQuery : 'no mapping applied',

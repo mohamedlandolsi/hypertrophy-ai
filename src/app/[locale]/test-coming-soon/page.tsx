@@ -2,7 +2,7 @@
 import ComingSoon from '@/components/coming-soon';
 
 export default function TestComingSoonPage() {
-  console.log('NEXT_PUBLIC_CHAT_COMING_SOON:', process.env.NEXT_PUBLIC_CHAT_COMING_SOON);
+  if (process.env.NODE_ENV === 'development') { console.log('NEXT_PUBLIC_CHAT_COMING_SOON:', process.env.NEXT_PUBLIC_CHAT_COMING_SOON); }
   
   return (
     <div>

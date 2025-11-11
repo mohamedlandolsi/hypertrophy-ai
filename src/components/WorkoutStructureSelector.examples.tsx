@@ -29,7 +29,7 @@ export function UpperLowerExample() {
 
   const handleSelect = (type: WorkoutStructureType) => {
     setSelectedStructure(type);
-    console.log('Selected structure:', type);
+    if (process.env.NODE_ENV === 'development') { console.log('Selected structure:', type); }
     
     // In a real app, you'd navigate to workout builder or save this choice
     // Example outcomes:
@@ -151,7 +151,7 @@ export function ProgramWizardExample() {
     };
 
     const workoutCount = workoutCounts[selectedStructure];
-    console.log(`Moving to step 3: Create ${workoutCount} workouts`);
+    if (process.env.NODE_ENV === 'development') { console.log(`Moving to step 3: Create ${workoutCount} workouts`); }
     
     // Navigate to workout builder
     setStep(3);
@@ -261,7 +261,7 @@ export function FormIntegrationExample() {
       return;
     }
 
-    console.log('Submitting form:', formData);
+    if (process.env.NODE_ENV === 'development') { console.log('Submitting form:', formData); }
     // API call to save program configuration
   };
 

@@ -34,7 +34,7 @@ export async function GET(request: NextRequest) {
     const url = new URL(request.url);
     const userId = url.searchParams.get('userId') || undefined;
     
-    console.log('🔍 Admin requested embedding audit', userId ? `for user ${userId}` : 'for all users');
+    if (process.env.NODE_ENV === 'development') { console.log('🔍 Admin requested embedding audit', userId ? `for user ${userId}` : 'for all users'); }
     
     // Run comprehensive embedding audit
     const auditReport = await runEmbeddingAudit();
@@ -81,8 +81,8 @@ export async function POST(request: NextRequest) {
     const body = await request.json().catch(() => ({}));
     const { userId, batchSize = 10 } = body;
     
-    console.log('🔄 Admin requested reembedding process', userId ? `for user ${userId}` : 'for all users');
-    console.log(`   Batch size: ${batchSize}`);
+    if (process.env.NODE_ENV === 'development') { console.log('🔄 Admin requested reembedding process', userId ? `for user ${userId}` : 'for all users'); }
+    if (process.env.NODE_ENV === 'development') { console.log(`   Batch size: ${batchSize}`); }
     
     // Run reembedding process
     const results = await reembedMissingChunks();

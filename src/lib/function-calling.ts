@@ -170,8 +170,8 @@ export const detectProfileConflictFunction: FunctionDeclaration = {
 // Handler function for profile updates
 export async function handleProfileUpdate(userId: string, updateData: EnhancedMemoryUpdate): Promise<void> {
   try {
-    console.log('🔄 Processing profile update for user:', userId);
-    console.log('📝 Update data:', updateData);
+    if (process.env.NODE_ENV === 'development') { console.log('🔄 Processing profile update for user:', userId); }
+    if (process.env.NODE_ENV === 'development') { console.log('📝 Update data:', updateData); }
     
     // Validate the update data
     if (!updateData.updateReason) {
@@ -181,7 +181,7 @@ export async function handleProfileUpdate(userId: string, updateData: EnhancedMe
     
     // Log conflict resolution if applicable
     if (updateData.conflictDetected) {
-      console.log('⚠️ Conflict resolved:', {
+      if (process.env.NODE_ENV === 'development') { console.log('⚠️ Conflict resolved:', { }
         field: updateData.conflictField,
         oldValue: updateData.conflictOldValue,
         newValue: updateData.conflictNewValue,
@@ -203,7 +203,7 @@ export async function handleProfileUpdate(userId: string, updateData: EnhancedMe
     await updateClientMemory(userId, cleanUpdateData);
     
     // Log successful update
-    console.log('✅ Profile updated successfully for user:', userId);
+    if (process.env.NODE_ENV === 'development') { console.log('✅ Profile updated successfully for user:', userId); }
     
     // Log the update for audit purposes
     await logProfileUpdate(userId, updateData);
@@ -225,8 +225,8 @@ export async function handleConflictDetection(userId: string, conflictData: {
   suggestedResolution?: string;
 }): Promise<boolean> {
   try {
-    console.log('🔍 Conflict detected for user:', userId);
-    console.log('⚠️ Conflict details:', conflictData);
+    if (process.env.NODE_ENV === 'development') { console.log('🔍 Conflict detected for user:', userId); }
+    if (process.env.NODE_ENV === 'development') { console.log('⚠️ Conflict details:', conflictData); }
     
     // Log the conflict for monitoring
     await logConflictDetection(userId, conflictData);

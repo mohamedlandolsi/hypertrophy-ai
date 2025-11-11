@@ -45,9 +45,9 @@ export async function enhancedKnowledgeRetrieval(
   const verboseLogging = options.verboseLogging ?? true;
   
   if (verboseLogging) {
-    console.log('🚀 Starting Enhanced RAG Retrieval v3 (Optimized Pipeline)');
-    console.log(`📝 Original Query: "${userQuery}"`);
-    console.log(`⚙️ Search Options:`, {
+    if (process.env.NODE_ENV === 'development') { console.log('🚀 Starting Enhanced RAG Retrieval v3 (Optimized Pipeline)'); }
+    if (process.env.NODE_ENV === 'development') { console.log(`📝 Original Query: "${userQuery}"`); }
+    if (process.env.NODE_ENV === 'development') { console.log(`⚙️ Search Options:`, { }
       maxChunks: options.maxChunks,
       similarityThreshold: options.similarityThreshold,
       useQueryTransformation: options.useQueryTransformation ?? true,
@@ -61,7 +61,7 @@ export async function enhancedKnowledgeRetrieval(
     // Step 1: Analyze query context and intent
     const queryContext = await analyzeQueryContext(userQuery);
     if (verboseLogging) {
-      console.log('🔍 Query Analysis:', {
+      if (process.env.NODE_ENV === 'development') { console.log('🔍 Query Analysis:', { }
         muscleGroups: queryContext.muscleGroups,
         trainingConcepts: queryContext.trainingConcepts,
         requestType: `${queryContext.isWorkoutRequest ? 'Workout' : ''}${queryContext.isProgramRequest ? 'Program' : ''}${queryContext.isNutritionRequest ? 'Nutrition' : 'General'}`,
@@ -72,7 +72,7 @@ export async function enhancedKnowledgeRetrieval(
     // Step 2: Query transformation and enhancement
     const transformedQueries = await generateOptimizedSearchQueries(userQuery, queryContext, options);
     if (verboseLogging) {
-      console.log(`📚 Generated ${transformedQueries.length} search queries:`, transformedQueries.slice(0, 3));
+      if (process.env.NODE_ENV === 'development') { console.log(`📚 Generated ${transformedQueries.length} search queries:`, transformedQueries.slice(0, 3)); }
     }
     
     // Step 3: Multi-strategy search with dynamic threshold adjustment
@@ -84,7 +84,7 @@ export async function enhancedKnowledgeRetrieval(
       searchAttempts++;
       
       if (verboseLogging) {
-        console.log(`🔄 Search Attempt ${searchAttempts} (threshold: ${currentThreshold.toFixed(3)})`);
+        if (process.env.NODE_ENV === 'development') { console.log(`🔄 Search Attempt ${searchAttempts} (threshold: ${currentThreshold.toFixed(3)})`); }
       }
       
       const attemptCandidates = await executeAdvancedMultiSearch(
@@ -96,14 +96,14 @@ export async function enhancedKnowledgeRetrieval(
       candidates = attemptCandidates;
       
       if (verboseLogging) {
-        console.log(`📊 Attempt ${searchAttempts} Results: ${candidates.length} candidates`);
+        if (process.env.NODE_ENV === 'development') { console.log(`📊 Attempt ${searchAttempts} Results: ${candidates.length} candidates`); }
       }
       
       // Dynamic threshold adjustment if enabled and results are insufficient
       if (options.dynamicThresholdAdjustment && candidates.length < (options.minAcceptableResults ?? 3)) {
         currentThreshold = Math.max(0.05, currentThreshold - 0.05); // Lower threshold by 0.05
         if (verboseLogging) {
-          console.log(`⚡ Lowering similarity threshold to ${currentThreshold.toFixed(3)} for broader search`);
+          if (process.env.NODE_ENV === 'development') { console.log(`⚡ Lowering similarity threshold to ${currentThreshold.toFixed(3)} for broader search`); }
         }
       } else {
         break; // Sufficient results found
@@ -113,7 +113,7 @@ export async function enhancedKnowledgeRetrieval(
     // Step 4: Enhanced filtering with quality metrics
     const filteredResults = await applyAdvancedFiltering(candidates, options, queryContext);
     if (verboseLogging) {
-      console.log(`🎯 Advanced Filtering: ${filteredResults.length} high-quality results`);
+      if (process.env.NODE_ENV === 'development') { console.log(`🎯 Advanced Filtering: ${filteredResults.length} high-quality results`); }
     }
     
     // Step 5: Ensure mandatory content coverage
@@ -495,10 +495,10 @@ async function logAdvancedMetrics(
 ): Promise<void> {
   if (!options.verboseLogging) return;
   
-  console.log('\n📊 ===== ENHANCED RAG PIPELINE DIAGNOSTICS =====');
-  console.log(`🎯 Query: "${originalQuery}"`);
-  console.log(`⏱️  Total Retrieval Time: ${timeMs}ms`);
-  console.log(`📄 Total Results Retrieved: ${results.length}/${options.maxChunks}`);
+  if (process.env.NODE_ENV === 'development') { console.log('\n📊 ===== ENHANCED RAG PIPELINE DIAGNOSTICS ====='); }
+  if (process.env.NODE_ENV === 'development') { console.log(`🎯 Query: "${originalQuery}"`); }
+  if (process.env.NODE_ENV === 'development') { console.log(`⏱️  Total Retrieval Time: ${timeMs}ms`); }
+  if (process.env.NODE_ENV === 'development') { console.log(`📄 Total Results Retrieved: ${results.length}/${options.maxChunks}`); }
   
   // Quality Metrics
   const highRelevanceCount = results.filter(r => r.isHighRelevance).length;
@@ -506,8 +506,8 @@ async function logAdvancedMetrics(
     ? (results.reduce((sum, r) => sum + (r.similarity || 0), 0) / results.length).toFixed(3)
     : '0.000';
   
-  console.log(`✨ High Relevance Results: ${highRelevanceCount}/${results.length} (${((highRelevanceCount/results.length)*100).toFixed(1)}%)`);
-  console.log(`📈 Average Similarity Score: ${averageSimilarity}`);
+  if (process.env.NODE_ENV === 'development') { console.log(`✨ High Relevance Results: ${highRelevanceCount}/${results.length} (${((highRelevanceCount/results.length)*100).toFixed(1)}%)`); }
+  if (process.env.NODE_ENV === 'development') { console.log(`📈 Average Similarity Score: ${averageSimilarity}`); }
   
   // Source Distribution Analysis
   const sourceDistribution = results.reduce((dist, result) => {
@@ -516,18 +516,18 @@ async function logAdvancedMetrics(
     return dist;
   }, {} as Record<string, number>);
   
-  console.log(`📚 Source Distribution:`, sourceDistribution);
+  if (process.env.NODE_ENV === 'development') { console.log(`📚 Source Distribution:`, sourceDistribution); }
   
   // Document Diversity
   const uniqueDocuments = new Set(results.map(r => r.knowledgeId)).size;
-  console.log(`📖 Document Diversity: ${uniqueDocuments} unique documents`);
+  if (process.env.NODE_ENV === 'development') { console.log(`📖 Document Diversity: ${uniqueDocuments} unique documents`); }
   
   // Context Analysis
-  console.log(`🔍 Query Analysis Results:`);
-  console.log(`   - Muscle Groups: ${context.muscleGroups.join(', ') || 'None'}`);
-  console.log(`   - Training Concepts: ${context.trainingConcepts.join(', ') || 'None'}`);
-  console.log(`   - Request Type: ${context.isWorkoutRequest ? 'Workout' : ''}${context.isProgramRequest ? 'Program' : ''}${context.isNutritionRequest ? 'Nutrition' : 'General'}`);
-  console.log(`   - Relevant Categories: ${context.relevantCategories.slice(0, 5).join(', ')}`);
+  if (process.env.NODE_ENV === 'development') { console.log(`🔍 Query Analysis Results:`); }
+  if (process.env.NODE_ENV === 'development') { console.log(`   - Muscle Groups: ${context.muscleGroups.join(', ') || 'None'}`); }
+  if (process.env.NODE_ENV === 'development') { console.log(`   - Training Concepts: ${context.trainingConcepts.join(', ') || 'None'}`); }
+  if (process.env.NODE_ENV === 'development') { console.log(`   - Request Type: ${context.isWorkoutRequest ? 'Workout' : ''}${context.isProgramRequest ? 'Program' : ''}${context.isNutritionRequest ? 'Nutrition' : 'General'}`); }
+  if (process.env.NODE_ENV === 'development') { console.log(`   - Relevant Categories: ${context.relevantCategories.slice(0, 5).join(', ')}`); }
   
   // Quality Assessment
   const qualityThresholds = {
@@ -544,31 +544,31 @@ async function logAdvancedMetrics(
     poor: results.filter(r => (r.similarity || 0) < qualityThresholds.acceptable).length
   };
   
-  console.log(`🎨 Quality Distribution:`, qualityDistribution);
+  if (process.env.NODE_ENV === 'development') { console.log(`🎨 Quality Distribution:`, qualityDistribution); }
   
   // Top Results Preview
-  console.log(`🔝 Top 3 Results:`);
+  if (process.env.NODE_ENV === 'development') { console.log(`🔝 Top 3 Results:`); }
   results.slice(0, 3).forEach((result, i) => {
-    console.log(`   ${i + 1}. "${result.title}" (Score: ${(result.similarity || 0).toFixed(3)}, ${result.isHighRelevance ? 'HIGH' : 'NORMAL'} relevance)`);
-    console.log(`      Preview: ${result.content.substring(0, 120)}...`);
+    if (process.env.NODE_ENV === 'development') { console.log(`   ${i + 1}. "${result.title}" (Score: ${(result.similarity || 0).toFixed(3)}, ${result.isHighRelevance ? 'HIGH' : 'NORMAL'} relevance)`); }
+    if (process.env.NODE_ENV === 'development') { console.log(`      Preview: ${result.content.substring(0, 120)}...`); }
   });
   
   // Performance Warnings
   if (timeMs > 3000) {
-    console.log(`⚠️  PERFORMANCE WARNING: Retrieval took ${timeMs}ms (>3s threshold)`);
+    if (process.env.NODE_ENV === 'development') { console.log(`⚠️  PERFORMANCE WARNING: Retrieval took ${timeMs}ms (>3s threshold)`); }
   }
   
   if (results.length < (options.minAcceptableResults ?? 3)) {
-    console.log(`⚠️  QUALITY WARNING: Only ${results.length} results found (minimum: ${options.minAcceptableResults ?? 3})`);
-    console.log(`   Recommendations: Lower similarity threshold or add more diverse content to knowledge base`);
+    if (process.env.NODE_ENV === 'development') { console.log(`⚠️  QUALITY WARNING: Only ${results.length} results found (minimum: ${options.minAcceptableResults ?? 3})`); }
+    if (process.env.NODE_ENV === 'development') { console.log(`   Recommendations: Lower similarity threshold or add more diverse content to knowledge base`); }
   }
   
   if (parseFloat(averageSimilarity) < 0.3) {
-    console.log(`⚠️  RELEVANCE WARNING: Low average similarity (${averageSimilarity})`);
-    console.log(`   Recommendations: Check query phrasing or consider query transformation techniques`);
+    if (process.env.NODE_ENV === 'development') { console.log(`⚠️  RELEVANCE WARNING: Low average similarity (${averageSimilarity})`); }
+    if (process.env.NODE_ENV === 'development') { console.log(`   Recommendations: Check query phrasing or consider query transformation techniques`); }
   }
   
-  console.log(`========================================\n`);
+  if (process.env.NODE_ENV === 'development') { console.log(`========================================\n`); }
 }
 
 /**
@@ -645,7 +645,7 @@ async function getCategoryIdsByNames(categoryNames: string[]): Promise<string[]>
     const notFound = categoryNames.filter(name => !foundNames.includes(name));
     
     if (notFound.length > 0) {
-      console.log(`Warning: Categories not found: ${notFound.join(', ')}`);
+      if (process.env.NODE_ENV === 'development') { console.log(`Warning: Categories not found: ${notFound.join(', ')}`); }
     }
     
     return foundIds;
@@ -889,7 +889,7 @@ async function performStrictKeywordSearch(
     // Use OR logic for broader matching, but rank by number of matches
     const searchTerms = importantTerms.join(' | ');
     
-    console.log(`🔍 Keyword search terms: "${searchTerms}"`);
+    if (process.env.NODE_ENV === 'development') { console.log(`🔍 Keyword search terms: "${searchTerms}"`); }
     
     const chunks = await prisma.$queryRaw`
       SELECT 
@@ -1033,7 +1033,7 @@ async function ensureMandatoryContent(
     );
     
     if (!hasProgrammingPrinciples) {
-      console.log('🔍 Adding mandatory programming principles...');
+      if (process.env.NODE_ENV === 'development') { console.log('🔍 Adding mandatory programming principles...'); }
       
       try {
         const programmingContent = await prisma.$queryRaw`

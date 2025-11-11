@@ -19,27 +19,27 @@ interface ProcessFileRequest {
 
 // POST - Process uploaded files from Supabase Storage
 export async function POST(request: NextRequest) {
-  console.log('� Upload processing API called');
+  if (process.env.NODE_ENV === 'development') { console.log('� Upload processing API called'); }
   
   try {
-    console.log('🔐 Checking authentication...');
+    if (process.env.NODE_ENV === 'development') { console.log('🔐 Checking authentication...'); }
     const supabase = await createClient();
     const { data: { user }, error: authError } = await supabase.auth.getUser();
 
     if (authError || !user) {
-      console.log('❌ Authentication failed:', authError);
+      if (process.env.NODE_ENV === 'development') { console.log('❌ Authentication failed:', authError); }
       return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
     }
 
-    console.log('✅ User authenticated:', user.id);
+    if (process.env.NODE_ENV === 'development') { console.log('✅ User authenticated:', user.id); }
 
     const body: ProcessFileRequest = await request.json();
     const { filePath, fileName, fileSize, mimeType } = body;
 
-    console.log('📊 Processing file from storage:', fileName);
+    if (process.env.NODE_ENV === 'development') { console.log('📊 Processing file from storage:', fileName); }
 
     if (!filePath || !fileName || !fileSize || !mimeType) {
-      console.log('❌ Missing required fields');
+      if (process.env.NODE_ENV === 'development') { console.log('❌ Missing required fields'); }
       return NextResponse.json(
         { error: 'filePath, fileName, fileSize, and mimeType are required' },
         { status: 400 }
@@ -53,14 +53,14 @@ export async function POST(request: NextRequest) {
     });
 
     // Check subscription limits before processing
-    console.log('🔒 Checking subscription limits...');
+    if (process.env.NODE_ENV === 'development') { console.log('🔒 Checking subscription limits...'); }
     
     const fileSizeInMB = fileSize / (1024 * 1024);
     
     // Check upload limits
     const uploadCheck = await canUserUploadFile(fileSizeInMB);
     if (!uploadCheck.canUpload) {
-      console.log('❌ Upload not allowed:', uploadCheck.reason);
+      if (process.env.NODE_ENV === 'development') { console.log('❌ Upload not allowed:', uploadCheck.reason); }
       return NextResponse.json({ 
         error: uploadCheck.reason,
         upgradeRequired: true,
@@ -72,7 +72,7 @@ export async function POST(request: NextRequest) {
     // Check knowledge item limits
     const knowledgeCheck = await canUserCreateKnowledgeItem();
     if (!knowledgeCheck.canCreate) {
-      console.log('❌ Knowledge item creation not allowed:', knowledgeCheck.reason);
+      if (process.env.NODE_ENV === 'development') { console.log('❌ Knowledge item creation not allowed:', knowledgeCheck.reason); }
       return NextResponse.json({ 
         error: knowledgeCheck.reason,
         upgradeRequired: true,
@@ -80,25 +80,25 @@ export async function POST(request: NextRequest) {
       }, { status: 429 }); // Too Many Requests
     }
 
-    console.log('✅ Subscription limits OK');
+    if (process.env.NODE_ENV === 'development') { console.log('✅ Subscription limits OK'); }
 
     // Validate file size against plan limits (double check)
     const maxSize = getMaxFileSize();
     if (fileSize > maxSize) {
       const reason = `File size ${Math.round(fileSize / 1024 / 1024)}MB exceeds the ${Math.round(maxSize / 1024 / 1024)}MB limit`;
-      console.log(`⚠️ File ${fileName}: ${reason}`);
+      if (process.env.NODE_ENV === 'development') { console.log(`⚠️ File ${fileName}: ${reason}`); }
       return NextResponse.json({ error: reason }, { status: 400 });
     }
 
     // Validate file type
     if (!isFileTypeSupported(mimeType)) {
       const reason = `File type ${mimeType} is not supported`;
-      console.log(`⚠️ File ${fileName}: ${reason}`);
+      if (process.env.NODE_ENV === 'development') { console.log(`⚠️ File ${fileName}: ${reason}`); }
       return NextResponse.json({ error: reason }, { status: 400 });
     }
 
     try {
-      console.log(`📥 Downloading file from storage: ${filePath}`);
+      if (process.env.NODE_ENV === 'development') { console.log(`📥 Downloading file from storage: ${filePath}`); }
       
       // Download file from Supabase Storage
       const { data: fileData, error: downloadError } = await supabase.storage
@@ -115,7 +115,7 @@ export async function POST(request: NextRequest) {
 
       // Convert blob to buffer
       const buffer = Buffer.from(await fileData.arrayBuffer());
-      console.log(`✅ File downloaded successfully, size: ${buffer.length} bytes`);
+      if (process.env.NODE_ENV === 'development') { console.log(`✅ File downloaded successfully, size: ${buffer.length} bytes`); }
 
       // Create knowledge item in database first (with PROCESSING status)
       const knowledgeItem = await prisma.knowledgeItem.create({
@@ -132,7 +132,7 @@ export async function POST(request: NextRequest) {
         }
       });
 
-      console.log(`🔄 Processing file with embeddings: ${fileName}`);
+      if (process.env.NODE_ENV === 'development') { console.log(`🔄 Processing file with embeddings: ${fileName}`); }
 
       // Process file with enhanced processor (includes chunking and embeddings)
       const processingResult: ProcessingResult = await processFileWithEmbeddings(
@@ -161,11 +161,11 @@ export async function POST(request: NextRequest) {
           }
         });
 
-        console.log(`✅ Successfully processed: ${fileName} (${processingResult.chunksCreated} chunks, ${processingResult.embeddingsGenerated} embeddings)`);
+        if (process.env.NODE_ENV === 'development') { console.log(`✅ Successfully processed: ${fileName} (${processingResult.chunksCreated} chunks, ${processingResult.embeddingsGenerated} embeddings)`); }
         
         // Build knowledge graph asynchronously (don't block response)
         if (content && content.trim().length > 100) {
-          console.log('🕸️ Building knowledge graph asynchronously...');
+          if (process.env.NODE_ENV === 'development') { console.log('🕸️ Building knowledge graph asynchronously...'); }
           buildKnowledgeGraph(content, knowledgeItem.id).catch(error => {
             console.error('❌ Knowledge graph building failed:', error);
             // Log error but don't fail the upload
@@ -175,7 +175,7 @@ export async function POST(request: NextRequest) {
         // Increment user's upload count for subscription tracking
         try {
           await incrementUserUploadCount();
-          console.log('📊 User upload count incremented');
+          if (process.env.NODE_ENV === 'development') { console.log('📊 User upload count incremented'); }
         } catch (error) {
           console.warn('⚠️ Failed to increment upload count:', error);
           // Don't fail the entire request for this

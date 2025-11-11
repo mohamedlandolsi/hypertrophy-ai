@@ -36,7 +36,7 @@ export async function fetchEnhancedKnowledgeContext(
   threshold: number
 ): Promise<EnhancedKnowledgeContext[]> {
   try {
-    console.log("🔍 Enhanced vector search using match_document_sections...");
+    if (process.env.NODE_ENV === 'development') { console.log("🔍 Enhanced vector search using match_document_sections..."); }
     
     // Generate embedding for the search query
     const queryEmbedding = await getEmbedding(query);
@@ -68,7 +68,7 @@ export async function fetchEnhancedKnowledgeContext(
       score: result.similarity
     }));
     
-    console.log(`✅ Enhanced vector search returned ${results.length} results`);
+    if (process.env.NODE_ENV === 'development') { console.log(`✅ Enhanced vector search returned ${results.length} results`); }
     return results;
     
   } catch (error) {
@@ -104,7 +104,7 @@ export async function fetchMultiQueryKnowledgeContext(
   threshold: number
 ): Promise<EnhancedKnowledgeContext[]> {
   try {
-    console.log(`🔍 Multi-query search with ${queries.length} queries...`);
+    if (process.env.NODE_ENV === 'development') { console.log(`🔍 Multi-query search with ${queries.length} queries...`); }
     
     const allResults = await Promise.all(
       queries.map(query => 
@@ -130,7 +130,7 @@ export async function fetchMultiQueryKnowledgeContext(
     const maxTotalResults = maxChunksPerQuery * queries.length;
     
     const finalResults = combinedResults.slice(0, maxTotalResults);
-    console.log(`✅ Multi-query search returned ${finalResults.length} unique results`);
+    if (process.env.NODE_ENV === 'development') { console.log(`✅ Multi-query search returned ${finalResults.length} unique results`); }
     
     return finalResults;
     

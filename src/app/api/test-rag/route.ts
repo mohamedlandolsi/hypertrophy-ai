@@ -10,8 +10,8 @@ export async function POST(request: NextRequest) {
       return NextResponse.json({ error: 'Message is required' }, { status: 400 });
     }
 
-    console.log('🧪 RAG Test API: Testing with message:', message);
-    console.log('🧪 RAG Test API: User ID:', userId);
+    if (process.env.NODE_ENV === 'development') { console.log('🧪 RAG Test API: Testing with message:', message); }
+    if (process.env.NODE_ENV === 'development') { console.log('🧪 RAG Test API: User ID:', userId); }
 
     // Test conversation
     const conversation = [
@@ -21,8 +21,8 @@ export async function POST(request: NextRequest) {
     // Test Gemini API with RAG
     const response = await sendToGemini(conversation, userId);
     
-    console.log('🧪 RAG Test API: Response length:', response.length);
-    console.log('🧪 RAG Test API: Response preview:', response.substring(0, 200));
+    if (process.env.NODE_ENV === 'development') { console.log('🧪 RAG Test API: Response length:', response.length); }
+    if (process.env.NODE_ENV === 'development') { console.log('🧪 RAG Test API: Response preview:', response.substring(0, 200)); }
 
     return NextResponse.json({ 
       success: true, 

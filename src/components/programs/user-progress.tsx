@@ -33,7 +33,7 @@ export function UserProgress({
   const [activeProgressTab, setActiveProgressTab] = useState('overview');
 
   // Use props to avoid unused variable warnings
-  console.log('Program:', _program.id, 'User:', _userId, 'Customization:', _userCustomization?.id);
+  if (process.env.NODE_ENV === 'development') { console.log('Program:', _program.id, 'User:', _userId, 'Customization:', _userCustomization?.id); }
 
   // Mock progress data - in real implementation, this would come from the database
   const progressData = {

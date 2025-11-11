@@ -47,7 +47,7 @@ export function calculateSetVolumeDistribution(
   const warnings: string[] = [];
   
   // Log session type for context
-  console.log(`Calculating set volume for ${sessionType} session with ${trainingFrequency} frequency`);
+  if (process.env.NODE_ENV === 'development') { console.log(`Calculating set volume for ${sessionType} session with ${trainingFrequency} frequency`); }
   
   // Group exercises by muscle group
   const muscleGroupExercises: Record<string, string[]> = {};
@@ -183,8 +183,8 @@ export function demonstrateSetVolumeLogic() {
   const distribution = calculateSetVolumeDistribution(upperBodyExercises, '72h', 'upper');
   const formattedTable = formatWorkoutTable(distribution);
   
-  console.log('🏋️ Example Upper Body Workout (72h frequency):');
-  console.log(formattedTable);
+  if (process.env.NODE_ENV === 'development') { console.log('🏋️ Example Upper Body Workout (72h frequency):'); }
+  if (process.env.NODE_ENV === 'development') { console.log(formattedTable); }
   
   return { distribution, formattedTable };
 }

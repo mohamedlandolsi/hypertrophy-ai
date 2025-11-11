@@ -80,7 +80,7 @@ const MenuBar = ({ editor, onImageUpload, uploadingImage }: {
     const { $from } = selection;
     let imageNode = null;
     
-    console.log('Selection update:', {
+    if (process.env.NODE_ENV === 'development') { console.log('Selection update:', { }
       selectionType: selection.constructor.name,
       nodeName: selection instanceof NodeSelection ? selection.node.type.name : 'not NodeSelection',
       $fromNodeName: $from.node()?.type.name,
@@ -90,16 +90,16 @@ const MenuBar = ({ editor, onImageUpload, uploadingImage }: {
     if (selection instanceof NodeSelection && (selection.node.type.name === 'image' || selection.node.type.name === 'imageResize')) {
       imageNode = selection.node;
       setIsImageSelected(true);
-      console.log('✅ Image selected (NodeSelection)', imageNode.attrs);
+      if (process.env.NODE_ENV === 'development') { console.log('✅ Image selected (NodeSelection)', imageNode.attrs); }
     } else {
       // Check if cursor is inside an image
       const node = $from.node();
       if (node && (node.type.name === 'image' || node.type.name === 'imageResize')) {
         imageNode = node;
         setIsImageSelected(true);
-        console.log('✅ Image selected (cursor inside)', imageNode.attrs);
+        if (process.env.NODE_ENV === 'development') { console.log('✅ Image selected (cursor inside)', imageNode.attrs); }
       } else {
-        console.log('❌ No image selected');
+        if (process.env.NODE_ENV === 'development') { console.log('❌ No image selected'); }
         setIsImageSelected(false);
         setImageWidth('');
         setImageHeight('');
@@ -110,7 +110,7 @@ const MenuBar = ({ editor, onImageUpload, uploadingImage }: {
     // Extract dimensions from the image node
     if (imageNode) {
       const attrs = imageNode.attrs;
-      console.log('Reading image attrs:', attrs);
+      if (process.env.NODE_ENV === 'development') { console.log('Reading image attrs:', attrs); }
       
       // Try multiple sources for width
       let width = null;
@@ -153,7 +153,7 @@ const MenuBar = ({ editor, onImageUpload, uploadingImage }: {
       setImageWidth(width ? width.toString() : '');
       setImageHeight(height ? height.toString() : '');
       
-      console.log('Set dimensions:', { width, height });
+      if (process.env.NODE_ENV === 'development') { console.log('Set dimensions:', { width, height }); }
     }
   }, [editor, editor?.state.selection, forceUpdate]);
 
@@ -161,17 +161,17 @@ const MenuBar = ({ editor, onImageUpload, uploadingImage }: {
   const applyDimensions = () => {
     if (!editor || !isImageSelected) return;
     
-    console.log('Applying dimensions:', { imageWidth, imageHeight, maintainAspectRatio });
+    if (process.env.NODE_ENV === 'development') { console.log('Applying dimensions:', { imageWidth, imageHeight, maintainAspectRatio }); }
     
     // Get current selection
     const { selection } = editor.state;
     if (!(selection instanceof NodeSelection)) {
-      console.log('Not a NodeSelection, cannot update');
+      if (process.env.NODE_ENV === 'development') { console.log('Not a NodeSelection, cannot update'); }
       return;
     }
     
     const node = selection.node;
-    console.log('Current node attrs:', node.attrs);
+    if (process.env.NODE_ENV === 'development') { console.log('Current node attrs:', node.attrs); }
     
     // Build new attributes
     const width = imageWidth ? parseInt(imageWidth) : null;
@@ -203,11 +203,11 @@ const MenuBar = ({ editor, onImageUpload, uploadingImage }: {
       attrs.containerStyle = `position: relative; width: ${width}px; margin: 0px auto;`;
     }
     
-    console.log('Updating to attrs:', attrs);
+    if (process.env.NODE_ENV === 'development') { console.log('Updating to attrs:', attrs); }
     
     // Update the node
     const result = editor.commands.updateAttributes('imageResize', attrs);
-    console.log('Update result:', result);
+    if (process.env.NODE_ENV === 'development') { console.log('Update result:', result); }
     
     // Force editor update
     editor.commands.focus();

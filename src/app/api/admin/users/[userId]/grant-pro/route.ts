@@ -136,7 +136,7 @@ export async function POST(
     });
 
     // Log the admin action for audit purposes
-    console.log(`Admin ${user.id} granted PRO plan to user ${userId} for ${duration} ${durationType}. Reason: ${reason || 'Not specified'}`);
+    if (process.env.NODE_ENV === 'development') { console.log(`Admin ${user.id} granted PRO plan to user ${userId} for ${duration} ${durationType}. Reason: ${reason || 'Not specified'}`); }
 
     return NextResponse.json({
       success: true,

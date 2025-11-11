@@ -8,19 +8,19 @@ interface UploadStartRequest {
 }
 
 export async function POST(request: NextRequest) {
-  console.log('🚀 Upload start API called');
+  if (process.env.NODE_ENV === 'development') { console.log('🚀 Upload start API called'); }
   
   try {
-    console.log('🔐 Checking authentication...');
+    if (process.env.NODE_ENV === 'development') { console.log('🔐 Checking authentication...'); }
     const supabase = await createClient();
     const { data: { user }, error: authError } = await supabase.auth.getUser();
 
     if (authError || !user) {
-      console.log('❌ Authentication failed:', authError);
+      if (process.env.NODE_ENV === 'development') { console.log('❌ Authentication failed:', authError); }
       return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
     }
 
-    console.log('✅ User authenticated:', user.id);
+    if (process.env.NODE_ENV === 'development') { console.log('✅ User authenticated:', user.id); }
 
     const body: UploadStartRequest = await request.json();
     const { fileName, fileSize, mimeType } = body;
@@ -64,7 +64,7 @@ export async function POST(request: NextRequest) {
     const sanitizedFileName = fileName.replace(/[^a-zA-Z0-9.-]/g, '_');
     const filePath = `knowledge/${user.id}/${timestamp}_${sanitizedFileName}`;
 
-    console.log('📝 Generating signed upload URL for:', filePath);
+    if (process.env.NODE_ENV === 'development') { console.log('📝 Generating signed upload URL for:', filePath); }
 
     // Create signed upload URL (valid for 1 hour)
     const { data: signedData, error: signError } = await supabase.storage
@@ -81,7 +81,7 @@ export async function POST(request: NextRequest) {
       );
     }
 
-    console.log('✅ Signed upload URL generated successfully');
+    if (process.env.NODE_ENV === 'development') { console.log('✅ Signed upload URL generated successfully'); }
 
     return NextResponse.json({
       uploadUrl: signedData.signedUrl,

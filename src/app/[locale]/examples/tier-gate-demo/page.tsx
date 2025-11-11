@@ -381,7 +381,7 @@ function TierGateHookCard() {
 
   const { canAccess, isLoading, reason, upgradePath } = useTierGate('advanced_analytics', {
     onAccessDenied: () => {
-      console.log('Access denied to advanced analytics');
+      if (process.env.NODE_ENV === 'development') { console.log('Access denied to advanced analytics'); }
       setAttempts((prev) => prev + 1);
     },
   });

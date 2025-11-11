@@ -26,7 +26,7 @@ export function WorkoutTemplates({
       locale={locale}
       onCustomizationSaved={() => {
         // Callback when customization is saved
-        console.log('Customization saved from Workouts tab');
+        if (process.env.NODE_ENV === 'development') { console.log('Customization saved from Workouts tab'); }
       }}
     />
   );

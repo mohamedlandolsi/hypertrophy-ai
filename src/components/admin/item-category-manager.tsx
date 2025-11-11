@@ -52,33 +52,35 @@ export default function ItemCategoryManager({ item, onUpdate }: ItemCategoryMana
   const fetchCategories = useCallback(async () => {
     try {
       setLoading(true);
-      console.log('🔍 Fetching categories...');
-      console.log('📋 Current item data:', {
-        itemId: item.id,
-        itemTitle: item.title,
-        itemKnowledgeItemCategory: item.KnowledgeItemCategory,
-        itemKnowledgeItemCategoryLength: item.KnowledgeItemCategory?.length
-      });
+      if (process.env.NODE_ENV === 'development') { console.log('🔍 Fetching categories...'); }
+      if (process.env.NODE_ENV === 'development') {
+        console.log('📋 Current item data:', {
+          itemId: item.id,
+          itemTitle: item.title,
+          itemKnowledgeItemCategory: item.KnowledgeItemCategory,
+          itemKnowledgeItemCategoryLength: item.KnowledgeItemCategory?.length
+        });
+      }
       
       const response = await fetch('/api/admin/knowledge-categories');
-      console.log('📡 Categories API response status:', response.status);
+      if (process.env.NODE_ENV === 'development') { console.log('📡 Categories API response status:', response.status); }
       
       if (!response.ok) {
         throw new Error(`Failed to fetch categories: ${response.status}`);
       }
       
       const data = await response.json();
-      console.log('📊 Categories data:', data);
-      console.log('📊 Raw categories from API:', data.categories?.map((c: { id: string; name: string }) => ({ id: c.id, name: c.name, idLength: c.id?.length })));
+      if (process.env.NODE_ENV === 'development') { console.log('📊 Categories data:', data); }
+      if (process.env.NODE_ENV === 'development') { console.log('📊 Raw categories from API:', data.categories?.map((c: { id: string; name: string }) => ({ id: c.id, name: c.name, idLength: c.id?.length }))); }
       setCategories(data.categories || []);
       
       // Set currently selected categories
       const currentCategoryIds = item.KnowledgeItemCategory?.map(kic => {
-        console.log('🔍 Processing KnowledgeItemCategory:', kic);
+        if (process.env.NODE_ENV === 'development') { console.log('🔍 Processing KnowledgeItemCategory:', kic); }
         return kic.KnowledgeCategory.id;
       }) || [];
-      console.log('🏷️ Current category IDs:', currentCategoryIds);
-      console.log('🏷️ Current category IDs details:', currentCategoryIds.map(id => ({ id, length: id?.length, type: typeof id })));
+      if (process.env.NODE_ENV === 'development') { console.log('🏷️ Current category IDs:', currentCategoryIds); }
+      if (process.env.NODE_ENV === 'development') { console.log('🏷️ Current category IDs details:', currentCategoryIds.map(id => ({ id, length: id?.length, type: typeof id }))); }
       setSelectedCategoryIds(currentCategoryIds);
       
       // Initialize optimistic categories with deduplication
@@ -92,7 +94,7 @@ export default function ItemCategoryManager({ item, onUpdate }: ItemCategoryMana
       showToast.error('Failed to load categories');
     } finally {
       setLoading(false);
-      console.log('🏁 Finished fetching categories');
+      if (process.env.NODE_ENV === 'development') { console.log('🏁 Finished fetching categories'); }
     }
   }, [item.id, item.title, item.KnowledgeItemCategory]);
 
@@ -109,29 +111,33 @@ export default function ItemCategoryManager({ item, onUpdate }: ItemCategoryMana
       // Filter out any invalid IDs (empty strings, null, undefined) and deduplicate
       const validCategoryIds = [...new Set(selectedCategoryIds.filter(id => id && typeof id === 'string' && id.trim() !== ''))];
       
-      console.log('🔍 Pre-save category validation:', {
-        knowledgeItemId: item.id,
-        originalSelectedIds: selectedCategoryIds,
-        originalCount: selectedCategoryIds.length,
-        validIds: validCategoryIds,
-        validCount: validCategoryIds.length,
-        duplicatesRemoved: selectedCategoryIds.length - validCategoryIds.length,
-        filteredOut: selectedCategoryIds.filter(id => !id || typeof id !== 'string' || id.trim() === ''),
-        allAvailableCategories: categories.map(c => ({ id: c.id, name: c.name })),
-        validationCheck: validCategoryIds.map(id => ({
-          id,
-          existsInAvailable: categories.some(c => c.id === id),
-          type: typeof id,
-          length: id?.length
-        }))
-      });
+      if (process.env.NODE_ENV === 'development') {
+        console.log('🔍 Pre-save category validation:', {
+          knowledgeItemId: item.id,
+          originalSelectedIds: selectedCategoryIds,
+          originalCount: selectedCategoryIds.length,
+          validIds: validCategoryIds,
+          validCount: validCategoryIds.length,
+          duplicatesRemoved: selectedCategoryIds.length - validCategoryIds.length,
+          filteredOut: selectedCategoryIds.filter(id => !id || typeof id !== 'string' || id.trim() === ''),
+          allAvailableCategories: categories.map(c => ({ id: c.id, name: c.name })),
+          validationCheck: validCategoryIds.map(id => ({
+            id,
+            existsInAvailable: categories.some(c => c.id === id),
+            type: typeof id,
+            length: id?.length
+          }))
+        });
+      }
 
-      console.log('🔍 Saving categories:', {
-        knowledgeItemId: item.id,
-        originalIds: selectedCategoryIds,
-        validIds: validCategoryIds,
-        categoryCount: validCategoryIds.length
-      });
+      if (process.env.NODE_ENV === 'development') {
+        console.log('🔍 Saving categories:', {
+          knowledgeItemId: item.id,
+          originalIds: selectedCategoryIds,
+          validIds: validCategoryIds,
+          categoryCount: validCategoryIds.length
+        });
+      }
 
       const response = await fetch('/api/admin/knowledge-item-categories', {
         method: 'POST',
@@ -142,23 +148,23 @@ export default function ItemCategoryManager({ item, onUpdate }: ItemCategoryMana
         })
       });
 
-      console.log('📡 API response status:', response.status, response.statusText);
+      if (process.env.NODE_ENV === 'development') { console.log('📡 API response status:', response.status, response.statusText); }
 
       let result;
       let responseText;
       try {
         responseText = await response.text();
-        console.log('📄 Raw response text (length:', responseText?.length || 0, '):', responseText);
+        if (process.env.NODE_ENV === 'development') { console.log('📄 Raw response text (length:', responseText?.length || 0, '):', responseText); }
         
         if (!responseText || responseText.trim() === '') {
           throw new Error('Empty response from server');
         }
         
         result = JSON.parse(responseText);
-        console.log('📄 Parsed response:', result);
+        if (process.env.NODE_ENV === 'development') { console.log('📄 Parsed response:', result); }
       } catch (jsonError) {
         console.error('❌ Failed to parse JSON response:', jsonError);
-        console.log('📄 Response text preview:', responseText?.substring(0, 200) || 'N/A');
+        if (process.env.NODE_ENV === 'development') { console.log('📄 Response text preview:', responseText?.substring(0, 200) || 'N/A'); }
         throw new Error(`Invalid API response (status: ${response.status}): ${jsonError instanceof Error ? jsonError.message : 'Parse error'}`);
       }
 
@@ -201,26 +207,28 @@ export default function ItemCategoryManager({ item, onUpdate }: ItemCategoryMana
   };
 
   const handleCategoryToggle = (categoryId: string, checked: boolean) => {
-    console.log('🔄 Category toggle:', { 
-      categoryId, 
-      categoryIdLength: categoryId?.length,
-      categoryIdType: typeof categoryId,
-      checked, 
-      currentSelected: selectedCategoryIds,
-      allCategories: categories.map(c => ({ id: c.id, name: c.name, idLength: c.id?.length }))
-    });
+    if (process.env.NODE_ENV === 'development') {
+      console.log('🔄 Category toggle:', {
+        categoryId, 
+        categoryIdLength: categoryId?.length,
+        categoryIdType: typeof categoryId,
+        checked, 
+        currentSelected: selectedCategoryIds,
+        allCategories: categories.map(c => ({ id: c.id, name: c.name, idLength: c.id?.length }))
+      });
+    }
     
     if (checked) {
       setSelectedCategoryIds(prev => {
         const newIds = [...prev, categoryId];
-        console.log('➕ Adding category, new IDs:', newIds);
-        console.log('➕ New IDs details:', newIds.map(id => ({ id, length: id?.length, type: typeof id })));
+        if (process.env.NODE_ENV === 'development') { console.log('➕ Adding category, new IDs:', newIds); }
+        if (process.env.NODE_ENV === 'development') { console.log('➕ New IDs details:', newIds.map(id => ({ id, length: id?.length, type: typeof id }))); }
         return newIds;
       });
     } else {
       setSelectedCategoryIds(prev => {
         const newIds = prev.filter(id => id !== categoryId);
-        console.log('➖ Removing category, new IDs:', newIds);
+        if (process.env.NODE_ENV === 'development') { console.log('➖ Removing category, new IDs:', newIds); }
         return newIds;
       });
     }

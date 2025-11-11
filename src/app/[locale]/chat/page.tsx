@@ -361,9 +361,9 @@ const ChatPage = () => {
       // Use local variable instead of stale state
       let tempConversationId = conversationId;
 
-      console.log("▶️ Sending message:", messageText);
-      console.log("📨 Conversation ID:", tempConversationId);
-      console.log("� Images count:", images?.length || 0);
+      if (process.env.NODE_ENV === 'development') { console.log("▶️ Sending message:", messageText); }
+      if (process.env.NODE_ENV === 'development') { console.log("📨 Conversation ID:", tempConversationId); }
+      if (process.env.NODE_ENV === 'development') { console.log("� Images count:", images?.length || 0); }
 
       let body: FormData | string;
       let contentType: string | undefined;
@@ -382,7 +382,7 @@ const ChatPage = () => {
         formData.append('imageCount', images.length.toString());
         
         body = formData;
-        console.log("📤 Request Body (FormData):", {
+        if (process.env.NODE_ENV === 'development') { console.log("📤 Request Body (FormData):", { }
           message: messageText,
           conversationId: tempConversationId || '',
           isGuest: !user,
@@ -397,7 +397,7 @@ const ChatPage = () => {
           selectedModel,
         });
         contentType = 'application/json';
-        console.log("📤 Request Body (JSON):", {
+        if (process.env.NODE_ENV === 'development') { console.log("📤 Request Body (JSON):", { }
           message: messageText,
           conversationId: tempConversationId || '',
           isGuest: !user,
@@ -533,7 +533,7 @@ const ChatPage = () => {
       if (typeof window !== 'undefined') {
         localStorage.setItem('selectedModel', 'flash');
       }
-      console.log('🔄 Automatically switched to Flash model (user does not have PRO plan)');
+      if (process.env.NODE_ENV === 'development') { console.log('🔄 Automatically switched to Flash model (user does not have PRO plan)'); }
     }
   }, [userPlan, user, selectedModel, setSelectedModel]);
 
@@ -1146,7 +1146,7 @@ const ChatPage = () => {
     const flag = process.env.NEXT_PUBLIC_CHAT_COMING_SOON === 'true';
     // Debug log (only once)
     if (typeof window !== 'undefined') {
-      console.log('[ChatPage] NEXT_PUBLIC_CHAT_COMING_SOON =', process.env.NEXT_PUBLIC_CHAT_COMING_SOON, '->', flag);
+      if (process.env.NODE_ENV === 'development') { console.log('[ChatPage] NEXT_PUBLIC_CHAT_COMING_SOON =', process.env.NEXT_PUBLIC_CHAT_COMING_SOON, '->', flag); }
     }
     setChatComingSoon(flag);
   }, [setChatComingSoon]);
@@ -1615,7 +1615,7 @@ const ChatPage = () => {
                 <DropdownMenuSeparator />
                 <DropdownMenuItem onClick={async () => { 
                   try {
-                    console.log('Logout action triggered');
+                    // Removed debug console.log
                     
                     const supabase = createClient();
                     

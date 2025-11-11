@@ -93,13 +93,13 @@ function getGeminiModelName(selectedModel: string, config: Record<string, unknow
   
   // If selectedModel is provided and valid, use it
   if (selectedModel && modelMap[selectedModel]) {
-    console.log(`🎯 Using selected model: ${selectedModel} → ${modelMap[selectedModel]}`);
+    if (process.env.NODE_ENV === 'development') { console.log(`🎯 Using selected model: ${selectedModel} → ${modelMap[selectedModel]}`); }
     return modelMap[selectedModel];
   }
   
   // Fall back to config or default
   const fallbackModel = (config.proModelName as string) || 'gemini-2.5-pro';
-  console.log(`🔄 Using fallback model: ${fallbackModel}`);
+  if (process.env.NODE_ENV === 'development') { console.log(`🔄 Using fallback model: ${fallbackModel}`); }
   return fallbackModel;
 }
 
@@ -179,7 +179,7 @@ async function executeToolCall(toolCall: { name: string; args: Record<string, un
       data: updateData
     });
 
-    console.log(`✅ Profile updated: ${field} = ${value} (${action})`);
+    if (process.env.NODE_ENV === 'development') { console.log(`✅ Profile updated: ${field} = ${value} (${action})`); }
     return `Successfully updated ${field} to "${value}" in your profile.`;
 
   } catch (error) {
@@ -237,10 +237,10 @@ async function fetchMuscleSpecificKnowledge(
     const threshold = Math.max(3, Math.floor(maxChunks * 0.5)); // At least 3 or 50% of maxChunks
     
     if (highRelevanceCount >= threshold) {
-      console.log(`✅ Found ${highRelevanceCount} muscle-specific chunks for: ${muscleGroups.join(', ')}`);
+      if (process.env.NODE_ENV === 'development') { console.log(`✅ Found ${highRelevanceCount} muscle-specific chunks for: ${muscleGroups.join(', ')}`); }
       return muscleChunks;
     } else {
-      console.log(`⚠️ Insufficient muscle-specific chunks (${highRelevanceCount}/${threshold}), falling back to standard search`);
+      if (process.env.NODE_ENV === 'development') { console.log(`⚠️ Insufficient muscle-specific chunks (${highRelevanceCount}/${threshold}), falling back to standard search`); }
       return [];
     }
   } catch (error) {
@@ -279,7 +279,7 @@ export async function POST(request: NextRequest) {
   let user: { id: string } | null = null;
   
   try {
-    console.log("🛬 Chat API hit - New RAG Pipeline");
+    if (process.env.NODE_ENV === 'development') { console.log("🛬 Chat API hit - New RAG Pipeline"); }
     logger.info('Chat API request received', context);
     
     // 1. Authentication Check
@@ -319,7 +319,7 @@ export async function POST(request: NextRequest) {
       for (let i = 0; i < 5; i++) {
         const imageFile = formData.get(`image_${i}`) as File | null;
         if (imageFile) {
-          console.log(`📷 Processing image ${i + 1}: ${imageFile.name} (${imageFile.type})`);
+          if (process.env.NODE_ENV === 'development') { console.log(`📷 Processing image ${i + 1}: ${imageFile.name} (${imageFile.type})`); }
           
           // Enhanced security validation
           const maxFileSize = 20 * 1024 * 1024; // 20MB limit
@@ -350,7 +350,7 @@ export async function POST(request: NextRequest) {
           imageBuffers.push(buffer);
           imageMimeTypes.push(imageFile.type);
           
-          console.log(`✅ Image ${i + 1} validated and processed successfully`);
+          if (process.env.NODE_ENV === 'development') { console.log(`✅ Image ${i + 1} validated and processed successfully`); }
         }
       }
     } else {
@@ -360,10 +360,10 @@ export async function POST(request: NextRequest) {
     const { conversationId: rawConversationId, message, selectedModel } = body;
     const conversationId = typeof rawConversationId === 'string' && rawConversationId.trim() !== '' ? rawConversationId : undefined;
 
-    console.log("🧠 conversationId:", conversationId);
-    console.log("👤 userId:", user?.id);
-    console.log("📝 message length:", typeof message === 'string' ? message.length : 0);
-    console.log("🤖 selectedModel:", selectedModel);
+    if (process.env.NODE_ENV === 'development') { console.log("🧠 conversationId:", conversationId); }
+    if (process.env.NODE_ENV === 'development') { console.log("👤 userId:", user?.id); }
+    if (process.env.NODE_ENV === 'development') { console.log("📝 message length:", typeof message === 'string' ? message.length : 0); }
+    if (process.env.NODE_ENV === 'development') { console.log("🤖 selectedModel:", selectedModel); }
 
     // 3. Validate Input
     const trimmedMessage = typeof message === 'string' ? message.trim() : '';
@@ -385,7 +385,7 @@ export async function POST(request: NextRequest) {
     }
 
     // 5. Fetch Configuration and Complete User Data
-    console.log("📋 Step 1: Fetching AI Configuration and Complete User Data...");
+    if (process.env.NODE_ENV === 'development') { console.log("📋 Step 1: Fetching AI Configuration and Complete User Data..."); }
     const [config, userProfile, userContext] = await Promise.all([
       prisma.aIConfiguration.findFirst(),
       prisma.user.findUnique({
@@ -399,11 +399,11 @@ export async function POST(request: NextRequest) {
       throw new Error('AI Configuration not found. Please configure the AI system in admin settings.');
     }
 
-    console.log(`✅ Configuration loaded - Knowledge Base: ${config.useKnowledgeBase}, Strict Muscle Priority: ${config.strictMusclePriority}`);
-    console.log(`✅ User context loaded - Profile fields: ${Object.keys(userContext.profile).length}, Memories: ${userContext.memories.length}`);
+    if (process.env.NODE_ENV === 'development') { console.log(`✅ Configuration loaded - Knowledge Base: ${config.useKnowledgeBase}, Strict Muscle Priority: ${config.strictMusclePriority}`); }
+    if (process.env.NODE_ENV === 'development') { console.log(`✅ User context loaded - Profile fields: ${Object.keys(userContext.profile).length}, Memories: ${userContext.memories.length}`); }
 
     // 6. Generate Enhanced System Prompt (will be enhanced after knowledge retrieval)
-    console.log("🎯 Step 2: Preparing Enhanced System Prompt with User Context...");
+    if (process.env.NODE_ENV === 'development') { console.log("🎯 Step 2: Preparing Enhanced System Prompt with User Context..."); }
     const profileObject = userProfile?.clientMemory || {};
     
     // Add conversation memories to profile context
@@ -417,7 +417,7 @@ export async function POST(request: NextRequest) {
     const isWorkoutProgramRequest = detectWorkoutProgramIntent(trimmedMessage);
     
     if (isWorkoutProgramRequest && config.useKnowledgeBase) {
-      console.log("🏋️ Detected workout program request - using specialized multi-query RAG...");
+      if (process.env.NODE_ENV === 'development') { console.log("🏋️ Detected workout program request - using specialized multi-query RAG..."); }
       
       try {
         // Get full conversation history for context (not limited)
@@ -481,7 +481,7 @@ export async function POST(request: NextRequest) {
           })
         ]);
 
-        console.log("✅ Workout program generated and saved successfully");
+        if (process.env.NODE_ENV === 'development') { console.log("✅ Workout program generated and saved successfully"); }
 
         return NextResponse.json({
           conversationId: chatId,
@@ -493,7 +493,7 @@ export async function POST(request: NextRequest) {
       } catch (error) {
         console.error("❌ Workout program generation failed:", error);
         // Fall back to standard RAG if program generation fails
-        console.log("⚠️ Falling back to standard RAG pipeline...");
+        if (process.env.NODE_ENV === 'development') { console.log("⚠️ Falling back to standard RAG pipeline..."); }
       }
     }
 
@@ -501,16 +501,16 @@ export async function POST(request: NextRequest) {
     let knowledgeContext = '';
     
     if (config.useKnowledgeBase) {
-      console.log("📚 Step 3: Executing Standard RAG Pipeline...");
+      if (process.env.NODE_ENV === 'development') { console.log("📚 Step 3: Executing Standard RAG Pipeline..."); }
       let knowledgeChunks: KnowledgeChunk[] = [];
 
       // 9. Implement Strict Muscle Priority Logic
       if (config.strictMusclePriority) {
-        console.log("💪 Step 4: Checking Strict Muscle Priority...");
+        if (process.env.NODE_ENV === 'development') { console.log("💪 Step 4: Checking Strict Muscle Priority..."); }
         const detectedMuscles = detectMuscleGroups(trimmedMessage);
         
         if (detectedMuscles.length > 0) {
-          console.log(`🎯 Detected muscle groups: ${detectedMuscles.join(', ')}`);
+          if (process.env.NODE_ENV === 'development') { console.log(`🎯 Detected muscle groups: ${detectedMuscles.join(', ')}`); }
           knowledgeChunks = await fetchMuscleSpecificKnowledge(
             trimmedMessage,
             detectedMuscles,
@@ -523,31 +523,31 @@ export async function POST(request: NextRequest) {
 
       // 9. Perform Vector Search using SQL function (if needed)
       if (knowledgeChunks.length === 0) {
-        console.log("🔍 Step 5: Performing Vector Search using match_document_sections...");
+        if (process.env.NODE_ENV === 'development') { console.log("🔍 Step 5: Performing Vector Search using match_document_sections..."); }
         
         // Rewrite query for enhanced search results
-        console.log("✍️ Rewriting query for better search results...");
+        if (process.env.NODE_ENV === 'development') { console.log("✍️ Rewriting query for better search results..."); }
         const queryRewriteResult = await rewriteFitnessQuery(trimmedMessage);
         
         let searchQuery = trimmedMessage;
         if (queryRewriteResult.success && queryRewriteResult.rewrittenQuery) {
           searchQuery = queryRewriteResult.rewrittenQuery;
-          console.log(`🔄 Query rewritten: "${trimmedMessage}" → "${searchQuery}"`);
+          if (process.env.NODE_ENV === 'development') { console.log(`🔄 Query rewritten: "${trimmedMessage}" → "${searchQuery}"`); }
           if (queryRewriteResult.additionalKeywords.length > 0) {
-            console.log(`🏷️ Additional keywords: ${queryRewriteResult.additionalKeywords.join(', ')}`);
+            if (process.env.NODE_ENV === 'development') { console.log(`🏷️ Additional keywords: ${queryRewriteResult.additionalKeywords.join(', ')}`); }
           }
         } else {
-          console.log(`⚠️ Query rewrite failed, using original: ${queryRewriteResult.error || 'Unknown error'}`);
+          if (process.env.NODE_ENV === 'development') { console.log(`⚠️ Query rewrite failed, using original: ${queryRewriteResult.error || 'Unknown error'}`); }
         }
         
         try {
           // Generate embedding for the search query
-          console.log("🧠 Generating embedding for search query...");
+          if (process.env.NODE_ENV === 'development') { console.log("🧠 Generating embedding for search query..."); }
           const queryEmbedding = await getEmbedding(searchQuery);
           const embeddingString = JSON.stringify(queryEmbedding);
           
           // Call the SQL function using Supabase RPC
-          console.log("🔍 Calling match_document_sections SQL function...");
+          if (process.env.NODE_ENV === 'development') { console.log("🔍 Calling match_document_sections SQL function..."); }
           const supabase = await createClient();
           const { data: searchResults, error: rpcError } = await supabase.rpc('match_document_sections', {
             query_embedding: embeddingString,
@@ -572,27 +572,27 @@ export async function POST(request: NextRequest) {
             knowledgeItem: { title: result.title }
           }));
           
-          console.log(`🎯 SQL vector search returned ${knowledgeChunks.length} results`);
+          if (process.env.NODE_ENV === 'development') { console.log(`🎯 SQL vector search returned ${knowledgeChunks.length} results`); }
           
         } catch (error) {
           console.error("❌ Error in SQL vector search:", error);
           // Fallback to empty results rather than crashing
           knowledgeChunks = [];
-          console.log("⚠️ Continuing with empty knowledge context due to search error");
+          if (process.env.NODE_ENV === 'development') { console.log("⚠️ Continuing with empty knowledge context due to search error"); }
         }
       }
 
       // Format knowledge context
       knowledgeContext = formatKnowledgeContext(knowledgeChunks);
-      console.log(`✅ Knowledge retrieval complete: ${knowledgeChunks.length} chunks found`);
+      if (process.env.NODE_ENV === 'development') { console.log(`✅ Knowledge retrieval complete: ${knowledgeChunks.length} chunks found`); }
     } else {
-      console.log("⏭️ Step 3-5: Skipping RAG (Knowledge Base disabled)");
+      if (process.env.NODE_ENV === 'development') { console.log("⏭️ Step 3-5: Skipping RAG (Knowledge Base disabled)"); }
     }
 
     // 9.5. Generate Enhanced Context-QA System Prompt with Full User Context
-    console.log("🎯 Step 6: Generating Enhanced Context-QA System Prompt with User Context...");
+    if (process.env.NODE_ENV === 'development') { console.log("🎯 Step 6: Generating Enhanced Context-QA System Prompt with User Context..."); }
     const systemPrompt: string = await getContextQASystemPrompt(enhancedProfileObject);
-    console.log(`✅ Enhanced context-QA system prompt generated (${systemPrompt.length} characters)`);
+    if (process.env.NODE_ENV === 'development') { console.log(`✅ Enhanced context-QA system prompt generated (${systemPrompt.length} characters)`); }
     
     // Add conversation memories to the prompt if available
     let memoryContext = '';
@@ -637,7 +637,7 @@ export async function POST(request: NextRequest) {
     }
 
     // 11. Assemble Enhanced Context-QA Structured Prompt for Gemini
-    console.log("🔨 Step 7: Assembling Enhanced Context-QA Structured Prompt...");
+    if (process.env.NODE_ENV === 'development') { console.log("🔨 Step 7: Assembling Enhanced Context-QA Structured Prompt..."); }
     
     const conversationHistory = formatConversationHistory(existingMessages);
     
@@ -664,7 +664,7 @@ ${conversationHistory}
 ${trimmedMessage}
 [/QUESTION]`;
 
-    console.log(`✅ Enhanced Context-QA structured prompt assembled (${fullPrompt.length} characters)`);
+    if (process.env.NODE_ENV === 'development') { console.log(`✅ Enhanced Context-QA structured prompt assembled (${fullPrompt.length} characters)`); }
 
     // 12. Save User Message with Enhanced Image Support
     const userMessage = await prisma.message.create({
@@ -686,7 +686,7 @@ ${trimmedMessage}
     });
 
     // 13. Call Gemini API with Tool Calling and Image Support
-    console.log("🤖 Step 7: Calling Gemini API with Profile Management Tools...");
+    if (process.env.NODE_ENV === 'development') { console.log("🤖 Step 7: Calling Gemini API with Profile Management Tools..."); }
     
     const modelName = getGeminiModelName(typeof selectedModel === 'string' ? selectedModel : '', config);
     const model = genAI.getGenerativeModel({ 
@@ -710,7 +710,7 @@ ${trimmedMessage}
     let messageContent: (string | { text: string } | { inlineData: { data: string; mimeType: string } })[];
     
     if (imageBuffers.length > 0) {
-      console.log(`📷 Processing ${imageBuffers.length} image(s) for AI analysis`);
+      if (process.env.NODE_ENV === 'development') { console.log(`📷 Processing ${imageBuffers.length} image(s) for AI analysis`); }
       
       // Security validation for images
       const maxImageSize = 20 * 1024 * 1024; // 20MB per image
@@ -743,7 +743,7 @@ ${trimmedMessage}
           }
         });
         
-        console.log(`✅ Added image ${i + 1} (${mimeType}, ${(buffer.length / 1024).toFixed(1)}KB)`);
+        if (process.env.NODE_ENV === 'development') { console.log(`✅ Added image ${i + 1} (${mimeType}, ${(buffer.length / 1024).toFixed(1)}KB)`); }
       }
     } else {
       // Text-only message
@@ -761,12 +761,12 @@ ${trimmedMessage}
     // let finalAssistantMessage: Record<string, unknown>;
 
     if (functionCalls && functionCalls.length > 0) {
-      console.log("🔧 Tool calls detected, executing profile updates...");
+      if (process.env.NODE_ENV === 'development') { console.log("🔧 Tool calls detected, executing profile updates..."); }
       
       // Execute all tool calls
       const toolResponses = [];
       for (const functionCall of functionCalls) {
-        console.log(`📝 Executing tool: ${functionCall.name}`);
+        if (process.env.NODE_ENV === 'development') { console.log(`📝 Executing tool: ${functionCall.name}`); }
         const toolResult = await executeToolCall({
           name: functionCall.name,
           args: functionCall.args as Record<string, unknown>
@@ -780,24 +780,24 @@ ${trimmedMessage}
       }
 
       // Make second API call with tool responses
-      console.log("🔄 Making second API call with tool responses...");
+      if (process.env.NODE_ENV === 'development') { console.log("🔄 Making second API call with tool responses..."); }
       const secondResult = await chat.sendMessage(toolResponses);
       const secondResponse = await secondResult.response;
       aiContent = secondResponse.text();
 
-      console.log(`✅ Final AI response received after tool execution (${aiContent.length} characters)`);
+      if (process.env.NODE_ENV === 'development') { console.log(`✅ Final AI response received after tool execution (${aiContent.length} characters)`); }
 
     } else {
       // No tool calls, process as normal
       aiContent = response.text();
-      console.log(`✅ AI response received (${aiContent.length} characters)`);
+      if (process.env.NODE_ENV === 'development') { console.log(`✅ AI response received (${aiContent.length} characters)`); }
     }
 
     if (!aiContent || aiContent.trim().length === 0) {
       throw new Error("AI generated an empty response. Please try again.");
     }
 
-    console.log(`✅ AI response received (${aiContent.length} characters)`);
+    if (process.env.NODE_ENV === 'development') { console.log(`✅ AI response received (${aiContent.length} characters)`); }
 
     // 14. Save Assistant Message
     const assistantMessage = await prisma.message.create({
@@ -809,7 +809,7 @@ ${trimmedMessage}
     });
 
     // 14.5. Extract and Save Profile Information & Memories (Background Process)
-    console.log("🧠 Step 8: Extracting and saving profile information and memories...");
+    if (process.env.NODE_ENV === 'development') { console.log("🧠 Step 8: Extracting and saving profile information and memories..."); }
     try {
       // Extract profile information from the conversation
       const profileExtractions = await extractProfileInformation(
@@ -830,14 +830,14 @@ ${trimmedMessage}
         saveProfileExtractions(user.id, profileExtractions).catch(error => {
           console.error('❌ Background profile extraction save failed:', error);
         });
-        console.log(`✅ Extracted ${profileExtractions.length} profile updates`);
+        if (process.env.NODE_ENV === 'development') { console.log(`✅ Extracted ${profileExtractions.length} profile updates`); }
       }
 
       if (memoryExtractions.length > 0) {
         saveConversationMemories(user.id, memoryExtractions).catch(error => {
           console.error('❌ Background memory extraction save failed:', error);
         });
-        console.log(`✅ Extracted ${memoryExtractions.length} conversation memories`);
+        if (process.env.NODE_ENV === 'development') { console.log(`✅ Extracted ${memoryExtractions.length} conversation memories`); }
       }
 
     } catch (error) {
@@ -849,7 +849,7 @@ ${trimmedMessage}
     await incrementUserMessageCount();
 
     // 16. Return Response
-    console.log("✅ Chat API request completed successfully");
+    if (process.env.NODE_ENV === 'development') { console.log("✅ Chat API request completed successfully"); }
     
     return NextResponse.json({
       content: aiContent,

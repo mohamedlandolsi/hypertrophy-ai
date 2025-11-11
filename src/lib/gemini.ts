@@ -48,14 +48,14 @@ async function getEnhancedKnowledgeContext(
       strictMusclePriority: config.strictMusclePriority || false,
     };
 
-    console.log("🚀 Attempting enhanced RAG retrieval...");
+    if (process.env.NODE_ENV === 'development') { console.log("🚀 Attempting enhanced RAG retrieval..."); }
     const enhancedResults = await enhancedKnowledgeRetrieval(
       query,
       searchOptions
     );
 
     if (enhancedResults.length > 0) {
-      console.log(`✅ Enhanced RAG success: ${enhancedResults.length} results`);
+      if (process.env.NODE_ENV === 'development') { console.log(`✅ Enhanced RAG success: ${enhancedResults.length} results`); }
 
       // Convert to legacy format
       return enhancedResults.map((chunk) => ({
@@ -70,7 +70,7 @@ async function getEnhancedKnowledgeContext(
   }
 
   // Fallback to enhanced SQL-based search
-  console.log("🔄 Using enhanced SQL-based fetchEnhancedKnowledgeContext...");
+  if (process.env.NODE_ENV === 'development') { console.log("🔄 Using enhanced SQL-based fetchEnhancedKnowledgeContext..."); }
   const enhancedResults = await fetchEnhancedKnowledgeContext(query, maxChunks, threshold);
   
   // Convert EnhancedKnowledgeContext to KnowledgeContext format
@@ -134,7 +134,7 @@ function optimizeSimilarityThreshold(
     );
   }
 
-  console.log(
+  if (process.env.NODE_ENV === 'development') { console.log( }
     `🎯 Similarity threshold optimized: ${baseSimilarityThreshold} → ${adjustedThreshold} (specificity: ${specificity}, generality: ${generality})`
   );
   return adjustedThreshold;
@@ -341,7 +341,7 @@ async function getCoreSystemPrompt(config?: AIConfiguration, userProfile?: any):
       return await getBasicSystemPrompt();
     }
 
-    console.log("📋 Loading database system prompt and injecting dynamic data");
+    if (process.env.NODE_ENV === 'development') { console.log("📋 Loading database system prompt and injecting dynamic data"); }
     
     // Get user profile string and exercise validation context
     const { sanitizeUserProfile } = await import('./ai/core-prompts');
@@ -381,7 +381,7 @@ async function buildOptimizedSystemPrompt(
   const corePrompt = await getCoreSystemPrompt(config, userProfile);
   const coreTokens = estimateTokens(corePrompt);
 
-  console.log(`📋 Core prompt tokens: ${coreTokens}/${tokenBudget}`);
+  if (process.env.NODE_ENV === 'development') { console.log(`📋 Core prompt tokens: ${coreTokens}/${tokenBudget}`); }
 
   // Always preserve core directives as primary
   let result = corePrompt;
@@ -395,20 +395,20 @@ async function buildOptimizedSystemPrompt(
     if (dbTokens <= remainingBudget) {
       // Full database prompt fits - append as secondary
       result += "\n\n### ADDITIONAL ADMIN CONFIGURATION ###\n" + dbSystemPrompt;
-      console.log(`📋 Added admin config: ${dbTokens} tokens`);
+      if (process.env.NODE_ENV === 'development') { console.log(`📋 Added admin config: ${dbTokens} tokens`); }
     } else {
       // Truncate database prompt to fit budget
       const allowedChars = Math.floor(remainingBudget / TOKENS_PER_CHAR);
       const truncatedDb = dbSystemPrompt.substring(0, allowedChars) + "...";
       result += "\n\n### ADDITIONAL ADMIN CONFIGURATION ###\n" + truncatedDb;
-      console.log(
+      if (process.env.NODE_ENV === 'development') { console.log( }
         `⚠️ Database system prompt truncated to fit token budget (${dbTokens} → ${estimateTokens(
           truncatedDb
         )} tokens)`
       );
     }
   } else if (remainingBudget <= 100) {
-    console.log(
+    if (process.env.NODE_ENV === 'development') { console.log( }
       `⚠️ Only using core system prompt - no budget for database prompt (core: ${coreTokens}, budget: ${tokenBudget})`
     );
   }
@@ -469,7 +469,7 @@ async function optimizeContentForTokens(
   // Optimize context (prioritize knowledge base chunks by relevance score)
   let optimizedContext = contextString;
   if (estimateTokens(contextString) > budget.context) {
-    console.log("⚠️ Context exceeds token budget, trimming...");
+    if (process.env.NODE_ENV === 'development') { console.log("⚠️ Context exceeds token budget, trimming..."); }
     // Keep profile/memory, trim knowledge base chunks
     const lines = contextString.split("\n");
     const trimmedLines: string[] = [];
@@ -494,7 +494,7 @@ async function optimizeContentForTokens(
   // Optimize history (keep recent messages)
   let optimizedHistory = history;
   if (estimateTokens(JSON.stringify(history)) > budget.history) {
-    console.log("⚠️ History exceeds token budget, trimming...");
+    if (process.env.NODE_ENV === 'development') { console.log("⚠️ History exceeds token budget, trimming..."); }
     let historyTokens = 0;
     optimizedHistory = [];
 
@@ -524,7 +524,7 @@ async function validateWorkoutProgramming(
   knowledgeContext: KnowledgeContext[],
   userQuery: string
 ): Promise<string> {
-  console.log("🏋️ Validating workout programming compliance...");
+  if (process.env.NODE_ENV === 'development') { console.log("🏋️ Validating workout programming compliance..."); }
 
   let modifiedResponse = responseText;
   const validationNotes: string[] = [];
@@ -533,8 +533,8 @@ async function validateWorkoutProgramming(
   const repRangeMatches = responseText.match(/\b(\d+)-(\d+)\s*reps?\b/gi);
   if (repRangeMatches) {
     const kbRepRanges = extractRepRangesFromKB(knowledgeContext);
-    console.log("📊 Found rep ranges in response:", repRangeMatches);
-    console.log("📖 KB approved rep ranges:", kbRepRanges);
+    if (process.env.NODE_ENV === 'development') { console.log("📊 Found rep ranges in response:", repRangeMatches); }
+    if (process.env.NODE_ENV === 'development') { console.log("📖 KB approved rep ranges:", kbRepRanges); }
 
     repRangeMatches.forEach((range) => {
       const [, min, max] = range.match(/(\d+)-(\d+)/) || [];
@@ -564,7 +564,7 @@ async function validateWorkoutProgramming(
   // 2. Set Volume Validation
   const setMatches = responseText.match(/\b(\d+)\s*sets?\b/gi);
   if (setMatches) {
-    console.log("📊 Found set recommendations:", setMatches);
+    if (process.env.NODE_ENV === 'development') { console.log("📊 Found set recommendations:", setMatches); }
     // Check for excessive set volumes that violate KB guidelines
     setMatches.forEach((setRec) => {
       const setNum = parseInt(setRec.match(/(\d+)/)?.[1] || "0");
@@ -659,7 +659,7 @@ async function validateExerciseCompliance(
 ): Promise<string> {
   // If no knowledge base context, apply strict enforcement
   if (knowledgeContext.length === 0) {
-    console.log(
+    if (process.env.NODE_ENV === 'development') { console.log( }
       "⚠️ No knowledge base context - checking for hypertrophy programming mentions"
     );
 
@@ -739,7 +739,7 @@ async function validateExerciseCompliance(
         );
         modifiedResponse = modifiedResponse.replace(regex, replacement);
         replacements.push({ original: exercise, replacement });
-        console.log(
+        if (process.env.NODE_ENV === 'development') { console.log( }
           `🔄 Replaced invalid exercise "${exercise}" with "${replacement}"`
         );
       }
@@ -854,7 +854,7 @@ function findBestExerciseReplacement(
     }
   }
 
-  console.log(
+  if (process.env.NODE_ENV === 'development') { console.log( }
     `🎯 Best replacement for "${invalidExercise}": "${bestExercise}" (score: ${bestScore})`
   );
   return bestExercise;
@@ -1124,7 +1124,7 @@ function strengthenKBAdherence(
   knowledgeContext: KnowledgeContext[],
   userQuery: string
 ): string {
-  console.log("🔧 Analyzing KB adherence strength...");
+  if (process.env.NODE_ENV === 'development') { console.log("🔧 Analyzing KB adherence strength..."); }
 
   // Check for generic fitness advice that doesn't reference KB
   const genericPhrases = [
@@ -1155,7 +1155,7 @@ function strengthenKBAdherence(
   );
 
   if (hasGenericPhrases && !hasKBReferences && knowledgeContext.length > 0) {
-    console.log("⚠️ Weak KB adherence detected - strengthening response");
+    if (process.env.NODE_ENV === 'development') { console.log("⚠️ Weak KB adherence detected - strengthening response"); }
 
     // Add strong KB adherence footer
     const kbStrengthening = `\n\n🔬 **Evidence-Based Recommendation**: This guidance is specifically derived from your uploaded knowledge base materials, including: "${knowledgeContext[0].title}" and related scientific guides. Unlike generic fitness advice, these recommendations are backed by the evidence-based protocols you've provided.`;
@@ -1400,13 +1400,13 @@ async function updateMemory(
       );
 
       if (hasNewInfo) {
-        console.log(`🧠 Updating memory for user ${userId}:`, parsedMemory);
+        if (process.env.NODE_ENV === 'development') { console.log(`🧠 Updating memory for user ${userId}:`, parsedMemory); }
         await updateClientMemory(userId, parsedMemory as MemoryUpdate);
       } else {
-        console.log(`🧠 No new lasting memory found for user ${userId}.`);
+        if (process.env.NODE_ENV === 'development') { console.log(`🧠 No new lasting memory found for user ${userId}.`); }
       }
     } else {
-      console.log(
+      if (process.env.NODE_ENV === 'development') { console.log( }
         `🧠 Could not parse memory update response for user ${userId}`
       );
     }
@@ -1465,13 +1465,13 @@ export async function generateChatResponse(
   selectedModel?: "flash" | "pro"
 ): Promise<AiResponse> {
   try {
-    console.log("🚀 generateChatResponse called", {
+    if (process.env.NODE_ENV === 'development') { console.log("🚀 generateChatResponse called", { }
       userId,
       messageLength: newUserMessage.length,
     });
 
     // 1. Fetch AI Configuration and User Data in parallel
-    console.log("📊 Fetching AI config and user data...");
+    if (process.env.NODE_ENV === 'development') { console.log("📊 Fetching AI config and user data..."); }
     const [config, userProfile, clientMemory, userData] = await Promise.all([
       getAIConfiguration(),
       fetchUserProfile(userId),
@@ -1482,7 +1482,7 @@ export async function generateChatResponse(
       }),
     ]);
 
-    console.log("✅ Data fetched successfully", {
+    if (process.env.NODE_ENV === 'development') { console.log("✅ Data fetched successfully", { }
       hasConfig: !!config,
       hasProfile: !!userProfile,
       hasMemory: !!clientMemory,
@@ -1490,7 +1490,7 @@ export async function generateChatResponse(
     });
 
     // 2. Enhanced Knowledge Context Fetching for Workout Programming
-    console.log(
+    if (process.env.NODE_ENV === 'development') { console.log( }
       `📚 Fetching KB context with base threshold: ${config.ragSimilarityThreshold}`
     );
     const optimizedThreshold = optimizeSimilarityThreshold(
@@ -1507,7 +1507,7 @@ export async function generateChatResponse(
     let knowledgeContext: KnowledgeContext[] = [];
 
     if (isWorkoutProgramming) {
-      console.log(
+      if (process.env.NODE_ENV === 'development') { console.log( }
         "🏋️ Detected workout programming request - fetching comprehensive KB context"
       );
 
@@ -1547,7 +1547,7 @@ export async function generateChatResponse(
         .sort((a, b) => b.score - a.score)
         .slice(0, config.ragMaxChunks);
 
-      console.log(
+      if (process.env.NODE_ENV === 'development') { console.log( }
         `📚 Comprehensive KB retrieval: ${knowledgeContext.length} unique chunks from ${allContexts.length} total`
       );
     } else {
@@ -1560,7 +1560,7 @@ export async function generateChatResponse(
       );
     }
 
-    console.log(
+    if (process.env.NODE_ENV === 'development') { console.log( }
       `📚 Retrieved ${knowledgeContext.length} knowledge chunks with optimized threshold: ${optimizedThreshold}`
     );
 
@@ -1604,7 +1604,7 @@ export async function generateChatResponse(
         );
         // Only attempt supplementation if we have fewer than half the muscle groups represented
         if (presentMuscles.size < 4 && missing.length > 0) {
-          console.log(
+          if (process.env.NODE_ENV === 'development') { console.log( }
             `⚠️  Low muscle coverage detected (have ${
               presentMuscles.size
             }, missing: ${missing.join(
@@ -1634,7 +1634,7 @@ export async function generateChatResponse(
                 });
               }
             } catch (e) {
-              console.log(`Supplemental fetch failed for ${muscle}:`, e);
+              if (process.env.NODE_ENV === 'development') { console.log(`Supplemental fetch failed for ${muscle}:`, e); }
             }
           }
           if (supplemental.length) {
@@ -1643,18 +1643,18 @@ export async function generateChatResponse(
             supplemental.forEach((s) => {
               if (!existingIds.has(s.id)) knowledgeContext.push(s);
             });
-            console.log(
+            if (process.env.NODE_ENV === 'development') { console.log( }
               `✅ Added ${supplemental.length} supplemental muscle coverage chunks.`
             );
           }
         }
       }
     } catch (divErr) {
-      console.log("Muscle diversity enforcement error (non-fatal):", divErr);
+      if (process.env.NODE_ENV === 'development') { console.log("Muscle diversity enforcement error (non-fatal):", divErr); }
     }
 
     // 3. Calculate token budget and optimize content
-    console.log("🔨 Optimizing content for token budget...");
+    if (process.env.NODE_ENV === 'development') { console.log("🔨 Optimizing content for token budget..."); }
     const tokenBudget = calculateTokenBudget(config.maxTokens);
     const formattedContext = formatContextForPrompt(
       userProfile,
@@ -1682,7 +1682,7 @@ export async function generateChatResponse(
       newUserMessage
     );
     
-    console.log(
+    if (process.env.NODE_ENV === 'development') { console.log( }
       `📝 Structured prompt assembled - Total length: ${structuredPrompt.length} characters`
     );
 
@@ -1694,31 +1694,31 @@ export async function generateChatResponse(
         // User wants PRO model - check if they have PRO plan
         if (userData?.plan === "PRO") {
           modelName = config.proModelName;
-          console.log(`🎯 Using user-selected PRO model: ${modelName}`);
+          if (process.env.NODE_ENV === 'development') { console.log(`🎯 Using user-selected PRO model: ${modelName}`); }
         } else {
           // User doesn't have PRO plan, fallback to flash model
           modelName = config.freeModelName;
-          console.log(
+          if (process.env.NODE_ENV === 'development') { console.log( }
             `⚠️ User selected PRO model but doesn't have PRO plan, using Flash model: ${modelName}`
           );
         }
       } else {
         // User selected flash model
         modelName = config.freeModelName;
-        console.log(`🎯 Using user-selected Flash model: ${modelName}`);
+        if (process.env.NODE_ENV === 'development') { console.log(`🎯 Using user-selected Flash model: ${modelName}`); }
       }
     } else {
       // No specific model selected, use plan-based default
       modelName =
         userData?.plan === "PRO" ? config.proModelName : config.freeModelName;
-      console.log(
+      if (process.env.NODE_ENV === 'development') { console.log( }
         `🔄 Using plan-based model: ${modelName} (plan: ${
           userData?.plan || "FREE"
         })`
       );
     }
 
-    console.log(`🤖 Using model: ${modelName}`);
+    if (process.env.NODE_ENV === 'development') { console.log(`🤖 Using model: ${modelName}`); }
     const model = genAI.getGenerativeModel({
       model: modelName,
       systemInstruction: {
@@ -1745,7 +1745,7 @@ export async function generateChatResponse(
       generationConfig,
     });
 
-    console.log("🔄 Sending structured request to Gemini...");
+    if (process.env.NODE_ENV === 'development') { console.log("🔄 Sending structured request to Gemini..."); }
     const result = await chat.sendMessage(structuredPrompt);
 
     // Handle function calls if present
@@ -1755,13 +1755,13 @@ export async function generateChatResponse(
     const functionCalls = result.response.functionCalls();
 
     if (functionCalls && functionCalls.length > 0) {
-      console.log(`🛠️ Processing ${functionCalls.length} function calls...`);
+      if (process.env.NODE_ENV === 'development') { console.log(`🛠️ Processing ${functionCalls.length} function calls...`); }
 
       const functionResponses: Part[] = [];
 
       for (const functionCall of functionCalls) {
         const { name, args } = functionCall;
-        console.log(`📞 Calling function: ${name}`, args);
+        if (process.env.NODE_ENV === 'development') { console.log(`📞 Calling function: ${name}`, args); }
 
         try {
           let functionResult: Record<string, unknown> = {};
@@ -1795,7 +1795,7 @@ export async function generateChatResponse(
               conflictData = { ...conflictArgs, resolutionNeeded: true };
             }
 
-            console.log("🔍 Conflict detection details:", {
+            if (process.env.NODE_ENV === 'development') { console.log("🔍 Conflict detection details:", { }
               requiresConfirmation,
               conflictData,
               conflictHandled,
@@ -1803,12 +1803,12 @@ export async function generateChatResponse(
 
             // EARLY RETURN: Don't continue processing if confirmation is needed
             if (requiresConfirmation) {
-              console.log(
+              if (process.env.NODE_ENV === 'development') { console.log( }
                 "⚠️ Conflict detected - returning early for user confirmation"
               );
               const confirmationPrompt =
                 generateConflictConfirmationPrompt(conflictData);
-              console.log("Generated confirmation prompt:", confirmationPrompt);
+              if (process.env.NODE_ENV === 'development') { console.log("Generated confirmation prompt:", confirmationPrompt); }
               return {
                 content: confirmationPrompt,
                 citations: knowledgeContext,
@@ -1846,28 +1846,28 @@ export async function generateChatResponse(
 
       // Send function responses back to the model for final response
       if (functionResponses.length > 0) {
-        console.log("🔄 Sending function responses back to model...");
+        if (process.env.NODE_ENV === 'development') { console.log("🔄 Sending function responses back to model..."); }
         const followUpResult = await chat.sendMessage(functionResponses);
         finalResponse = followUpResult.response;
       }
     }
 
     let aiContent = finalResponse.text();
-    console.log(`✅ Gemini response received: ${aiContent.length} chars`);
+    if (process.env.NODE_ENV === 'development') { console.log(`✅ Gemini response received: ${aiContent.length} chars`); }
 
     if (aiContent.length === 0) {
       console.error("❌ EMPTY RESPONSE FROM GEMINI!");
     }
 
     // 5. Enhanced Post-processing: Comprehensive Workout Programming Validation
-    console.log(
+    if (process.env.NODE_ENV === 'development') { console.log( }
       "🔍 Validating exercise compliance and programming adherence..."
     );
     aiContent = await validateExerciseCompliance(aiContent, knowledgeContext);
 
     // Additional validation for workout programming
     if (isWorkoutProgramming) {
-      console.log(
+      if (process.env.NODE_ENV === 'development') { console.log( }
         "🏋️ Applying comprehensive workout programming validation..."
       );
       aiContent = await validateWorkoutProgramming(
@@ -1890,7 +1890,7 @@ export async function generateChatResponse(
     updateMemory(userId, newUserMessage, aiContent).catch(console.error);
 
     // 7. Return the response with enhanced data
-    console.log("🎯 Returning response with citations and metadata");
+    if (process.env.NODE_ENV === 'development') { console.log("🎯 Returning response with citations and metadata"); }
     return {
       content: aiContent,
       citations: knowledgeContext,

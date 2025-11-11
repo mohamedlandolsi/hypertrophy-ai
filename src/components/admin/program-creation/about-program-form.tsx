@@ -34,7 +34,7 @@ export function AboutProgramForm() {
       return;
     }
 
-    console.log('Starting file upload:', {
+    if (process.env.NODE_ENV === 'development') { console.log('Starting file upload:', { }
       name: file.name,
       type: file.type,
       size: file.size,
@@ -47,19 +47,19 @@ export function AboutProgramForm() {
       formData.append('file', file);
       formData.append('type', 'program-thumbnail');
 
-      console.log('FormData prepared:', {
+      if (process.env.NODE_ENV === 'development') { console.log('FormData prepared:', { }
         fileAppended: formData.has('file'),
         typeAppended: formData.has('type')
       });
 
-      console.log('Sending upload request to /api/upload...');
+      if (process.env.NODE_ENV === 'development') { console.log('Sending upload request to /api/upload...'); }
       
       const response = await fetch('/api/upload', {
         method: 'POST',
         body: formData,
       });
 
-      console.log('Response received:', {
+      if (process.env.NODE_ENV === 'development') { console.log('Response received:', { }
         status: response.status,
         statusText: response.statusText,
         ok: response.ok,
@@ -68,7 +68,7 @@ export function AboutProgramForm() {
 
       if (response.ok) {
         const data = await response.json();
-        console.log('Upload successful:', data);
+        if (process.env.NODE_ENV === 'development') { console.log('Upload successful:', data); }
         setValue('thumbnailUrl', data.url);
       } else {
         const responseText = await response.text();

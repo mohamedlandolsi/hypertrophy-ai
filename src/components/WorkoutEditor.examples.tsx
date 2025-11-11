@@ -48,7 +48,7 @@ export function WorkoutEditorWithNavigation({
   const router = useRouter();
 
   const handleSave = () => {
-    console.log('Workout saved');
+    if (process.env.NODE_ENV === 'development') { console.log('Workout saved'); }
     // Navigate back to program overview
     router.push(`/programs/${programId}`);
   };
@@ -182,7 +182,7 @@ export function WorkoutEditorWithValidation({
 
   const handleSave = () => {
     setHasUnsavedChanges(false);
-    console.log('Changes saved');
+    if (process.env.NODE_ENV === 'development') { console.log('Changes saved'); }
   };
 
   const handleExit = () => {
@@ -246,7 +246,7 @@ export function WorkoutEditorInFormContext({
       )
     }));
     setCurrentWorkout(null);
-    console.log('Workout configured:', workoutId);
+    if (process.env.NODE_ENV === 'development') { console.log('Workout configured:', workoutId); }
   };
 
   const handleSubmitProgram = async () => {
@@ -257,7 +257,7 @@ export function WorkoutEditorInFormContext({
       return;
     }
 
-    console.log('Submitting program:', formState);
+    if (process.env.NODE_ENV === 'development') { console.log('Submitting program:', formState); }
     // Submit to API
   };
 
@@ -456,7 +456,7 @@ export async function generateWorkoutTemplate(
   // This would fetch recommended exercises from the database
   // based on workout type and return a template
   
-  console.log(`Generating template for ${workoutType}`);
+  if (process.env.NODE_ENV === 'development') { console.log(`Generating template for ${workoutType}`); }
   
   return {
     exercises: []

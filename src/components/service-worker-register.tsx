@@ -11,7 +11,7 @@ export function ServiceWorkerRegister() {
           updateViaCache: 'none'
         })
         .then((registration) => {
-          console.log('Service Worker registered successfully:', registration);
+          if (process.env.NODE_ENV === 'development') { console.log('Service Worker registered successfully:', registration); }
           
           // Force immediate check for updates
           registration.update();
@@ -23,7 +23,7 @@ export function ServiceWorkerRegister() {
               newWorker.addEventListener('statechange', () => {
                 if (newWorker.state === 'installed' && navigator.serviceWorker.controller) {
                   // New update available - force refresh to avoid cache issues
-                  console.log('New service worker available, refreshing...');
+                  if (process.env.NODE_ENV === 'development') { console.log('New service worker available, refreshing...'); }
                   window.location.reload();
                 }
               });
@@ -43,7 +43,7 @@ export function ServiceWorkerRegister() {
       navigator.serviceWorker.addEventListener('message', (event) => {
         try {
           if (event.data && event.data.type === 'CACHE_UPDATED') {
-            console.log('Cache has been updated');
+            if (process.env.NODE_ENV === 'development') { console.log('Cache has been updated'); }
           }
         } catch (error) {
           console.warn('Service Worker message handling failed:', error);
@@ -57,7 +57,7 @@ export function ServiceWorkerRegister() {
 
       // Handle controller change (new SW took control)
       navigator.serviceWorker.addEventListener('controllerchange', () => {
-        console.log('Service Worker controller changed');
+        if (process.env.NODE_ENV === 'development') { console.log('Service Worker controller changed'); }
         // Optionally reload the page when a new SW takes control
         window.location.reload();
       });
@@ -75,12 +75,12 @@ export function ServiceWorkerRegister() {
           async clearCaches() {
             const cacheNames = await caches.keys();
             await Promise.all(cacheNames.map(name => caches.delete(name)));
-            console.log('All caches cleared');
+            if (process.env.NODE_ENV === 'development') { console.log('All caches cleared'); }
           },
           async unregisterSW() {
             const registrations = await navigator.serviceWorker.getRegistrations();
             await Promise.all(registrations.map(reg => reg.unregister()));
-            console.log('Service worker unregistered');
+            if (process.env.NODE_ENV === 'development') { console.log('Service worker unregistered'); }
           },
           async forceRefresh() {
             await this.clearCaches();
@@ -91,17 +91,17 @@ export function ServiceWorkerRegister() {
           },
           async checkCaches() {
             const cacheNames = await caches.keys();
-            console.log('Current caches:', cacheNames);
+            if (process.env.NODE_ENV === 'development') { console.log('Current caches:', cacheNames); }
             for (const cacheName of cacheNames) {
               const cache = await caches.open(cacheName);
               const keys = await cache.keys();
-              console.log(`Cache ${cacheName}:`, keys.map(req => req.url));
+              if (process.env.NODE_ENV === 'development') { console.log(`Cache ${cacheName}:`, keys.map(req => req.url)); }
             }
           }
         };
 
         (window as typeof window & { hypertroqDebug: HypertroqDebug }).hypertroqDebug = hypertroqDebug;
-        console.log('Debug functions available: window.hypertroqDebug');
+        // Removed debug console.log
       }
     }
   }, []);

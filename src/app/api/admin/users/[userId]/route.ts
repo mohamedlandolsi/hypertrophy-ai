@@ -120,7 +120,7 @@ export async function DELETE(
 
     // TODO: Delete user from Supabase Auth using admin client when service role key is fixed
     // For now, we'll just delete from Prisma
-    console.log('Note: User deleted from Prisma. Supabase auth deletion skipped due to service role key issue.');
+    if (process.env.NODE_ENV === 'development') { console.log('Note: User deleted from Prisma. Supabase auth deletion skipped due to service role key issue.'); }
 
     return NextResponse.json({
       success: true,

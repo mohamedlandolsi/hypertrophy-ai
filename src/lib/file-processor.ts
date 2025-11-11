@@ -11,12 +11,12 @@ async function extractPdfText(buffer: Buffer, fileName: string): Promise<string>
       throw new Error('PDF parse function is not available');
     }
     
-    console.log(`Attempting to parse PDF: ${fileName}, buffer size: ${buffer.length}`);
+    if (process.env.NODE_ENV === 'development') { console.log(`Attempting to parse PDF: ${fileName}, buffer size: ${buffer.length}`); }
     
     // Try to parse the PDF
     const pdfData = await pdfParse(buffer);
     
-    console.log(`PDF parsed successfully: ${fileName}, text length: ${pdfData?.text?.length || 0}`);
+    if (process.env.NODE_ENV === 'development') { console.log(`PDF parsed successfully: ${fileName}, text length: ${pdfData?.text?.length || 0}`); }
     
     if (pdfData && pdfData.text && pdfData.text.trim().length > 0) {
       return pdfData.text;
@@ -72,7 +72,7 @@ export async function extractTextFromFile(
           if (extractedText && !extractedText.includes('[PDF file uploaded successfully but text extraction failed') && !extractedText.includes('[Unable to extract text from PDF')) {
             return extractedText;
           }        } catch (error) {
-          console.log('PDF text extraction failed, using viewer-only mode:', error);
+          if (process.env.NODE_ENV === 'development') { console.log('PDF text extraction failed, using viewer-only mode:', error); }
         }
         // Fallback: PDF is available for viewing but no text for AI
         return `[PDF document available for viewing. This PDF can be viewed directly in the viewer, but text content is not available for AI analysis. File: ${fileName}]`;

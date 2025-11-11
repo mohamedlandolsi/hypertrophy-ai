@@ -142,7 +142,7 @@ export default function CreateProgramPage() {
         ...data,
         guideSections: sanitizedGuideSections,
       };
-  console.log('Creating program with data:', payload);
+  if (process.env.NODE_ENV === 'development') { console.log('Creating program with data:', payload); }
       
       // Provide helpful validation guidance
       if (!data.categories || data.categories.length === 0) {
@@ -192,7 +192,7 @@ export default function CreateProgramPage() {
   // Empty onSubmit to prevent accidental form submissions
   const onSubmit = async () => {
     // Prevent any accidental form submissions from inputs, Enter keys, etc.
-    console.log('Form submission blocked to prevent accidental validation');
+    if (process.env.NODE_ENV === 'development') { console.log('Form submission blocked to prevent accidental validation'); }
     return false;
   };
 
@@ -229,7 +229,7 @@ export default function CreateProgramPage() {
           break;
       }
 
-      console.log(`Saving ${tabId} tab data:`, tabData);
+      if (process.env.NODE_ENV === 'development') { console.log(`Saving ${tabId} tab data:`, tabData); }
       
       // TODO: Implement actual API call to save draft
       // await saveProgramDraft(tabData, tabId);

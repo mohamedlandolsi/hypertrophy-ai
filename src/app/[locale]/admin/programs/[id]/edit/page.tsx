@@ -255,7 +255,7 @@ export default function EditProgramPage() {
 
         const transformedGuideSections = normalizeGuideSections(programData.programGuide?.content);
 
-        console.log('Loaded program data:', {
+        if (process.env.NODE_ENV === 'development') { console.log('Loaded program data:', { }
           workoutNames: programData.workoutNames,
           workoutNamesType: typeof programData.workoutNames,
           workoutNamesIsArray: Array.isArray(programData.workoutNames)
@@ -348,7 +348,7 @@ export default function EditProgramPage() {
         })
       };
 
-      console.log('Updating program with data:', transformedData);
+      if (process.env.NODE_ENV === 'development') { console.log('Updating program with data:', transformedData); }
 
       const result = await updateTrainingProgram(transformedData);
       
@@ -369,7 +369,7 @@ export default function EditProgramPage() {
   // Empty onSubmit to prevent accidental form submissions
   const onSubmit = async () => {
     // Prevent any accidental form submissions from inputs, Enter keys, etc.
-    console.log('Form submission blocked to prevent accidental validation');
+    if (process.env.NODE_ENV === 'development') { console.log('Form submission blocked to prevent accidental validation'); }
     return false;
   };
 

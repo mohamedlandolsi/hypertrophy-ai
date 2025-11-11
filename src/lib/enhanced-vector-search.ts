@@ -37,8 +37,8 @@ export async function enhancedVectorSearch(
     matchCount: number = 10
 ): Promise<EnhancedKnowledgeContext[]> {
     try {
-        console.log(`🚀 Enhanced PostgreSQL vector search for: "${query}"`);
-        console.log(`📊 Parameters: threshold=${matchThreshold}, count=${matchCount}`);
+        if (process.env.NODE_ENV === 'development') { console.log(`🚀 Enhanced PostgreSQL vector search for: "${query}"`); }
+        if (process.env.NODE_ENV === 'development') { console.log(`📊 Parameters: threshold=${matchThreshold}, count=${matchCount}`); }
         
         // Generate embedding
         const queryEmbedding = await getEmbedding(query);
@@ -53,7 +53,7 @@ export async function enhancedVectorSearch(
             )
         `;
         
-        console.log(`✅ PostgreSQL function returned ${results.length} results`);
+        if (process.env.NODE_ENV === 'development') { console.log(`✅ PostgreSQL function returned ${results.length} results`); }
         
         return results;
         
@@ -74,7 +74,7 @@ export async function enhancedCategorySearch(
     matchCount: number = 10
 ): Promise<EnhancedKnowledgeContext[]> {
     try {
-        console.log(`🏷️ Enhanced category search: ${categories.join(', ')}`);
+        if (process.env.NODE_ENV === 'development') { console.log(`🏷️ Enhanced category search: ${categories.join(', ')}`); }
         
         // Generate embedding
         const queryEmbedding = await getEmbedding(query);
@@ -100,7 +100,7 @@ export async function enhancedCategorySearch(
             LIMIT ${matchCount}
         `;
         
-        console.log(`✅ Category search returned ${results.length} results`);
+        if (process.env.NODE_ENV === 'development') { console.log(`✅ Category search returned ${results.length} results`); }
         
         return results;
         
@@ -121,7 +121,7 @@ export async function enhancedHybridSearch(
     keywordWeight: number = 0.3
 ): Promise<EnhancedKnowledgeContext[]> {
     try {
-        console.log(`🔀 Enhanced hybrid search for: "${query}"`);
+        if (process.env.NODE_ENV === 'development') { console.log(`🔀 Enhanced hybrid search for: "${query}"`); }
         
         // Generate embedding
         const queryEmbedding = await getEmbedding(query);
@@ -154,7 +154,7 @@ export async function enhancedHybridSearch(
             LIMIT ${matchCount}
         `;
         
-        console.log(`✅ Hybrid search returned ${results.length} results`);
+        if (process.env.NODE_ENV === 'development') { console.log(`✅ Hybrid search returned ${results.length} results`); }
         
         // Map to standard interface
         return results.map(r => ({
@@ -179,7 +179,7 @@ export async function fallbackVectorSearch(
     maxChunks: number
 ): Promise<EnhancedKnowledgeContext[]> {
     try {
-        console.log(`🔄 Using fallback vector search`);
+        if (process.env.NODE_ENV === 'development') { console.log(`🔄 Using fallback vector search`); }
         
         // Generate embedding
         const queryEmbedding = await getEmbedding(query);
@@ -245,27 +245,27 @@ export async function performanceComparison(
     matchThreshold: number = 0.1,
     matchCount: number = 10
 ) {
-    console.log(`🏁 Starting performance comparison for: "${query}"`);
+    if (process.env.NODE_ENV === 'development') { console.log(`🏁 Starting performance comparison for: "${query}"`); }
     
     // Test PostgreSQL function
     const pgStart = Date.now();
     try {
         const pgResults = await enhancedVectorSearch(query, matchThreshold, matchCount);
         const pgTime = Date.now() - pgStart;
-        console.log(`⚡ PostgreSQL function: ${pgTime}ms (${pgResults.length} results)`);
+        if (process.env.NODE_ENV === 'development') { console.log(`⚡ PostgreSQL function: ${pgTime}ms (${pgResults.length} results)`); }
         
         // Test fallback implementation
         const fallbackStart = Date.now();
         const fallbackResults = await fallbackVectorSearch(query, matchCount);
         const fallbackTime = Date.now() - fallbackStart;
-        console.log(`🐌 Fallback implementation: ${fallbackTime}ms (${fallbackResults.length} results)`);
+        if (process.env.NODE_ENV === 'development') { console.log(`🐌 Fallback implementation: ${fallbackTime}ms (${fallbackResults.length} results)`); }
         
         // Performance summary
         const speedup = fallbackTime / pgTime;
-        console.log(`📊 Performance Summary:`);
-        console.log(`   - PostgreSQL: ${pgTime}ms`);
-        console.log(`   - Fallback: ${fallbackTime}ms`);
-        console.log(`   - Speedup: ${speedup.toFixed(2)}x faster`);
+        if (process.env.NODE_ENV === 'development') { console.log(`📊 Performance Summary:`); }
+        if (process.env.NODE_ENV === 'development') { console.log(`   - PostgreSQL: ${pgTime}ms`); }
+        if (process.env.NODE_ENV === 'development') { console.log(`   - Fallback: ${fallbackTime}ms`); }
+        if (process.env.NODE_ENV === 'development') { console.log(`   - Speedup: ${speedup.toFixed(2)}x faster`); }
         
         return {
             postgresql: { time: pgTime, results: pgResults.length },

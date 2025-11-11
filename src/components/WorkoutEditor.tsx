@@ -967,7 +967,7 @@ export default function WorkoutEditor({
                           workoutExercise={exercise}
                           onEdit={(ex) => {
                             // TODO: Implement edit functionality
-                            console.log('Edit exercise:', ex);
+                            if (process.env.NODE_ENV === 'development') { console.log('Edit exercise:', ex); }
                           }}
                           onDelete={handleDeleteExercise}
                         />
