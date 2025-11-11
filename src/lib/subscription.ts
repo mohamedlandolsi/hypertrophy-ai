@@ -117,14 +117,16 @@ export async function getUserSubscriptionTier(): Promise<{
       const isInactive = !['active', 'on_trial'].includes(subscription.status);
       
       if (isExpired || isInactive) {
-        if (process.env.NODE_ENV === 'development') { console.log('Auto-downgrading expired/inactive subscription', { }
-          userId: user.id,
-          subscriptionId: subscription.id,
-          status: subscription.status,
-          currentPeriodEnd: subscription.currentPeriodEnd,
-          isExpired,
-          isInactive
-        });
+        if (process.env.NODE_ENV === 'development') {
+      console.log('Auto-downgrading expired/inactive subscription', {
+      userId: user.id,
+      subscriptionId: subscription.id,
+      status: subscription.status,
+      currentPeriodEnd: subscription.currentPeriodEnd,
+      isExpired,
+      isInactive
+      });
+    }
         
         // Automatically downgrade to free
         await downgradeUserToFreeTier(user.id);

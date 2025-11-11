@@ -34,12 +34,14 @@ export function AboutProgramForm() {
       return;
     }
 
-    if (process.env.NODE_ENV === 'development') { console.log('Starting file upload:', { }
+    if (process.env.NODE_ENV === 'development') {
+      console.log('Starting file upload:', {
       name: file.name,
       type: file.type,
       size: file.size,
       sizeFormatted: `${(file.size / 1024).toFixed(1)} KB`
-    });
+      });
+    }
 
     setIsUploading(true);
     try {
@@ -47,10 +49,12 @@ export function AboutProgramForm() {
       formData.append('file', file);
       formData.append('type', 'program-thumbnail');
 
-      if (process.env.NODE_ENV === 'development') { console.log('FormData prepared:', { }
-        fileAppended: formData.has('file'),
-        typeAppended: formData.has('type')
+      if (process.env.NODE_ENV === 'development') {
+      console.log('FormData prepared:', {
+      fileAppended: formData.has('file'),
+      typeAppended: formData.has('type')
       });
+    }
 
       if (process.env.NODE_ENV === 'development') { console.log('Sending upload request to /api/upload...'); }
       
@@ -59,12 +63,14 @@ export function AboutProgramForm() {
         body: formData,
       });
 
-      if (process.env.NODE_ENV === 'development') { console.log('Response received:', { }
-        status: response.status,
-        statusText: response.statusText,
-        ok: response.ok,
-        headers: Object.fromEntries(response.headers.entries())
+      if (process.env.NODE_ENV === 'development') {
+      console.log('Response received:', {
+      status: response.status,
+      statusText: response.statusText,
+      ok: response.ok,
+      headers: Object.fromEntries(response.headers.entries())
       });
+    }
 
       if (response.ok) {
         const data = await response.json();

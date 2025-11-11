@@ -80,11 +80,13 @@ const MenuBar = ({ editor, onImageUpload, uploadingImage }: {
     const { $from } = selection;
     let imageNode = null;
     
-    if (process.env.NODE_ENV === 'development') { console.log('Selection update:', { }
+    if (process.env.NODE_ENV === 'development') {
+      console.log('Selection update:', {
       selectionType: selection.constructor.name,
       nodeName: selection instanceof NodeSelection ? selection.node.type.name : 'not NodeSelection',
       $fromNodeName: $from.node()?.type.name,
-    });
+      });
+    }
     
     // Check if selection is a NodeSelection containing an image (ResizableImageExtension uses 'imageResize' node type)
     if (selection instanceof NodeSelection && (selection.node.type.name === 'image' || selection.node.type.name === 'imageResize')) {

@@ -47,26 +47,30 @@ export async function enhancedKnowledgeRetrieval(
   if (verboseLogging) {
     if (process.env.NODE_ENV === 'development') { console.log('🚀 Starting Enhanced RAG Retrieval v3 (Optimized Pipeline)'); }
     if (process.env.NODE_ENV === 'development') { console.log(`📝 Original Query: "${userQuery}"`); }
-    if (process.env.NODE_ENV === 'development') { console.log(`⚙️ Search Options:`, { }
+    if (process.env.NODE_ENV === 'development') {
+      console.log(`⚙️ Search Options:`, {
       maxChunks: options.maxChunks,
       similarityThreshold: options.similarityThreshold,
       useQueryTransformation: options.useQueryTransformation ?? true,
       useHyDE: options.useHyDE ?? true,
       dynamicThresholdAdjustment: options.dynamicThresholdAdjustment ?? true,
       minAcceptableResults: options.minAcceptableResults ?? 3
-    });
+      });
+    }
   }
   
   try {
     // Step 1: Analyze query context and intent
     const queryContext = await analyzeQueryContext(userQuery);
     if (verboseLogging) {
-      if (process.env.NODE_ENV === 'development') { console.log('🔍 Query Analysis:', { }
-        muscleGroups: queryContext.muscleGroups,
-        trainingConcepts: queryContext.trainingConcepts,
-        requestType: `${queryContext.isWorkoutRequest ? 'Workout' : ''}${queryContext.isProgramRequest ? 'Program' : ''}${queryContext.isNutritionRequest ? 'Nutrition' : 'General'}`,
-        relevantCategories: queryContext.relevantCategories.slice(0, 5) // Show first 5
+      if (process.env.NODE_ENV === 'development') {
+      console.log('🔍 Query Analysis:', {
+      muscleGroups: queryContext.muscleGroups,
+      trainingConcepts: queryContext.trainingConcepts,
+      requestType: `${queryContext.isWorkoutRequest ? 'Workout' : ''}${queryContext.isProgramRequest ? 'Program' : ''}${queryContext.isNutritionRequest ? 'Nutrition' : 'General'}`,
+      relevantCategories: queryContext.relevantCategories.slice(0, 5) // Show first 5
       });
+    }
     }
     
     // Step 2: Query transformation and enhancement

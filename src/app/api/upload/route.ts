@@ -79,29 +79,32 @@ export async function POST(request: NextRequest) {
     if (process.env.NODE_ENV === 'development') { console.log('[UPLOAD_API] Admin access confirmed'); }
 
     const formData = await request.formData();
-    if (process.env.NODE_ENV === 'development') { console.log('[UPLOAD_API] FormData received, entries:', Array.from(formData.entries()).map(([key, value]) => ({ }
-      key,
-      valueType: typeof value,
-      isFile: value instanceof File,
-      fileName: value instanceof File ? value.name : undefined,
-      fileType: value instanceof File ? value.type : undefined,
-      fileSize: value instanceof File ? value.size : undefined
-    })));
-    
+    if (process.env.NODE_ENV === 'development') {
+      console.log('[UPLOAD_API] FormData received, entries:', Array.from(formData.entries()).map(([key, value]) => ({
+        key,
+        valueType: typeof value,
+        isFile: value instanceof File,
+        fileName: value instanceof File ? value.name : undefined,
+        fileType: value instanceof File ? value.type : undefined,
+        fileSize: value instanceof File ? value.size : undefined
+      })));
+    }
     const file = formData.get('file') as File | null;
     const type = formData.get('type') as string | null;
     const existingPath = formData.get('currentPath') as string | null;
 
-    if (process.env.NODE_ENV === 'development') { console.log('[UPLOAD_API] Parsed form data:', { }
-      hasFile: !!file, 
-      type, 
+    if (process.env.NODE_ENV === 'development') {
+      console.log('[UPLOAD_API] Parsed form data:', {
+      hasFile: !!file,
+      type,
       existingPath,
       fileDetails: file ? {
-        name: file.name,
-        type: file.type,
-        size: file.size
+      name: file.name,
+      type: file.type,
+      size: file.size
       } : null
-    });
+      });
+    }
 
     if (!file) {
       if (process.env.NODE_ENV === 'development') { console.log('[UPLOAD_API] No file provided in request'); }

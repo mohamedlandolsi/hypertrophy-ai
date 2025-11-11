@@ -36,21 +36,25 @@ export async function POST(request: NextRequest) {
 
     const { knowledgeItemId, categoryIds } = await request.json();
 
-    if (process.env.NODE_ENV === 'development') { console.log('🔍 Raw request data:', { }
+    if (process.env.NODE_ENV === 'development') {
+      console.log('🔍 Raw request data:', {
       knowledgeItemId,
       categoryIds,
       categoryIdsType: typeof categoryIds,
       categoryIdsIsArray: Array.isArray(categoryIds),
       categoryIdsLength: Array.isArray(categoryIds) ? categoryIds.length : 'Not an array',
       categoryIdsContent: Array.isArray(categoryIds) ? categoryIds.map(id => ({ id, type: typeof id, length: id?.length })) : 'Not an array'
-    });
+      });
+    }
 
-    if (process.env.NODE_ENV === 'development') { console.log('🔍 Knowledge item category assignment:', { }
+    if (process.env.NODE_ENV === 'development') {
+      console.log('🔍 Knowledge item category assignment:', {
       knowledgeItemId,
       categoryIds,
       categoryIdsType: typeof categoryIds,
       categoryIdsLength: Array.isArray(categoryIds) ? categoryIds.length : 'Not an array'
-    });
+      });
+    }
 
     if (!knowledgeItemId || !Array.isArray(categoryIds)) {
       throw new ValidationError('Knowledge item ID and category IDs array are required');
@@ -59,13 +63,15 @@ export async function POST(request: NextRequest) {
     // Deduplicate category IDs to avoid validation errors
     const uniqueCategoryIds = [...new Set(categoryIds.filter(id => id && typeof id === 'string' && id.trim() !== ''))];
     
-    if (process.env.NODE_ENV === 'development') { console.log('🔧 Deduplication applied:', { }
+    if (process.env.NODE_ENV === 'development') {
+      console.log('🔧 Deduplication applied:', {
       originalIds: categoryIds,
       originalCount: categoryIds.length,
       uniqueIds: uniqueCategoryIds,
       uniqueCount: uniqueCategoryIds.length,
       duplicatesRemoved: categoryIds.length - uniqueCategoryIds.length
-    });
+      });
+    }
 
     // Verify knowledge item exists
     const knowledgeItem = await prisma.knowledgeItem.findUnique({
@@ -81,13 +87,15 @@ export async function POST(request: NextRequest) {
       where: { id: { in: uniqueCategoryIds } }
     });
 
-    if (process.env.NODE_ENV === 'development') { console.log('📊 Category validation details:', { }
+    if (process.env.NODE_ENV === 'development') {
+      console.log('📊 Category validation details:', {
       requestedCount: uniqueCategoryIds.length,
       foundCount: categories.length,
       requestedIds: uniqueCategoryIds.map((id, index) => ({ index, id, type: typeof id, length: id?.length })),
       foundIds: categories.map(cat => ({ id: cat.id, name: cat.name })),
       missingIds: uniqueCategoryIds.filter(id => !categories.find(cat => cat.id === id))
-    });
+      });
+    }
 
     if (categories.length !== uniqueCategoryIds.length) {
       console.error('❌ Category validation failed:', {

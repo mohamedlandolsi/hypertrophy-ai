@@ -181,12 +181,14 @@ export async function handleProfileUpdate(userId: string, updateData: EnhancedMe
     
     // Log conflict resolution if applicable
     if (updateData.conflictDetected) {
-      if (process.env.NODE_ENV === 'development') { console.log('⚠️ Conflict resolved:', { }
-        field: updateData.conflictField,
-        oldValue: updateData.conflictOldValue,
-        newValue: updateData.conflictNewValue,
-        reason: updateData.conflictReason
+      if (process.env.NODE_ENV === 'development') {
+      console.log('⚠️ Conflict resolved:', {
+      field: updateData.conflictField,
+      oldValue: updateData.conflictOldValue,
+      newValue: updateData.conflictNewValue,
+      reason: updateData.conflictReason
       });
+    }
     }
     
     // Remove function calling specific fields before updating

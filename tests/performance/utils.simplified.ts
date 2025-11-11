@@ -190,6 +190,14 @@ export async function createTestTemplate(
     throw new Error('No training split found. Please seed splits first.');
   }
   
+  // Get a structure for this split
+  const structure = await prisma.trainingSplitStructure.findFirst({
+    where: { splitId: split.id }
+  });
+  if (!structure) {
+    throw new Error(`No structure found for split ${split.id}. Please seed structures first.`);
+  }
+  
   // Get available exercises
   const availableExercises = await prisma.exercise.findMany({
     take: exercisesPerWorkout * workoutCount,
@@ -203,7 +211,11 @@ export async function createTestTemplate(
     data: {
       name,
       description: `Performance test template with ${workoutCount} workouts and ${exercisesPerWorkout} exercises each`,
-      trainingSplitId: split.id,
+      splitId: split.id,
+      structureId: structure.id,
+      workoutStructureType: 'REPEATING',
+      estimatedDurationWeeks: 8,
+      targetAudience: 'Performance Testing',
       difficultyLevel: 'INTERMEDIATE',
       isActive: true,
       templateWorkouts: {

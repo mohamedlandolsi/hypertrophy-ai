@@ -15,7 +15,7 @@ export const runtime = 'nodejs';
  * 
  * @returns {Object} Subscription data or error response
  */
-export async function GET(request: Request) {
+export async function GET() {
   try {
     const supabase = await createClient();
     const { data: { user }, error: authError } = await supabase.auth.getUser();
@@ -40,10 +40,11 @@ export async function GET(request: Request) {
       },
       subscription: subscriptionData.subscription,
     });
-  } catch (error: any) {
+  } catch (error: unknown) {
     console.error('Error fetching subscription:', error);
+    const errorMessage = error instanceof Error ? error.message : 'Unknown error';
     return NextResponse.json(
-      { error: 'Internal server error', details: error.message },
+      { error: 'Internal server error', details: errorMessage },
       { status: 500 }
     );
   }

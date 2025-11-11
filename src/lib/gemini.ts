@@ -134,9 +134,11 @@ function optimizeSimilarityThreshold(
     );
   }
 
-  if (process.env.NODE_ENV === 'development') { console.log( }
-    `🎯 Similarity threshold optimized: ${baseSimilarityThreshold} → ${adjustedThreshold} (specificity: ${specificity}, generality: ${generality})`
-  );
+  if (process.env.NODE_ENV === 'development') {
+    console.log(
+      `🎯 Similarity threshold optimized: ${baseSimilarityThreshold} → ${adjustedThreshold} (specificity: ${specificity}, generality: ${generality})`
+    );
+  }
   return adjustedThreshold;
 }
 
@@ -401,16 +403,20 @@ async function buildOptimizedSystemPrompt(
       const allowedChars = Math.floor(remainingBudget / TOKENS_PER_CHAR);
       const truncatedDb = dbSystemPrompt.substring(0, allowedChars) + "...";
       result += "\n\n### ADDITIONAL ADMIN CONFIGURATION ###\n" + truncatedDb;
-      if (process.env.NODE_ENV === 'development') { console.log( }
-        `⚠️ Database system prompt truncated to fit token budget (${dbTokens} → ${estimateTokens(
-          truncatedDb
-        )} tokens)`
-      );
+      if (process.env.NODE_ENV === 'development') {
+        console.log(
+          `⚠️ Database system prompt truncated to fit token budget (${dbTokens} → ${estimateTokens(
+            truncatedDb
+          )} tokens)`
+        );
+      }
     }
   } else if (remainingBudget <= 100) {
-    if (process.env.NODE_ENV === 'development') { console.log( }
-      `⚠️ Only using core system prompt - no budget for database prompt (core: ${coreTokens}, budget: ${tokenBudget})`
-    );
+    if (process.env.NODE_ENV === 'development') {
+      console.log(
+        `⚠️ Only using core system prompt - no budget for database prompt (core: ${coreTokens}, budget: ${tokenBudget})`
+      );
+    }
   }
 
   return result;
@@ -659,9 +665,11 @@ async function validateExerciseCompliance(
 ): Promise<string> {
   // If no knowledge base context, apply strict enforcement
   if (knowledgeContext.length === 0) {
-    if (process.env.NODE_ENV === 'development') { console.log( }
-      "⚠️ No knowledge base context - checking for hypertrophy programming mentions"
-    );
+    if (process.env.NODE_ENV === 'development') {
+      console.log(
+        "⚠️ No knowledge base context - checking for hypertrophy programming mentions"
+      );
+    }
 
     // Check if response contains hypertrophy programming advice
     const hypertrophyKeywords =
@@ -739,9 +747,11 @@ async function validateExerciseCompliance(
         );
         modifiedResponse = modifiedResponse.replace(regex, replacement);
         replacements.push({ original: exercise, replacement });
-        if (process.env.NODE_ENV === 'development') { console.log( }
-          `🔄 Replaced invalid exercise "${exercise}" with "${replacement}"`
-        );
+        if (process.env.NODE_ENV === 'development') {
+          console.log(
+            `🔄 Replaced invalid exercise "${exercise}" with "${replacement}"`
+          );
+        }
       }
     }
   }
@@ -854,9 +864,9 @@ function findBestExerciseReplacement(
     }
   }
 
-  if (process.env.NODE_ENV === 'development') { console.log( }
-    `🎯 Best replacement for "${invalidExercise}": "${bestExercise}" (score: ${bestScore})`
-  );
+  if (process.env.NODE_ENV === 'development') {
+    console.log(`🎯 Best replacement for "${invalidExercise}": "${bestExercise}" (score: ${bestScore})`);
+  }
   return bestExercise;
 }
 
@@ -1406,9 +1416,9 @@ async function updateMemory(
         if (process.env.NODE_ENV === 'development') { console.log(`🧠 No new lasting memory found for user ${userId}.`); }
       }
     } else {
-      if (process.env.NODE_ENV === 'development') { console.log( }
-        `🧠 Could not parse memory update response for user ${userId}`
-      );
+      if (process.env.NODE_ENV === 'development') {
+        console.log(`🧠 Could not parse memory update response for user ${userId}`);
+      }
     }
   } catch (error) {
     console.error("Error updating client memory:", error);
@@ -1465,10 +1475,12 @@ export async function generateChatResponse(
   selectedModel?: "flash" | "pro"
 ): Promise<AiResponse> {
   try {
-    if (process.env.NODE_ENV === 'development') { console.log("🚀 generateChatResponse called", { }
+    if (process.env.NODE_ENV === 'development') {
+      console.log("🚀 generateChatResponse called", {
       userId,
       messageLength: newUserMessage.length,
-    });
+      });
+    }
 
     // 1. Fetch AI Configuration and User Data in parallel
     if (process.env.NODE_ENV === 'development') { console.log("📊 Fetching AI config and user data..."); }
@@ -1482,17 +1494,19 @@ export async function generateChatResponse(
       }),
     ]);
 
-    if (process.env.NODE_ENV === 'development') { console.log("✅ Data fetched successfully", { }
+    if (process.env.NODE_ENV === 'development') {
+      console.log("✅ Data fetched successfully", {
       hasConfig: !!config,
       hasProfile: !!userProfile,
       hasMemory: !!clientMemory,
       userPlan: userData?.plan,
-    });
+      });
+    }
 
     // 2. Enhanced Knowledge Context Fetching for Workout Programming
-    if (process.env.NODE_ENV === 'development') { console.log( }
-      `📚 Fetching KB context with base threshold: ${config.ragSimilarityThreshold}`
-    );
+    if (process.env.NODE_ENV === 'development') {
+      console.log(`📚 Fetching KB context with base threshold: ${config.ragSimilarityThreshold}`);
+    }
     const optimizedThreshold = optimizeSimilarityThreshold(
       newUserMessage,
       config.ragSimilarityThreshold
@@ -1507,9 +1521,9 @@ export async function generateChatResponse(
     let knowledgeContext: KnowledgeContext[] = [];
 
     if (isWorkoutProgramming) {
-      if (process.env.NODE_ENV === 'development') { console.log( }
-        "🏋️ Detected workout programming request - fetching comprehensive KB context"
-      );
+      if (process.env.NODE_ENV === 'development') {
+        console.log("🏋️ Detected workout programming request - fetching comprehensive KB context");
+      }
 
       // For workout programming, fetch broader context with multiple queries
       const programmingQueries = [
@@ -1547,9 +1561,9 @@ export async function generateChatResponse(
         .sort((a, b) => b.score - a.score)
         .slice(0, config.ragMaxChunks);
 
-      if (process.env.NODE_ENV === 'development') { console.log( }
-        `📚 Comprehensive KB retrieval: ${knowledgeContext.length} unique chunks from ${allContexts.length} total`
-      );
+      if (process.env.NODE_ENV === 'development') {
+        console.log(`📚 Comprehensive KB retrieval: ${knowledgeContext.length} unique chunks from ${allContexts.length} total`);
+      }
     } else {
       // Standard single-query retrieval for non-programming requests
       knowledgeContext = await getEnhancedKnowledgeContext(
@@ -1560,9 +1574,9 @@ export async function generateChatResponse(
       );
     }
 
-    if (process.env.NODE_ENV === 'development') { console.log( }
-      `📚 Retrieved ${knowledgeContext.length} knowledge chunks with optimized threshold: ${optimizedThreshold}`
-    );
+    if (process.env.NODE_ENV === 'development') {
+      console.log(`📚 Retrieved ${knowledgeContext.length} knowledge chunks with optimized threshold: ${optimizedThreshold}`);
+    }
 
     // === DIVERSITY ENFORCEMENT: Ensure multi-muscle coverage to avoid false "no exercises" claims ===
     try {
@@ -1604,13 +1618,11 @@ export async function generateChatResponse(
         );
         // Only attempt supplementation if we have fewer than half the muscle groups represented
         if (presentMuscles.size < 4 && missing.length > 0) {
-          if (process.env.NODE_ENV === 'development') { console.log( }
-            `⚠️  Low muscle coverage detected (have ${
-              presentMuscles.size
-            }, missing: ${missing.join(
-              ", "
-            )}) – running supplemental keyword fetch.`
-          );
+          if (process.env.NODE_ENV === 'development') {
+            console.log(
+              `⚠️  Low muscle coverage detected (have ${presentMuscles.size}, missing: ${missing.join(", ")}) – running supplemental keyword fetch.`
+            );
+          }
           // Lightweight direct DB keyword fetch (not embedding) to pull at least one chunk per missing group
           const supplemental: KnowledgeContext[] = [];
           for (const muscle of missing.slice(0, 4)) {
@@ -1643,9 +1655,9 @@ export async function generateChatResponse(
             supplemental.forEach((s) => {
               if (!existingIds.has(s.id)) knowledgeContext.push(s);
             });
-            if (process.env.NODE_ENV === 'development') { console.log( }
-              `✅ Added ${supplemental.length} supplemental muscle coverage chunks.`
-            );
+            if (process.env.NODE_ENV === 'development') {
+              console.log(`✅ Added ${supplemental.length} supplemental muscle coverage chunks.`);
+            }
           }
         }
       }
@@ -1682,9 +1694,9 @@ export async function generateChatResponse(
       newUserMessage
     );
     
-    if (process.env.NODE_ENV === 'development') { console.log( }
-      `📝 Structured prompt assembled - Total length: ${structuredPrompt.length} characters`
-    );
+    if (process.env.NODE_ENV === 'development') {
+      console.log(`📝 Structured prompt assembled - Total length: ${structuredPrompt.length} characters`);
+    }
 
     // 4. Determine which model to use based on user selection and plan
     let modelName: string;
@@ -1698,9 +1710,9 @@ export async function generateChatResponse(
         } else {
           // User doesn't have PRO plan, fallback to flash model
           modelName = config.freeModelName;
-          if (process.env.NODE_ENV === 'development') { console.log( }
-            `⚠️ User selected PRO model but doesn't have PRO plan, using Flash model: ${modelName}`
-          );
+          if (process.env.NODE_ENV === 'development') {
+            console.log(`⚠️ User selected PRO model but doesn't have PRO plan, using Flash model: ${modelName}`);
+          }
         }
       } else {
         // User selected flash model
@@ -1711,11 +1723,11 @@ export async function generateChatResponse(
       // No specific model selected, use plan-based default
       modelName =
         userData?.plan === "PRO" ? config.proModelName : config.freeModelName;
-      if (process.env.NODE_ENV === 'development') { console.log( }
-        `🔄 Using plan-based model: ${modelName} (plan: ${
-          userData?.plan || "FREE"
-        })`
-      );
+      if (process.env.NODE_ENV === 'development') {
+        console.log(
+          `🔄 Using plan-based model: ${modelName} (plan: ${userData?.plan || "FREE"})`
+        );
+      }
     }
 
     if (process.env.NODE_ENV === 'development') { console.log(`🤖 Using model: ${modelName}`); }
@@ -1795,17 +1807,19 @@ export async function generateChatResponse(
               conflictData = { ...conflictArgs, resolutionNeeded: true };
             }
 
-            if (process.env.NODE_ENV === 'development') { console.log("🔍 Conflict detection details:", { }
-              requiresConfirmation,
-              conflictData,
-              conflictHandled,
-            });
+            if (process.env.NODE_ENV === 'development') {
+      console.log("🔍 Conflict detection details:", {
+      requiresConfirmation,
+      conflictData,
+      conflictHandled,
+      });
+    }
 
             // EARLY RETURN: Don't continue processing if confirmation is needed
             if (requiresConfirmation) {
-              if (process.env.NODE_ENV === 'development') { console.log( }
-                "⚠️ Conflict detected - returning early for user confirmation"
-              );
+              if (process.env.NODE_ENV === 'development') {
+                console.log("⚠️ Conflict detected - returning early for user confirmation");
+              }
               const confirmationPrompt =
                 generateConflictConfirmationPrompt(conflictData);
               if (process.env.NODE_ENV === 'development') { console.log("Generated confirmation prompt:", confirmationPrompt); }
@@ -1860,16 +1874,16 @@ export async function generateChatResponse(
     }
 
     // 5. Enhanced Post-processing: Comprehensive Workout Programming Validation
-    if (process.env.NODE_ENV === 'development') { console.log( }
-      "🔍 Validating exercise compliance and programming adherence..."
-    );
+    if (process.env.NODE_ENV === 'development') {
+      console.log("🔍 Validating exercise compliance and programming adherence...");
+    }
     aiContent = await validateExerciseCompliance(aiContent, knowledgeContext);
 
     // Additional validation for workout programming
     if (isWorkoutProgramming) {
-      if (process.env.NODE_ENV === 'development') { console.log( }
-        "🏋️ Applying comprehensive workout programming validation..."
-      );
+      if (process.env.NODE_ENV === 'development') {
+        console.log("🏋️ Applying comprehensive workout programming validation...");
+      }
       aiContent = await validateWorkoutProgramming(
         aiContent,
         knowledgeContext,

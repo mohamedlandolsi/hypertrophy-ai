@@ -260,13 +260,15 @@ export async function processQueryForRAG(originalQuery: string): Promise<{
     isTranslated
   };
   
-  if (process.env.NODE_ENV === 'development') { console.log(`✅ Query processing complete:`, { }
-    original: originalQuery,
-    translated: translatedQuery,
-    semanticallyMapped: semanticallyMappedQuery !== translatedQuery ? semanticallyMappedQuery : 'no mapping applied',
-    expanded: expandedQueries.length,
-    isTranslated
-  });
+  if (process.env.NODE_ENV === 'development') {
+    console.log(`✅ Query processing complete:`, {
+      original: originalQuery,
+      translated: translatedQuery,
+      semanticallyMapped: semanticallyMappedQuery !== translatedQuery ? semanticallyMappedQuery : 'no mapping applied',
+      expanded: expandedQueries.length,
+      isTranslated
+    });
+  }
   
   return result;
 }

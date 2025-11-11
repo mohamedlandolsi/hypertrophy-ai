@@ -255,11 +255,13 @@ export default function EditProgramPage() {
 
         const transformedGuideSections = normalizeGuideSections(programData.programGuide?.content);
 
-        if (process.env.NODE_ENV === 'development') { console.log('Loaded program data:', { }
-          workoutNames: programData.workoutNames,
-          workoutNamesType: typeof programData.workoutNames,
-          workoutNamesIsArray: Array.isArray(programData.workoutNames)
-        });
+        if (process.env.NODE_ENV === 'development') {
+      console.log('Loaded program data:', {
+      workoutNames: programData.workoutNames,
+      workoutNamesType: typeof programData.workoutNames,
+      workoutNamesIsArray: Array.isArray(programData.workoutNames)
+      });
+    }
 
         // Reset form with fetched data
         reset({

@@ -382,13 +382,15 @@ const ChatPage = () => {
         formData.append('imageCount', images.length.toString());
         
         body = formData;
-        if (process.env.NODE_ENV === 'development') { console.log("📤 Request Body (FormData):", { }
-          message: messageText,
-          conversationId: tempConversationId || '',
-          isGuest: !user,
-          selectedModel,
-          imageCount: images.length
-        });
+        if (process.env.NODE_ENV === 'development') {
+      console.log("📤 Request Body (FormData):", {
+      message: messageText,
+      conversationId: tempConversationId || '',
+      isGuest: !user,
+      selectedModel,
+      imageCount: images.length
+      });
+    }
       } else {
         body = JSON.stringify({
           message: messageText,
@@ -397,12 +399,14 @@ const ChatPage = () => {
           selectedModel,
         });
         contentType = 'application/json';
-        if (process.env.NODE_ENV === 'development') { console.log("📤 Request Body (JSON):", { }
-          message: messageText,
-          conversationId: tempConversationId || '',
-          isGuest: !user,
-          selectedModel,
-        });
+        if (process.env.NODE_ENV === 'development') {
+      console.log("📤 Request Body (JSON):", {
+      message: messageText,
+      conversationId: tempConversationId || '',
+      isGuest: !user,
+      selectedModel,
+      });
+    }
       }
 
       const response = await fetch('/api/chat', {

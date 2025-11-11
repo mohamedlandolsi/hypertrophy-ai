@@ -41,7 +41,10 @@ export default function AuthDebugPage() {
     // Listen for auth changes
     const { data: { subscription } } = supabase.auth.onAuthStateChange(
       (event, session) => {
-        if (process.env.NODE_ENV === 'development') { console.log('Auth state changed:', event, session);        setAuthState({ }
+        if (process.env.NODE_ENV === 'development') {
+          console.log('Auth state changed:', event, session);
+        }
+        setAuthState({
           user: session?.user || null,
           event,
           session,
