@@ -6,7 +6,6 @@ import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
 import { Skeleton } from '@/components/ui/skeleton';
 import { Alert, AlertDescription } from '@/components/ui/alert';
-import { Tabs, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { 
   Dumbbell, 
   Calendar, 
@@ -602,7 +601,7 @@ export default function SplitSelector({ onComplete, existingData }: SplitSelecto
           </Alert>
 
           {/* Day assignment grid */}
-          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-7 gap-3">
+          <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-7 gap-3">
             {customDayAssignments.map((assignment) => {
               const uniqueWorkoutTypes = getUniqueWorkoutTypes(selectedStructure);
               
@@ -614,36 +613,26 @@ export default function SplitSelector({ onComplete, existingData }: SplitSelecto
                     assignment.workoutType !== 'Rest' && "border-primary"
                   )}
                 >
-                  <CardHeader className="pb-3">
-                    <CardTitle className="text-sm font-medium">
-                      {assignment.dayOfWeek.slice(0, 3)}
+                  <CardHeader className="pb-2 px-3">
+                    <CardTitle className="text-sm font-medium text-center">
+                      {assignment.dayOfWeek}
                     </CardTitle>
                   </CardHeader>
-                  <CardContent className="pb-3">
-                    <Tabs
+                  <CardContent className="pb-3 px-3 pt-0">
+                    <select
                       value={assignment.workoutType}
-                      onValueChange={(value) => handleDayAssignmentChange(assignment.dayOfWeek, value)}
+                      onChange={(e) => handleDayAssignmentChange(assignment.dayOfWeek, e.target.value)}
+                      className="w-full text-xs p-2 border rounded-md bg-background"
                     >
-                      <TabsList className="w-full h-auto flex-col space-y-1">
-                        <TabsTrigger 
-                          value="Rest" 
-                          className="w-full text-xs"
-                        >
-                          Rest
-                        </TabsTrigger>
-                        {uniqueWorkoutTypes.map((type) => (
-                          <TabsTrigger 
-                            key={type} 
-                            value={type}
-                            className="w-full text-xs"
-                          >
-                            {type}
-                          </TabsTrigger>
-                        ))}
-                      </TabsList>
-                    </Tabs>
+                      <option value="Rest">Rest</option>
+                      {uniqueWorkoutTypes.map((type) => (
+                        <option key={type} value={type}>
+                          {type}
+                        </option>
+                      ))}
+                    </select>
                     <Badge 
-                      className={cn("w-full mt-2 justify-center", getWorkoutTypeColor(assignment.workoutType))}
+                      className={cn("w-full mt-2 justify-center text-xs", getWorkoutTypeColor(assignment.workoutType))}
                     >
                       {assignment.workoutType}
                     </Badge>

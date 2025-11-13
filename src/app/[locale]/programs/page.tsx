@@ -810,7 +810,7 @@ export default function ProgramsPage() {
         {/* Browse Templates Section */}
         {isAuthenticated && (
           <>
-            <div className="mb-8">
+            <div id="templates" className="mb-8 scroll-mt-20">
               <div className="flex items-center justify-between mb-4">
                 <div className="flex items-center gap-3">
                   <Sparkles className="h-6 w-6 text-primary" />
