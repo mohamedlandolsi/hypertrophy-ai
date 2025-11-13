@@ -238,16 +238,23 @@ export default function SplitSelector({ onComplete, existingData }: SplitSelecto
   };
 
   const initializeDayAssignments = (structure: TrainingSplitStructure) => {
-    const assignments: CustomDayAssignment[] = structure.trainingDayAssignments.map((assignment) => ({
-      dayOfWeek: assignment.dayOfWeek || DAYS_OF_WEEK[assignment.dayNumber - 1],
-      dayNumber: assignment.dayNumber,
-      workoutType: assignment.workoutType
-    }));
+    // Create a map to track assignments by day to prevent duplicates
+    const dayMap = new Map<string, CustomDayAssignment>();
+    
+    // Add assignments from structure (prefer these)
+    structure.trainingDayAssignments.forEach((assignment) => {
+      const dayOfWeek = assignment.dayOfWeek || DAYS_OF_WEEK[assignment.dayNumber - 1];
+      dayMap.set(dayOfWeek, {
+        dayOfWeek,
+        dayNumber: assignment.dayNumber,
+        workoutType: assignment.workoutType
+      });
+    });
     
     // Fill remaining days with "Rest"
     DAYS_OF_WEEK.forEach((day, index) => {
-      if (!assignments.find(a => a.dayOfWeek === day)) {
-        assignments.push({
+      if (!dayMap.has(day)) {
+        dayMap.set(day, {
           dayOfWeek: day,
           dayNumber: index + 1,
           workoutType: 'Rest'
@@ -255,8 +262,8 @@ export default function SplitSelector({ onComplete, existingData }: SplitSelecto
       }
     });
     
-    // Sort by day of week
-    assignments.sort((a, b) => {
+    // Convert map to array and sort by day of week
+    const assignments = Array.from(dayMap.values()).sort((a, b) => {
       return DAYS_OF_WEEK.indexOf(a.dayOfWeek) - DAYS_OF_WEEK.indexOf(b.dayOfWeek);
     });
     
