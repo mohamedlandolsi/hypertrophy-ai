@@ -23,8 +23,7 @@ import {
 } from 'lucide-react';
 import { toast } from 'sonner';
 import { cn } from '@/lib/utils';
-// import SplitSelector, { type SplitSelectorData } from '@/components/SplitSelector';
-import { type SplitSelectorData } from '@/components/SplitSelector';
+import SplitSelector, { type SplitSelectorData } from '@/components/SplitSelector';
 import { UserTemplateSelector } from '@/components/UserTemplateSelector';
 
 interface ProgramInfo {
@@ -53,7 +52,7 @@ export default function CreateProgramPage() {
     difficulty: ''
   });
 
-  const [splitData] = useState<SplitSelectorData | null>(null);
+  const [splitData, setSplitData] = useState<SplitSelectorData | null>(null);
 
   // Loading state
   const [creating, setCreating] = useState(false);
@@ -83,7 +82,10 @@ export default function CreateProgramPage() {
     setCurrentStep(prev => Math.max(prev - 1, 1));
   };
 
-  // Removed unused handleSplitComplete - using setSplitData directly in SplitSelector
+  const handleSplitComplete = (data: SplitSelectorData) => {
+    setSplitData(data);
+    setCurrentStep(3); // Move to review step
+  };
 
   const handleCreateProgram = async () => {
     if (!splitData) {
@@ -382,19 +384,13 @@ export default function CreateProgramPage() {
             </div>
           )}
 
-          {/* Step 2: Split Selection - TODO: Fix integration with SplitSelector */}
+          {/* Step 2: Split Selection */}
           {currentStep === 2 && (
-            <div className="p-8 text-center">
-              <p className="text-muted-foreground mb-4">
-                Split selection integration is being updated.
-              </p>
-              <p className="text-sm text-muted-foreground">
-                Please use the quick create option from the programs page for now.
-              </p>
-              {/* <SplitSelector
+            <div className="space-y-4">
+              <SplitSelector
                 onComplete={handleSplitComplete}
                 existingData={splitData || undefined}
-              /> */}
+              />
             </div>
           )}
 

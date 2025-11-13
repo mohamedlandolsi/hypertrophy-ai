@@ -193,7 +193,10 @@ export default function ProgramsPage() {
         const templatesResponse = await fetch('/api/programs/templates');
         if (templatesResponse.ok) {
           const templatesData = await templatesResponse.json();
-          setTemplates(templatesData);
+          console.log('Templates response:', templatesData); // Debug log
+          setTemplates(templatesData.templates || []);
+        } else {
+          console.error('Failed to fetch templates:', templatesResponse.status);
         }
 
         // Fetch user's program count and plan
