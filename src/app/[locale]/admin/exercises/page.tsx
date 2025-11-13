@@ -61,12 +61,12 @@ export default function AdminExercisesPage() {
 
   return (
     <AdminLayout>
-      <div className="container mx-auto px-6 py-8">
+      <div className="container mx-auto px-4 sm:px-6 py-8 max-w-[1600px]">
         <div className="mb-6">
-          <h1 className="text-3xl font-bold text-gray-900 dark:text-white">
+          <h1 className="text-2xl sm:text-3xl font-bold text-gray-900 dark:text-white">
             Exercise Management
           </h1>
-          <p className="mt-2 text-gray-600 dark:text-gray-300">
+          <p className="mt-2 text-sm sm:text-base text-gray-600 dark:text-gray-300">
             Manage and configure exercises for training programs
           </p>
         </div>

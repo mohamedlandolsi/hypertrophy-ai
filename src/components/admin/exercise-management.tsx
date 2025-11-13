@@ -226,7 +226,14 @@ export default function ExerciseManagement() {
       // Upload image first if one is selected
       let imageData = null;
       if (imageFile) {
-        imageData = await handleImageUpload();
+        try {
+          imageData = await handleImageUpload();
+        } catch (imageError) {
+          if (process.env.NODE_ENV === 'development') {
+            console.error('Image upload error:', imageError);
+          }
+          throw new Error('Failed to upload image: ' + (imageError instanceof Error ? imageError.message : 'Unknown error'));
+        }
       }
 
       // Merge image data into the payload to avoid race condition with state updates
@@ -238,6 +245,10 @@ export default function ExerciseManagement() {
       const url = editingId ? `/api/admin/exercises/${editingId}` : '/api/admin/exercises';
       const method = editingId ? 'PUT' : 'POST';
       
+      if (process.env.NODE_ENV === 'development') {
+        console.log('Submitting exercise:', { url, method, payload });
+      }
+      
       const response = await fetch(url, {
         method,
         headers: { 'Content-Type': 'application/json' },
@@ -245,12 +256,16 @@ export default function ExerciseManagement() {
       });
 
       const result = await response.json();
-
-      if (!response.ok) {
-        throw new Error(result.error || 'Failed to save exercise');
+      
+      if (process.env.NODE_ENV === 'development') {
+        console.log('API response:', { status: response.status, result });
       }
 
-      setSuccess(result.message);
+      if (!response.ok) {
+        throw new Error(result.error || result.message || 'Failed to save exercise');
+      }
+
+      setSuccess(result.message || 'Exercise saved successfully');
       
       // Optimistic UI update: Update local state without full page reload
       if (editingId && result.exercise) {
@@ -273,7 +288,11 @@ export default function ExerciseManagement() {
       setImageFile(null);
       setImagePreview(null);
     } catch (err) {
-      setError(err instanceof Error ? err.message : 'Failed to save exercise');
+      const errorMessage = err instanceof Error ? err.message : 'Failed to save exercise';
+      if (process.env.NODE_ENV === 'development') {
+        console.error('Exercise save error:', err);
+      }
+      setError(errorMessage);
     } finally {
       setSaving(false);
     }
@@ -1035,33 +1054,30 @@ export default function ExerciseManagement() {
           </div>
         ) : (
           <>
-            <div className="w-full overflow-auto">
+            <div className="w-full overflow-x-auto -mx-6 px-6">
               <Table>
                 <TableHeader>
                   <TableRow>
-                    <TableHead className="min-w-[200px]">Name</TableHead>
-                    <TableHead className="min-w-[80px]">Image</TableHead>
-                    <TableHead className="min-w-[120px]">Exercise Type</TableHead>
-                    <TableHead className="min-w-[100px]">Category</TableHead>
-                    <TableHead className="min-w-[120px]">Classification</TableHead>
-                    <TableHead className="min-w-[100px]">Recommended</TableHead>
-                    <TableHead className="min-w-[150px]">Equipment</TableHead>
-                    <TableHead className="min-w-[200px]">Volume Contributions</TableHead>
-                    <TableHead className="min-w-[150px]">Primary/Secondary</TableHead>
-                    <TableHead className="min-w-[80px]">Status</TableHead>
-                    <TableHead className="min-w-[120px]">Actions</TableHead>
+                    <TableHead className="w-[200px]">Name</TableHead>
+                    <TableHead className="w-[80px]">Image</TableHead>
+                    <TableHead className="w-[120px]">Type</TableHead>
+                    <TableHead className="w-[100px]">Category</TableHead>
+                    <TableHead className="w-[150px]">Equipment</TableHead>
+                    <TableHead className="w-[180px]">Volume</TableHead>
+                    <TableHead className="w-[80px]">Status</TableHead>
+                    <TableHead className="w-[120px] text-right">Actions</TableHead>
                   </TableRow>
                 </TableHeader>
                 <TableBody>
                   {exercises.map((exercise) => (
                     <TableRow key={exercise.id}>
                       <TableCell className="font-medium">
-                        <div className="max-w-[200px]">
-                          <div className="font-semibold truncate">{exercise.name}</div>
-                          {exercise.description && (
-                            <div className="text-sm text-muted-foreground truncate">
-                              {exercise.description}
-                            </div>
+                        <div>
+                          <div className="font-semibold">{exercise.name}</div>
+                          {exercise.isRecommended && (
+                            <Badge variant="default" className="bg-green-600 mt-1">
+                              ⭐ Recommended
+                            </Badge>
                           )}
                         </div>
                       </TableCell>
@@ -1091,32 +1107,7 @@ export default function ExerciseManagement() {
                         </Badge>
                       </TableCell>
                       <TableCell>
-                        <div className="flex flex-col gap-1">
-                          {((exercise as Exercise & { isCompound?: boolean }).isCompound || exercise.exerciseType === 'COMPOUND') && (
-                            <Badge variant="outline" className="text-xs w-fit">
-                              Compound
-                            </Badge>
-                          )}
-                          {((exercise as Exercise & { canBeUnilateral?: boolean }).canBeUnilateral) && (
-                            <Badge variant="outline" className="text-xs w-fit">
-                              Unilateral
-                            </Badge>
-                          )}
-                        </div>
-                      </TableCell>
-                      <TableCell>
-                        <div className="flex items-center justify-center">
-                          {exercise.isRecommended ? (
-                            <Badge variant="default" className="bg-green-600">
-                              ✓ Recommended
-                            </Badge>
-                          ) : (
-                            <span className="text-muted-foreground">—</span>
-                          )}
-                        </div>
-                      </TableCell>
-                      <TableCell>
-                        <div className="flex flex-wrap gap-1 max-w-[150px]">
+                        <div className="flex flex-wrap gap-1">
                           {exercise.equipment.slice(0, 2).map((item, index) => (
                             <Badge key={index} variant="secondary" className="text-xs">
                               {item}
@@ -1130,63 +1121,22 @@ export default function ExerciseManagement() {
                         </div>
                       </TableCell>
                       <TableCell>
-                        <div className="max-w-[200px]">
+                        <div>
                           {exercise.volumeContributions && Object.keys(exercise.volumeContributions).length > 0 ? (
-                            <div className="space-y-2">
+                            <div className="space-y-1">
                               {/* Total Volume Badge */}
-                              <div className="flex items-center gap-2">
-                                <span className="text-xs text-muted-foreground">Total:</span>
-                                <Badge className={getVolumeColor(
-                                  Object.values(exercise.volumeContributions).reduce((sum: number, val: number) => sum + val, 0)
-                                )}>
-                                  {Object.values(exercise.volumeContributions).reduce((sum: number, val: number) => sum + val, 0).toFixed(2)}
-                                </Badge>
-                              </div>
-                              {/* Individual Muscle Volumes */}
-                              <div className="flex flex-wrap gap-1">
-                                {Object.entries(exercise.volumeContributions).slice(0, 3).map(([muscle, volume]) => (
-                                  <Badge key={muscle} variant="outline" className="text-xs">
-                                    {VOLUME_MUSCLES.find(m => m.value === muscle)?.label || muscle}: {volume}
-                                  </Badge>
-                                ))}
-                                {Object.keys(exercise.volumeContributions).length > 3 && (
-                                  <Badge variant="outline" className="text-xs">
-                                    +{Object.keys(exercise.volumeContributions).length - 3} more
-                                  </Badge>
-                                )}
+                              <Badge className={getVolumeColor(
+                                Object.values(exercise.volumeContributions).reduce((sum: number, val: number) => sum + val, 0)
+                              )}>
+                                Total: {Object.values(exercise.volumeContributions).reduce((sum: number, val: number) => sum + val, 0).toFixed(2)}
+                              </Badge>
+                              {/* Show muscle count */}
+                              <div className="text-xs text-muted-foreground">
+                                {Object.keys(exercise.volumeContributions).length} muscle{Object.keys(exercise.volumeContributions).length !== 1 ? 's' : ''}
                               </div>
                             </div>
                           ) : (
-                            <span className="text-sm text-muted-foreground">No volumes set</span>
-                          )}
-                        </div>
-                      </TableCell>
-                      <TableCell>
-                        <div className="max-w-[150px]">
-                          {((exercise as Exercise & { primaryMuscle?: string }).primaryMuscle) && (
-                            <div className="mb-1">
-                              <span className="text-xs text-muted-foreground">Primary: </span>
-                              <Badge variant="default" className="text-xs">
-                                {VOLUME_MUSCLES.find(m => m.value === (exercise as Exercise & { primaryMuscle?: string }).primaryMuscle)?.label || (exercise as Exercise & { primaryMuscle?: string }).primaryMuscle}
-                              </Badge>
-                            </div>
-                          )}
-                          {((exercise as Exercise & { secondaryMuscles?: string[] }).secondaryMuscles?.length || 0) > 0 && (
-                            <div>
-                              <span className="text-xs text-muted-foreground">Secondary: </span>
-                              <div className="flex flex-wrap gap-1 mt-1">
-                                {(exercise as Exercise & { secondaryMuscles?: string[] }).secondaryMuscles?.slice(0, 2).map((muscle) => (
-                                  <Badge key={muscle} variant="secondary" className="text-xs">
-                                    {VOLUME_MUSCLES.find(m => m.value === muscle)?.label || muscle}
-                                  </Badge>
-                                ))}
-                                {((exercise as Exercise & { secondaryMuscles?: string[] }).secondaryMuscles?.length || 0) > 2 && (
-                                  <Badge variant="secondary" className="text-xs">
-                                    +{((exercise as Exercise & { secondaryMuscles?: string[] }).secondaryMuscles?.length || 0) - 2}
-                                  </Badge>
-                                )}
-                              </div>
-                            </div>
+                            <span className="text-sm text-muted-foreground">No volumes</span>
                           )}
                         </div>
                       </TableCell>
@@ -1197,8 +1147,8 @@ export default function ExerciseManagement() {
                           <Badge className="bg-gray-100 text-gray-800 dark:bg-gray-800 dark:text-gray-100">Inactive</Badge>
                         )}
                       </TableCell>
-                      <TableCell>
-                        <div className="flex items-center gap-2">
+                      <TableCell className="text-right">
+                        <div className="flex items-center justify-end gap-2">
                           <Button
                             variant="outline"
                             size="sm"

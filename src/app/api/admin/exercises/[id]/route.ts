@@ -101,9 +101,17 @@ export async function PUT(request: NextRequest, { params }: { params: Promise<{ 
     } = body;
 
     // Validate required fields
-    if (!name || !exerciseType || !volumeContributions || Object.keys(volumeContributions).length === 0) {
+    if (!name || !exerciseType) {
       return NextResponse.json(
-        { error: 'Name, exercise type, and volume contributions are required' },
+        { error: 'Name and exercise type are required' },
+        { status: 400 }
+      );
+    }
+    
+    // Validate volume contributions if provided
+    if (volumeContributions && typeof volumeContributions !== 'object') {
+      return NextResponse.json(
+        { error: 'Volume contributions must be an object' },
         { status: 400 }
       );
     }
