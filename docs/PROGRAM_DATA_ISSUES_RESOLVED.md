@@ -2,7 +2,7 @@
 
 ## Date: November 13, 2025
 
-## Issues Identified
+## Issues Identified & RESOLVED
 
 ### Issue 1: Training Splits Not Loading ✅ RESOLVED
 **Problem**: Program creation wizard Step 2 showed "Split selection integration is being updated" instead of showing available splits.
@@ -10,24 +10,57 @@
 **Root Cause**: 
 - Training splits existed in database (seeded via `npx prisma db seed`)
 - API route `/api/training-splits` was working correctly
-- Component was fetching correctly
+- **Component was COMMENTED OUT** - SplitSelector was disabled in the code
 
-**Resolution**: No code changes needed. Data was already present.
+**Resolution**: 
+1. Uncommented the `SplitSelector` component import
+2. Restored `handleSplitComplete` callback function
+3. Changed `splitData` from const to state with `setSplitData`
+4. Removed placeholder "being updated" message
+5. Re-enabled the component in Step 2
+
+**Code Changes**:
+```tsx
+// Before (disabled):
+// import SplitSelector, { type SplitSelectorData } from '@/components/SplitSelector';
+const [splitData] = useState<SplitSelectorData | null>(null);
+
+// After (enabled):
+import SplitSelector, { type SplitSelectorData } from '@/components/SplitSelector';
+const [splitData, setSplitData] = useState<SplitSelectorData | null>(null);
+```
 
 **Verified**:
 - ✅ 4 active training splits in database
 - ✅ 10 training structures with day assignments
 - ✅ API route returns data correctly
-- ✅ Component fetches from correct endpoint
+- ✅ Component now renders and fetches data
 
 ---
 
-### Issue 2: No Templates Appearing ❌ FIXED
+### Issue 2: No Templates Appearing ✅ RESOLVED
 **Problem**: Browse Templates section showed "No templates found" message.
 
-**Root Cause**: No ProgramTemplate records existed in the database.
+**Root Cause**: 
+1. No ProgramTemplate records existed in database (initial issue)
+2. Frontend was incorrectly parsing the API response
 
-**Resolution**: Created seed script to populate program templates with workouts and exercises.
+**Resolution**: 
+1. Created seed script to populate program templates
+2. Fixed template data extraction from API response:
+   ```tsx
+   // Before:
+   setTemplates(templatesData);
+   
+   // After:
+   setTemplates(templatesData.templates || []);
+   ```
+3. Added debug logging and error handling
+
+**Changes Made**:
+- Created `scripts/seed-program-templates.js` (seeds 3 templates)
+- Fixed data parsing in `src/app/[locale]/programs/page.tsx`
+- Added console logging for debugging
 
 **Changes Made**:
 1. **Created**: `scripts/seed-program-templates.js`
@@ -138,8 +171,8 @@ Or use the Admin Dashboard:
 - [x] Templates appear in Browse Templates section
 - [x] User can select a split and see structures
 - [x] User can view template details
-- [ ] User can create program from template (requires testing)
-- [ ] User can customize template workouts (requires testing)
+- [ ] User can create program from split selection (requires live testing)
+- [ ] User can create program from template (requires live testing)
 
 ---
 
@@ -161,7 +194,8 @@ Or use the Admin Dashboard:
 - `docs/PROGRAM_DATA_ISSUES_RESOLVED.md` - This file
 
 ### Modified Files
-- None (issue was data-only, not code)
+- `src/app/[locale]/programs/create/page.tsx` - Re-enabled SplitSelector component
+- `src/app/[locale]/programs/page.tsx` - Fixed template data parsing
 
 ---
 
