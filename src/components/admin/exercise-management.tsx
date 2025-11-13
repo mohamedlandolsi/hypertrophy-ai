@@ -373,6 +373,7 @@ export default function ExerciseManagement() {
   };
 
   const handleEdit = (exercise: Exercise) => {
+    const primaryMuscleValue = (exercise as Exercise & { primaryMuscle?: string }).primaryMuscle || '';
     setFormData({
       name: exercise.name,
       exerciseType: exercise.exerciseType,
@@ -386,7 +387,7 @@ export default function ExerciseManagement() {
       imageType: exercise.imageType,
       volumeContributions: exercise.volumeContributions || {},
       regionalBias: (exercise as Exercise & { regionalBias?: Record<string, string> }).regionalBias || {},
-      primaryMuscle: (exercise as Exercise & { primaryMuscle?: string }).primaryMuscle || '',
+      primaryMuscle: primaryMuscleValue === '' ? 'NONE' : primaryMuscleValue,
       secondaryMuscles: (exercise as Exercise & { secondaryMuscles?: string[] }).secondaryMuscles || [],
       isCompound: (exercise as Exercise & { isCompound?: boolean }).isCompound ?? (exercise.exerciseType === 'COMPOUND'),
       canBeUnilateral: (exercise as Exercise & { canBeUnilateral?: boolean }).canBeUnilateral || false,
@@ -613,14 +614,14 @@ export default function ExerciseManagement() {
                     <Select
                       value={formData.primaryMuscle}
                       onValueChange={(value: string) => 
-                        setFormData({ ...formData, primaryMuscle: value })
+                        setFormData({ ...formData, primaryMuscle: value === 'NONE' ? '' : value })
                       }
                     >
                       <SelectTrigger>
                         <SelectValue placeholder="Select primary muscle" />
                       </SelectTrigger>
                       <SelectContent>
-                        <SelectItem value="">None</SelectItem>
+                        <SelectItem value="NONE">None</SelectItem>
                         {VOLUME_MUSCLES.map(({ value, label }) => (
                           <SelectItem key={value} value={value}>
                             {label}
