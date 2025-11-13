@@ -246,6 +246,8 @@ export default function ProgramsPage() {
 
   // Filter templates
   const getFilteredTemplates = () => {
+    if (!Array.isArray(templates)) return [];
+    
     return templates.filter(template => {
       const matchesDifficulty = templateFilters.difficulty.length === 0 || 
         templateFilters.difficulty.includes(template.difficultyLevel.toUpperCase());
@@ -853,7 +855,7 @@ export default function ProgramsPage() {
                     <DropdownMenuSeparator />
                     <DropdownMenuLabel>Training Split</DropdownMenuLabel>
                     <DropdownMenuSeparator />
-                    {Array.from(new Set(templates.map(t => t.trainingSplit?.name).filter(Boolean))).map((split) => (
+                    {Array.isArray(templates) && Array.from(new Set(templates.map(t => t.trainingSplit?.name).filter(Boolean))).map((split) => (
                       <DropdownMenuCheckboxItem
                         key={split}
                         checked={templateFilters.split.includes(split as string)}

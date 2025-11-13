@@ -58,7 +58,7 @@ const nextConfig: NextConfig = {
               "font-src 'self' https://fonts.gstatic.com https://checkout.lemonsqueezy.com",
               "img-src 'self' data: blob: https: http:",
               "media-src 'self' data: blob:",
-              "connect-src 'self' https://www.google-analytics.com https://vitals.vercel-analytics.com https://*.supabase.co https://*.lemonsqueezy.com https://api.lemonsqueezy.com https://auth.lemonsqueezy.com https://checkout.lemonsqueezy.com https://play.google.com https://www.paypal.com https://*.paypal.com https://stats.g.doubleclick.net https://www.google.com https://accounts.google.com https://api.stripe.com https://js.stripe.com https://maps.googleapis.com https://*.googleapis.com https://app.lemonsqueezy.com",
+              "connect-src 'self' https://www.googletagmanager.com https://www.google-analytics.com https://vitals.vercel-analytics.com https://*.supabase.co https://*.lemonsqueezy.com https://api.lemonsqueezy.com https://auth.lemonsqueezy.com https://checkout.lemonsqueezy.com https://play.google.com https://www.paypal.com https://*.paypal.com https://stats.g.doubleclick.net https://www.google.com https://accounts.google.com https://api.stripe.com https://js.stripe.com https://maps.googleapis.com https://*.googleapis.com https://app.lemonsqueezy.com",
               "frame-src 'self' https://checkout.lemonsqueezy.com https://www.paypal.com https://*.paypal.com https://play.google.com https://js.stripe.com https://app.lemonsqueezy.com",
               "child-src 'self' https://checkout.lemonsqueezy.com https://www.paypal.com https://*.paypal.com https://app.lemonsqueezy.com",
               "object-src 'none'",

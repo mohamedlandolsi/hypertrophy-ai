@@ -2,7 +2,7 @@
 
 import Link from 'next/link';
 import Image from 'next/image';
-import { Menu, User, MessageSquare, Settings, LogOut, LayoutDashboard, UserCircle, Crown, Dumbbell } from 'lucide-react';
+import { Menu, User, MessageSquare, Settings, LogOut, LayoutDashboard, UserCircle, Crown, Dumbbell, BookOpen } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Sheet, SheetContent, SheetTrigger, SheetClose, SheetTitle } from '@/components/ui/sheet';
 import { useState, useEffect } from 'react';
@@ -126,6 +126,7 @@ const Navbar = () => {
 
   const navLinks = [
     { href: `/${locale}/pricing`, label: t('pricing'), icon: Crown },
+    { href: `/${locale}/programs`, label: t('programs'), icon: BookOpen },
     ...(user ? [{ href: `/${locale}/profile`, label: t('profile'), icon: UserCircle }] : []),
     ...(userRole?.split(',').map(r => r.trim()).includes('coach') ? [{ href: `/${locale}/coach-inbox`, label: 'Coach Inbox', icon: MessageSquare }] : []),
     ...(userRole === 'admin' ? [{ href: `/${locale}/admin`, label: t('dashboard'), icon: LayoutDashboard }] : []),

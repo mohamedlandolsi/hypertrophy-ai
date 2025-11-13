@@ -50,7 +50,6 @@ export const GoogleAnalytics = () => {
         page_title: document.title,
         page_location: window.location.href,
       });
-      if (process.env.NODE_ENV === 'development') { console.log('Google Analytics: Configuration loaded successfully'); }
     `;
     
     try {
