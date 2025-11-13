@@ -47,6 +47,13 @@ interface TrainingProgram {
   isAdminAccess?: boolean;
   isProAccess?: boolean;
   accessReason?: 'admin' | 'pro_subscription' | 'purchased' | 'free';
+  isCustomProgram?: boolean;
+  customProgramData?: {
+    split?: string;
+    daysPerWeek?: number;
+    pattern?: string;
+    status?: string;
+  };
   // Additional metadata for filtering (these would come from DB in real implementation)
   difficulty?: 'beginner' | 'intermediate' | 'advanced';
   split?: string;
@@ -277,7 +284,12 @@ export default function ProgramsPage() {
 
   const handleProgramClick = (program: TrainingProgram) => {
     setNavigatingToProgramId(program.id);
-    router.push(`/${locale}/programs/${program.id}/guide`);
+    // Route custom programs to workouts page, admin programs to guide page
+    if (program.isCustomProgram) {
+      router.push(`/${locale}/programs/${program.id}/workouts`);
+    } else {
+      router.push(`/${locale}/programs/${program.id}/guide`);
+    }
   };
 
   // Modern Program Card Component
@@ -359,11 +371,36 @@ export default function ProgramsPage() {
             </CardHeader>
 
             <CardContent className="flex-1 flex flex-col gap-4">
-              {/* Mobile Tracking Badge */}
-              <div className="flex items-center gap-1.5 text-sm">
-                <BarChart3 className="h-4 w-4 text-primary" />
-                <span className="text-muted-foreground">{t('card.specs.mobileTracking')}</span>
-              </div>
+              {/* Program Info */}
+              {program.isCustomProgram ? (
+                <div className="flex flex-wrap items-center gap-3 text-sm">
+                  {program.customProgramData?.split && (
+                    <div className="flex items-center gap-1.5 text-muted-foreground">
+                      <Dumbbell className="h-4 w-4 text-primary" />
+                      <span>{program.customProgramData.split}</span>
+                    </div>
+                  )}
+                  {program.customProgramData?.daysPerWeek && (
+                    <div className="flex items-center gap-1.5 text-muted-foreground">
+                      <Calendar className="h-4 w-4 text-primary" />
+                      <span>{program.customProgramData.daysPerWeek} days/week</span>
+                    </div>
+                  )}
+                  {program.customProgramData?.status && (
+                    <Badge variant={program.customProgramData.status === 'active' ? 'default' : 'secondary'} className="text-xs">
+                      {program.customProgramData.status}
+                    </Badge>
+                  )}
+                </div>
+              ) : (
+                <>
+                  {/* Mobile Tracking Badge */}
+                  <div className="flex items-center gap-1.5 text-sm">
+                    <BarChart3 className="h-4 w-4 text-primary" />
+                    <span className="text-muted-foreground">{t('card.specs.mobileTracking')}</span>
+                  </div>
+                </>
+              )}
 
               {isFeatured && (
                 <div className="space-y-2">

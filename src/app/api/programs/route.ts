@@ -74,7 +74,36 @@ export async function GET(request: NextRequest) {
       }
     });
 
-    const purchasedProgramIds = new Set(userPurchases.map(p => p.trainingProgramId));
+    // Get user's custom created programs
+    const customPrograms = await prisma.customTrainingProgram.findMany({
+      where: {
+        userId: user.id,
+        status: {
+          in: ['DRAFT', 'ACTIVE']
+        }
+      },
+      select: {
+        id: true,
+        name: true,
+        description: true,
+        status: true,
+        createdAt: true,
+        trainingSplit: {
+          select: {
+            name: true
+          }
+        },
+        splitStructure: {
+          select: {
+            daysPerWeek: true,
+            pattern: true
+          }
+        }
+      },
+      orderBy: {
+        createdAt: 'desc'
+      }
+    });
 
     // For admin users, all programs are "owned"
     if (isAdmin) {
@@ -85,17 +114,38 @@ export async function GET(request: NextRequest) {
           purchaseDate: purchase?.purchaseDate,
           isOwned: true,
           isAdminAccess: !purchase, // Flag to indicate admin access vs real purchase
-          accessReason: 'admin' as const
+          accessReason: 'admin' as const,
+          isCustomProgram: false
         };
       });
+
+      // Map custom programs to match the TrainingProgram structure
+      const customProgramsFormatted = customPrograms.map(cp => ({
+        id: cp.id,
+        name: { en: cp.name },
+        description: { en: cp.description || '' },
+        price: 0,
+        isActive: cp.status === 'ACTIVE',
+        thumbnailUrl: null,
+        aboutContent: null,
+        createdAt: cp.createdAt,
+        isOwned: true,
+        isCustomProgram: true,
+        customProgramData: {
+          split: cp.trainingSplit?.name,
+          daysPerWeek: cp.splitStructure?.daysPerWeek,
+          pattern: cp.splitStructure?.pattern,
+          status: cp.status
+        }
+      }));
 
       return NextResponse.json({
         success: true,
         data: {
-          ownedPrograms,
+          ownedPrograms: [...customProgramsFormatted, ...ownedPrograms],
           browsePrograms: [], // Admin sees all as owned
           totalPrograms: allPrograms.length,
-          ownedCount: ownedPrograms.length,
+          ownedCount: ownedPrograms.length + customPrograms.length,
           browseCount: 0,
           isAdmin: true,
           isPro: dbUser?.plan === 'PRO'
@@ -112,17 +162,38 @@ export async function GET(request: NextRequest) {
           purchaseDate: purchase?.purchaseDate,
           isOwned: true,
           isProAccess: !purchase, // Flag to indicate Pro access vs actual purchase
-          accessReason: purchase ? 'purchased' : 'pro_subscription' as const
+          accessReason: purchase ? 'purchased' : 'pro_subscription' as const,
+          isCustomProgram: false
         };
       });
+
+      // Map custom programs to match the TrainingProgram structure
+      const customProgramsFormatted = customPrograms.map(cp => ({
+        id: cp.id,
+        name: { en: cp.name },
+        description: { en: cp.description || '' },
+        price: 0,
+        isActive: cp.status === 'ACTIVE',
+        thumbnailUrl: null,
+        aboutContent: null,
+        createdAt: cp.createdAt,
+        isOwned: true,
+        isCustomProgram: true,
+        customProgramData: {
+          split: cp.trainingSplit?.name,
+          daysPerWeek: cp.splitStructure?.daysPerWeek,
+          pattern: cp.splitStructure?.pattern,
+          status: cp.status
+        }
+      }));
 
       return NextResponse.json({
         success: true,
         data: {
-          ownedPrograms,
+          ownedPrograms: [...customProgramsFormatted, ...ownedPrograms],
           browsePrograms: [], // Pro users see all as owned
           totalPrograms: allPrograms.length,
-          ownedCount: ownedPrograms.length,
+          ownedCount: ownedPrograms.length + customPrograms.length,
           browseCount: 0,
           isAdmin: false,
           isPro: true
@@ -130,34 +201,35 @@ export async function GET(request: NextRequest) {
       });
     }
 
-    // For regular users, separate owned and available programs
-    const ownedPrograms = allPrograms.filter(program => 
-      purchasedProgramIds.has(program.id) || program.price === 0 // Include free programs
-    ).map(program => {
-      const purchase = userPurchases.find(p => p.trainingProgramId === program.id);
-      return {
-        ...program,
-        purchaseDate: purchase?.purchaseDate,
-        isOwned: true,
-        accessReason: program.price === 0 ? 'free' : 'purchased' as const
-      };
-    });
-
-    const browsePrograms = allPrograms.filter(program => 
-      !purchasedProgramIds.has(program.id) && program.price > 0
-    ).map(program => ({
-      ...program,
-      isOwned: false
+    // For regular users, only show their custom programs (hide admin programs for now)
+    // Map custom programs to match the TrainingProgram structure
+    const customProgramsFormatted = customPrograms.map(cp => ({
+      id: cp.id,
+      name: { en: cp.name },
+      description: { en: cp.description || '' },
+      price: 0,
+      isActive: cp.status === 'ACTIVE',
+      thumbnailUrl: null,
+      aboutContent: null,
+      createdAt: cp.createdAt,
+      isOwned: true,
+      isCustomProgram: true,
+      customProgramData: {
+        split: cp.trainingSplit?.name,
+        daysPerWeek: cp.splitStructure?.daysPerWeek,
+        pattern: cp.splitStructure?.pattern,
+        status: cp.status
+      }
     }));
 
     return NextResponse.json({
       success: true,
       data: {
-        ownedPrograms,
-        browsePrograms,
-        totalPrograms: allPrograms.length,
-        ownedCount: ownedPrograms.length,
-        browseCount: browsePrograms.length,
+        ownedPrograms: customProgramsFormatted,
+        browsePrograms: [], // Regular users only see their custom programs
+        totalPrograms: customPrograms.length,
+        ownedCount: customPrograms.length,
+        browseCount: 0,
         isAdmin: false,
         isPro: false
       }
